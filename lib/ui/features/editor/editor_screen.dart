@@ -150,7 +150,11 @@ class _EditorScreenState extends State<EditorScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Синхронизируем размер области рисования с контроллером для корректного Fit to Screen
-        controller.lastViewportSize = constraints.biggest;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (controller.lastViewportSize != constraints.biggest) {
+            controller.lastViewportSize = constraints.biggest;
+          }
+        });
 
         return SizedBox.expand(
           child: Listener(
