@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789142111.056441,
-    "seen": 1789148910.5377083,
-    "ast_hash": "bbbd32eb9ddda8067a19d8562843d57d",
+    "mtime": 1789151901.1193128,
+    "seen": 1789152107.8513098,
+    "ast_hash": "2467f91f84e6a59b6d8924707a86f45f",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789149643.9590225,
-    "seen": 1789150052.056864,
-    "ast_hash": "418b3ca3cac23ee781c96feb119f9449",
+    "mtime": 1789151063.8817122,
+    "seen": 1789152107.8513274,
+    "ast_hash": "688a5c7c156ed683f5aa28eb6afc4b34",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789142110.933942,
-    "seen": 1789148910.5378363,
-    "ast_hash": "60aaab29a39144369657d49efd579f0b",
+    "mtime": 1789150322.9861882,
+    "seen": 1789152107.851464,
+    "ast_hash": "0f62f5a30674f7ded00f06f948bc6ab8",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1269,6 +1269,18 @@
     "mtime": 1789148058.3237202,
     "seen": 1789148910.5378404,
     "ast_hash": "7833d5a060596fad93974933e01e517a",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/fitting_detector.dart": {
+    "mtime": 1789151282.8654532,
+    "seen": 1789152107.8513331,
+    "ast_hash": "bc5c4d5c106a54b49c797917d48c6192",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/spool_calculator.dart": {
+    "mtime": 1789150563.9222832,
+    "seen": 1789152107.8513343,
+    "ast_hash": "adbd3e3515e520d3a8923204450f43ba",
     "semantic_hash": ""
   }
 }

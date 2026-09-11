@@ -1,21 +1,21 @@
 # Graph Report - Akso  (2026-09-11)
 
 ## Corpus Check
-- 167 files · ~137,783 words
+- 169 files · ~137,916 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1838 nodes · 2182 edges · 137 communities (119 shown, 18 thin omitted)
+- 1850 nodes · 2200 edges · 145 communities (126 shown, 19 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e08b04ae`
+- Built from commit: `6977da1e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Win32Window
+- FlutterWindow
 - server.cjs
 - input_controller.dart
 - fitting.dart
@@ -115,7 +115,7 @@
 - Antigravity CLI (`agy`) Tool Mapping
 - MainActivity.kt
 - GEMINI.md
-- InspectionMethod
+- win32_window.cpp
 - akso
 - rules/graphify.md
 - spec-document-reviewer-prompt.md
@@ -140,13 +140,21 @@
 - Global Constraints
 - StatelessWidget
 - WeldType
-- tools_panel.dart
 - package:flutter/material.dart
+- Win32Window
 - construction_axis.dart
 - tablet_touch_layout.dart
-- top_bar.dart
-- ../../../../domain/enums/valve_type.dart
+- fitting_detector.dart
+- node_3d.dart
 - ValveType
+- MessageHandler
+- codex-tools.md
+- Gemini CLI Tool Mapping
+- FittingCatalogDialog
+- RegisterPlugins
+- Point
+- Size
+- PipingCanvasPainter
 
 ## God Nodes (most connected - your core abstractions)
 1. `Win32Window` - 24 edges
@@ -161,6 +169,8 @@
 10. `PipingNetwork` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `OnCreate` --calls--> `RegisterPlugins()`  [INFERRED]
+  windows/runner/flutter_window.h → windows/flutter/generated_plugin_registrant.cc
 - `wWinMain()` --calls--> `CreateAndAttachConsole()`  [INFERRED]
   windows/runner/main.cpp → windows/runner/utils.cpp
 - `Win32Window::Win32Window()` --calls--> `Destroy`  [INFERRED]
@@ -169,17 +179,15 @@
   linux/runner/my_application.cc → linux/flutter/generated_plugin_registrant.cc
 - `main()` --calls--> `my_application_new()`  [INFERRED]
   linux/runner/main.cc → linux/runner/my_application.cc
-- `OnCreate` --calls--> `RegisterPlugins()`  [INFERRED]
-  windows/runner/flutter_window.h → windows/flutter/generated_plugin_registrant.cc
 
 ## Import Cycles
 - None detected.
 
-## Communities (137 total, 18 thin omitted)
+## Communities (145 total, 19 thin omitted)
 
-### Community 0 - "Win32Window"
-Cohesion: 0.05
-Nodes (57): PluginRegistry, RECT, unique_ptr, RegisterPlugins(), DartProject, HWND, LPARAM, LRESULT (+49 more)
+### Community 0 - "FlutterWindow"
+Cohesion: 0.13
+Nodes (13): unique_ptr, DartProject, HWND, LPARAM, LRESULT, UINT, WPARAM, FlutterWindow (+5 more)
 
 ### Community 1 - "server.cjs"
 Cohesion: 0.06
@@ -194,8 +202,8 @@ Cohesion: 0.07
 Nodes (27): double get, branchLengthMm, buildingLengthMm, copyWith, customRadiusMm, customWeldCount, cutsMainPipe, definitionId (+19 more)
 
 ### Community 4 - "Testing Skills With Subagents"
-Cohesion: 0.04
-Nodes (41): Codex App Finishing, Environment Detection, Model routing on spawns, Subagent dispatch requires multi-agent support, Waiting on children, Additional Gemini CLI tools, Gemini CLI Tool Mapping, Instructions file (+33 more)
+Cohesion: 0.07
+Nodes (29): 1. Explicit Negation in Rules, 2. Entry in Rationalization Table, 3. Red Flag Entry, 4. Update description, Common Mistakes (Same as TDD), Example: TDD Skill Bulletproofing, GREEN Phase: Write Minimal Skill (Make It Pass), Initial Test (Failed) (+21 more)
 
 ### Community 5 - "AppDelegate"
 Cohesion: 0.06
@@ -203,11 +211,11 @@ Nodes (28): Any, Cocoa, file_picker_darwin, Flutter, FlutterAppDelegate, Flutter
 
 ### Community 6 - "valve.dart"
 Cohesion: 0.12
-Nodes (16): ../enums/valve_type.dart, calculatePosition, copyWith, dn, fromJson, handleAngleDeg, id, isFlanged (+8 more)
+Nodes (15): calculatePosition, copyWith, dn, fromJson, handleAngleDeg, id, isFlanged, isReversed (+7 more)
 
 ### Community 7 - "piping_network.dart"
 Cohesion: 0.04
-Nodes (44): construction_axis.dart, fitting_catalog.dart, fitting.dart, addSegment, addValve, addWeldJoint, autoDetectAllFittings, _autoDetectFittingsForNode (+36 more)
+Nodes (45): construction_axis.dart, fitting_catalog.dart, fitting.dart, addSegment, addValve, addWeldJoint, autoDetectAllFittings, axes (+37 more)
 
 ### Community 8 - "Subagent-Driven Development"
 Cohesion: 0.06
@@ -218,8 +226,8 @@ Cohesion: 0.06
 Nodes (29): Common Rationalizations, Debugging Integration, Example: Bug Fix, Final Rule, Good Tests, GREEN - Minimal Code, Overview, Red Flags - STOP and Start Over (+21 more)
 
 ### Community 10 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.07
-Nodes (40): dart:io, dart:ui, package:akso/core/math/axonometry_projector.dart, package:akso/core/math/snap_engine.dart, package:akso/data/dxf/dxf_writer.dart, package:akso/domain/enums/fitting_type.dart, package:akso/domain/enums/projection_type.dart, package:akso/domain/enums/valve_type.dart (+32 more)
+Cohesion: 0.08
+Nodes (38): dart:io, dart:ui, package:akso/core/math/axonometry_projector.dart, package:akso/core/math/snap_engine.dart, package:akso/data/dxf/dxf_writer.dart, package:akso/domain/enums/fitting_type.dart, package:akso/domain/enums/projection_type.dart, package:akso/domain/enums/valve_type.dart (+30 more)
 
 ### Community 11 - "my_application.cc"
 Cohesion: 0.09
@@ -227,7 +235,7 @@ Nodes (22): FlPluginRegistry, FlView, GApplication, gboolean, gchar, GObject, Gt
 
 ### Community 12 - "piping_canvas.dart"
 Cohesion: 0.05
-Nodes (40): CustomPainter, activeAxisStart, activeSystemId, activeTraceEnd, activeTraceStart, _calcElbowTangentLength, _calcPipeTrimmedPoint, _calcStrokeWidth (+32 more)
+Nodes (38): activeAxisStart, activeSystemId, activeTraceEnd, activeTraceStart, _calcElbowTangentLength, _calcPipeTrimmedPoint, _calcStrokeWidth, _calcValveSize (+30 more)
 
 ### Community 13 - "Visual Companion Guide"
 Cohesion: 0.10
@@ -243,19 +251,19 @@ Nodes (14): 1. Generate Firestore Rules, 3. Strict Path and Relationship Scoping
 
 ### Community 16 - "fitting_catalog.dart"
 Cohesion: 0.10
-Nodes (20): ../enums/fitting_type.dart, fitting_definition.dart, addCustomDefinition, allDefinitions, createFromBase, customDefinitions, defaultBranchId, defaultElbowId (+12 more)
+Nodes (19): fitting_definition.dart, addCustomDefinition, allDefinitions, createFromBase, customDefinitions, defaultBranchId, defaultElbowId, defaultFlangeConnectionType (+11 more)
 
 ### Community 17 - "dxf_writer.dart"
 Cohesion: 0.10
-Nodes (20): ../../../../domain/enums/inspection_method.dart, DxfWriter, generate2dGostAxonometryDxf, generate3dDxf, generateMtoCsv, generateSpoolsCsv, generateWeldJournalCsv, _projectTo2d (+12 more)
+Nodes (20): DxfWriter, generate2dGostAxonometryDxf, generate3dDxf, generateMtoCsv, generateSpoolsCsv, generateWeldJournalCsv, _getConnectedNodes, _projectTo2d (+12 more)
 
 ### Community 18 - "weld_joint.dart"
-Cohesion: 0.11
-Nodes (18): ../enums/inspection_method.dart, ../enums/weld_type.dart, calculatePosition, copyWith, date, electrodeGrade, fromJson, id (+10 more)
+Cohesion: 0.10
+Nodes (19): ../enums/inspection_method.dart, InspectionMethod, InspectionMethodExt, calculatePosition, copyWith, date, electrodeGrade, fromJson (+11 more)
 
 ### Community 19 - "piping_system.dart"
 Cohesion: 0.11
-Nodes (18): availableDns, code, colorValue, copyWith, defaultBranchId, defaultDn, defaultElbowId, defaultFlangeId (+10 more)
+Nodes (17): availableDns, code, colorValue, copyWith, defaultBranchId, defaultDn, defaultElbowId, defaultFlangeId (+9 more)
 
 ### Community 20 - "custom_pipe_dimension_dialog.dart"
 Cohesion: 0.11
@@ -303,7 +311,7 @@ Nodes (15): 1. High Write Rates (Sequential Values), 2. Large String/Map/Array F
 
 ### Community 31 - "fitting_properties_sheet.dart"
 Cohesion: 0.12
-Nodes (17): ../../../../domain/enums/fitting_type.dart, ../../../../domain/models/fitting.dart, ../../../../domain/models/fitting_definition.dart, build, _buildBadge, _buildRadiusChip, createState, FittingPropertiesSheet (+9 more)
+Nodes (15): ../../../../domain/enums/fitting_type.dart, ../../../../domain/models/fitting.dart, ../../../../domain/models/fitting_definition.dart, build, _buildBadge, _buildRadiusChip, createState, _getFittingIcon (+7 more)
 
 ### Community 32 - "Using Git Worktrees"
 Cohesion: 0.13
@@ -314,12 +322,12 @@ Cohesion: 0.13
 Nodes (15): Code Examples, Common Rationalizations for Skipping Testing, Directory Structure, Discovery Workflow, Flowchart Usage, Match the Form to the Failure, Overview, Skill Creation Checklist (TDD Adapted) (+7 more)
 
 ### Community 34 - "fitting_catalog_dialog.dart"
-Cohesion: 0.08
-Nodes (26): _applyDefinitionToSelectedNode, build, _buildCollectionTab, _buildRoutingRulesTab, _buildSectionHeader, createState, dispose, FittingCatalogDialog (+18 more)
+Cohesion: 0.09
+Nodes (22): _applyDefinitionToSelectedNode, build, _buildCollectionTab, _buildRoutingRulesTab, _buildSectionHeader, createState, dispose, _formatDeduction (+14 more)
 
 ### Community 35 - "dxf_export_dialog.dart"
-Cohesion: 0.15
-Nodes (12): build, createState, currentProjection, _exportDxf, initState, is3dMode, network, selectedProjection (+4 more)
+Cohesion: 0.09
+Nodes (25): ../../../../data/dxf/dxf_writer.dart, ../../../../domain/enums/inspection_method.dart, ../../../../domain/enums/weld_type.dart, ../../../../domain/models/piping_network.dart, PipingNetwork, build, createState, currentProjection (+17 more)
 
 ### Community 36 - "Dispatching Parallel Agents"
 Cohesion: 0.14
@@ -334,8 +342,8 @@ Cohesion: 0.14
 Nodes (14): 1. Generate Firestore Rules, 3. Strict Path and Relationship Scoping, 4. Secure Counter Updates, 5. **CRITICAL** Ensure Application Validity, Advanced Validation for Business Logic, Critical Constraints, Critical Directives for Secure Generation, **CRITICAL** RBAC Guidelines (+6 more)
 
 ### Community 39 - "fitting_definition.dart"
-Cohesion: 0.06
-Nodes (35): int get, archetype, branchLengthMm, calculateDeduction, copyWith, cutsMainPipe, defaultMaterial, defaultWeldCount (+27 more)
+Cohesion: 0.09
+Nodes (23): archetype, branchLengthMm, calculateDeduction, copyWith, cutsMainPipe, defaultMaterial, defaultWeldCount, FittingArchetype (+15 more)
 
 ### Community 40 - "pipe_spool.dart"
 Cohesion: 0.14
@@ -561,6 +569,10 @@ Nodes (4): File Organization, Self-Contained Skill, Skill with Heavy Reference, 
 Cohesion: 0.50
 Nodes (4): Pattern, Reference, Skill Types, Technique
 
+### Community 101 - "win32_window.cpp"
+Cohesion: 0.21
+Nodes (12): wchar_t, Scale(), Create, Destroy, UpdateTheme, Win32Window::Win32Window(), WindowClassRegistrar, class_registered_ (+4 more)
+
 ### Community 112 - "Спецификация: Редизайн UI, адаптивные стили (Desktop / Tablet), расширенные инструменты трассировки и диспетчер систем"
 Cohesion: 0.09
 Nodes (21): 1. Контекст и цели, 2.1 Переключатель режима (`UiLayoutMode`), 2.2 Десктопный CAD-стиль (`DesktopCadLayout`), 2.3 Планшетный сенсорный стиль (`TabletTouchLayout`), 2. Архитектура UI и стили компоновки, 3.1 Модель истории (`NetworkHistoryManager`), 3.2 Отмена операции (`cancelCurrentOperation()`), 3. Отмена действий и стек Undo / Redo (+13 more)
@@ -582,12 +594,12 @@ Cohesion: 0.09
 Nodes (22): ../../../../core/math/snap_engine.dart, _applyLength, build, _buildHeader, _buildLeftToolPalette, _buildOptionsBar, _buildPropertyInspector, _buildStatusBar (+14 more)
 
 ### Community 123 - "piping_systems_dialog.dart"
-Cohesion: 0.12
-Nodes (16): ../../../../domain/models/piping_system.dart, activeSystemId, build, _confirmDeleteSystem, createState, _getAciColor, network, onSystemsChanged (+8 more)
+Cohesion: 0.11
+Nodes (18): ../../../../domain/models/piping_system.dart, activeSystemId, build, _confirmDeleteSystem, createState, _getAciColor, network, onSystemsChanged (+10 more)
 
 ### Community 124 - "pipe_assortment_dialog.dart"
-Cohesion: 0.13
-Nodes (14): ../../../../domain/models/pipe_dimension.dart, build, controller, createState, dispose, _filter, network, onCatalogChanged (+6 more)
+Cohesion: 0.10
+Nodes (20): ../../../canvas/input_controller.dart, ChangeNotifier, ../../../../domain/models/pipe_dimension.dart, PipingInputController, build, controller, ElevationPanel, _showElevationInputDialog (+12 more)
 
 ### Community 125 - "Global Constraints"
 Cohesion: 0.18
@@ -595,7 +607,7 @@ Nodes (10): Global Constraints, Task 1: Network History & State Management (Undo
 
 ### Community 126 - "State"
 Cohesion: 0.23
-Nodes (12): EditorScreen, _EditorScreenState, CustomPipeDimensionDialog, _CustomPipeDimensionDialogState, _DesktopSegmentInspector, _DesktopSegmentInspectorState, DxfExportDialog, _DxfExportDialogState (+4 more)
+Nodes (12): EditorScreen, _EditorScreenState, CustomPipeDimensionDialog, _CustomPipeDimensionDialogState, _DesktopSegmentInspector, _DesktopSegmentInspectorState, FittingPropertiesSheet, _FittingPropertiesSheetState (+4 more)
 
 ### Community 127 - "Global Constraints"
 Cohesion: 0.22
@@ -605,52 +617,76 @@ Nodes (8): Akso Improvements Implementation Plan, Global Constraints, Task 1: П
 Cohesion: 0.25
 Nodes (8): AksoApp, DesktopCadLayout, MaterialsSpecificationDialog, TabletTouchLayout, EditorToolsPanel, EditorTopBar, WeldJournalDialog, StatelessWidget
 
-### Community 130 - "tools_panel.dart"
+### Community 130 - "package:flutter/material.dart"
 Cohesion: 0.14
-Nodes (13): ../../../canvas/input_controller.dart, ChangeNotifier, custom_pipe_dimension_dialog.dart, ../../../../domain/enums/weld_type.dart, CanvasTool, PipingInputController, build, controller (+5 more)
+Nodes (12): custom_pipe_dimension_dialog.dart, ../../../../domain/enums/valve_type.dart, CanvasTool, _drawTwoTriangles, drawValve, ValveSymbolPainter, build, controller (+4 more)
 
-### Community 131 - "package:flutter/material.dart"
-Cohesion: 0.23
-Nodes (10): ../../../../data/dxf/dxf_writer.dart, ../../../../domain/models/piping_network.dart, PipingNetwork, build, network, _parseCsvRows, build, network (+2 more)
+### Community 131 - "Win32Window"
+Cohesion: 0.20
+Nodes (14): RECT, OnCreate, OnDestroy, HWND, Win32Window, child_content_, GetClientArea, OnCreate (+6 more)
 
 ### Community 132 - "construction_axis.dart"
 Cohesion: 0.17
 Nodes (11): ConstructionAxis, copyWith, endPoint, fromJson, id, isBuildingGrid, label, startPoint (+3 more)
 
 ### Community 133 - "tablet_touch_layout.dart"
-Cohesion: 0.15
-Nodes (12): elevation_panel.dart, fitting_properties_sheet.dart, build, canvasWidget, controller, _showChangeDnSheet, _showChangeLengthDialog, _showChangeMaterialSheet (+4 more)
+Cohesion: 0.09
+Nodes (22): ../../../../domain/models/node_3d.dart, ../../../../domain/models/pipe_segment.dart, dxf_export_dialog.dart, elevation_panel.dart, fitting_catalog_dialog.dart, fitting_properties_sheet.dart, ProjectionType, build (+14 more)
 
-### Community 134 - "top_bar.dart"
+### Community 134 - "fitting_detector.dart"
 Cohesion: 0.17
-Nodes (10): ../../../../domain/models/node_3d.dart, ../../../../domain/models/pipe_segment.dart, dxf_export_dialog.dart, fitting_catalog_dialog.dart, ProjectionType, build, controller, _loadDemoNetwork (+2 more)
+Nodes (11): ../enums/fitting_type.dart, ../enums/valve_type.dart, ../enums/weld_type.dart, autoDetectAllFittings, autoDetectFittingsForNode, FittingDetector, recalculateSpools, SpoolCalculator (+3 more)
 
-### Community 135 - "../../../../domain/enums/valve_type.dart"
-Cohesion: 0.40
-Nodes (4): ../../../../domain/enums/valve_type.dart, _drawTwoTriangles, drawValve, ValveSymbolPainter
+### Community 135 - "node_3d.dart"
+Cohesion: 0.15
+Nodes (12): int get, copyWith, customElevation, distanceTo, fromJson, hashCode, id, operator (+4 more)
 
 ### Community 136 - "ValveType"
 Cohesion: 0.67
 Nodes (3): defaultLengthMm, ValveType, ValveTypeExt
 
+### Community 137 - "MessageHandler"
+Cohesion: 0.36
+Nodes (10): HWND, LPARAM, LRESULT, UINT, WPARAM, EnableFullDpiSupportIfAvailable(), GetHandle, GetThisFromHandle (+2 more)
+
+### Community 138 - "codex-tools.md"
+Cohesion: 0.22
+Nodes (5): Codex App Finishing, Environment Detection, Model routing on spawns, Subagent dispatch requires multi-agent support, Waiting on children
+
+### Community 139 - "Gemini CLI Tool Mapping"
+Cohesion: 0.29
+Nodes (7): Additional Gemini CLI tools, Gemini CLI Tool Mapping, Instructions file, Parallel dispatch, Personal skills directory, Prompt filling, Subagent support
+
+### Community 140 - "FittingCatalogDialog"
+Cohesion: 0.50
+Nodes (4): FittingCatalogDialog, _FittingCatalogDialogState, FittingSettingsDialog, SingleTickerProviderStateMixin
+
+### Community 142 - "Point"
+Cohesion: 0.50
+Nodes (3): Point, x, y
+
+### Community 143 - "Size"
+Cohesion: 0.50
+Nodes (3): Size, height, width
+
 ## Knowledge Gaps
-- **1176 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+1171 more)
+- **1181 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+1176 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PipingNetwork` connect `package:flutter/material.dart` to `input_controller.dart`, `dxf_export_dialog.dart`, `fitting_catalog_dialog.dart`, `piping_network.dart`, `piping_canvas.dart`, `piping_systems_dialog.dart`, `pipe_assortment_dialog.dart`, `project_model.dart`, `fitting_properties_sheet.dart`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
-- **Why does `WeldType` connect `WeldType` to `input_controller.dart`, `fitting.dart`, `fitting_catalog_dialog.dart`, `tools_panel.dart`, `fitting_definition.dart`, `weld_joint.dart`, `desktop_cad_layout.dart`, `fitting_properties_sheet.dart`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `PipingNetwork` connect `dxf_export_dialog.dart` to `input_controller.dart`, `fitting_catalog_dialog.dart`, `piping_network.dart`, `piping_canvas.dart`, `piping_systems_dialog.dart`, `pipe_assortment_dialog.dart`, `project_model.dart`, `fitting_properties_sheet.dart`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `WeldType` connect `WeldType` to `input_controller.dart`, `fitting.dart`, `fitting_catalog_dialog.dart`, `package:flutter/material.dart`, `fitting_definition.dart`, `weld_joint.dart`, `desktop_cad_layout.dart`, `fitting_properties_sheet.dart`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `ValveType` connect `ValveType` to `input_controller.dart`, `valve.dart`, `desktop_cad_layout.dart`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `crypto`, `http`, `fs` to the rest of the system?**
-  _1176 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Win32Window` be split into smaller, more focused modules?**
-  _Cohesion score 0.05311676909569798 - nodes in this community are weakly interconnected._
+  _1181 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `FlutterWindow` be split into smaller, more focused modules?**
+  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `server.cjs` be split into smaller, more focused modules?**
   _Cohesion score 0.05628415300546448 - nodes in this community are weakly interconnected._
 - **Should `input_controller.dart` be split into smaller, more focused modules?**
