@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import '../models/piping_network.dart';
-import '../models/node_3d.dart';
 import '../models/fitting.dart';
 import '../enums/fitting_type.dart';
 import '../enums/weld_type.dart';
