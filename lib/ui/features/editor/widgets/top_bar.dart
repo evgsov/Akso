@@ -156,6 +156,52 @@ class EditorTopBar extends StatelessWidget {
 
             const SizedBox(width: 16),
 
+            // Сохранить проект
+            OutlinedButton.icon(
+              icon: const Icon(Icons.save, size: 18),
+              label: const Text('Сохранить'),
+              onPressed: () async {
+                try {
+                  await controller.saveProject();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Проект успешно сохранён')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Ошибка сохранения: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+
+            // Загрузить проект
+            OutlinedButton.icon(
+              icon: const Icon(Icons.folder_open, size: 18),
+              label: const Text('Загрузить'),
+              onPressed: () async {
+                try {
+                  await controller.loadProject();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Проект успешно загружен')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Ошибка загрузки: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+
             // Загрузить демо-сеть
             OutlinedButton.icon(
               icon: const Icon(Icons.playlist_add, size: 18),

@@ -12,6 +12,8 @@ import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
 import '../../domain/models/pipe_segment.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/project_model.dart';
+import '../../data/repositories/project_repository.dart';
 
 const _uuid = Uuid();
 
@@ -955,6 +957,25 @@ class PipingInputController extends ChangeNotifier {
 
       selectedSegmentId = null;
       network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveProject() async {
+    final proj = ProjectModel(
+      id: _uuid.v4(),
+      title: 'Akso Project',
+      network: network,
+    );
+    await ProjectRepository().saveProject(proj);
+  }
+
+  Future<void> loadProject() async {
+    final proj = await ProjectRepository().loadProject();
+    if (proj != null) {
+      network = proj.network;
+      // Обязательно обновить историю и уведомить слушателей
       history.recordState(network);
       notifyListeners();
     }
