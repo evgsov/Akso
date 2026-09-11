@@ -1,0 +1,199 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../data/dxf/dxf_writer.dart';
+import '../../../../domain/enums/projection_type.dart';
+import '../../../../domain/models/piping_network.dart';
+
+class DxfExportDialog extends StatefulWidget {
+  final PipingNetwork network;
+  final ProjectionType currentProjection;
+
+  const DxfExportDialog({
+    super.key,
+    required this.network,
+    required this.currentProjection,
+  });
+
+  @override
+  State<DxfExportDialog> createState() => _DxfExportDialogState();
+}
+
+class _DxfExportDialogState extends State<DxfExportDialog> {
+  bool is3dMode = false;
+  late ProjectionType selectedProjection;
+  String statusMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    selectedProjection = widget.currentProjection == ProjectionType.orbit3d
+        ? ProjectionType.gostFrontal45
+        : widget.currentProjection;
+  }
+
+  Future<void> _exportDxf() async {
+    try {
+      final String dxfContent;
+      final String fileName;
+
+      if (is3dMode) {
+        dxfContent = DxfWriter.generate3dDxf(widget.network);
+        fileName = 'akso_scheme_3d.dxf';
+      } else {
+        dxfContent = DxfWriter.generate2dGostAxonometryDxf(
+          widget.network,
+          projection: selectedProjection,
+        );
+        fileName = 'akso_scheme_gost_2d.dxf';
+      }
+
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        // На мобильных/планшетах сохраняем во временный каталог и вызываем системный Share
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsString(dxfContent);
+
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Исполнительная схема $fileName',
+            text: 'Экспорт схемы трубопроводов Akso в AutoCAD DXF',
+          ),
+        );
+
+        setState(() {
+          statusMessage = 'Файл $fileName готов к отправке!';
+        });
+      } else {
+        // На десктопе сохраняем в папку Загрузки или рядом с проектом
+        final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsString(dxfContent);
+
+        setState(() {
+          statusMessage = 'Файл сохранен: ${file.path}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        statusMessage = 'Ошибка экспорта: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.file_download, color: Colors.blueAccent),
+          SizedBox(width: 10),
+          Text('Экспорт в AutoCAD (DXF)'),
+        ],
+      ),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Выберите вариант экспорта для AutoCAD / nanoCAD / Revit:',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            RadioGroup<bool>(
+              groupValue: is3dMode,
+              onChanged: (val) => setState(() => is3dMode = val ?? false),
+              child: Column(
+                children: [
+                  const RadioListTile<bool>(
+                    value: false,
+                    title: Text('Плоская схема в аксонометрии ГОСТ / СПДС (2D DXF)'),
+                    subtitle: Text(
+                      'Готовый к печати чертеж с выносками сварки, клеймами, отметками ∇ и диаметрами на отдельных слоях',
+                    ),
+                  ),
+                  if (!is3dMode)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 32, bottom: 8),
+                      child: DropdownButton<ProjectionType>(
+                        value: selectedProjection,
+                        isExpanded: true,
+                        items: const [
+                          DropdownMenuItem(
+                            value: ProjectionType.gostFrontal45,
+                            child: Text('ГОСТ 21.602 Фронтальная 45° (k=0.5)'),
+                          ),
+                          DropdownMenuItem(
+                            value: ProjectionType.gostMirrored45,
+                            child: Text('ГОСТ Зеркальная 45° (разворот взгляда)'),
+                          ),
+                          DropdownMenuItem(
+                            value: ProjectionType.iso30,
+                            child: Text('ISO Прямоугольная изометрия 30°'),
+                          ),
+                        ],
+                        onChanged: (p) => setState(() => selectedProjection = p!),
+                      ),
+                    ),
+                  const RadioListTile<bool>(
+                    value: true,
+                    title: Text('Пространственная 3D-модель (3D DXF)'),
+                    subtitle: Text(
+                      'Реальные координаты (X, Y, Z). Открывается в AutoCAD 3D или подгружается как семейство/подложка в Revit',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (statusMessage.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Text(
+                  statusMessage,
+                  style: TextStyle(color: Colors.green.shade900, fontSize: 12),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton.icon(
+          icon: const Icon(Icons.copy, size: 16),
+          label: const Text('Копировать текст DXF'),
+          onPressed: () {
+            final content = is3dMode
+                ? DxfWriter.generate3dDxf(widget.network)
+                : DxfWriter.generate2dGostAxonometryDxf(widget.network, projection: selectedProjection);
+            Clipboard.setData(ClipboardData(text: content));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('DXF скопирован в буфер обмена')),
+            );
+          },
+        ),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.download),
+          label: const Text('Экспортировать файл'),
+          onPressed: _exportDxf,
+        ),
+        TextButton(
+          child: const Text('Закрыть'),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+}
