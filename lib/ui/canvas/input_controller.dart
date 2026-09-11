@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../core/math/snap_engine.dart';
 import '../../domain/enums/projection_type.dart';
@@ -11,6 +12,8 @@ import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
 import '../../domain/models/pipe_segment.dart';
 import '../../domain/models/piping_network.dart';
+
+const _uuid = Uuid();
 
 enum CanvasTool {
   trace, // Черчение труб
@@ -273,14 +276,14 @@ class PipingInputController extends ChangeNotifier {
     final outerD = dim?.outerDiameterMm;
 
     final newNode = Node3D(
-      id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'node_${_uuid.v4()}',
       x: baseNode.x,
       y: baseNode.y,
       z: targetElevationZ,
     );
     network.nodes[newNode.id] = newNode;
 
-    final segId = 'seg_${DateTime.now().millisecondsSinceEpoch}';
+    final segId = 'seg_${_uuid.v4()}';
     final seg = PipeSegment(
       id: segId,
       startNodeId: baseNode.id,
@@ -325,7 +328,7 @@ class PipingInputController extends ChangeNotifier {
               ? currentSnapResult!.worldPoint
               : projector.unproject(screenPos, currentElevationZ);
           axisStartNode = Node3D(
-            id: 'axis_start_${DateTime.now().millisecondsSinceEpoch}',
+            id: 'axis_start_${_uuid.v4()}',
             x: snapWorld.x,
             y: snapWorld.y,
             z: currentElevationZ,
@@ -336,12 +339,12 @@ class PipingInputController extends ChangeNotifier {
               ? currentSnapResult!.worldPoint
               : projector.unproject(screenPos, currentElevationZ);
           final axisEndNode = Node3D(
-            id: 'axis_end_${DateTime.now().millisecondsSinceEpoch}',
+            id: 'axis_end_${_uuid.v4()}',
             x: snapWorld.x,
             y: snapWorld.y,
             z: currentElevationZ,
           );
-          final axisId = 'axis_${DateTime.now().millisecondsSinceEpoch}';
+          final axisId = 'axis_${_uuid.v4()}';
           network.axes[axisId] = ConstructionAxis(
             id: axisId,
             label: currentAxisLabel,
@@ -385,7 +388,7 @@ class PipingInputController extends ChangeNotifier {
           // Начинаем трассировку из новой точки на текущей отметке Z
           final worldNode = _snapToGrid(projector.unproject(screenPos, currentElevationZ));
           final newNode = Node3D(
-            id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+            id: 'node_${_uuid.v4()}',
             x: worldNode.x,
             y: worldNode.y,
             z: currentElevationZ,
@@ -538,12 +541,12 @@ class PipingInputController extends ChangeNotifier {
               ? currentSnapResult!.worldPoint
               : projector.unproject(currentCursorScreenPos!, currentElevationZ);
           final axisEndNode = Node3D(
-            id: 'axis_end_${DateTime.now().millisecondsSinceEpoch}',
+            id: 'axis_end_${_uuid.v4()}',
             x: snapWorld.x,
             y: snapWorld.y,
             z: currentElevationZ,
           );
-          final axisId = 'axis_${DateTime.now().millisecondsSinceEpoch}';
+          final axisId = 'axis_${_uuid.v4()}';
           network.axes[axisId] = ConstructionAxis(
             id: axisId,
             label: currentAxisLabel,
@@ -582,14 +585,14 @@ class PipingInputController extends ChangeNotifier {
         targetNodeId = midNode?.id ??
             (() {
               final w = currentSnapResult!.worldPoint;
-              final n = Node3D(id: 'node_${DateTime.now().millisecondsSinceEpoch}', x: w.x, y: w.y, z: w.z);
+              final n = Node3D(id: 'node_${_uuid.v4()}', x: w.x, y: w.y, z: w.z);
               network.nodes[n.id] = n;
               return n.id;
             })();
       } else {
         final w = currentSnapResult!.worldPoint;
         final newNode = Node3D(
-          id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'node_${_uuid.v4()}',
           x: w.x,
           y: w.y,
           z: currentElevationZ,
@@ -625,7 +628,7 @@ class PipingInputController extends ChangeNotifier {
         targetNodeId = midNode?.id ??
             (() {
               final fallback = Node3D(
-                id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+                id: 'node_${_uuid.v4()}',
                 x: snapped.x,
                 y: snapped.y,
                 z: currentElevationZ,
@@ -635,7 +638,7 @@ class PipingInputController extends ChangeNotifier {
             })();
       } else {
         final newNode = Node3D(
-          id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'node_${_uuid.v4()}',
           x: snapped.x,
           y: snapped.y,
           z: currentElevationZ,
@@ -645,7 +648,7 @@ class PipingInputController extends ChangeNotifier {
       }
     }
 
-    final segId = 'seg_${DateTime.now().millisecondsSinceEpoch}';
+    final segId = 'seg_${_uuid.v4()}';
     final dim = network.pipeCatalog.getDimension(activeDn);
     final outerD = dim?.outerDiameterMm;
     final seg = PipeSegment(

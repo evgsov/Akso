@@ -39,22 +39,22 @@ void main() {
 
     net.recalculateSpools();
 
-    final dir = Directory('d:/Git/Akso/samples');
+    final dir = Directory('samples');
     if (!dir.existsSync()) dir.createSync(recursive: true);
 
     final dxf2d = DxfWriter.generate2dGostAxonometryDxf(net, projection: ProjectionType.gostFrontal45);
-    File('d:/Git/Akso/samples/demo_gost_2d.dxf').writeAsStringSync(dxf2d);
+    File('samples/demo_gost_2d.dxf').writeAsStringSync(dxf2d);
 
     final dxf3d = DxfWriter.generate3dDxf(net);
-    File('d:/Git/Akso/samples/demo_3d.dxf').writeAsStringSync(dxf3d);
+    File('samples/demo_3d.dxf').writeAsStringSync(dxf3d);
 
     final weldCsv = DxfWriter.generateWeldJournalCsv(net);
-    File('d:/Git/Akso/samples/weld_journal.csv').writeAsStringSync(weldCsv);
+    File('samples/weld_journal.csv').writeAsStringSync(weldCsv);
 
     final spoolsCsv = DxfWriter.generateSpoolsCsv(net);
-    File('d:/Git/Akso/samples/spools_list.csv').writeAsStringSync(spoolsCsv);
+    File('samples/spools_list.csv').writeAsStringSync(spoolsCsv);
 
-    expect(File('d:/Git/Akso/samples/demo_gost_2d.dxf').existsSync(), isTrue);
-    expect(File('d:/Git/Akso/samples/demo_3d.dxf').existsSync(), isTrue);
+    expect(File('samples/demo_gost_2d.dxf').existsSync(), isTrue);
+    expect(File('samples/demo_3d.dxf').existsSync(), isTrue);
   });
 }

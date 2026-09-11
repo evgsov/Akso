@@ -144,5 +144,47 @@ void main() {
       expect(weldsA.length, 1);
       expect(weldsB.length, 1);
     });
+
+    test('Генерация ID сущностей использует UUIDv4 вместо миллисекунд', () {
+      final uuidRegex = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', caseSensitive: false);
+
+      // 1. Сварной стык (weld_${uuid}_$number)
+      final weld = network.addWeldJoint(segmentId: 'seg1', ratio: 0.3);
+      final weldParts = weld.id.split('_');
+      expect(weldParts.length, 3);
+      expect(weldParts[0], 'weld');
+      expect(uuidRegex.hasMatch(weldParts[1]), isTrue, reason: 'Weld UUID should match UUIDv4');
+
+      // 2. Арматура (valve_${uuid})
+      final valve = network.addValve(
+        segmentId: 'seg1',
+        ratio: 0.7,
+        valveType: ValveType.gateValve,
+      );
+      expect(valve.id.startsWith('valve_'), isTrue);
+      final valveUuid = valve.id.substring('valve_'.length);
+      expect(uuidRegex.hasMatch(valveUuid), isTrue, reason: 'Valve UUID should match UUIDv4');
+
+      // 3. Разделение сегмента (node_${uuid})
+      final midNode = network.splitSegmentAtRatio('seg2', 0.5);
+      expect(midNode, isNotNull);
+      expect(midNode!.id.startsWith('node_'), isTrue);
+      final nodeUuid = midNode.id.substring('node_'.length);
+      expect(uuidRegex.hasMatch(nodeUuid), isTrue, reason: 'Split node UUID should match UUIDv4');
+
+      // 4. Ответвление (seg_${uuid})
+      final branchEnd = const Node3D(id: 'n_branch_end', x: 100, y: 100, z: 2500);
+      network.nodes['n_branch_end'] = branchEnd;
+      final fit = network.connectBranchToSegment(
+        hostSegmentId: 'seg2_a',
+        ratio: 0.5,
+        branchEndNodeId: 'n_branch_end',
+      );
+      expect(fit, isNotNull);
+      final branchSeg = network.segments.values.firstWhere((s) => s.endNodeId == 'n_branch_end');
+      expect(branchSeg.id.startsWith('seg_'), isTrue);
+      final segUuid = branchSeg.id.substring('seg_'.length);
+      expect(uuidRegex.hasMatch(segUuid), isTrue, reason: 'Branch segment UUID should match UUIDv4');
+    });
   });
 }

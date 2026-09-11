@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:uuid/uuid.dart';
 import '../enums/fitting_type.dart';
 import '../enums/inspection_method.dart';
 import '../enums/valve_type.dart';
@@ -13,6 +14,8 @@ import 'pipe_spool.dart';
 import 'piping_system.dart';
 import 'valve.dart';
 import 'weld_joint.dart';
+
+const _uuid = Uuid();
 
 /// Топологический граф трубопроводной сети (параметрическая связность как в Revit)
 class PipingNetwork {
@@ -237,7 +240,7 @@ class PipingNetwork {
     String? electrodeGrade,
   }) {
     final nextNumber = weldJoints.length + 1;
-    final id = 'weld_${DateTime.now().millisecondsSinceEpoch}_$nextNumber';
+    final id = 'weld_${_uuid.v4()}_$nextNumber';
     final seg = segments[segmentId];
     final defaultGrade = seg?.material ?? 'Сталь 20';
 
@@ -272,7 +275,7 @@ class PipingNetwork {
     final valveDn = dn ?? seg?.dn ?? 25;
     final valveName = name ?? '${valveType.displayName} Ду$valveDn';
     final length = customLengthMm ?? valveType.defaultLengthMm(valveDn);
-    final id = 'valve_${DateTime.now().millisecondsSinceEpoch}';
+    final id = 'valve_${_uuid.v4()}';
     final flanged = isFlanged ?? catalog.defaultValveIsFlanged;
 
     final valve = Valve(
@@ -325,7 +328,7 @@ class PipingNetwork {
     final midY = startNode.y + (endNode.y - startNode.y) * ratio;
     final midZ = startNode.z + (endNode.z - startNode.z) * ratio;
 
-    final midNodeId = 'node_split_${DateTime.now().millisecondsSinceEpoch}';
+    final midNodeId = 'node_${_uuid.v4()}';
     final midNode = Node3D(id: midNodeId, x: midX, y: midY, z: midZ);
     nodes[midNodeId] = midNode;
 
@@ -554,7 +557,7 @@ class PipingNetwork {
     final bDn = branchDn ?? hostSegA.dn;
 
     // Создаем сегмент ответвления от midNode к branchEndNodeId
-    final branchSegId = 'seg_branch_${DateTime.now().millisecondsSinceEpoch}';
+    final branchSegId = 'seg_${_uuid.v4()}';
     final branchSeg = PipeSegment(
       id: branchSegId,
       startNodeId: midNode.id,

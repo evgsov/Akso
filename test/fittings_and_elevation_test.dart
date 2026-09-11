@@ -59,6 +59,12 @@ void main() {
       expect(topNode.x, 2000.0);
       expect(topNode.y, 0.0);
 
+      final uuidRegex = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', caseSensitive: false);
+      expect(riser.id.startsWith('seg_'), isTrue);
+      expect(uuidRegex.hasMatch(riser.id.substring('seg_'.length)), isTrue);
+      expect(topNode.id.startsWith('node_'), isTrue);
+      expect(uuidRegex.hasMatch(topNode.id.substring('node_'.length)), isTrue);
+
       // В узле n2 должен автоматически определиться отвод 90°
       expect(network.fittings.containsKey('n2'), isTrue);
       expect(network.fittings['n2']!.fittingType, FittingType.elbow90);
