@@ -6,6 +6,7 @@ import '../../domain/enums/inspection_method.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
+import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 
 /// Генератор файлов AutoCAD DXF (ASCII R2000 / AC1015)
@@ -345,15 +346,12 @@ class DxfWriter {
         if (node == null) continue;
         final center = _projectTo2d(projector, node);
 
-        final connected = network.getConnectedSegments(fit.nodeId);
+        final connectedNodes = _getConnectedNodes(network, node);
         double angle = 0.0;
-        if (connected.isNotEmpty) {
-          final s1 = connected[0];
-          final other = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-          if (other != null) {
-            final pOther = _projectTo2d(projector, other);
-            angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
-          }
+        if (connectedNodes.isNotEmpty) {
+          final other = connectedNodes.first;
+          final pOther = _projectTo2d(projector, other);
+          angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
         }
 
         final isEcc = fit.fittingType == FittingType.reducerEccentric;
@@ -375,15 +373,12 @@ class DxfWriter {
       final center = _projectTo2d(projector, node);
 
       if (fit.fittingType == FittingType.flange) {
-        final connected = network.getConnectedSegments(fit.nodeId);
+        final connectedNodes = _getConnectedNodes(network, node);
         double angle = 0.0;
-        if (connected.isNotEmpty) {
-          final s1 = connected[0];
-          final other = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-          if (other != null) {
-            final pOther = _projectTo2d(projector, other);
-            angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
-          }
+        if (connectedNodes.isNotEmpty) {
+          final other = connectedNodes.first;
+          final pOther = _projectTo2d(projector, other);
+          angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
         }
 
         _writeGostFlange2d(
@@ -543,7 +538,20 @@ class DxfWriter {
 
   // --- Вспомогательные DXF примитивы ---
 
-  static Offset _projectTo2d(AxonometryProjector projector, dynamic node) {
+  static List<Node3D> _getConnectedNodes(PipingNetwork network, Node3D targetNode) {
+    final connected = network.getConnectedSegments(targetNode.id);
+    final result = <Node3D>[];
+    for (final seg in connected) {
+      final otherId = seg.startNodeId == targetNode.id ? seg.endNodeId : seg.startNodeId;
+      final other = network.nodes[otherId];
+      if (other != null) {
+        result.add(other);
+      }
+    }
+    return result;
+  }
+
+  static Offset _projectTo2d(AxonometryProjector projector, Node3D node) {
     // В CAD Y направлен вверх
     double rawX2d = 0.0;
     double rawY2d = 0.0;
