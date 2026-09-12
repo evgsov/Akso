@@ -18,6 +18,8 @@ void main() {
     expect(find.text('AKSO'), findsOneWidget);
     expect(find.text('ГОСТ 45°'), findsOneWidget);
     expect(find.text('Трассировка'), findsOneWidget);
+
+    controller.dispose();
   });
 
   testWidgets('AksoApp renders DesktopCadLayout on desktop viewports', (WidgetTester tester) async {
@@ -35,5 +37,7 @@ void main() {
     expect(find.text('Трассировка:'), findsOneWidget);
     expect(find.text('Каталог'), findsOneWidget);
     expect(find.text('Экспорт DXF'), findsOneWidget);
+
+    controller.dispose();
   });
 }

@@ -134,6 +134,7 @@ void main() {
     test('PipingInputController accepts IProjectRepository via DI', () async {
       final mockRepo = MockProjectRepository();
       final controller = PipingInputController(repository: mockRepo);
+      addTearDown(() => controller.dispose());
 
       expect(controller.projectRepository, equals(mockRepo));
 

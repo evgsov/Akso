@@ -43,6 +43,7 @@ void main() {
 
     test('Preserves currentProject.id across multiple saveProject calls', () async {
       final controller = PipingInputController(projectRepository: fakeRepo);
+      addTearDown(() => controller.dispose());
       final initialId = controller.currentProject.id;
 
       // First save
@@ -98,6 +99,7 @@ void main() {
 
     test('loadProject returning null does not overwrite currentProject', () async {
       final controller = PipingInputController(projectRepository: fakeRepo);
+      addTearDown(() => controller.dispose());
       final initialId = controller.currentProject.id;
       fakeRepo.projectToLoad = null;
 

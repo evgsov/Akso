@@ -20,6 +20,10 @@ void main() {
       controller = PipingInputController(network: network, projector: projector);
     });
 
+    tearDown(() {
+      controller.dispose();
+    });
+
     test('Отмена операции через cancelCurrentOperation очищает начальный узел трассировки', () {
       controller.setTool(CanvasTool.trace);
       controller.traceStartNode = const Node3D(id: 'n_start', x: 0, y: 0, z: 0);

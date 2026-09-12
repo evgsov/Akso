@@ -217,6 +217,8 @@ void main() {
 
       expect(controller.activeDn, 250);
       expect(controller.activeWallThicknessMm, 7.0);
+
+      controller.dispose();
     });
   });
 }
