@@ -688,7 +688,7 @@ class PipingCanvasPainter extends CustomPainter {
       // но не более 42% длины сегмента, чтобы не пересекать середину трубы
       const minScreenElbow = 15.0;
       const maxFrac = 0.42;
-      trimPx = math.max(physicalPx, math.min(minScreenElbow, screenDist * maxFrac));
+      trimPx = math.min(screenDist * maxFrac, math.max(physicalPx, minScreenElbow));
     } else if (fit.fittingType == FittingType.tee) {
       if (fit.cutsMainPipe) {
         // Тройник врезан в разрыв трубы (ГОСТ 17376) — все 3 патрубка имеют длину
@@ -697,7 +697,7 @@ class PipingCanvasPainter extends CustomPainter {
         final physicalPx = screenDist * frac3d;
         const minScreenTee = 14.0;
         const maxFrac = 0.38;
-        trimPx = math.max(physicalPx, math.min(minScreenTee, screenDist * maxFrac));
+        trimPx = math.min(screenDist * maxFrac, math.max(physicalPx, minScreenTee));
       } else {
         // Прямая врезка без разрезания магистрали: обрезается только сегмент ответвления
         final isBranch = _isTeeBranchSegment(nodeId, seg.id);
