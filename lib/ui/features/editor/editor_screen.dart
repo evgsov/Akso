@@ -329,6 +329,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   projector: controller.projector,
                   selectedNodeId: controller.selectedNodeId,
                   selectedSegmentId: controller.selectedSegmentId,
+                  selectedEquipmentId: controller.selectedEquipmentId,
                   activeSystemId: controller.activeSystemId,
                   activeTraceStart: controller.traceStartNode,
                   activeTraceEnd: controller.currentCursorScreenPos,

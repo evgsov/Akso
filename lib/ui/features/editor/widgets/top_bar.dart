@@ -319,6 +319,18 @@ class EditorTopBar extends StatelessWidget {
                     ),
                     onPressed: () => controller.setTool(CanvasTool.drawAxis),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.precision_manufacturing, size: 18),
+                    tooltip: 'Оборудование (Equipment)',
+                    color: controller.currentTool == CanvasTool.insertEquipment ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.currentTool == CanvasTool.insertEquipment ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: () => controller.setTool(CanvasTool.insertEquipment),
+                  ),
                 ],
               ),
             ),

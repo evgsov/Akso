@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/data/repositories/project_repository.dart';
 import 'package:akso/domain/enums/projection_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
+import 'package:akso/domain/models/equipment.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
@@ -63,6 +64,32 @@ void main() {
       );
       network.valves['val1'] = valve;
 
+      const nozzle = Nozzle(
+        id: 'noz1',
+        equipmentId: 'eq1',
+        name: 'Ш-1',
+        localX: 0,
+        localY: 0,
+        localZ: 2000,
+        dirX: 0,
+        dirY: 0,
+        dirZ: 1,
+        dn: 50,
+      );
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        type: EquipmentType.cylinderVertical,
+        x: 500,
+        y: 500,
+        z: 0,
+        width: 1200,
+        length: 1200,
+        height: 2500,
+        nozzles: [nozzle],
+      );
+      network.addEquipment(eq);
+
       final project = ProjectModel(
         id: 'test-project-uuid-1234',
         title: 'Узел учета тепла',
@@ -94,9 +121,21 @@ void main() {
       expect(restoredProject.currentElevationZ, equals(project.currentElevationZ));
 
       // Assert network structure
-      expect(restoredProject.network.nodes.length, equals(2));
+      expect(restoredProject.network.nodes.length, equals(3)); // n1, n2, noz1
       expect(restoredProject.network.segments.length, equals(1));
       expect(restoredProject.network.valves.length, equals(1));
+      expect(restoredProject.network.equipments.length, equals(1));
+
+      final restoredEq = restoredProject.network.equipments['eq1']!;
+      expect(restoredEq.name, equals('Емкость Е-1'));
+      expect(restoredEq.type, equals(EquipmentType.cylinderVertical));
+      expect(restoredEq.x, equals(500.0));
+      expect(restoredEq.y, equals(500.0));
+      expect(restoredEq.height, equals(2500.0));
+      expect(restoredEq.nozzles.length, equals(1));
+      expect(restoredEq.nozzles.first.name, equals('Ш-1'));
+      expect(restoredEq.nozzles.first.dn, equals(50));
+      expect(restoredProject.network.nodes.containsKey('noz1'), isTrue);
 
       // Assert node details
       final restoredNode1 = restoredProject.network.nodes['n1']!;

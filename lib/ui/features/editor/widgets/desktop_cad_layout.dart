@@ -273,6 +273,18 @@ class DesktopCadLayout extends StatelessWidget {
                   ),
                   onPressed: () => controller.setTool(CanvasTool.drawAxis),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.precision_manufacturing, size: 16),
+                  tooltip: 'Оборудование (Equipment)',
+                  color: controller.currentTool == CanvasTool.insertEquipment ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.currentTool == CanvasTool.insertEquipment ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: () => controller.setTool(CanvasTool.insertEquipment),
+                ),
               ],
             ),
           ),
@@ -596,6 +608,10 @@ class DesktopCadLayout extends StatelessWidget {
                 label: const Text('Эксцентрический', style: TextStyle(fontSize: 11)),
                 onSelected: (val) => controller.setIsEccentricReducer(val),
               ),
+            ] else if (controller.currentTool == CanvasTool.insertEquipment) ...[
+              const Text('Оборудование:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
+              const SizedBox(width: 12),
+              const Text('Кликните на чертеже для размещения емкости Е-1 (1000x1000x2000 мм, штуцер Ш-1 Ду50)', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ] else ...[
               const Text('Выбор и навигация: кликните на узел или трубу для редактирования', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
@@ -622,6 +638,7 @@ class DesktopCadLayout extends StatelessWidget {
             const Divider(height: 16, indent: 8, endIndent: 8),
             _toolButton(CanvasTool.trace, Icons.edit, 'Трассировка трубы (T)'),
             _toolButton(CanvasTool.drawAxis, Icons.architecture, 'Строительная ось (G)'),
+            _toolButton(CanvasTool.insertEquipment, Icons.precision_manufacturing, 'Технологическое оборудование (E)'),
             const Divider(height: 16, indent: 8, endIndent: 8),
             _toolButton(CanvasTool.insertValve, Icons.tune, 'Врезка арматуры'),
             _toolButton(CanvasTool.insertWeld, Icons.flare, 'Врезка сварного шва'),
@@ -906,6 +923,8 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.insertReducer:
       case CanvasTool.insertFlange:
         return 'Нажмите на участок трубы на чертеже для врезки';
+      case CanvasTool.insertEquipment:
+        return 'Кликните на холсте для размещения оборудования и штуцеров';
     }
   }
 }

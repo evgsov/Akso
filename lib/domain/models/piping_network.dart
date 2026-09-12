@@ -7,6 +7,7 @@ import '../enums/weld_type.dart';
 import '../services/fitting_detector.dart';
 import '../services/spool_calculator.dart';
 import 'construction_axis.dart';
+import 'equipment.dart';
 import 'fitting.dart';
 import 'fitting_catalog.dart';
 import 'node_3d.dart';
@@ -29,6 +30,7 @@ class PipingNetwork {
   final Map<String, PipeSpool> spools;
   final Map<String, PipingSystem> systems;
   final Map<String, ConstructionAxis> axes;
+  final Map<String, Equipment> equipments;
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
@@ -41,6 +43,7 @@ class PipingNetwork {
     Map<String, PipeSpool>? spools,
     Map<String, PipingSystem>? systems,
     Map<String, ConstructionAxis>? axes,
+    Map<String, Equipment>? equipments,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
   })  : nodes = nodes ?? {},
@@ -51,6 +54,7 @@ class PipingNetwork {
         spools = spools ?? {},
         systems = systems ?? {for (var s in PipingSystem.defaults) s.id: s},
         axes = axes ?? {},
+        equipments = equipments ?? {},
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
@@ -65,6 +69,7 @@ class PipingNetwork {
       spools: Map.from(spools),
       systems: Map.from(systems),
       axes: Map.from(axes),
+      equipments: Map.from(equipments),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
@@ -78,13 +83,92 @@ class PipingNetwork {
   }
 
   /// 1. Перемещение узла в 3D (стилусом или вводом координат)
-  /// Все примыкающие трубы автоматически растягиваются/сжимаются, сохраняя соединение
+  /// Все примыкающие трубы автоматически растягиваются/сжимаются, сохраняя соединение.
+  /// Если узел является штуцером оборудования, перемещается все оборудование целиком.
   void moveNode(String nodeId, double newX, double newY, double newZ) {
     final node = nodes[nodeId];
     if (node == null) return;
 
+    if (node.equipmentId != null) {
+      final dx = newX - node.x;
+      final dy = newY - node.y;
+      final dz = newZ - node.z;
+      moveEquipment(node.equipmentId!, dx, dy, dz);
+      return;
+    }
+
     nodes[nodeId] = node.copyWith(x: newX, y: newY, z: newZ);
     FittingDetector.autoDetectFittingsForNode(this, nodeId);
+    recalculateSpools();
+  }
+
+  /// Добавление оборудования и автоматическая регистрация штуцеров как 3D-узлов сети
+  void addEquipment(Equipment eq) {
+    equipments[eq.id] = eq;
+    for (final nozzle in eq.nozzles) {
+      final node = Node3D(
+        id: nozzle.id,
+        x: eq.x + nozzle.localX,
+        y: eq.y + nozzle.localY,
+        z: eq.z + nozzle.localZ,
+        equipmentId: eq.id,
+        nozzleId: nozzle.id,
+      );
+      nodes[node.id] = node;
+    }
+  }
+
+  /// Перемещение оборудования со всеми его штуцерами и подключенными трубами
+  void moveEquipment(String eqId, double dx, double dy, double dz) {
+    final eq = equipments[eqId];
+    if (eq == null) return;
+
+    equipments[eqId] = eq.copyWith(
+      x: eq.x + dx,
+      y: eq.y + dy,
+      z: eq.z + dz,
+    );
+
+    final movedNodeIds = <String>[];
+    for (final entry in nodes.entries) {
+      final node = entry.value;
+      if (node.equipmentId == eqId) {
+        nodes[entry.key] = node.copyWith(
+          x: node.x + dx,
+          y: node.y + dy,
+          z: node.z + dz,
+        );
+        movedNodeIds.add(node.id);
+      }
+    }
+
+    for (final nId in movedNodeIds) {
+      FittingDetector.autoDetectFittingsForNode(this, nId);
+    }
+    recalculateSpools();
+  }
+
+  /// Удаление оборудования с каскадной очисткой штуцеров и примыкающих элементов
+  void removeEquipment(String eqId) {
+    final eq = equipments.remove(eqId);
+    if (eq == null) return;
+    final nozzleNodeIds = nodes.values
+        .where((n) => n.equipmentId == eqId)
+        .map((n) => n.id)
+        .toList();
+    for (final nId in nozzleNodeIds) {
+      final segsToRemove = segments.values
+          .where((s) => s.startNodeId == nId || s.endNodeId == nId)
+          .map((s) => s.id)
+          .toList();
+      for (final sId in segsToRemove) {
+        segments.remove(sId);
+        valves.removeWhere((_, v) => v.segmentId == sId);
+        weldJoints.removeWhere((_, w) => w.segmentId == sId);
+      }
+      fittings.remove(nId);
+      nodes.remove(nId);
+    }
     recalculateSpools();
   }
 
@@ -638,6 +722,7 @@ class PipingNetwork {
         'spools': spools.map((k, v) => MapEntry(k, v.toJson())),
         'systems': systems.map((k, v) => MapEntry(k, v.toJson())),
         'axes': axes.map((k, v) => MapEntry(k, v.toJson())),
+        'equipments': equipments.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
       };
@@ -652,6 +737,7 @@ class PipingNetwork {
     spools.clear();
     systems.clear();
     axes.clear();
+    equipments.clear();
 
     if (json.containsKey('nodes')) {
       final m = json['nodes'] as Map<String, dynamic>;
@@ -684,6 +770,10 @@ class PipingNetwork {
     if (json.containsKey('axes')) {
       final m = json['axes'] as Map<String, dynamic>;
       m.forEach((k, v) => axes[k] = ConstructionAxis.fromJson(v as Map<String, dynamic>));
+    }
+    if (json.containsKey('equipments')) {
+      final m = json['equipments'] as Map<String, dynamic>;
+      m.forEach((k, v) => equipments[k] = Equipment.fromJson(v as Map<String, dynamic>));
     }
     if (json.containsKey('catalog')) {
       catalog.loadFromJson(json['catalog'] as Map<String, dynamic>);
@@ -737,6 +827,10 @@ class PipingNetwork {
           {},
       axes: (json['axes'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, ConstructionAxis.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
+      equipments: (json['equipments'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, Equipment.fromJson(v as Map<String, dynamic>)),
           ) ??
           {},
       catalog: catalog,

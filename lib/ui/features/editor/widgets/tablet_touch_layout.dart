@@ -164,6 +164,7 @@ class TabletTouchLayout extends StatelessWidget {
                             _touchToolBtn(CanvasTool.insertWeld, Icons.flare, 'Сварка'),
                             _touchToolBtn(CanvasTool.insertReducer, Icons.call_split, 'Переход'),
                             _touchToolBtn(CanvasTool.insertFlange, Icons.radio_button_checked, 'Фланец'),
+                            _touchToolBtn(CanvasTool.insertEquipment, Icons.precision_manufacturing, 'Оборудование'),
                           ],
                         ),
                       ),

@@ -10,6 +10,7 @@ import 'painters/pipe_painter.dart';
 import 'painters/fitting_painter.dart';
 import 'painters/valve_painter.dart';
 import 'painters/annotation_painter.dart';
+import 'painters/equipment_painter.dart';
 
 
 
@@ -32,6 +33,7 @@ class PipingCanvasPainter extends CustomPainter {
   final AxonometryProjector projector;
   final String? selectedNodeId;
   final String? selectedSegmentId;
+  final String? selectedEquipmentId;
   final String? activeSystemId;
   final Node3D? activeTraceStart;
   final Offset? activeTraceEnd;
@@ -47,6 +49,7 @@ class PipingCanvasPainter extends CustomPainter {
     required this.projector,
     this.selectedNodeId,
     this.selectedSegmentId,
+    this.selectedEquipmentId,
     this.activeSystemId,
     this.activeTraceStart,
     this.activeTraceEnd,
@@ -70,6 +73,15 @@ class PipingCanvasPainter extends CustomPainter {
 
     // 2. Оси координат в левом нижнем углу
     _drawCoordinateAxes(canvas, size);
+
+    // 2.1. Отрисовка технологического оборудования и штуцеров
+    EquipmentPainter.paint(
+      canvas,
+      projector,
+      network,
+      selectedEquipmentId: selectedEquipmentId,
+      selectedNodeId: selectedNodeId,
+    );
 
     // 3. Отрисовка труб (сегментов)
     final screenPoints = <String, Offset>{};

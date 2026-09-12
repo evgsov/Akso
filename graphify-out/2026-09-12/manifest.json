@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789218756.5080926,
-    "seen": 1789218806.5124424,
-    "ast_hash": "d3a6c4518fce614709535497c7bee356",
+    "mtime": 1789221558.511401,
+    "seen": 1789221735.326117,
+    "ast_hash": "52c90327414e9c9a2a5ff296f4aefe01",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789218246.7176266,
-    "seen": 1789218253.56294,
-    "ast_hash": "a4711d43d5db259f147f86437ecea17f",
+    "mtime": 1789221727.767609,
+    "seen": 1789221735.3262584,
+    "ast_hash": "6b7cfca0f3dad034b4d5decbf05574c9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1182,9 +1182,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/tablet_touch_layout.dart": {
-    "mtime": 1789142111.070941,
-    "seen": 1789148910.5377398,
-    "ast_hash": "2cefe25282fed7f38c616be19f65b683",
+    "mtime": 1789221630.8751824,
+    "seen": 1789221735.3261387,
+    "ast_hash": "6201141e5adbf36bf7e017f764af1710",
     "semantic_hash": ""
   },
   "test/construction_axis_test.dart": {
@@ -1359,6 +1359,18 @@
     "mtime": 1789218751.6583908,
     "seen": 1789218806.5124843,
     "ast_hash": "f0666a0e721dde2c557db217d7604ebd",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/touch_distance_entry_dialog.dart": {
+    "mtime": 1789221598.9524758,
+    "seen": 1789221735.3261423,
+    "ast_hash": "d17d8198c4e761b5f63158e14a28691b",
+    "semantic_hash": ""
+  },
+  "test/touch_distance_entry_test.dart": {
+    "mtime": 1789221698.9042535,
+    "seen": 1789221735.3261747,
+    "ast_hash": "9c6e0e6d3a7aa46aaee7cab761489a3e",
     "semantic_hash": ""
   }
 }

@@ -8,6 +8,7 @@ import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
 import '../../domain/models/construction_axis.dart';
+import '../../domain/models/equipment.dart';
 import '../../domain/models/network_history_manager.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
@@ -27,6 +28,7 @@ enum CanvasTool {
   insertWeld, // Врезка сварного стыка
   insertFlange, // Врезка фланцев
   drawAxis, // Черчение строительных осей
+  insertEquipment, // Размещение оборудования со штуцерами
   orbit, // 3D вращение сцены
   pan, // Панорамирование сцены (рука)
 }
@@ -79,6 +81,7 @@ class PipingInputController extends ChangeNotifier {
   // Интерактивное состояние
   String? selectedNodeId;
   String? selectedSegmentId;
+  String? selectedEquipmentId;
   String? hoveredNodeId;
 
   Node3D? traceStartNode;
@@ -88,6 +91,8 @@ class PipingInputController extends ChangeNotifier {
 
   // Режим перетаскивания
   bool isDraggingNode = false;
+  bool isDraggingEquipment = false;
+  Node3D? _dragEquipmentStartPos;
 
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
@@ -164,7 +169,10 @@ class PipingInputController extends ChangeNotifier {
     currentSnapResult = null;
     selectedNodeId = null;
     selectedSegmentId = null;
+    selectedEquipmentId = null;
     isDraggingNode = false;
+    isDraggingEquipment = false;
+    _dragEquipmentStartPos = null;
     if (!keepTool &&
         currentTool != CanvasTool.select &&
         currentTool != CanvasTool.trace &&
@@ -453,9 +461,60 @@ class PipingInputController extends ChangeNotifier {
       case CanvasTool.select:
         selectedNodeId = hitNodeId;
         selectedSegmentId = hitSegId;
+        selectedEquipmentId = _findEquipmentAtScreenPos(screenPos);
         if (hitNodeId != null) {
+          final n = network.nodes[hitNodeId];
+          if (n?.equipmentId != null) {
+            selectedEquipmentId = n!.equipmentId;
+          }
           isDraggingNode = true;
+        } else if (selectedEquipmentId != null) {
+          isDraggingEquipment = true;
+          final eq = network.equipments[selectedEquipmentId!];
+          if (eq != null) {
+            final unproj = projector.unproject(screenPos, eq.z);
+            _dragEquipmentStartPos = Node3D(id: 'drag', x: unproj.x, y: unproj.y, z: eq.z);
+          }
         }
+        break;
+
+      case CanvasTool.insertEquipment:
+        final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : projector.unproject(screenPos, currentElevationZ);
+        final snapped = _snapToGrid(snapWorld);
+
+        final eqId = 'eq_${_uuid.v4()}';
+        final nozzleId = 'noz_${_uuid.v4()}';
+        final nozzle = Nozzle(
+          id: nozzleId,
+          equipmentId: eqId,
+          name: 'Ш-1',
+          localX: 0,
+          localY: 0,
+          localZ: 2000,
+          dirX: 0,
+          dirY: 0,
+          dirZ: 1,
+          dn: 50,
+        );
+        final eq = Equipment(
+          id: eqId,
+          name: 'Емкость Е-1',
+          type: EquipmentType.box,
+          x: snapped.x,
+          y: snapped.y,
+          z: currentElevationZ,
+          width: 1000,
+          length: 1000,
+          height: 2000,
+          nozzles: [nozzle],
+        );
+
+        history.recordState(network);
+        network.addEquipment(eq);
+        selectedEquipmentId = eq.id;
+        selectedNodeId = nozzleId;
         break;
 
       case CanvasTool.insertValve:
@@ -546,6 +605,22 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
+    if (isDraggingEquipment && selectedEquipmentId != null && _dragEquipmentStartPos != null) {
+      final eq = network.equipments[selectedEquipmentId!];
+      if (eq != null) {
+        final unproj = projector.unproject(screenPos, eq.z);
+        final snapped = _snapToGrid(unproj);
+        final dx = snapped.x - _dragEquipmentStartPos!.x;
+        final dy = snapped.y - _dragEquipmentStartPos!.y;
+        if (dx.abs() > 0.1 || dy.abs() > 0.1) {
+          network.moveEquipment(selectedEquipmentId!, dx, dy, 0);
+          _dragEquipmentStartPos = Node3D(id: 'drag', x: snapped.x, y: snapped.y, z: eq.z);
+          notifyListeners();
+        }
+      }
+      return;
+    }
+
     notifyListeners();
   }
 
@@ -574,6 +649,15 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
     isDraggingNode = false;
+
+    if (isDraggingEquipment) {
+      history.recordState(network);
+      isDraggingEquipment = false;
+      _dragEquipmentStartPos = null;
+      notifyListeners();
+      return;
+    }
+    isDraggingEquipment = false;
 
     // Поддержка жеста Drag-to-Draw (проведение стилусом/пальцем и отпускание)
     if (currentCursorScreenPos != null) {
@@ -917,6 +1001,47 @@ class PipingInputController extends ChangeNotifier {
     return null;
   }
 
+  /// Поиск оборудования под курсором
+  String? _findEquipmentAtScreenPos(Offset screenPos) {
+    for (final eq in network.equipments.values) {
+      final x1 = eq.x - eq.width / 2;
+      final x2 = eq.x + eq.width / 2;
+      final y1 = eq.y - eq.length / 2;
+      final y2 = eq.y + eq.length / 2;
+      final z1 = eq.z;
+      final z2 = eq.z + eq.height;
+
+      final pts = [
+        projector.projectCoordinates(x1, y1, z1),
+        projector.projectCoordinates(x2, y1, z1),
+        projector.projectCoordinates(x2, y2, z1),
+        projector.projectCoordinates(x1, y2, z1),
+        projector.projectCoordinates(x1, y1, z2),
+        projector.projectCoordinates(x2, y1, z2),
+        projector.projectCoordinates(x2, y2, z2),
+        projector.projectCoordinates(x1, y2, z2),
+      ];
+
+      double minX = pts[0].dx;
+      double maxX = pts[0].dx;
+      double minY = pts[0].dy;
+      double maxY = pts[0].dy;
+
+      for (final p in pts) {
+        if (p.dx < minX) minX = p.dx;
+        if (p.dx > maxX) maxX = p.dx;
+        if (p.dy < minY) minY = p.dy;
+        if (p.dy > maxY) maxY = p.dy;
+      }
+
+      final rect = Rect.fromLTRB(minX - 10, minY - 10, maxX + 10, maxY + 10);
+      if (rect.contains(screenPos)) {
+        return eq.id;
+      }
+    }
+    return null;
+  }
+
   double _calcSegmentRatio(String segId, Offset screenPos) {
     final seg = network.segments[segId];
     if (seg == null) return 0.5;
@@ -1134,8 +1259,20 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Удаление выбранного узла или сегмента с каскадной очисткой связей
+  /// Удаление выбранного узла, оборудования или сегмента с каскадной очисткой связей
   void deleteSelected() {
+    final selectedNode = selectedNodeId != null ? network.nodes[selectedNodeId] : null;
+    final eqToDelete = selectedEquipmentId ?? selectedNode?.equipmentId;
+    if (eqToDelete != null && (selectedSegmentId == null || selectedEquipmentId != null || selectedNode?.equipmentId != null)) {
+      network.removeEquipment(eqToDelete);
+      selectedEquipmentId = null;
+      selectedNodeId = null;
+      selectedSegmentId = null;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
     if (selectedNodeId != null) {
       final nodeId = selectedNodeId!;
       final segsToRemove = network.segments.values

@@ -7,6 +7,8 @@ class Node3D {
   final double y;
   final double z;
   final String? customElevation;
+  final String? equipmentId;
+  final String? nozzleId;
 
   const Node3D({
     required this.id,
@@ -14,6 +16,8 @@ class Node3D {
     required this.y,
     required this.z,
     this.customElevation,
+    this.equipmentId,
+    this.nozzleId,
   });
 
   /// Вычисленная высотная отметка в метрах (например, "+2.500" или "-0.800")
@@ -43,6 +47,8 @@ class Node3D {
     double? y,
     double? z,
     String? customElevation,
+    String? equipmentId,
+    String? nozzleId,
   }) {
     return Node3D(
       id: id ?? this.id,
@@ -50,6 +56,8 @@ class Node3D {
       y: y ?? this.y,
       z: z ?? this.z,
       customElevation: customElevation ?? this.customElevation,
+      equipmentId: equipmentId ?? this.equipmentId,
+      nozzleId: nozzleId ?? this.nozzleId,
     );
   }
 
@@ -59,6 +67,8 @@ class Node3D {
         'y': y,
         'z': z,
         if (customElevation != null) 'customElevation': customElevation,
+        if (equipmentId != null) 'equipmentId': equipmentId,
+        if (nozzleId != null) 'nozzleId': nozzleId,
       };
 
   factory Node3D.fromJson(Map<String, dynamic> json) => Node3D(
@@ -67,6 +77,8 @@ class Node3D {
         y: (json['y'] as num).toDouble(),
         z: (json['z'] as num).toDouble(),
         customElevation: json['customElevation'] as String?,
+        equipmentId: json['equipmentId'] as String?,
+        nozzleId: json['nozzleId'] as String?,
       );
 
   @override
@@ -77,8 +89,11 @@ class Node3D {
           id == other.id &&
           x == other.x &&
           y == other.y &&
-          z == other.z;
+          z == other.z &&
+          customElevation == other.customElevation &&
+          equipmentId == other.equipmentId &&
+          nozzleId == other.nozzleId;
 
   @override
-  int get hashCode => Object.hash(id, x, y, z);
+  int get hashCode => Object.hash(id, x, y, z, customElevation, equipmentId, nozzleId);
 }
