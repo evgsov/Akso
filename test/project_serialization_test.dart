@@ -6,6 +6,7 @@ import 'package:akso/domain/enums/valve_type.dart';
 import 'package:akso/domain/models/equipment.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
+import 'package:akso/domain/models/pipe_support.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/project_model.dart';
 import 'package:akso/domain/models/valve.dart';
@@ -63,6 +64,13 @@ void main() {
         lengthMm: 180,
       );
       network.valves['val1'] = valve;
+
+      network.addSupport(
+        segmentId: 'seg1',
+        distanceRatio: 0.7,
+        type: PipeSupportType.sliding,
+        name: 'ОП-1',
+      );
 
       const nozzle = Nozzle(
         id: 'noz1',
@@ -125,6 +133,12 @@ void main() {
       expect(restoredProject.network.segments.length, equals(1));
       expect(restoredProject.network.valves.length, equals(1));
       expect(restoredProject.network.equipments.length, equals(1));
+      expect(restoredProject.network.supports.length, equals(1));
+      final restoredSup = restoredProject.network.supports.values.first;
+      expect(restoredSup.segmentId, equals('seg1'));
+      expect(restoredSup.distanceRatio, closeTo(0.7, 0.001));
+      expect(restoredSup.type, equals(PipeSupportType.sliding));
+      expect(restoredSup.name, equals('ОП-1'));
 
       final restoredEq = restoredProject.network.equipments['eq1']!;
       expect(restoredEq.name, equals('Емкость Е-1'));

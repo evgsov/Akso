@@ -14,6 +14,7 @@ import 'node_3d.dart';
 import 'pipe_dimension.dart';
 import 'pipe_segment.dart';
 import 'pipe_spool.dart';
+import 'pipe_support.dart';
 import 'piping_system.dart';
 import 'valve.dart';
 import 'weld_joint.dart';
@@ -31,6 +32,7 @@ class PipingNetwork {
   final Map<String, PipingSystem> systems;
   final Map<String, ConstructionAxis> axes;
   final Map<String, Equipment> equipments;
+  final Map<String, PipeSupport> supports;
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
@@ -44,6 +46,7 @@ class PipingNetwork {
     Map<String, PipingSystem>? systems,
     Map<String, ConstructionAxis>? axes,
     Map<String, Equipment>? equipments,
+    Map<String, PipeSupport>? supports,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
   })  : nodes = nodes ?? {},
@@ -55,6 +58,7 @@ class PipingNetwork {
         systems = systems ?? {for (var s in PipingSystem.defaults) s.id: s},
         axes = axes ?? {},
         equipments = equipments ?? {},
+        supports = supports ?? {},
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
@@ -70,6 +74,7 @@ class PipingNetwork {
       systems: Map.from(systems),
       axes: Map.from(axes),
       equipments: Map.from(equipments),
+      supports: Map.from(supports),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
@@ -165,6 +170,7 @@ class PipingNetwork {
         segments.remove(sId);
         valves.removeWhere((_, v) => v.segmentId == sId);
         weldJoints.removeWhere((_, w) => w.segmentId == sId);
+        supports.removeWhere((_, s) => s.segmentId == sId);
       }
       fittings.remove(nId);
       nodes.remove(nId);
@@ -401,6 +407,31 @@ class PipingNetwork {
     return valve;
   }
 
+  /// Установка опоры или подвески на участок трубы
+  PipeSupport addSupport({
+    required String segmentId,
+    required double distanceRatio,
+    PipeSupportType type = PipeSupportType.sliding,
+    String? name,
+  }) {
+    final supportId = 'support_${_uuid.v4()}';
+    final supportName = name ?? '${type.shortCode}-${supports.length + 1}';
+    final support = PipeSupport(
+      id: supportId,
+      segmentId: segmentId,
+      distanceRatio: distanceRatio.clamp(0.0, 1.0),
+      type: type,
+      name: supportName,
+    );
+    supports[supportId] = support;
+    return support;
+  }
+
+  /// Удаление опоры
+  void removeSupport(String id) {
+    supports.remove(id);
+  }
+
   /// Разделение сегмента трубы на два участка в точке ratio (0.0 < ratio < 1.0)
   /// Возвращает созданный промежуточный узел
   Node3D? splitSegmentAtRatio(String segmentId, double ratio) {
@@ -458,6 +489,19 @@ class PipingNetwork {
       } else {
         final newRatio = (1.0 - ratio) > 0.0001 ? ((v.ratio - ratio) / (1.0 - ratio)).clamp(0.05, 0.95) : 0.5;
         valves[v.id] = v.copyWith(segmentId: seg2Id, ratio: newRatio);
+      }
+    }
+
+    // Переносим опоры и подвески
+    final affectedSupports = supports.values.where((s) => s.segmentId == segmentId).toList();
+    for (final s in affectedSupports) {
+      supports.remove(s.id);
+      if (s.distanceRatio <= ratio) {
+        final newRatio = ratio > 0.0001 ? (s.distanceRatio / ratio).clamp(0.0, 1.0) : 0.0;
+        supports[s.id] = s.copyWith(segmentId: seg1Id, distanceRatio: newRatio);
+      } else {
+        final newRatio = (1.0 - ratio) > 0.0001 ? ((s.distanceRatio - ratio) / (1.0 - ratio)).clamp(0.0, 1.0) : 0.0;
+        supports[s.id] = s.copyWith(segmentId: seg2Id, distanceRatio: newRatio);
       }
     }
 
@@ -723,6 +767,7 @@ class PipingNetwork {
         'systems': systems.map((k, v) => MapEntry(k, v.toJson())),
         'axes': axes.map((k, v) => MapEntry(k, v.toJson())),
         'equipments': equipments.map((k, v) => MapEntry(k, v.toJson())),
+        'supports': supports.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
       };
@@ -738,6 +783,7 @@ class PipingNetwork {
     systems.clear();
     axes.clear();
     equipments.clear();
+    supports.clear();
 
     if (json.containsKey('nodes')) {
       final m = json['nodes'] as Map<String, dynamic>;
@@ -774,6 +820,10 @@ class PipingNetwork {
     if (json.containsKey('equipments')) {
       final m = json['equipments'] as Map<String, dynamic>;
       m.forEach((k, v) => equipments[k] = Equipment.fromJson(v as Map<String, dynamic>));
+    }
+    if (json.containsKey('supports')) {
+      final m = json['supports'] as Map<String, dynamic>;
+      m.forEach((k, v) => supports[k] = PipeSupport.fromJson(v as Map<String, dynamic>));
     }
     if (json.containsKey('catalog')) {
       catalog.loadFromJson(json['catalog'] as Map<String, dynamic>);
@@ -831,6 +881,10 @@ class PipingNetwork {
           {},
       equipments: (json['equipments'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, Equipment.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
+      supports: (json['supports'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, PipeSupport.fromJson(v as Map<String, dynamic>)),
           ) ??
           {},
       catalog: catalog,

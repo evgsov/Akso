@@ -13,6 +13,7 @@ import '../../domain/models/network_history_manager.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
 import '../../domain/models/pipe_segment.dart';
+import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
 import '../../data/repositories/project_repository.dart';
@@ -27,6 +28,7 @@ enum CanvasTool {
   insertReducer, // Врезка перехода диаметров
   insertWeld, // Врезка сварного стыка
   insertFlange, // Врезка фланцев
+  insertSupport, // Установка опор и подвесок
   drawAxis, // Черчение строительных осей
   insertEquipment, // Размещение оборудования со штуцерами
   orbit, // 3D вращение сцены
@@ -55,6 +57,7 @@ class PipingInputController extends ChangeNotifier {
   bool isFlangePair = true;
   int flangePressurePn = 16;
   String activeMaterial = 'Сталь 20';
+  PipeSupportType selectedSupportType = PipeSupportType.sliding;
 
   String activeSystemId = 'sys_b1';
   int activeDn = 25;
@@ -192,6 +195,11 @@ class PipingInputController extends ChangeNotifier {
 
   void setSelectedValveType(ValveType type) {
     selectedValveType = type;
+    notifyListeners();
+  }
+
+  void setSelectedSupportType(PipeSupportType type) {
+    selectedSupportType = type;
     notifyListeners();
   }
 
@@ -569,6 +577,18 @@ class PipingInputController extends ChangeNotifier {
             isPair: isFlangePair,
             pressurePn: flangePressurePn,
             material: activeMaterial,
+          );
+        }
+        break;
+
+      case CanvasTool.insertSupport:
+        if (hitSegId != null) {
+          history.recordState(network);
+          final ratio = _calcSegmentRatio(hitSegId, screenPos);
+          network.addSupport(
+            segmentId: hitSegId,
+            distanceRatio: ratio,
+            type: selectedSupportType,
           );
         }
         break;
@@ -1284,6 +1304,7 @@ class PipingInputController extends ChangeNotifier {
         network.segments.remove(segId);
         network.valves.removeWhere((_, v) => v.segmentId == segId);
         network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
+        network.supports.removeWhere((_, s) => s.segmentId == segId);
       }
       network.fittings.remove(nodeId);
       network.nodes.remove(nodeId);
@@ -1302,6 +1323,7 @@ class PipingInputController extends ChangeNotifier {
       network.segments.remove(segId);
       network.valves.removeWhere((_, v) => v.segmentId == segId);
       network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
+      network.supports.removeWhere((_, s) => s.segmentId == segId);
 
       if (startNodeId != null && network.getConnectedSegments(startNodeId).isEmpty) {
         network.fittings.remove(startNodeId);

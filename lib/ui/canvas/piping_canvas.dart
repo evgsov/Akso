@@ -9,6 +9,7 @@ import 'painters/grid_painter.dart';
 import 'painters/pipe_painter.dart';
 import 'painters/fitting_painter.dart';
 import 'painters/valve_painter.dart';
+import 'painters/support_painter.dart';
 import 'painters/annotation_painter.dart';
 import 'painters/equipment_painter.dart';
 
@@ -103,7 +104,10 @@ class PipingCanvasPainter extends CustomPainter {
     // 4. Отрисовка арматуры
     ValvePainter.paint(canvas, projector, network);
 
-    // 4.1. Отрисовка фасонных деталей
+    // 4.1. Отрисовка опор и подвесок
+    SupportPainter.paint(canvas, projector, network);
+
+    // 4.2. Отрисовка фасонных деталей
     FittingPainter.paint(canvas, projector, network, selectedNodeId, showCallouts);
 
     // 5 & 6. Отрисовка сварных стыков, узлов сети и отметок

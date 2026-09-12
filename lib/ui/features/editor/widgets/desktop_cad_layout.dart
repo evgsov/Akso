@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/enums/weld_type.dart';
+import '../../../../domain/models/pipe_support.dart';
 import '../../../../core/math/snap_engine.dart';
 import '../../../canvas/input_controller.dart';
 import 'custom_pipe_dimension_dialog.dart';
@@ -534,6 +535,19 @@ class DesktopCadLayout extends StatelessWidget {
                   onPressed: controller.cancelCurrentOperation,
                 ),
               ],
+            ] else if (controller.currentTool == CanvasTool.insertSupport) ...[
+              const Text('Опоры и подвески:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
+              const SizedBox(width: 12),
+              DropdownButton<PipeSupportType>(
+                value: controller.selectedSupportType,
+                isDense: true,
+                items: PipeSupportType.values.map((s) => DropdownMenuItem(value: s, child: Text(s.displayName))).toList(),
+                onChanged: (s) {
+                  if (s != null) controller.setSelectedSupportType(s);
+                },
+              ),
+              const SizedBox(width: 16),
+              const Text('Нажмите на трубу для установки опоры', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ] else if (controller.currentTool == CanvasTool.insertValve) ...[
               const Text('Врезка арматуры:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
               const SizedBox(width: 12),
@@ -644,6 +658,7 @@ class DesktopCadLayout extends StatelessWidget {
             _toolButton(CanvasTool.insertWeld, Icons.flare, 'Врезка сварного шва'),
             _toolButton(CanvasTool.insertReducer, Icons.call_split, 'Врезка перехода'),
             _toolButton(CanvasTool.insertFlange, Icons.radio_button_checked, 'Врезка фланцев'),
+            _toolButton(CanvasTool.insertSupport, Icons.format_underlined, 'Опора / подвеска трубы'),
             const Divider(height: 16, indent: 8, endIndent: 8),
             IconButton(
               icon: Icon(controller.isSnapEnabled ? Icons.lens : Icons.lens_outlined, size: 16, color: controller.isSnapEnabled ? Colors.green : Colors.grey),
@@ -922,7 +937,8 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.insertWeld:
       case CanvasTool.insertReducer:
       case CanvasTool.insertFlange:
-        return 'Нажмите на участок трубы на чертеже для врезки';
+      case CanvasTool.insertSupport:
+        return 'Нажмите на участок трубы на чертеже для установки элемента';
       case CanvasTool.insertEquipment:
         return 'Кликните на холсте для размещения оборудования и штуцеров';
     }

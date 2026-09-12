@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/enums/weld_type.dart';
+import '../../../../domain/models/pipe_support.dart';
 import '../../../canvas/input_controller.dart';
 import 'custom_pipe_dimension_dialog.dart';
 import 'pipe_assortment_dialog.dart';
@@ -64,6 +65,11 @@ class EditorToolsPanel extends StatelessWidget {
                       value: CanvasTool.insertFlange,
                       icon: Icon(Icons.radio_button_checked, size: 18),
                       label: Text('Фланец'),
+                    ),
+                    ButtonSegment(
+                      value: CanvasTool.insertSupport,
+                      icon: Icon(Icons.format_underlined, size: 18),
+                      label: Text('Опора'),
                     ),
                   ],
                   selected: {controller.currentTool},
@@ -283,6 +289,25 @@ class EditorToolsPanel extends StatelessWidget {
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
+              ),
+            ),
+          ] else if (controller.currentTool == CanvasTool.insertSupport) ...[
+            const Divider(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: PipeSupportType.values.map((st) {
+                  final isSelected = controller.selectedSupportType == st;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      selected: isSelected,
+                      label: Text(st.displayName),
+                      selectedColor: Colors.lightBlue.shade100,
+                      onSelected: (_) => controller.setSelectedSupportType(st),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ] else if (controller.currentTool == CanvasTool.insertValve) ...[
