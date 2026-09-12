@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/fitting_catalog.dart": {
-    "mtime": 1789142111.0594406,
-    "seen": 1789148910.5377154,
-    "ast_hash": "9e4c7eb63b19f0fb14d66b92ef20c586",
+    "mtime": 1789194885.4820833,
+    "seen": 1789194981.8927276,
+    "ast_hash": "970d635cedac089bbb0db2ce1337b8d5",
     "semantic_hash": ""
   },
   "lib/domain/models/fitting_definition.dart": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789149698.4387476,
-    "seen": 1789150052.056871,
-    "ast_hash": "a9c3c35cd034fbd780400840e480d898",
+    "mtime": 1789195779.86419,
+    "seen": 1789195837.201317,
+    "ast_hash": "260aed0fca553f18625f4988aa40269a",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
-    "mtime": 1789142111.0649414,
-    "seen": 1789148910.5377283,
-    "ast_hash": "4ad28b75fc072b386ef645f5c6b79385",
+    "mtime": 1789195249.87459,
+    "seen": 1789195276.2376716,
+    "ast_hash": "1b119ae88030618ff69ddc44c1bfc6f0",
     "semantic_hash": ""
   },
   "lib/ui/canvas/smart_callout.dart": {
@@ -276,15 +276,15 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart": {
-    "mtime": 1789142111.0689409,
-    "seen": 1789148910.5377355,
-    "ast_hash": "ddcfabf69f4a44d0f2a8f7b3a00b8393",
+    "mtime": 1789194893.5459726,
+    "seen": 1789194981.8927553,
+    "ast_hash": "9db92990b5606280ea95a25dcefea69b",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/fitting_properties_sheet.dart": {
-    "mtime": 1789142111.0694408,
-    "seen": 1789148910.5377362,
-    "ast_hash": "14f8482e6c823918c580dd1bbd02c36b",
+    "mtime": 1789194902.2530725,
+    "seen": 1789194981.8927562,
+    "ast_hash": "ebeb86a0644c1c32969349f34cd4d618",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/materials_specification_dialog.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789142111.0719407,
-    "seen": 1789148910.5377421,
-    "ast_hash": "fa332dce40960d3fdb1d42e34787b3f0",
+    "mtime": 1789152482.4110637,
+    "seen": 1789194981.892763,
+    "ast_hash": "641d2909777722923536908904121145",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789150322.9861882,
-    "seen": 1789152107.851464,
-    "ast_hash": "0f62f5a30674f7ded00f06f948bc6ab8",
+    "mtime": 1789195825.8109477,
+    "seen": 1789195837.2014437,
+    "ast_hash": "4d370d6d394db237b006ecdb347bd2b7",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1176,9 +1176,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
-    "mtime": 1789142111.070941,
-    "seen": 1789148910.537739,
-    "ast_hash": "bb929e6fc4bdaed45bf2365bf2a32f42",
+    "mtime": 1789194913.8822653,
+    "seen": 1789194981.8927596,
+    "ast_hash": "cbadb6106cf95e90880b0edaa4e11eed",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/tablet_touch_layout.dart": {
@@ -1281,6 +1281,24 @@
     "mtime": 1789150563.9222832,
     "seen": 1789152107.8513343,
     "ast_hash": "adbd3e3515e520d3a8923204450f43ba",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/project_repository.dart": {
+    "mtime": 1789195774.1172438,
+    "seen": 1789195837.2012928,
+    "ast_hash": "f8da07aa6cf91117af2cde27db2cf003",
+    "semantic_hash": ""
+  },
+  "test/project_identity_test.dart": {
+    "mtime": 1789195455.2152567,
+    "seen": 1789195488.5629458,
+    "ast_hash": "6a86262c98d7cf86cfaff8bfc1c2e85b",
+    "semantic_hash": ""
+  },
+  "test/project_serialization_test.dart": {
+    "mtime": 1789195747.8228152,
+    "seen": 1789195837.201361,
+    "ast_hash": "ba2f2d6194c753bded7980b917de840b",
     "semantic_hash": ""
   }
 }
