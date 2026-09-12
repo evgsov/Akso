@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+
 import '../../../../domain/models/piping_network.dart';
 import '../../../../domain/models/piping_system.dart';
+
+const _uuid = Uuid();
 
 class PipingSystemsDialog extends StatefulWidget {
   final PipingNetwork network;
@@ -461,7 +465,7 @@ class _PipingSystemsDialogState extends State<PipingSystemsDialog> {
                     final name = nameCtrl.text.trim();
                     if (code.isEmpty || name.isEmpty) return;
 
-                    final id = existing?.id ?? 'sys_${DateTime.now().millisecondsSinceEpoch}';
+                    final id = existing?.id ?? 'sys_${_uuid.v4()}';
                     final newSys = PipingSystem(
                       id: id,
                       code: code,

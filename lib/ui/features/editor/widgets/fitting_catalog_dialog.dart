@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+
 import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/fitting.dart';
 import '../../../../domain/models/fitting_definition.dart';
 import '../../../../domain/models/piping_network.dart';
+
+const _uuid = Uuid();
 
 /// Диалог управления каталогом фитингов, коллекцией элементов и правилами трассировки
 class FittingCatalogDialog extends StatefulWidget {
@@ -730,7 +734,7 @@ class _FittingCatalogDialogState extends State<FittingCatalogDialog> with Single
                 onPressed: () {
                   final fittingType = _resolveFittingType(currentArchetype);
                   final customDef = FittingDefinition(
-                    id: 'custom_${currentArchetype.name}_${DateTime.now().millisecondsSinceEpoch}',
+                    id: 'custom_${currentArchetype.name}_${_uuid.v4()}',
                     name: nameCtrl.text.trim().isNotEmpty ? nameCtrl.text.trim() : 'Пользовательская деталь',
                     archetype: currentArchetype,
                     fittingType: fittingType,

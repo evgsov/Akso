@@ -1,6 +1,10 @@
+import 'package:uuid/uuid.dart';
+
 import '../enums/fitting_type.dart';
 import '../enums/weld_type.dart';
 import 'fitting_definition.dart';
+
+const _uuid = Uuid();
 
 /// Каталог стандартных и пользовательских фитингов с правилами трассировки (Routing Preferences)
 class FittingCatalog {
@@ -232,7 +236,7 @@ class FittingCatalog {
     bool? newCutsMainPipe,
   }) {
     final base = definitions[baseDefinitionId] ?? definitions['elbow_gost_17375']!;
-    final customId = 'custom_${base.archetype.name}_${DateTime.now().millisecondsSinceEpoch}';
+    final customId = 'custom_${base.archetype.name}_${_uuid.v4()}';
 
     final customDef = FittingDefinition(
       id: customId,

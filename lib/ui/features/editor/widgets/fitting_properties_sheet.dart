@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+
 import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/fitting.dart';
 import '../../../../domain/models/fitting_definition.dart';
 import '../../../../domain/models/piping_network.dart';
 import 'fitting_catalog_dialog.dart';
+
+const _uuid = Uuid();
 
 /// Инспектор свойств выбранного фасонного элемента (отвода, тройника, фланца, перехода)
 class FittingPropertiesSheet extends StatefulWidget {
@@ -475,7 +479,7 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
 
   void _saveAsCustomTemplate(Fitting fit) {
     final customDef = FittingDefinition(
-      id: 'custom_${fit.fittingType.name}_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'custom_${fit.fittingType.name}_${_uuid.v4()}',
       name: '${fit.displayName} (Шаблон)',
       archetype: _resolveArchetype(fit.fittingType),
       fittingType: fit.fittingType,
