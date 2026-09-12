@@ -4,6 +4,19 @@ enum EquipmentType {
   cylinderHorizontal,
 }
 
+extension EquipmentTypeExt on EquipmentType {
+  String get displayName {
+    switch (this) {
+      case EquipmentType.box:
+        return 'Параллелепипед';
+      case EquipmentType.cylinderVertical:
+        return 'Цилиндр верт.';
+      case EquipmentType.cylinderHorizontal:
+        return 'Цилиндр гор.';
+    }
+  }
+}
+
 /// Штуцер технологического оборудования (точка подключения трубопровода)
 class Nozzle {
   final String id;

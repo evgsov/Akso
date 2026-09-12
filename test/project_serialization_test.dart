@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/data/repositories/project_repository.dart';
 import 'package:akso/domain/enums/projection_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
+import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/equipment.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
@@ -98,6 +99,16 @@ void main() {
       );
       network.addEquipment(eq);
 
+      const callout = Callout(
+        id: 'c1',
+        targetId: 'seg1',
+        targetType: CalloutTargetType.segment,
+        customText: 'Индивидуальная выноска трубы',
+        screenOffsetX: 60.0,
+        screenOffsetY: -40.0,
+      );
+      network.callouts['c1'] = callout;
+
       final project = ProjectModel(
         id: 'test-project-uuid-1234',
         title: 'Узел учета тепла',
@@ -108,6 +119,10 @@ void main() {
         activeSystemId: 'sys_t3',
         activeDn: 50,
         currentElevationZ: 150.0,
+        calloutTemplates: const {
+          'segment': 'Ø{DN}x{WALL}',
+          'valve': '{NAME}',
+        },
         network: network,
       );
 
@@ -127,6 +142,8 @@ void main() {
       expect(restoredProject.activeSystemId, equals(project.activeSystemId));
       expect(restoredProject.activeDn, equals(project.activeDn));
       expect(restoredProject.currentElevationZ, equals(project.currentElevationZ));
+      expect(restoredProject.calloutTemplates['segment'], equals('Ø{DN}x{WALL}'));
+      expect(restoredProject.calloutTemplates['valve'], equals('{NAME}'));
 
       // Assert network structure
       expect(restoredProject.network.nodes.length, equals(3)); // n1, n2, noz1
@@ -134,6 +151,15 @@ void main() {
       expect(restoredProject.network.valves.length, equals(1));
       expect(restoredProject.network.equipments.length, equals(1));
       expect(restoredProject.network.supports.length, equals(1));
+      expect(restoredProject.network.callouts.length, equals(1));
+
+      final restoredCallout = restoredProject.network.callouts['c1']!;
+      expect(restoredCallout.id, equals('c1'));
+      expect(restoredCallout.targetId, equals('seg1'));
+      expect(restoredCallout.targetType, equals(CalloutTargetType.segment));
+      expect(restoredCallout.customText, equals('Индивидуальная выноска трубы'));
+      expect(restoredCallout.screenOffsetX, equals(60.0));
+      expect(restoredCallout.screenOffsetY, equals(-40.0));
       final restoredSup = restoredProject.network.supports.values.first;
       expect(restoredSup.segmentId, equals('seg1'));
       expect(restoredSup.distanceRatio, closeTo(0.7, 0.001));

@@ -6,6 +6,7 @@ import '../enums/valve_type.dart';
 import '../enums/weld_type.dart';
 import '../services/fitting_detector.dart';
 import '../services/spool_calculator.dart';
+import 'callout.dart';
 import 'construction_axis.dart';
 import 'equipment.dart';
 import 'fitting.dart';
@@ -33,6 +34,7 @@ class PipingNetwork {
   final Map<String, ConstructionAxis> axes;
   final Map<String, Equipment> equipments;
   final Map<String, PipeSupport> supports;
+  final Map<String, Callout> callouts;
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
@@ -47,6 +49,7 @@ class PipingNetwork {
     Map<String, ConstructionAxis>? axes,
     Map<String, Equipment>? equipments,
     Map<String, PipeSupport>? supports,
+    Map<String, Callout>? callouts,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
   })  : nodes = nodes ?? {},
@@ -59,6 +62,7 @@ class PipingNetwork {
         axes = axes ?? {},
         equipments = equipments ?? {},
         supports = supports ?? {},
+        callouts = callouts ?? {},
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
@@ -75,6 +79,7 @@ class PipingNetwork {
       axes: Map.from(axes),
       equipments: Map.from(equipments),
       supports: Map.from(supports),
+      callouts: Map.from(callouts),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
@@ -171,9 +176,11 @@ class PipingNetwork {
         valves.removeWhere((_, v) => v.segmentId == sId);
         weldJoints.removeWhere((_, w) => w.segmentId == sId);
         supports.removeWhere((_, s) => s.segmentId == sId);
+        callouts.removeWhere((_, c) => c.targetId == sId);
       }
       fittings.remove(nId);
       nodes.remove(nId);
+      callouts.removeWhere((_, c) => c.targetId == nId);
     }
     recalculateSpools();
   }
@@ -505,6 +512,12 @@ class PipingNetwork {
       }
     }
 
+    // Обновляем целевой сегмент для выносок
+    final affectedCallouts = callouts.values.where((c) => c.targetId == segmentId).toList();
+    for (final c in affectedCallouts) {
+      callouts[c.id] = c.copyWith(targetId: seg1Id);
+    }
+
     return midNode;
   }
 
@@ -768,6 +781,7 @@ class PipingNetwork {
         'axes': axes.map((k, v) => MapEntry(k, v.toJson())),
         'equipments': equipments.map((k, v) => MapEntry(k, v.toJson())),
         'supports': supports.map((k, v) => MapEntry(k, v.toJson())),
+        'callouts': callouts.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
       };
@@ -784,6 +798,7 @@ class PipingNetwork {
     axes.clear();
     equipments.clear();
     supports.clear();
+    callouts.clear();
 
     if (json.containsKey('nodes')) {
       final m = json['nodes'] as Map<String, dynamic>;
@@ -824,6 +839,10 @@ class PipingNetwork {
     if (json.containsKey('supports')) {
       final m = json['supports'] as Map<String, dynamic>;
       m.forEach((k, v) => supports[k] = PipeSupport.fromJson(v as Map<String, dynamic>));
+    }
+    if (json.containsKey('callouts')) {
+      final m = json['callouts'] as Map<String, dynamic>;
+      m.forEach((k, v) => callouts[k] = Callout.fromJson(v as Map<String, dynamic>));
     }
     if (json.containsKey('catalog')) {
       catalog.loadFromJson(json['catalog'] as Map<String, dynamic>);
@@ -887,9 +906,187 @@ class PipingNetwork {
             (k, v) => MapEntry(k, PipeSupport.fromJson(v as Map<String, dynamic>)),
           ) ??
           {},
+      callouts: (json['callouts'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, Callout.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
     return net;
+  }
+
+  /// Генерация текста для выноски по шаблону или возврат customText
+  String generateCalloutText(
+    Callout callout,
+    Map<String, String> templates, {
+    bool ignoreCustomText = false,
+  }) {
+    if (!ignoreCustomText && callout.customText != null && callout.customText!.trim().isNotEmpty) {
+      return callout.customText!;
+    }
+
+    final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
+    var text = template;
+
+    switch (callout.targetType) {
+      case CalloutTargetType.segment:
+        final seg = segments[callout.targetId];
+        if (seg == null) return callout.customText ?? 'Труба (удалена)';
+
+        final dStr = seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
+            ? seg.outerDiameterMm.toStringAsFixed(0)
+            : seg.outerDiameterMm.toStringAsFixed(1);
+        final sStr = seg.wallThicknessMm.truncateToDouble() == seg.wallThicknessMm
+            ? seg.wallThicknessMm.toStringAsFixed(0)
+            : seg.wallThicknessMm.toStringAsFixed(1);
+        final sysCode = systems[seg.systemId]?.code ?? seg.systemId;
+
+        text = text
+            .replaceAll('{DN}', '${seg.dn}')
+            .replaceAll('{WALL}', sStr)
+            .replaceAll('{S}', sStr)
+            .replaceAll('{D_OUT}', dStr)
+            .replaceAll('{OD}', dStr)
+            .replaceAll('{OUTER_DIAMETER}', dStr)
+            .replaceAll('{MATERIAL}', seg.material)
+            .replaceAll('{SYSTEM}', sysCode)
+            .replaceAll('{ID}', seg.id);
+
+        if (text.contains('{LENGTH}') || text.contains('{L}')) {
+          final start = nodes[seg.startNodeId];
+          final end = nodes[seg.endNodeId];
+          final len = (start != null && end != null) ? start.distanceTo(end).round() : 0;
+          text = text.replaceAll('{LENGTH}', '$len').replaceAll('{L}', '$len');
+        }
+        break;
+
+      case CalloutTargetType.valve:
+        final v = valves[callout.targetId];
+        if (v == null) return callout.customText ?? 'Арматура (удалена)';
+
+        text = text
+            .replaceAll('{NAME}', v.name)
+            .replaceAll('{DN}', '${v.dn}')
+            .replaceAll('{TYPE}', v.valveType.displayName)
+            .replaceAll('{LENGTH}', '${v.lengthMm.round()}')
+            .replaceAll('{L}', '${v.lengthMm.round()}')
+            .replaceAll('{ID}', v.id);
+        break;
+
+      case CalloutTargetType.weld:
+        final w = weldJoints[callout.targetId];
+        if (w == null) return callout.customText ?? 'Стык (удален)';
+
+        final numStr = w.number > 0 ? '${w.number}' : w.id;
+        text = text
+            .replaceAll('{ID}', numStr)
+            .replaceAll('{NUM}', '${w.number}')
+            .replaceAll('{NUMBER}', '${w.number}')
+            .replaceAll('{STAMP}', w.stamp)
+            .replaceAll('{TYPE}', w.weldType.shortName)
+            .replaceAll('{STEEL}', w.steelGrade)
+            .replaceAll('{MATERIAL}', w.steelGrade)
+            .replaceAll('{ELECTRODE}', w.electrodeGrade)
+            .replaceAll('{WELD_ID}', w.id);
+        break;
+
+      case CalloutTargetType.equipment:
+        final eq = equipments[callout.targetId];
+        if (eq == null) return callout.customText ?? 'Оборудование (удалено)';
+
+        text = text
+            .replaceAll('{NAME}', eq.name)
+            .replaceAll('{TYPE}', eq.type.displayName)
+            .replaceAll('{ID}', eq.id);
+        break;
+
+      case CalloutTargetType.support:
+        final sup = supports[callout.targetId];
+        if (sup == null) return callout.customText ?? 'Опора (удалена)';
+
+        text = text
+            .replaceAll('{NAME}', sup.name)
+            .replaceAll('{TYPE}', sup.type.displayName)
+            .replaceAll('{CODE}', sup.type.shortCode)
+            .replaceAll('{ID}', sup.id);
+        break;
+
+      case CalloutTargetType.node:
+        final node = nodes[callout.targetId];
+        if (node == null) return callout.customText ?? 'Узел (удален)';
+
+        text = text
+            .replaceAll('{ID}', node.id)
+            .replaceAll('{X}', '${node.x.round()}')
+            .replaceAll('{Y}', '${node.y.round()}')
+            .replaceAll('{Z}', '${node.z.round()}');
+        break;
+    }
+
+    return text;
+  }
+
+  /// Автогенерация недостающих выносок для сегментов, арматуры и сварных стыков
+  int generateMissingCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+    int addedCount = 0;
+    final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
+
+    for (final seg in segments.values) {
+      if (!existingTargetIds.contains(seg.id)) {
+        final id = 'callout_${_uuid.v4()}';
+        callouts[id] = Callout(
+          id: id,
+          targetId: seg.id,
+          targetType: CalloutTargetType.segment,
+          screenOffsetX: offsetX,
+          screenOffsetY: offsetY,
+        );
+        existingTargetIds.add(seg.id);
+        addedCount++;
+      }
+    }
+
+    for (final valve in valves.values) {
+      if (!existingTargetIds.contains(valve.id)) {
+        final id = 'callout_${_uuid.v4()}';
+        callouts[id] = Callout(
+          id: id,
+          targetId: valve.id,
+          targetType: CalloutTargetType.valve,
+          screenOffsetX: offsetX,
+          screenOffsetY: offsetY,
+        );
+        existingTargetIds.add(valve.id);
+        addedCount++;
+      }
+    }
+
+    for (final weld in weldJoints.values) {
+      if (!existingTargetIds.contains(weld.id)) {
+        final id = 'callout_${_uuid.v4()}';
+        callouts[id] = Callout(
+          id: id,
+          targetId: weld.id,
+          targetType: CalloutTargetType.weld,
+          screenOffsetX: offsetX,
+          screenOffsetY: offsetY,
+        );
+        existingTargetIds.add(weld.id);
+        addedCount++;
+      }
+    }
+
+    return addedCount;
+  }
+
+  /// Добавление выноски в сеть
+  void addCallout(Callout callout) {
+    callouts[callout.id] = callout;
+  }
+
+  /// Удаление выноски из сети
+  void removeCallout(String id) {
+    callouts.remove(id);
   }
 }

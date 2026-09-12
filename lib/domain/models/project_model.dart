@@ -1,4 +1,5 @@
 import '../enums/projection_type.dart';
+import 'callout.dart';
 import 'piping_network.dart';
 
 /// Корневой проект исполнительной схемы трубопроводов (.akso)
@@ -13,6 +14,7 @@ class ProjectModel {
   final int activeDn;
   final double currentElevationZ;
   final PipingNetwork network;
+  final Map<String, String> calloutTemplates;
 
   ProjectModel({
     required this.id,
@@ -25,8 +27,12 @@ class ProjectModel {
     this.activeDn = 25,
     this.currentElevationZ = 0.0,
     PipingNetwork? network,
+    Map<String, String>? calloutTemplates,
   })  : creationDate = creationDate ?? DateTime.now().toIso8601String().substring(0, 10),
-        network = network ?? PipingNetwork();
+        network = network ?? PipingNetwork(),
+        calloutTemplates = calloutTemplates != null
+            ? Map.from(calloutTemplates)
+            : Map.from(defaultCalloutTemplates);
 
   ProjectModel copyWith({
     String? id,
@@ -39,6 +45,7 @@ class ProjectModel {
     int? activeDn,
     double? currentElevationZ,
     PipingNetwork? network,
+    Map<String, String>? calloutTemplates,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -51,6 +58,7 @@ class ProjectModel {
       activeDn: activeDn ?? this.activeDn,
       currentElevationZ: currentElevationZ ?? this.currentElevationZ,
       network: network ?? this.network,
+      calloutTemplates: calloutTemplates ?? this.calloutTemplates,
     );
   }
 
@@ -65,6 +73,7 @@ class ProjectModel {
         'activeDn': activeDn,
         'currentElevationZ': currentElevationZ,
         'network': network.toJson(),
+        'calloutTemplates': calloutTemplates,
       };
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) => ProjectModel(
@@ -78,5 +87,8 @@ class ProjectModel {
         activeDn: json['activeDn'] as int? ?? 25,
         currentElevationZ: (json['currentElevationZ'] as num?)?.toDouble() ?? 0.0,
         network: PipingNetwork.fromJson(json['network'] as Map<String, dynamic>),
+        calloutTemplates: json['calloutTemplates'] != null
+            ? Map<String, String>.from(json['calloutTemplates'] as Map)
+            : null,
       );
 }

@@ -5,6 +5,7 @@ import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/pipe_support.dart';
 import '../../../../core/math/snap_engine.dart';
 import '../../../canvas/input_controller.dart';
+import 'callout_manager_panel.dart';
 import 'custom_pipe_dimension_dialog.dart';
 import 'dxf_export_dialog.dart';
 import 'elevation_panel.dart';
@@ -210,7 +211,18 @@ class DesktopCadLayout extends StatelessWidget {
             ),
           ),
 
-          // Ведомости (Спецификация, Сварка)
+          // Выноски
+          Tooltip(
+            message: 'Умные выноски и аннотации',
+            child: TextButton.icon(
+              icon: const Icon(Icons.label_outline, size: 16, color: Colors.amberAccent),
+              label: const Text('Выноски', style: TextStyle(color: Colors.white, fontSize: 12)),
+              onPressed: () => CalloutManagerPanel.show(context, controller: controller),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Ведомости (Спецификация, Сварка, Выноски)
           PopupMenuButton<String>(
             tooltip: 'Ведомости и спецификации',
             icon: const Icon(Icons.table_chart, size: 18, color: Colors.white70),
@@ -218,12 +230,15 @@ class DesktopCadLayout extends StatelessWidget {
             itemBuilder: (ctx) => [
               const PopupMenuItem(value: 'mto', child: Text('Спецификация (СО ГОСТ 21.110)', style: TextStyle(color: Colors.white, fontSize: 13))),
               const PopupMenuItem(value: 'weld', child: Text('Журнал сварки и катушек', style: TextStyle(color: Colors.white, fontSize: 13))),
+              const PopupMenuItem(value: 'callouts', child: Text('Менеджер выносок', style: TextStyle(color: Colors.white, fontSize: 13))),
             ],
             onSelected: (val) {
               if (val == 'mto') {
                 showDialog(context: context, builder: (_) => MaterialsSpecificationDialog(network: controller.network));
               } else if (val == 'weld') {
                 showDialog(context: context, builder: (_) => WeldJournalDialog(network: controller.network));
+              } else if (val == 'callouts') {
+                CalloutManagerPanel.show(context, controller: controller);
               }
             },
           ),

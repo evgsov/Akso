@@ -7,6 +7,7 @@ import '../../core/math/snap_engine.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
+import '../../domain/models/callout.dart';
 import '../../domain/models/construction_axis.dart';
 import '../../domain/models/equipment.dart';
 import '../../domain/models/network_history_manager.dart';
@@ -1285,6 +1286,7 @@ class PipingInputController extends ChangeNotifier {
     final eqToDelete = selectedEquipmentId ?? selectedNode?.equipmentId;
     if (eqToDelete != null && (selectedSegmentId == null || selectedEquipmentId != null || selectedNode?.equipmentId != null)) {
       network.removeEquipment(eqToDelete);
+      network.callouts.removeWhere((_, c) => c.targetId == eqToDelete);
       selectedEquipmentId = null;
       selectedNodeId = null;
       selectedSegmentId = null;
@@ -1305,9 +1307,11 @@ class PipingInputController extends ChangeNotifier {
         network.valves.removeWhere((_, v) => v.segmentId == segId);
         network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
         network.supports.removeWhere((_, s) => s.segmentId == segId);
+        network.callouts.removeWhere((_, c) => c.targetId == segId);
       }
       network.fittings.remove(nodeId);
       network.nodes.remove(nodeId);
+      network.callouts.removeWhere((_, c) => c.targetId == nodeId);
 
       selectedNodeId = null;
       selectedSegmentId = null;
@@ -1324,6 +1328,7 @@ class PipingInputController extends ChangeNotifier {
       network.valves.removeWhere((_, v) => v.segmentId == segId);
       network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
       network.supports.removeWhere((_, s) => s.segmentId == segId);
+      network.callouts.removeWhere((_, c) => c.targetId == segId);
 
       if (startNodeId != null && network.getConnectedSegments(startNodeId).isEmpty) {
         network.fittings.remove(startNodeId);
@@ -1337,6 +1342,65 @@ class PipingInputController extends ChangeNotifier {
       history.recordState(network);
       notifyListeners();
     }
+  }
+
+  // ==========================================
+  // Callouts (Умные выноски)
+  // ==========================================
+
+  /// Генерация недостающих выносок для сегментов, арматуры и стыков
+  int generateMissingCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+    final count = network.generateMissingCallouts(offsetX: offsetX, offsetY: offsetY);
+    if (count > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return count;
+  }
+
+  /// Обновление выноски
+  void updateCallout(Callout callout) {
+    network.callouts[callout.id] = callout;
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Удаление выноски
+  void removeCallout(String id) {
+    if (network.callouts.containsKey(id)) {
+      network.callouts.remove(id);
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Переключение выноски между режимом "по шаблону" и "свой текст"
+  void toggleCalloutMode(String id, bool isCustom) {
+    final callout = network.callouts[id];
+    if (callout == null) return;
+    if (isCustom) {
+      // Инициализируем пользовательский текст текущим сгенерированным по шаблону
+      final currentText = network.generateCalloutText(callout, currentProject.calloutTemplates);
+      network.callouts[id] = callout.copyWith(customText: currentText);
+    } else {
+      network.callouts[id] = callout.copyWith(clearCustomText: true);
+    }
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Обновление пользовательского текста выноски
+  void updateCalloutCustomText(String id, String customText) {
+    final callout = network.callouts[id];
+    if (callout == null) return;
+    network.callouts[id] = callout.copyWith(customText: customText);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Получение итогового текста выноски для отображения
+  String getCalloutText(Callout callout) {
+    return network.generateCalloutText(callout, currentProject.calloutTemplates);
   }
 
   Future<void> saveProject() async {
