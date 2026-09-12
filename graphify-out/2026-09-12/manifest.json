@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789196195.5543451,
-    "seen": 1789217223.2008224,
-    "ast_hash": "289d8f984d5f52352290bdef1054e771",
+    "mtime": 1789217606.0398953,
+    "seen": 1789217779.3635242,
+    "ast_hash": "b66179a45f34c1691d0e3150b8736745",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789148787.4513845,
-    "seen": 1789148910.537731,
-    "ast_hash": "0a99fe5ae67727a37eeb811f943d6bfe",
+    "mtime": 1789217612.0497482,
+    "seen": 1789217779.3635347,
+    "ast_hash": "820dc0abeb865e4cfbd8b9667afc55ea",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789196214.0820694,
-    "seen": 1789217223.200844,
-    "ast_hash": "6a495055bd8e1ba69d770486ee4ed199",
+    "mtime": 1789217671.6712992,
+    "seen": 1789217779.3635476,
+    "ast_hash": "8d7748545978738de663560c2e9e9209",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789142111.0679417,
-    "seen": 1789148910.5377326,
-    "ast_hash": "b24162d1aad3ca1246e2ac3ff6318401",
+    "mtime": 1789217676.4005744,
+    "seen": 1789217779.3635366,
+    "ast_hash": "abe2e820c056842b47a50acfbe9269b6",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1353,6 +1353,12 @@
     "mtime": 1789196806.9597268,
     "seen": 1789217223.2009568,
     "ast_hash": "e2e844ccd2d16435c6b86b8f6a6a77eb",
+    "semantic_hash": ""
+  },
+  "test/top_bar_grid_snap_axes_test.dart": {
+    "mtime": 1789217737.7560828,
+    "seen": 1789217779.3635771,
+    "ast_hash": "88a1222a3cbf5fe4a380a80d578d9ff5",
     "semantic_hash": ""
   }
 }

@@ -13,6 +13,19 @@ import 'painters/annotation_painter.dart';
 
 
 
+/// Данные о длине и угле отрезка трассировки для отображения в HUD
+class TraceHudInfo {
+  final double lengthMm;
+  final int angleDegrees;
+  final String text;
+
+  const TraceHudInfo({
+    required this.lengthMm,
+    required this.angleDegrees,
+    required this.text,
+  });
+}
+
 /// Холст для визуализации и интерактивного черчения трубопроводной сети
 class PipingCanvasPainter extends CustomPainter {
   final PipingNetwork network;
@@ -109,6 +122,9 @@ class PipingCanvasPainter extends CustomPainter {
 
     // 9. Индикатор магнитной привязки и полярных углов
     _drawSnapIndicator(canvas);
+
+    // 10. HUD длины и угла активного отрезка трассировки
+    _drawTraceHud(canvas, size);
   }
 
   void _drawCoordinateAxes(Canvas canvas, Size size) {
@@ -246,8 +262,9 @@ class PipingCanvasPainter extends CustomPainter {
       _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00B0FF));
     } else if (snapResult!.type == SnapType.polarAngle) {
       // Направляющий луч от начала трассировки
-      if (activeTraceStart != null) {
-        final startPt = projector.project(activeTraceStart!);
+      final startNode = activeTraceStart ?? activeAxisStart;
+      if (startNode != null) {
+        final startPt = projector.project(startNode);
         final rayPaint = Paint()
           ..color = Colors.amber.shade700
           ..strokeWidth = 1.5
@@ -260,8 +277,118 @@ class PipingCanvasPainter extends CustomPainter {
         ..style = PaintingStyle.stroke;
       canvas.drawRect(Rect.fromCenter(center: pt, width: 12, height: 12), orangePaint);
 
-      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, Colors.amber.shade900);
+      // Если HUD не активен, рисуем компактный бейдж полярной привязки
+      if (activeTraceStart == null && activeAxisStart == null) {
+        _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, Colors.amber.shade900);
+      }
     }
+  }
+
+  /// Вычисление информации о длине и угле для HUD трассировки
+  static TraceHudInfo computeTraceHudInfo(Node3D startNode, Node3D endNode) {
+    final lengthMm = startNode.distanceTo(endNode);
+
+    final dx = endNode.x - startNode.x;
+    final dy = endNode.y - startNode.y;
+    double angleDeg = 0.0;
+    if (dx.abs() > 0.001 || dy.abs() > 0.001) {
+      angleDeg = math.atan2(dy, dx) * 180.0 / math.pi;
+      if (angleDeg < 0) {
+        angleDeg += 360.0;
+      }
+    }
+    final angleInt = angleDeg.round() % 360;
+    final text = 'L: ${lengthMm.round()} мм | ∠: $angleInt°';
+
+    return TraceHudInfo(
+      lengthMm: lengthMm,
+      angleDegrees: angleInt,
+      text: text,
+    );
+  }
+
+  /// Вычисление экранной позиции бейджа HUD с защитой от перекрытия курсора и выхода за границы экрана
+  static Offset computeBadgePosition({
+    required Offset cursorOffset,
+    required Size badgeSize,
+    required Size canvasSize,
+    double offsetDistance = 16.0,
+  }) {
+    double posX = cursorOffset.dx + offsetDistance;
+    double posY = cursorOffset.dy + offsetDistance;
+
+    if (canvasSize.width.isFinite && posX + badgeSize.width > canvasSize.width - 8) {
+      posX = cursorOffset.dx - offsetDistance - badgeSize.width;
+    }
+    if (canvasSize.height.isFinite && posY + badgeSize.height > canvasSize.height - 8) {
+      posY = cursorOffset.dy - offsetDistance - badgeSize.height;
+    }
+    if (posX < 8) posX = 8;
+    if (posY < 8) posY = 8;
+
+    return Offset(posX, posY);
+  }
+
+  void _drawTraceHud(Canvas canvas, Size size) {
+    final startNode = activeTraceStart ?? activeAxisStart;
+    if (startNode == null || activeTraceEnd == null) return;
+
+    final endNode = (snapResult != null && snapResult!.type != SnapType.none)
+        ? snapResult!.worldPoint
+        : projector.unproject(activeTraceEnd!, currentElevationZ);
+
+    final hudInfo = computeTraceHudInfo(startNode, endNode);
+    final isPolarLocked = snapResult?.type == SnapType.polarAngle;
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: hudInfo.text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    const paddingH = 8.0;
+    const paddingV = 4.0;
+    final badgeSize = Size(tp.width + paddingH * 2, tp.height + paddingV * 2);
+
+    final badgePos = computeBadgePosition(
+      cursorOffset: activeTraceEnd!,
+      badgeSize: badgeSize,
+      canvasSize: size,
+    );
+
+    final badgeRect = Rect.fromLTWH(badgePos.dx, badgePos.dy, badgeSize.width, badgeSize.height);
+    final rrect = RRect.fromRectAndRadius(badgeRect, const Radius.circular(6.0));
+
+    // Тень бейджа для читаемости на любом фоне холста
+    canvas.drawShadow(
+      Path()..addRRect(rrect),
+      Colors.black.withValues(alpha: 0.45),
+      4.0,
+      false,
+    );
+
+    // Полупрозрачный темный фон
+    final bgPaint = Paint()
+      ..color = const Color(0xE61E293B) // Slate 800 с 90% непрозрачностью
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(rrect, bgPaint);
+
+    // Рамка бейджа (золотистая при фиксации полярного угла, полупрозрачная белая в обычном режиме)
+    final borderPaint = Paint()
+      ..color = isPolarLocked ? Colors.amber.shade600 : const Color(0x33FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawRRect(rrect, borderPaint);
+
+    // Отрисовка текста
+    tp.paint(canvas, Offset(badgePos.dx + paddingH, badgePos.dy + paddingV));
   }
 
   void _drawSnapBadge(Canvas canvas, Offset pos, String text, Color accentColor) {
