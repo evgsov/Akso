@@ -10,6 +10,7 @@ import 'materials_specification_dialog.dart';
 import 'pipe_assortment_dialog.dart';
 import 'piping_systems_dialog.dart';
 import 'tools_panel.dart';
+import 'touch_distance_entry_dialog.dart';
 import 'weld_journal_dialog.dart';
 
 class TabletTouchLayout extends StatelessWidget {
@@ -195,8 +196,24 @@ class TabletTouchLayout extends StatelessWidget {
                             ],
                           ),
                         ),
-                        if (controller.traceStartNode != null) ...[
+                        if (controller.traceStartNode != null || controller.axisStartNode != null) ...[
                           const SizedBox(height: 12),
+                          FilledButton.icon(
+                            key: const Key('tablet_exact_length_button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.amber.shade700,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            icon: const Icon(Icons.straighten, size: 18),
+                            label: const Text(
+                              '📐 Точная длина',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            onPressed: () => _showTouchDistanceEntryDialog(context),
+                          ),
+                          const SizedBox(height: 8),
                           FilledButton.icon(
                             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
                             icon: const Icon(Icons.close, size: 18),
@@ -708,6 +725,20 @@ class TabletTouchLayout extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showTouchDistanceEntryDialog(BuildContext context) {
+    TouchDistanceEntryDialog.show(
+      context,
+      onCommit: (lengthMm, {dirX, dirY, dirZ}) {
+        controller.commitTraceWithLength(
+          lengthMm,
+          dirX: dirX,
+          dirY: dirY,
+          dirZ: dirZ,
+        );
+      },
     );
   }
 }

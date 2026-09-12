@@ -765,13 +765,26 @@ class PipingInputController extends ChangeNotifier {
     return (dirX: dirX, dirY: dirY, dirZ: dirZ);
   }
 
-  /// Фиксация конца трассировки трубы или строительной оси на заданном расстоянии (Direct Distance Entry)
-  void commitTraceWithLength(double lengthMm) {
+  /// Фиксация конца трассировки трубы или строительной оси на заданном расстоянии (Direct Distance Entry / Touch UI)
+  void commitTraceWithLength(double lengthMm, {double? dirX, double? dirY, double? dirZ}) {
     if (lengthMm <= 0 || lengthMm.isNaN || lengthMm.isInfinite) return;
 
     if (currentTool == CanvasTool.trace && traceStartNode != null) {
       final startNode = traceStartNode!;
-      final dir = _computeTraceDirection(startNode);
+      final ({double dirX, double dirY, double dirZ}) dir;
+      if (dirX != null || dirY != null || dirZ != null) {
+        final dx = dirX ?? 0.0;
+        final dy = dirY ?? 0.0;
+        final dz = dirZ ?? 0.0;
+        final mag = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (mag > 1e-6) {
+          dir = (dirX: dx / mag, dirY: dy / mag, dirZ: dz / mag);
+        } else {
+          dir = _computeTraceDirection(startNode);
+        }
+      } else {
+        dir = _computeTraceDirection(startNode);
+      }
 
       final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
       final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
@@ -827,7 +840,20 @@ class PipingInputController extends ChangeNotifier {
       notifyListeners();
     } else if (currentTool == CanvasTool.drawAxis && axisStartNode != null) {
       final startNode = axisStartNode!;
-      final dir = _computeTraceDirection(startNode);
+      final ({double dirX, double dirY, double dirZ}) dir;
+      if (dirX != null || dirY != null || dirZ != null) {
+        final dx = dirX ?? 0.0;
+        final dy = dirY ?? 0.0;
+        final dz = dirZ ?? 0.0;
+        final mag = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (mag > 1e-6) {
+          dir = (dirX: dx / mag, dirY: dy / mag, dirZ: dz / mag);
+        } else {
+          dir = _computeTraceDirection(startNode);
+        }
+      } else {
+        dir = _computeTraceDirection(startNode);
+      }
 
       final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
       final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
