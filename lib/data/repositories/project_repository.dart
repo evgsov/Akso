@@ -3,7 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../domain/models/project_model.dart';
 
-class ProjectRepository {
+abstract class IProjectRepository {
+  Future<void> saveProject(ProjectModel project);
+  Future<ProjectModel?> loadProject();
+}
+
+class ProjectRepository implements IProjectRepository {
+  @override
   Future<void> saveProject(ProjectModel project) async {
     final String jsonString = jsonEncode(project.toJson());
     final Uint8List bytes = Uint8List.fromList(utf8.encode(jsonString));
@@ -17,6 +23,7 @@ class ProjectRepository {
     );
   }
 
+  @override
   Future<ProjectModel?> loadProject() async {
     final PlatformFile? result = await FilePicker.pickFile(
       type: FileType.custom,

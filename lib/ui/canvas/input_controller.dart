@@ -84,19 +84,20 @@ class PipingInputController extends ChangeNotifier {
   bool isDraggingNode = false;
 
   late ProjectModel currentProject;
-  final ProjectRepository projectRepository;
+  final IProjectRepository projectRepository;
 
   PipingInputController({
     PipingNetwork? network,
     PipingNetwork? initialNetwork,
     AxonometryProjector? projector,
-    ProjectRepository? projectRepository,
+    IProjectRepository? projectRepository,
+    IProjectRepository? repository,
   })  : network = network ?? initialNetwork ?? PipingNetwork(),
         projector = projector ??
             const AxonometryProjector(
               projectionType: ProjectionType.gostFrontal45,
             ),
-        projectRepository = projectRepository ?? ProjectRepository() {
+        projectRepository = repository ?? projectRepository ?? ProjectRepository() {
     currentProject = ProjectModel(
       id: _uuid.v4(),
       title: 'Новый проект',
