@@ -6,13 +6,15 @@ import '../../domain/enums/inspection_method.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
+import '../../domain/models/callout.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
+import '../../ui/canvas/painters/callout_painter.dart';
 
 /// Генератор файлов AutoCAD DXF (ASCII R2000 / AC1015)
 class DxfWriter {
   /// Генерация 3D DXF файла (пространственные трубы, слои по системам, 3D-отметки)
-  static String generate3dDxf(PipingNetwork network) {
+  static String generate3dDxf(PipingNetwork network, {Map<String, String>? calloutTemplates}) {
     final buffer = StringBuffer();
 
     _writeHeader(buffer);
@@ -184,6 +186,9 @@ class DxfWriter {
       }
     }
 
+    // 8. Умные выноски (Callouts) в 3D
+    _writeCallouts3d(buffer, network, calloutTemplates ?? defaultCalloutTemplates);
+
     buffer.writeln('  0\nENDSEC\n  0\nEOF');
     return buffer.toString();
   }
@@ -193,6 +198,7 @@ class DxfWriter {
   static String generate2dGostAxonometryDxf(
     PipingNetwork network, {
     ProjectionType projection = ProjectionType.gostFrontal45,
+    Map<String, String>? calloutTemplates,
   }) {
     final buffer = StringBuffer();
     final projector = AxonometryProjector(projectionType: projection, scale: 1.0);
@@ -422,6 +428,9 @@ class DxfWriter {
       }
     }
 
+    // 8. Умные выноски (Callouts) в 2D проекции
+    _writeCallouts2d(buffer, network, projector, calloutTemplates ?? defaultCalloutTemplates);
+
     buffer.writeln('  0\nENDSEC\n  0\nEOF');
     return buffer.toString();
   }
@@ -590,7 +599,7 @@ class DxfWriter {
     b.writeln('  0\nENDTAB');
 
     // Таблица слоев (LAYER)
-    final layerCount = 16 + net.systems.length;
+    final layerCount = 18 + net.systems.length;
     b.writeln('  0\nTABLE\n  2\nLAYER\n 70\n$layerCount');
 
     // Базовые слои
@@ -610,6 +619,8 @@ class DxfWriter {
     _writeLayerEntry(b, 'АКСО_ВРЕЗКИ', 1); // Red
     _writeLayerEntry(b, 'АКСО_ОСИ', 8, 'DASHDOT'); // Gray Dash-dot
     _writeLayerEntry(b, 'АКСО_ОСИ_ТЕКСТ', 7);
+    _writeLayerEntry(b, 'АКСО_ВЫНОСКИ', 7); // White (callout leader lines)
+    _writeLayerEntry(b, 'АКСО_ВЫНОСКИ_ТЕКСТ', 4); // Cyan (callout text)
 
     // Слои для систем
     for (final sys in net.systems.values) {
@@ -822,5 +833,127 @@ class DxfWriter {
       z: 0.0,
       height: 35.0,
     );
+  }
+
+  // --- Экспорт Callouts (Умные Выноски) ---
+
+  /// Экспорт умных выносок в 3D DXF (TEXT + LINE на слоях АКСО_ВЫНОСКИ / АКСО_ВЫНОСКИ_ТЕКСТ)
+  static void _writeCallouts3d(
+    StringBuffer buffer,
+    PipingNetwork network,
+    Map<String, String> templates,
+  ) {
+    for (final callout in network.callouts.values) {
+      final anchor = CalloutPainter.getTarget3DPoint(network, callout);
+      if (anchor == null) continue;
+
+      final text = network.generateCalloutText(callout, templates);
+      if (text.isEmpty) continue;
+
+      // Смещение текста (конвертируем экранные пиксели в мировые мм, грубый масштаб)
+      const screenToWorld = 5.0; // 1 px ≈ 5 мм в мировых координатах
+      final textX = anchor.x + callout.screenOffsetX * screenToWorld;
+      final textY = anchor.y;
+      final textZ = anchor.z + callout.screenOffsetY.abs() * screenToWorld;
+
+      // Ножка выноски (наклонная линия от объекта до излома)
+      _write3dLine(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ',
+        x1: anchor.x, y1: anchor.y, z1: anchor.z,
+        x2: textX, y2: textY, z2: textZ,
+      );
+
+      // Горизонтальная полочка
+      final shelfLen = text.length * 40.0; // примерная ширина текста
+      _write3dLine(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ',
+        x1: textX, y1: textY, z1: textZ,
+        x2: textX + shelfLen, y2: textY, z2: textZ,
+      );
+
+      // Текст над полочкой
+      _writeText(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+        text: text,
+        x: textX + 10.0,
+        y: textY,
+        z: textZ + 15.0,
+        height: 50.0,
+      );
+    }
+  }
+
+  /// Экспорт умных выносок в 2D ГОСТ DXF (LINE + TEXT с ножкой и полочкой)
+  static void _writeCallouts2d(
+    StringBuffer buffer,
+    PipingNetwork network,
+    AxonometryProjector projector,
+    Map<String, String> templates,
+  ) {
+    for (final callout in network.callouts.values) {
+      final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
+      if (anchor3D == null) continue;
+
+      final text = network.generateCalloutText(callout, templates);
+      if (text.isEmpty) continue;
+
+      final anchorScreen = _projectTo2d(projector, anchor3D);
+
+      // Конвертируем экранное смещение выноски в 2D CAD координаты
+      // Масштаб: screenOffset пиксели → мировые единицы (1 px ≈ 5 мм)
+      const px2cad = 5.0;
+      final textPos = Offset(
+        anchorScreen.dx + callout.screenOffsetX * px2cad,
+        anchorScreen.dy - callout.screenOffsetY * px2cad, // Инвертируем Y (в CAD Y↑)
+      );
+
+      // Ножка выноски (наклонная от точки привязки до излома)
+      _write2dLine(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ',
+        x1: anchorScreen.dx,
+        y1: anchorScreen.dy,
+        x2: textPos.dx,
+        y2: textPos.dy,
+      );
+
+      // Горизонтальная полочка
+      final shelfLen = text.length * 35.0;
+      final isRight = callout.screenOffsetX >= 0;
+      final shelfEndX = isRight ? textPos.dx + shelfLen : textPos.dx - shelfLen;
+
+      _write2dLine(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ',
+        x1: textPos.dx,
+        y1: textPos.dy,
+        x2: shelfEndX,
+        y2: textPos.dy,
+      );
+
+      // Текст над полочкой (редактируемый TEXT в AutoCAD)
+      final textLeft = isRight ? textPos.dx + 10.0 : textPos.dx - shelfLen + 10.0;
+      _writeText(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+        text: text,
+        x: textLeft,
+        y: textPos.dy + 15.0,
+        z: 0.0,
+        height: 40.0,
+      );
+
+      // Кружок в точке привязки (как по ГОСТ 2.316)
+      _writeCircle(
+        buffer,
+        layer: 'АКСО_ВЫНОСКИ',
+        cx: anchorScreen.dx,
+        cy: anchorScreen.dy,
+        radius: 8.0,
+      );
+    }
   }
 }

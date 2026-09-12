@@ -11,11 +11,13 @@ import '../../../../domain/models/piping_network.dart';
 class DxfExportDialog extends StatefulWidget {
   final PipingNetwork network;
   final ProjectionType currentProjection;
+  final Map<String, String>? calloutTemplates;
 
   const DxfExportDialog({
     super.key,
     required this.network,
     required this.currentProjection,
+    this.calloutTemplates,
   });
 
   @override
@@ -41,12 +43,13 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
       final String fileName;
 
       if (is3dMode) {
-        dxfContent = DxfWriter.generate3dDxf(widget.network);
+        dxfContent = DxfWriter.generate3dDxf(widget.network, calloutTemplates: widget.calloutTemplates);
         fileName = 'akso_scheme_3d.dxf';
       } else {
         dxfContent = DxfWriter.generate2dGostAxonometryDxf(
           widget.network,
           projection: selectedProjection,
+          calloutTemplates: widget.calloutTemplates,
         );
         fileName = 'akso_scheme_gost_2d.dxf';
       }
@@ -176,8 +179,8 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           label: const Text('Копировать текст DXF'),
           onPressed: () {
             final content = is3dMode
-                ? DxfWriter.generate3dDxf(widget.network)
-                : DxfWriter.generate2dGostAxonometryDxf(widget.network, projection: selectedProjection);
+                ? DxfWriter.generate3dDxf(widget.network, calloutTemplates: widget.calloutTemplates)
+                : DxfWriter.generate2dGostAxonometryDxf(widget.network, projection: selectedProjection, calloutTemplates: widget.calloutTemplates);
             Clipboard.setData(ClipboardData(text: content));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('DXF скопирован в буфер обмена')),

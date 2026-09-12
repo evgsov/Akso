@@ -65,7 +65,7 @@ TABLE
   2
 LAYER
  70
-24
+26
   0
 LAYER
   2
@@ -224,6 +224,26 @@ LAYER
 0
  62
 7
+  6
+CONTINUOUS
+  0
+LAYER
+  2
+АКСО_ВЫНОСКИ
+ 70
+0
+ 62
+7
+  6
+CONTINUOUS
+  0
+LAYER
+  2
+АКСО_ВЫНОСКИ_ТЕКСТ
+ 70
+0
+ 62
+4
   6
 CONTINUOUS
   0

@@ -321,6 +321,7 @@ class DesktopCadLayout extends StatelessWidget {
                 builder: (_) => DxfExportDialog(
                   network: controller.network,
                   currentProjection: controller.projector.projectionType,
+                  calloutTemplates: controller.currentProject.calloutTemplates,
                 ),
               );
             },

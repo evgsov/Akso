@@ -122,7 +122,7 @@ class TabletTouchLayout extends StatelessWidget {
                       } else if (val == 'weld') {
                         showDialog(context: context, builder: (_) => WeldJournalDialog(network: controller.network));
                       } else if (val == 'export') {
-                        showDialog(context: context, builder: (_) => DxfExportDialog(network: controller.network, currentProjection: controller.projector.projectionType));
+                        showDialog(context: context, builder: (_) => DxfExportDialog(network: controller.network, currentProjection: controller.projector.projectionType, calloutTemplates: controller.currentProject.calloutTemplates));
                       } else if (val == 'desktop') {
                         controller.setLayoutMode(UiLayoutMode.desktopCad);
                       }
