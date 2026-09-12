@@ -2099,13 +2099,13 @@
       "source_location": "L6"
     },
     {
-      "id": "package_akso_core_math_snap_engine_dart",
-      "label": "package:akso/core/math/snap_engine.dart",
+      "id": "dart_io",
+      "label": "dart:io",
       "_origin": "ast",
       "community": 10,
       "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
-      "norm_label": "package:akso/core/math/snap_engine.dart",
+      "norm_label": "dart:io",
       "source_file": null,
       "source_location": null
     },
@@ -2121,17 +2121,6 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_enums_fitting_type_dart",
-      "label": "package:akso/domain/enums/fitting_type.dart",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/enums/fitting_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_enums_valve_type_dart",
       "label": "package:akso/domain/enums/valve_type.dart",
       "_origin": "ast",
@@ -2139,17 +2128,6 @@
       "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/enums/valve_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_enums_weld_type_dart",
-      "label": "package:akso/domain/enums/weld_type.dart",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/enums/weld_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -2172,17 +2150,6 @@
       "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/models/network_history_manager.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_node_3d_dart",
-      "label": "package:akso/domain/models/node_3d.dart",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/node_3d.dart",
       "source_file": null,
       "source_location": null
     },
@@ -2231,28 +2198,6 @@
       "source_location": null
     },
     {
-      "id": "test_auto_branching_and_flanges_test",
-      "label": "auto_branching_and_flanges_test.dart",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "auto_branching_and_flanges_test.dart",
-      "source_file": "test/auto_branching_and_flanges_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_auto_branching_and_flanges_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/auto_branching_and_flanges_test.dart",
-      "source_location": null
-    },
-    {
       "id": "test_construction_axis_test",
       "label": "construction_axis_test.dart",
       "_origin": "ast",
@@ -2294,6 +2239,28 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/dxf_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_generate_samples_test",
+      "label": "generate_samples_test.dart",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "generate_samples_test.dart",
+      "source_file": "test/generate_samples_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_generate_samples_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/generate_samples_test.dart",
       "source_location": null
     },
     {
@@ -2363,28 +2330,6 @@
       "source_location": null
     },
     {
-      "id": "test_snap_engine_test",
-      "label": "snap_engine_test.dart",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "snap_engine_test.dart",
-      "source_file": "test/snap_engine_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_snap_engine_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/snap_engine_test.dart",
-      "source_location": null
-    },
-    {
       "id": "gemini",
       "label": "GEMINI.md",
       "_origin": "ast",
@@ -2425,7 +2370,7 @@
       "label": "dart:ui",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "dart:ui",
       "source_file": null,
@@ -2436,53 +2381,42 @@
       "label": "package:akso/core/math/axonometry_projector.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "package:akso/core/math/axonometry_projector.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_main_dart",
-      "label": "package:akso/main.dart",
+      "id": "package_akso_core_math_snap_engine_dart",
+      "label": "package:akso/core/math/snap_engine.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "package:akso/main.dart",
+      "norm_label": "package:akso/core/math/snap_engine.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_ui_canvas_input_controller_dart",
-      "label": "package:akso/ui/canvas/input_controller.dart",
+      "id": "package_akso_domain_enums_projection_type_dart",
+      "label": "package:akso/domain/enums/projection_type.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "package:akso/ui/canvas/input_controller.dart",
+      "norm_label": "package:akso/domain/enums/projection_type.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_ui_canvas_piping_canvas_dart",
-      "label": "package:akso/ui/canvas/piping_canvas.dart",
+      "id": "package_akso_domain_models_node_3d_dart",
+      "label": "package:akso/domain/models/node_3d.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "package:akso/ui/canvas/piping_canvas.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_features_editor_widgets_top_bar_dart",
-      "label": "package:akso/ui/features/editor/widgets/top_bar.dart",
-      "_origin": "ast",
-      "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/top_bar.dart",
+      "norm_label": "package:akso/domain/models/node_3d.dart",
       "source_file": null,
       "source_location": null
     },
@@ -2491,7 +2425,7 @@
       "label": "axonometry_math_test.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "axonometry_math_test.dart",
       "source_file": "test/axonometry_math_test.dart",
@@ -2502,7 +2436,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/axonometry_math_test.dart",
@@ -2513,7 +2447,7 @@
       "label": "fittings_and_elevation_test.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "fittings_and_elevation_test.dart",
       "source_file": "test/fittings_and_elevation_test.dart",
@@ -2524,32 +2458,54 @@
       "label": "main",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/fittings_and_elevation_test.dart",
       "source_location": null
     },
     {
-      "id": "test_top_bar_grid_snap_axes_test",
-      "label": "top_bar_grid_snap_axes_test.dart",
+      "id": "test_snap_engine_test",
+      "label": "snap_engine_test.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "top_bar_grid_snap_axes_test.dart",
-      "source_file": "test/top_bar_grid_snap_axes_test.dart",
+      "norm_label": "snap_engine_test.dart",
+      "source_file": "test/snap_engine_test.dart",
       "source_location": null
     },
     {
-      "id": "test_top_bar_grid_snap_axes_test_main",
+      "id": "test_snap_engine_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/top_bar_grid_snap_axes_test.dart",
+      "source_file": "test/snap_engine_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_trace_hud_test",
+      "label": "trace_hud_test.dart",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "trace_hud_test.dart",
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_trace_hud_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/trace_hud_test.dart",
       "source_location": null
     },
     {
@@ -2557,7 +2513,7 @@
       "label": "viewport_navigation_test.dart",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "viewport_navigation_test.dart",
       "source_file": "test/viewport_navigation_test.dart",
@@ -2568,32 +2524,10 @@
       "label": "main",
       "_origin": "ast",
       "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/viewport_navigation_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_widget_test",
-      "label": "widget_test.dart",
-      "_origin": "ast",
-      "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
-      "file_type": "code",
-      "norm_label": "widget_test.dart",
-      "source_file": "test/widget_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_widget_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 101,
-      "community_name": "fittings_and_elevation_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/widget_test.dart",
       "source_location": null
     },
     {
@@ -3631,28 +3565,6 @@
       "source_location": null
     },
     {
-      "id": "core_math_snap_engine_dart",
-      "label": "../../../../core/math/snap_engine.dart",
-      "_origin": "ast",
-      "community": 12,
-      "community_name": "piping_canvas.dart",
-      "file_type": "code",
-      "norm_label": "../../../../core/math/snap_engine.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "custompainter",
-      "label": "CustomPainter",
-      "_origin": "ast",
-      "community": 12,
-      "community_name": "piping_canvas.dart",
-      "file_type": "code",
-      "norm_label": "custompainter",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_ui_canvas_piping_canvas",
       "label": "piping_canvas.dart",
       "_origin": "ast",
@@ -3704,6 +3616,39 @@
       "community_name": "piping_canvas.dart",
       "file_type": "code",
       "norm_label": "activetracestart",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_angledegrees",
+      "label": "angleDegrees",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "angledegrees",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_computebadgeposition",
+      "label": "computeBadgePosition",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "computebadgeposition",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_computetracehudinfo",
+      "label": "computeTraceHudInfo",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "computetracehudinfo",
       "source_file": "lib/ui/canvas/piping_canvas.dart",
       "source_location": null
     },
@@ -3796,6 +3741,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_canvas_piping_canvas_drawtracehud",
+      "label": "_drawTraceHud",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "_drawtracehud",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_lengthmm",
+      "label": "lengthMm",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "lengthmm",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_canvas_piping_canvas_network",
       "label": "network",
       "_origin": "ast",
@@ -3814,17 +3781,6 @@
       "community_name": "piping_canvas.dart",
       "file_type": "code",
       "norm_label": "paint",
-      "source_file": "lib/ui/canvas/piping_canvas.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_piping_canvas_pipingcanvaspainter",
-      "label": "PipingCanvasPainter",
-      "_origin": "ast",
-      "community": 12,
-      "community_name": "piping_canvas.dart",
-      "file_type": "code",
-      "norm_label": "pipingcanvaspainter",
       "source_file": "lib/ui/canvas/piping_canvas.dart",
       "source_location": null
     },
@@ -3913,6 +3869,28 @@
       "community_name": "piping_canvas.dart",
       "file_type": "code",
       "norm_label": "snapresult",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_text",
+      "label": "text",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "text",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_tracehudinfo",
+      "label": "TraceHudInfo",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "piping_canvas.dart",
+      "file_type": "code",
+      "norm_label": "tracehudinfo",
       "source_file": "lib/ui/canvas/piping_canvas.dart",
       "source_location": null
     },
@@ -4078,6 +4056,28 @@
       "community_name": "editor_screen.dart",
       "file_type": "code",
       "norm_label": "dispose",
+      "source_file": "lib/ui/features/editor/editor_screen.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_editor_screen_editorscreen",
+      "label": "EditorScreen",
+      "_origin": "ast",
+      "community": 120,
+      "community_name": "editor_screen.dart",
+      "file_type": "code",
+      "norm_label": "editorscreen",
+      "source_file": "lib/ui/features/editor/editor_screen.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_editor_screen_editorscreenstate",
+      "label": "_EditorScreenState",
+      "_origin": "ast",
+      "community": 120,
+      "community_name": "editor_screen.dart",
+      "file_type": "code",
+      "norm_label": "_editorscreenstate",
       "source_file": "lib/ui/features/editor/editor_screen.dart",
       "source_location": null
     },
@@ -4277,6 +4277,17 @@
       "file_type": "code",
       "norm_label": "flangeconnectiontypeext",
       "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "core_math_snap_engine_dart",
+      "label": "../../../../core/math/snap_engine.dart",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "../../../../core/math/snap_engine.dart",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -4962,28 +4973,6 @@
       "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_editor_screen_editorscreen",
-      "label": "EditorScreen",
-      "_origin": "ast",
-      "community": 126,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "editorscreen",
-      "source_file": "lib/ui/features/editor/editor_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_editor_screen_editorscreenstate",
-      "label": "_EditorScreenState",
-      "_origin": "ast",
-      "community": 126,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_editorscreenstate",
-      "source_file": "lib/ui/features/editor/editor_screen.dart",
-      "source_location": null
-    },
-    {
       "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialog",
       "label": "CustomPipeDimensionDialog",
       "_origin": "ast",
@@ -5025,6 +5014,28 @@
       "file_type": "code",
       "norm_label": "_desktopsegmentinspectorstate",
       "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheet",
+      "label": "FittingPropertiesSheet",
+      "_origin": "ast",
+      "community": 126,
+      "community_name": "State",
+      "file_type": "code",
+      "norm_label": "fittingpropertiessheet",
+      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheetstate",
+      "label": "_FittingPropertiesSheetState",
+      "_origin": "ast",
+      "community": 126,
+      "community_name": "State",
+      "file_type": "code",
+      "norm_label": "_fittingpropertiessheetstate",
+      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
       "source_location": null
     },
     {
@@ -5178,17 +5189,6 @@
       "norm_label": "task 6: \u0440\u0435\u0430\u043b\u0438\u0437\u0430\u0446\u0438\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f \u0438 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u043f\u0440\u043e\u0435\u043a\u0442\u043e\u0432 (file i/o)",
       "source_file": "docs/superpowers/plans/implementation_plan.md",
       "source_location": "L279"
-    },
-    {
-      "id": "lib_main_aksoapp",
-      "label": "AksoApp",
-      "_origin": "ast",
-      "community": 128,
-      "community_name": "StatelessWidget",
-      "file_type": "code",
-      "norm_label": "aksoapp",
-      "source_file": "lib/main.dart",
-      "source_location": null
     },
     {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopcadlayout",
@@ -5618,6 +5618,28 @@
       "source_location": "L140"
     },
     {
+      "id": "package_akso_domain_enums_fitting_type_dart",
+      "label": "package:akso/domain/enums/fitting_type.dart",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "package:flutter_test/flutter_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/enums/fitting_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_enums_weld_type_dart",
+      "label": "package:akso/domain/enums/weld_type.dart",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "package:flutter_test/flutter_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/enums/weld_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "package_akso_domain_models_fitting_catalog_dart",
       "label": "package:akso/domain/models/fitting_catalog.dart",
       "_origin": "ast",
@@ -5670,6 +5692,28 @@
       "file_type": "code",
       "norm_label": "package:flutter_test/flutter_test.dart",
       "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "test_auto_branching_and_flanges_test",
+      "label": "auto_branching_and_flanges_test.dart",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "package:flutter_test/flutter_test.dart",
+      "file_type": "code",
+      "norm_label": "auto_branching_and_flanges_test.dart",
+      "source_file": "test/auto_branching_and_flanges_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_auto_branching_and_flanges_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "package:flutter_test/flutter_test.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/auto_branching_and_flanges_test.dart",
       "source_location": null
     },
     {
@@ -6036,28 +6080,6 @@
       "source_location": null
     },
     {
-      "id": "domain_models_node_3d_dart",
-      "label": "../../../../domain/models/node_3d.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/models/node_3d.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "dxf_export_dialog_dart",
-      "label": "dxf_export_dialog.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "dxf_export_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "elevation_panel_dart",
       "label": "elevation_panel.dart",
       "_origin": "ast",
@@ -6065,17 +6087,6 @@
       "community_name": "tablet_touch_layout.dart",
       "file_type": "code",
       "norm_label": "elevation_panel.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "fitting_catalog_dialog_dart",
-      "label": "fitting_catalog_dialog.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "fitting_catalog_dialog.dart",
       "source_file": null,
       "source_location": null
     },
@@ -6088,28 +6099,6 @@
       "file_type": "code",
       "norm_label": "fitting_properties_sheet.dart",
       "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_projection_type",
-      "label": "projection_type.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "projection_type.dart",
-      "source_file": "lib/domain/enums/projection_type.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_projection_type_projectiontype",
-      "label": "ProjectionType",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "projectiontype",
-      "source_file": "lib/domain/enums/projection_type.dart",
       "source_location": null
     },
     {
@@ -6201,61 +6190,6 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_top_bar",
-      "label": "top_bar.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "top_bar.dart",
-      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_top_bar_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_top_bar_controller",
-      "label": "controller",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_top_bar_loaddemonetwork",
-      "label": "_loadDemoNetwork",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "_loaddemonetwork",
-      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
-      "source_location": null
-    },
-    {
-      "id": "materials_specification_dialog_dart",
-      "label": "materials_specification_dialog.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "materials_specification_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "piping_systems_dialog_dart",
       "label": "piping_systems_dialog.dart",
       "_origin": "ast",
@@ -6274,17 +6208,6 @@
       "community_name": "tablet_touch_layout.dart",
       "file_type": "code",
       "norm_label": "tools_panel.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "weld_journal_dialog_dart",
-      "label": "weld_journal_dialog.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "tablet_touch_layout.dart",
-      "file_type": "code",
-      "norm_label": "weld_journal_dialog.dart",
       "source_file": null,
       "source_location": null
     },
@@ -6443,146 +6366,113 @@
       "source_location": null
     },
     {
-      "id": "int_get",
-      "label": "int get",
+      "id": "domain_enums_fitting_type_dart",
+      "label": "../../../../domain/enums/fitting_type.dart",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "int get",
+      "norm_label": "../../../../domain/enums/fitting_type.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d",
-      "label": "node_3d.dart",
+      "id": "domain_models_pipe_segment_dart",
+      "label": "../../../../domain/models/pipe_segment.dart",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "node_3d.dart",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "../../../../domain/models/pipe_segment.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_copywith",
-      "label": "copyWith",
+      "id": "lib_ui_canvas_painters_pipe_painter",
+      "label": "pipe_painter.dart",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "copywith",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "pipe_painter.dart",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_customelevation",
-      "label": "customElevation",
+      "id": "lib_ui_canvas_painters_pipe_painter_calcelbowtangentlength",
+      "label": "calcElbowTangentLength",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "customelevation",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "calcelbowtangentlength",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_distanceto",
-      "label": "distanceTo",
+      "id": "lib_ui_canvas_painters_pipe_painter_calcpipetrimmedpoint",
+      "label": "calcPipeTrimmedPoint",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "distanceto",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "calcpipetrimmedpoint",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_fromjson",
-      "label": "fromJson",
+      "id": "lib_ui_canvas_painters_pipe_painter_calcstrokewidth",
+      "label": "calcStrokeWidth",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "fromjson",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "calcstrokewidth",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_hashcode",
-      "label": "hashCode",
+      "id": "lib_ui_canvas_painters_pipe_painter_drawselecteddimensionbadge",
+      "label": "drawSelectedDimensionBadge",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "hashcode",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "drawselecteddimensionbadge",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_id",
-      "label": "id",
+      "id": "lib_ui_canvas_painters_pipe_painter_isteebranchsegment",
+      "label": "isTeeBranchSegment",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "id",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "isteebranchsegment",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_operator",
-      "label": "operator",
+      "id": "lib_ui_canvas_painters_pipe_painter_paint",
+      "label": "paint",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "operator",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "paint",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_models_node_3d_tojson",
-      "label": "toJson",
+      "id": "lib_ui_canvas_painters_pipe_painter_pipepainter",
+      "label": "PipePainter",
       "_origin": "ast",
       "community": 135,
-      "community_name": "node_3d.dart",
+      "community_name": "pipe_painter.dart",
       "file_type": "code",
-      "norm_label": "tojson",
-      "source_file": "lib/domain/models/node_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_node_3d_x",
-      "label": "x",
-      "_origin": "ast",
-      "community": 135,
-      "community_name": "node_3d.dart",
-      "file_type": "code",
-      "norm_label": "x",
-      "source_file": "lib/domain/models/node_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_node_3d_y",
-      "label": "y",
-      "_origin": "ast",
-      "community": 135,
-      "community_name": "node_3d.dart",
-      "file_type": "code",
-      "norm_label": "y",
-      "source_file": "lib/domain/models/node_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_node_3d_z",
-      "label": "z",
-      "_origin": "ast",
-      "community": 135,
-      "community_name": "node_3d.dart",
-      "file_type": "code",
-      "norm_label": "z",
-      "source_file": "lib/domain/models/node_3d.dart",
+      "norm_label": "pipepainter",
+      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
@@ -6795,40 +6685,92 @@
       "source_location": null
     },
     {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_anti_patterns_to_avoid",
-      "label": "Anti-patterns to avoid",
+      "id": "package_akso_main_dart",
+      "label": "package:akso/main.dart",
       "_origin": "ast",
       "community": 138,
-      "community_name": "Anti-patterns to avoid",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "anti-patterns to avoid",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L823"
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/main.dart",
+      "source_file": null,
+      "source_location": null
     },
     {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_avoid_offering_too_many_options",
-      "label": "Avoid offering too many options",
+      "id": "package_akso_ui_canvas_input_controller_dart",
+      "label": "package:akso/ui/canvas/input_controller.dart",
       "_origin": "ast",
       "community": 138,
-      "community_name": "Anti-patterns to avoid",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "avoid offering too many options",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L834"
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/canvas/input_controller.dart",
+      "source_file": null,
+      "source_location": null
     },
     {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_avoid_windows_style_paths",
-      "label": "Avoid Windows-style paths",
+      "id": "package_akso_ui_canvas_piping_canvas_dart",
+      "label": "package:akso/ui/canvas/piping_canvas.dart",
       "_origin": "ast",
       "community": 138,
-      "community_name": "Anti-patterns to avoid",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "avoid windows-style paths",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L825"
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/canvas/piping_canvas.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_features_editor_widgets_top_bar_dart",
+      "label": "package:akso/ui/features/editor/widgets/top_bar.dart",
+      "_origin": "ast",
+      "community": 138,
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/features/editor/widgets/top_bar.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "test_top_bar_grid_snap_axes_test",
+      "label": "top_bar_grid_snap_axes_test.dart",
+      "_origin": "ast",
+      "community": 138,
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "top_bar_grid_snap_axes_test.dart",
+      "source_file": "test/top_bar_grid_snap_axes_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_top_bar_grid_snap_axes_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 138,
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/top_bar_grid_snap_axes_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_widget_test",
+      "label": "widget_test.dart",
+      "_origin": "ast",
+      "community": 138,
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "widget_test.dart",
+      "source_file": "test/widget_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_widget_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 138,
+      "community_name": "top_bar_grid_snap_axes_test.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/widget_test.dart",
+      "source_location": null
     },
     {
       "id": "core_math_axonometry_projector_dart",
@@ -6838,28 +6780,6 @@
       "community_name": "../../../../domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "../../core/math/axonometry_projector.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "domain_enums_fitting_type_dart",
-      "label": "../../../../domain/enums/fitting_type.dart",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/fitting_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "domain_models_pipe_segment_dart",
-      "label": "../../../../domain/models/pipe_segment.dart",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/models/pipe_segment.dart",
       "source_file": null,
       "source_location": null
     },
@@ -6905,94 +6825,6 @@
       "file_type": "code",
       "norm_label": "paint",
       "source_file": "lib/ui/canvas/painters/annotation_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter",
-      "label": "pipe_painter.dart",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "pipe_painter.dart",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_calcelbowtangentlength",
-      "label": "calcElbowTangentLength",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "calcelbowtangentlength",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_calcpipetrimmedpoint",
-      "label": "calcPipeTrimmedPoint",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "calcpipetrimmedpoint",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_calcstrokewidth",
-      "label": "calcStrokeWidth",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "calcstrokewidth",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_drawselecteddimensionbadge",
-      "label": "drawSelectedDimensionBadge",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "drawselecteddimensionbadge",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_isteebranchsegment",
-      "label": "isTeeBranchSegment",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "isteebranchsegment",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_paint",
-      "label": "paint",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "paint",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_pipe_painter_pipepainter",
-      "label": "PipePainter",
-      "_origin": "ast",
-      "community": 139,
-      "community_name": "../../../../domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "pipepainter",
-      "source_file": "lib/ui/canvas/painters/pipe_painter.dart",
       "source_location": null
     },
     {
@@ -7335,28 +7167,201 @@
       "source_location": "L1"
     },
     {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules",
-      "label": "standard/security_rules.md",
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_directives_for_secure_generation",
+      "label": "Critical Directives for Secure Generation",
       "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "standard/security_rules.md",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_1_generate_firestore_rules",
-      "label": "1. Generate Firestore Rules",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
+      "community": 143,
+      "community_name": "Workflow",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "1. generate firestore rules",
+      "norm_label": "critical directives for secure generation",
       "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L1"
+      "source_location": "L280"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_rbac_guidelines",
+      "label": "**CRITICAL** RBAC Guidelines",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "Workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "**critical** rbac guidelines",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L240"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_mandatory_user_data_separation_the_no_mixed_content_rule",
+      "label": "Mandatory: User Data Separation (The \"No Mixed Content\" Rule)",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "Workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "mandatory: user data separation (the \"no mixed content\" rule)",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L221"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_phase_1_codebase_analysis",
+      "label": "Phase-1: Codebase Analysis",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "Workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "phase-1: codebase analysis",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L20"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_phase_2_security_rules_generation",
+      "label": "Phase-2: Security Rules Generation",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "Workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "phase-2: security rules generation",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_workflow",
+      "label": "Workflow",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "Workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "workflow",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L16"
+    },
+    {
+      "id": "domain_enums_projection_type_dart",
+      "label": "../../../../domain/enums/projection_type.dart",
+      "_origin": "ast",
+      "community": 144,
+      "community_name": "../../../../domain/enums/projection_type.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/enums/projection_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_painters_grid_painter",
+      "label": "grid_painter.dart",
+      "_origin": "ast",
+      "community": 144,
+      "community_name": "../../../../domain/enums/projection_type.dart",
+      "file_type": "code",
+      "norm_label": "grid_painter.dart",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_painters_grid_painter_drawscalebar",
+      "label": "_drawScaleBar",
+      "_origin": "ast",
+      "community": 144,
+      "community_name": "../../../../domain/enums/projection_type.dart",
+      "file_type": "code",
+      "norm_label": "_drawscalebar",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_painters_grid_painter_gridpainter",
+      "label": "GridPainter",
+      "_origin": "ast",
+      "community": 144,
+      "community_name": "../../../../domain/enums/projection_type.dart",
+      "file_type": "code",
+      "norm_label": "gridpainter",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_painters_grid_painter_paint",
+      "label": "paint",
+      "_origin": "ast",
+      "community": 144,
+      "community_name": "../../../../domain/enums/projection_type.dart",
+      "file_type": "code",
+      "norm_label": "paint",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
+      "source_location": null
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_build_evaluations_first",
+      "label": "Build evaluations first",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "Evaluation and iteration",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "build evaluations first",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L723"
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_develop_skills_iteratively_with_the_agent",
+      "label": "Develop Skills iteratively with the agent",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "Evaluation and iteration",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "develop skills iteratively with the agent",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L756"
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_evaluation_and_iteration",
+      "label": "Evaluation and iteration",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "Evaluation and iteration",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "evaluation and iteration",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L721"
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_observe_how_agents_navigate_skills",
+      "label": "Observe how agents navigate Skills",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "Evaluation and iteration",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "observe how agents navigate skills",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L812"
+    },
+    {
+      "id": "custompainter",
+      "label": "CustomPainter",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "PipingCanvasPainter",
+      "file_type": "code",
+      "norm_label": "custompainter",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_piping_canvas_pipingcanvaspainter",
+      "label": "PipingCanvasPainter",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "PipingCanvasPainter",
+      "file_type": "code",
+      "norm_label": "pipingcanvaspainter",
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null
     },
     {
       "id": "agents_skills_firebase_firestore_references_standard_security_rules_3_strict_path_and_relationship_scoping",
@@ -7407,78 +7412,6 @@
       "source_location": "L347"
     },
     {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_constraints",
-      "label": "Critical Constraints",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "critical constraints",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L545"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_directives_for_secure_generation",
-      "label": "Critical Directives for Secure Generation",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "critical directives for secure generation",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L280"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_rbac_guidelines",
-      "label": "**CRITICAL** RBAC Guidelines",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "**critical** rbac guidelines",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L240"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_mandatory_user_data_separation_the_no_mixed_content_rule",
-      "label": "Mandatory: User Data Separation (The \"No Mixed Content\" Rule)",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "mandatory: user data separation (the \"no mixed content\" rule)",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L221"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_phase_1_codebase_analysis",
-      "label": "Phase-1: Codebase Analysis",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase-1: codebase analysis",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L20"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_phase_2_security_rules_generation",
-      "label": "Phase-2: Security Rules Generation",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase-2: security rules generation",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L39"
-    },
-    {
       "id": "agents_skills_firebase_firestore_references_standard_security_rules_phase_3_devil_s_advocate_attack",
       "label": "Phase-3: Devil's Advocate Attack",
       "_origin": "ast",
@@ -7501,18 +7434,6 @@
       "norm_label": "phase-4: syntactic validation",
       "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
       "source_location": "L539"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules_workflow",
-      "label": "Workflow",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "Advanced Validation for Business Logic",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "workflow",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L16"
     },
     {
       "id": "fitting_definition_dart",
@@ -12368,28 +12289,6 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheet",
-      "label": "FittingPropertiesSheet",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "fittingpropertiessheet",
-      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheetstate",
-      "label": "_FittingPropertiesSheetState",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_fittingpropertiessheetstate",
-      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
-      "source_location": null
-    },
-    {
       "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_getfittingicon",
       "label": "_getFittingIcon",
       "_origin": "ast",
@@ -13801,6 +13700,17 @@
       "source_location": "L16"
     },
     {
+      "id": "int_get",
+      "label": "int get",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "int get",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "lib_domain_models_fitting_definition",
       "label": "fitting_definition.dart",
       "_origin": "ast",
@@ -14062,6 +13972,138 @@
       "file_type": "code",
       "norm_label": "weldtype",
       "source_file": "lib/domain/models/fitting_definition.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d",
+      "label": "node_3d.dart",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "node_3d.dart",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_copywith",
+      "label": "copyWith",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "copywith",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_customelevation",
+      "label": "customElevation",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "customelevation",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_distanceto",
+      "label": "distanceTo",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "distanceto",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_fromjson",
+      "label": "fromJson",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "fromjson",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_hashcode",
+      "label": "hashCode",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "hashcode",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_id",
+      "label": "id",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "id",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_operator",
+      "label": "operator",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "operator",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_tojson",
+      "label": "toJson",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "tojson",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_x",
+      "label": "x",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "x",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_y",
+      "label": "y",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "y",
+      "source_file": "lib/domain/models/node_3d.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_node_3d_z",
+      "label": "z",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "fitting_definition.dart",
+      "file_type": "code",
+      "norm_label": "z",
+      "source_file": "lib/domain/models/node_3d.dart",
       "source_location": null
     },
     {
@@ -15602,16 +15644,40 @@
       "source_location": "L636"
     },
     {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_build_evaluations_first",
-      "label": "Build evaluations first",
+      "id": "agents_skills_writing_skills_anthropic_best_practices_anti_patterns_to_avoid",
+      "label": "Anti-patterns to avoid",
       "_origin": "ast",
       "community": 46,
       "community_name": "[Analysis Title]",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "build evaluations first",
+      "norm_label": "anti-patterns to avoid",
       "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L723"
+      "source_location": "L823"
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_avoid_offering_too_many_options",
+      "label": "Avoid offering too many options",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "[Analysis Title]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "avoid offering too many options",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L834"
+    },
+    {
+      "id": "agents_skills_writing_skills_anthropic_best_practices_avoid_windows_style_paths",
+      "label": "Avoid Windows-style paths",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "[Analysis Title]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "avoid windows-style paths",
+      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "source_location": "L825"
     },
     {
       "id": "agents_skills_writing_skills_anthropic_best_practices_conditional_workflow_pattern",
@@ -15624,30 +15690,6 @@
       "norm_label": "conditional workflow pattern",
       "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
       "source_location": "L693"
-    },
-    {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_develop_skills_iteratively_with_the_agent",
-      "label": "Develop Skills iteratively with the agent",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "[Analysis Title]",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "develop skills iteratively with the agent",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L756"
-    },
-    {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_evaluation_and_iteration",
-      "label": "Evaluation and iteration",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "[Analysis Title]",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "evaluation and iteration",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L721"
     },
     {
       "id": "agents_skills_writing_skills_anthropic_best_practices_examples_pattern",
@@ -15684,18 +15726,6 @@
       "norm_label": "key findings",
       "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
       "source_location": "L641"
-    },
-    {
-      "id": "agents_skills_writing_skills_anthropic_best_practices_observe_how_agents_navigate_skills",
-      "label": "Observe how agents navigate Skills",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "[Analysis Title]",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "observe how agents navigate skills",
-      "source_file": ".agents/skills/writing-skills/anthropic-best-practices.md",
-      "source_location": "L812"
     },
     {
       "id": "agents_skills_writing_skills_anthropic_best_practices_provide_utility_scripts",
@@ -18075,17 +18105,6 @@
       "source_location": "L185"
     },
     {
-      "id": "domain_enums_projection_type_dart",
-      "label": "../../../../domain/enums/projection_type.dart",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/projection_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_main",
       "label": "main.dart",
       "_origin": "ast",
@@ -18093,6 +18112,17 @@
       "community_name": "main.dart",
       "file_type": "code",
       "norm_label": "main.dart",
+      "source_file": "lib/main.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_main_aksoapp",
+      "label": "AksoApp",
+      "_origin": "ast",
+      "community": 61,
+      "community_name": "main.dart",
+      "file_type": "code",
+      "norm_label": "aksoapp",
       "source_file": "lib/main.dart",
       "source_location": null
     },
@@ -18149,50 +18179,6 @@
       "file_type": "code",
       "norm_label": "projector",
       "source_file": "lib/main.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter",
-      "label": "grid_painter.dart",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "grid_painter.dart",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_drawscalebar",
-      "label": "_drawScaleBar",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "_drawscalebar",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_gridpainter",
-      "label": "GridPainter",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "gridpainter",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_paint",
-      "label": "paint",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "paint",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
@@ -20426,6 +20412,42 @@
       "source_location": "L1"
     },
     {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules",
+      "label": "standard/security_rules.md",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "standard/security_rules.md",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_1_generate_firestore_rules",
+      "label": "1. Generate Firestore Rules",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "1. generate firestore rules",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules_critical_constraints",
+      "label": "Critical Constraints",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "critical constraints",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L545"
+    },
+    {
       "id": "agents_skills_using_superpowers_skill",
       "label": "using-superpowers/SKILL.md",
       "_origin": "ast",
@@ -21976,47 +21998,124 @@
       "source_location": "L14"
     },
     {
-      "id": "dart_io",
-      "label": "dart:io",
+      "id": "domain_models_node_3d_dart",
+      "label": "../../../../domain/models/node_3d.dart",
       "_origin": "ast",
       "community": 92,
-      "community_name": "generate_samples_test.dart",
+      "community_name": "top_bar.dart",
       "file_type": "code",
-      "norm_label": "dart:io",
+      "norm_label": "../../../../domain/models/node_3d.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_domain_enums_projection_type_dart",
-      "label": "package:akso/domain/enums/projection_type.dart",
+      "id": "dxf_export_dialog_dart",
+      "label": "dxf_export_dialog.dart",
       "_origin": "ast",
       "community": 92,
-      "community_name": "generate_samples_test.dart",
+      "community_name": "top_bar.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/enums/projection_type.dart",
+      "norm_label": "dxf_export_dialog.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_generate_samples_test",
-      "label": "generate_samples_test.dart",
+      "id": "fitting_catalog_dialog_dart",
+      "label": "fitting_catalog_dialog.dart",
       "_origin": "ast",
       "community": 92,
-      "community_name": "generate_samples_test.dart",
+      "community_name": "top_bar.dart",
       "file_type": "code",
-      "norm_label": "generate_samples_test.dart",
-      "source_file": "test/generate_samples_test.dart",
+      "norm_label": "fitting_catalog_dialog.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_generate_samples_test_main",
-      "label": "main",
+      "id": "lib_domain_enums_projection_type",
+      "label": "projection_type.dart",
       "_origin": "ast",
       "community": 92,
-      "community_name": "generate_samples_test.dart",
+      "community_name": "top_bar.dart",
       "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/generate_samples_test.dart",
+      "norm_label": "projection_type.dart",
+      "source_file": "lib/domain/enums/projection_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_projection_type_projectiontype",
+      "label": "ProjectionType",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "projectiontype",
+      "source_file": "lib/domain/enums/projection_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_top_bar",
+      "label": "top_bar.dart",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "top_bar.dart",
+      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_top_bar_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_top_bar_controller",
+      "label": "controller",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_top_bar_loaddemonetwork",
+      "label": "_loadDemoNetwork",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "_loaddemonetwork",
+      "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "materials_specification_dialog_dart",
+      "label": "materials_specification_dialog.dart",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "materials_specification_dialog.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "weld_journal_dialog_dart",
+      "label": "weld_journal_dialog.dart",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "top_bar.dart",
+      "file_type": "code",
+      "norm_label": "weld_journal_dialog.dart",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -40435,6 +40534,39 @@
     },
     {
       "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_angledegrees",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_computebadgeposition",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_computetracehudinfo",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
       "target": "lib_ui_canvas_piping_canvas_currentelevationz",
       "relation": "defines",
       "_origin": "ast",
@@ -40513,6 +40645,28 @@
     {
       "source": "lib_ui_canvas_piping_canvas",
       "target": "lib_ui_canvas_piping_canvas_drawsnapindicator",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_drawtracehud",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_lengthmm",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -40634,6 +40788,28 @@
     {
       "source": "lib_ui_canvas_piping_canvas",
       "target": "lib_ui_canvas_piping_canvas_snapresult",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_text",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/ui/canvas/piping_canvas.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_ui_canvas_piping_canvas",
+      "target": "lib_ui_canvas_piping_canvas_tracehudinfo",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42839,6 +43015,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/top_bar_grid_snap_axes_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "test_trace_hud_test_main",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
       "source_location": null,
       "weight": 1.0
     },
@@ -46902,6 +47089,83 @@
       "weight": 1.0
     },
     {
+      "source": "test_trace_hud_test",
+      "target": "dart_ui",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_akso_core_math_axonometry_projector_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_akso_core_math_snap_engine_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_akso_domain_models_node_3d_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_akso_domain_models_piping_network_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_akso_ui_canvas_piping_canvas_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_trace_hud_test",
+      "target": "package_flutter_test_flutter_test_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/trace_hud_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
       "source": "test_viewport_navigation_test",
       "target": "dart_ui",
       "relation": "imports",
@@ -48281,5 +48545,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "cca1da1468278af9642457fad924b50bc599a02c"
+  "built_at_commit": "245827028956aab782dc43743e58af80f581ab59"
 }

@@ -719,6 +719,149 @@ class PipingInputController extends ChangeNotifier {
     selectedNodeId = targetNodeId;
   }
 
+  /// Вычисляет единичный направляющий 3D-вектор от startNode к текущей цели привязки или курсору
+  ({double dirX, double dirY, double dirZ}) _computeTraceDirection(Node3D startNode) {
+    double dirX = 1.0;
+    double dirY = 0.0;
+    double dirZ = 0.0;
+
+    if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
+      final snapWorld = currentSnapResult!.worldPoint;
+      final dx = snapWorld.x - startNode.x;
+      final dy = snapWorld.y - startNode.y;
+      final dz = snapWorld.z - startNode.z;
+      final dist = math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (dist > 1e-6) {
+        dirX = dx / dist;
+        dirY = dy / dist;
+        dirZ = dz / dist;
+      }
+    } else if (currentCursorScreenPos != null) {
+      final rawWorld = projector.unproject(currentCursorScreenPos!, currentElevationZ);
+      final rawDx = rawWorld.x - startNode.x;
+      final rawDy = rawWorld.y - startNode.y;
+      final rawDz = rawWorld.z - startNode.z;
+
+      if (angleSnapMode == AngleSnapMode.ortho90) {
+        if (rawDx.abs() >= rawDy.abs()) {
+          dirX = rawDx >= 0 ? 1.0 : -1.0;
+          dirY = 0.0;
+          dirZ = 0.0;
+        } else {
+          dirX = 0.0;
+          dirY = rawDy >= 0 ? 1.0 : -1.0;
+          dirZ = 0.0;
+        }
+      } else {
+        final dist = math.sqrt(rawDx * rawDx + rawDy * rawDy + rawDz * rawDz);
+        if (dist > 1e-6) {
+          dirX = rawDx / dist;
+          dirY = rawDy / dist;
+          dirZ = rawDz / dist;
+        }
+      }
+    }
+
+    return (dirX: dirX, dirY: dirY, dirZ: dirZ);
+  }
+
+  /// Фиксация конца трассировки трубы или строительной оси на заданном расстоянии (Direct Distance Entry)
+  void commitTraceWithLength(double lengthMm) {
+    if (lengthMm <= 0 || lengthMm.isNaN || lengthMm.isInfinite) return;
+
+    if (currentTool == CanvasTool.trace && traceStartNode != null) {
+      final startNode = traceStartNode!;
+      final dir = _computeTraceDirection(startNode);
+
+      final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
+      final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
+      final endZ = double.parse((startNode.z + dir.dirZ * lengthMm).toStringAsFixed(2));
+
+      String targetNodeId;
+      final existingNode = network.nodes.values.cast<Node3D?>().firstWhere(
+            (n) =>
+                n != null &&
+                n.id != startNode.id &&
+                (n.x - endX).abs() < 1.0 &&
+                (n.y - endY).abs() < 1.0 &&
+                (n.z - endZ).abs() < 1.0,
+            orElse: () => null,
+          );
+
+      if (existingNode != null) {
+        targetNodeId = existingNode.id;
+      } else {
+        final newNode = Node3D(
+          id: 'node_${_uuid.v4()}',
+          x: endX,
+          y: endY,
+          z: endZ,
+        );
+        network.nodes[newNode.id] = newNode;
+        targetNodeId = newNode.id;
+      }
+
+      final segId = 'seg_${_uuid.v4()}';
+      final dim = network.pipeCatalog.getDimension(activeDn);
+      final outerD = dim?.outerDiameterMm;
+      final seg = PipeSegment(
+        id: segId,
+        startNodeId: startNode.id,
+        endNodeId: targetNodeId,
+        systemId: activeSystemId,
+        dn: activeDn,
+        outerDiameterMm: outerD,
+        wallThicknessMm: activeWallThicknessMm,
+        material: activeMaterial,
+      );
+      network.addSegment(seg);
+
+      history.recordState(network);
+      traceStartNode = network.nodes[targetNodeId];
+      selectedNodeId = targetNodeId;
+
+      currentSnapResult = null;
+      if (currentCursorScreenPos != null) {
+        _updateSnap(currentCursorScreenPos!);
+      }
+      notifyListeners();
+    } else if (currentTool == CanvasTool.drawAxis && axisStartNode != null) {
+      final startNode = axisStartNode!;
+      final dir = _computeTraceDirection(startNode);
+
+      final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
+      final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
+
+      final axisEndNode = Node3D(
+        id: 'axis_end_${_uuid.v4()}',
+        x: endX,
+        y: endY,
+        z: currentElevationZ,
+      );
+      final axisId = 'axis_${_uuid.v4()}';
+      network.axes[axisId] = ConstructionAxis(
+        id: axisId,
+        label: currentAxisLabel,
+        startPoint: axisStartNode!,
+        endPoint: axisEndNode,
+        isBuildingGrid: true,
+      );
+
+      final num = int.tryParse(currentAxisLabel);
+      if (num != null) {
+        currentAxisLabel = '${num + 1}';
+      }
+      axisStartNode = null;
+      history.recordState(network);
+
+      if (currentCursorScreenPos != null) {
+        _updateSnap(currentCursorScreenPos!);
+      }
+      notifyListeners();
+    }
+  }
+
+
   /// Поиск узла в радиусе 18 пикселей от курсора
   String? _findNodeAtScreenPos(Offset screenPos) {
     for (final node in network.nodes.values) {

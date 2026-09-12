@@ -677,12 +677,13 @@ class DesktopCadLayout extends StatelessWidget {
                   size: 18,
                   color: Colors.indigo,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  isSegment ? 'Свойства трубы' : 'Свойства узла',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                Expanded(
+                  child: Text(
+                    isSegment ? 'Свойства трубы' : 'Свойства узла',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close, size: 16),
                   padding: EdgeInsets.zero,
