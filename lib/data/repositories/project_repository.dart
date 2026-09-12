@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../domain/models/project_model.dart';
 
@@ -9,11 +9,11 @@ class ProjectRepository {
     final Uint8List bytes = Uint8List.fromList(utf8.encode(jsonString));
 
     await FilePicker.saveFile(
+      dialogTitle: 'Сохранить проект',
       fileName: 'my_project.akso',
-      bytes: bytes,
       type: FileType.custom,
       allowedExtensions: ['akso'],
-      dialogTitle: 'Сохранить проект',
+      bytes: bytes,
     );
   }
 
@@ -25,10 +25,14 @@ class ProjectRepository {
     );
 
     if (result != null) {
-      final bytes = await result.readAsBytes();
-      final jsonString = utf8.decode(bytes);
-      final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
-      return ProjectModel.fromJson(jsonMap);
+      try {
+        final Uint8List content = await result.readAsBytes();
+        final jsonString = utf8.decode(content);
+        final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
+        return ProjectModel.fromJson(jsonMap);
+      } catch (e) {
+        throw const FormatException('Неверный формат файла проекта');
+      }
     }
     return null;
   }
