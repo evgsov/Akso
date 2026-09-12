@@ -273,6 +273,55 @@ class EditorTopBar extends StatelessWidget {
                 );
               },
             ),
+            // Переключатели режимов: Сетка, Привязка, Оси
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.grid_4x4, size: 18),
+                    tooltip: 'Сетка (Grid)',
+                    color: controller.showGrid ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.showGrid ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: controller.toggleGrid,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.gps_fixed, size: 18),
+                    tooltip: 'Привязка (Snap)',
+                    color: controller.isSnapEnabled ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.isSnapEnabled ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: controller.toggleSnap,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.architecture, size: 18),
+                    tooltip: 'Осевые линии (Axes)',
+                    color: controller.currentTool == CanvasTool.drawAxis ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.currentTool == CanvasTool.drawAxis ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: () => controller.setTool(CanvasTool.drawAxis),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(width: 8),
 
             // Экспорт DXF

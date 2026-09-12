@@ -74,6 +74,7 @@ class PipingInputController extends ChangeNotifier {
   AngleSnapMode angleSnapMode = AngleSnapMode.ortho90;
   double customAngleDegrees = 15.0;
   bool isSnapEnabled = true;
+  bool showGrid = true;
 
   // Интерактивное состояние
   String? selectedNodeId;
@@ -243,6 +244,11 @@ class PipingInputController extends ChangeNotifier {
 
   void toggleSnap() {
     isSnapEnabled = !isSnapEnabled;
+    notifyListeners();
+  }
+
+  void toggleGrid() {
+    showGrid = !showGrid;
     notifyListeners();
   }
 

@@ -200,3 +200,13 @@
   - Разработан механизм Recovery-автосохранения через \path_provider\ во временную директорию ОС.
   - Улучшен UX: вывод имени текущего проекта и индикация процесса сохранения/загрузки.
   - Монолит \PipingCanvasPainter\ (>1200 строк) полностью расщеплён на специализированные Painter-классы: \GridPainter\, \PipePainter\, \FittingPainter\, \ValvePainter\, \AnnotationPainter\.
+- **Управление сеткой, привязками и осями в UI (Phase 4, Task 2):**
+  - Добавлено реактивное управление отображением сетки: свойство `showGrid` и метод `toggleGrid()` в `PipingInputController`.
+  - Связано динамическое переключение `showGrid` с `PipingCanvasPainter` в `editor_screen.dart` (холст скрывает сетку при `showGrid == false`, сохраняя видимость строительных осей `network.axes`).
+  - Добавлена группа кнопок быстрого переключения в `TopBar` и `DesktopCadLayout` (перед кнопкой экспорта DXF):
+    - Сетка (Grid) — `Icons.grid_4x4`, переключает `controller.toggleGrid()`, визуально подсвечена при активности.
+    - Привязка (Snap) — `Icons.gps_fixed`, переключает `controller.toggleSnap()`, подсвечена при `isSnapEnabled`.
+    - Осевые линии (Axes) — `Icons.architecture`, активирует инструмент `CanvasTool.drawAxis`, подсвечена при его выборе.
+  - В левой палитре CAD (`DesktopCadLayout`) иконка инструмента строительных осей переведена на `Icons.architecture` во избежание путаницы с сеткой `Icons.grid_4x4`.
+  - Написан полный набор юнит- и виджет-тестов (`test/top_bar_grid_snap_axes_test.dart`).
+

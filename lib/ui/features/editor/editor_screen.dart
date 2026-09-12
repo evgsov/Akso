@@ -279,6 +279,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   activeAxisStart: controller.axisStartNode,
                   snapResult: controller.currentSnapResult,
                   currentElevationZ: controller.currentElevationZ,
+                  showGrid: controller.showGrid,
                 ),
               ),
             ),

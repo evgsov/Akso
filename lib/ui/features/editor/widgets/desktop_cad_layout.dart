@@ -226,6 +226,57 @@ class DesktopCadLayout extends StatelessWidget {
               }
             },
           ),
+          const SizedBox(width: 8),
+
+          // Переключатели режимов: Сетка, Привязка, Оси
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF334155),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.grid_4x4, size: 16),
+                  tooltip: 'Сетка (Grid)',
+                  color: controller.showGrid ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.showGrid ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: controller.toggleGrid,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.gps_fixed, size: 16),
+                  tooltip: 'Привязка (Snap)',
+                  color: controller.isSnapEnabled ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.isSnapEnabled ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: controller.toggleSnap,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.architecture, size: 16),
+                  tooltip: 'Осевые линии (Axes)',
+                  color: controller.currentTool == CanvasTool.drawAxis ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.currentTool == CanvasTool.drawAxis ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: () => controller.setTool(CanvasTool.drawAxis),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
 
           // Экспорт DXF
           FilledButton.icon(
@@ -570,7 +621,7 @@ class DesktopCadLayout extends StatelessWidget {
             _toolButton(CanvasTool.orbit, Icons.threed_rotation, '3D Орбита (O / ПКМ)'),
             const Divider(height: 16, indent: 8, endIndent: 8),
             _toolButton(CanvasTool.trace, Icons.edit, 'Трассировка трубы (T)'),
-            _toolButton(CanvasTool.drawAxis, Icons.grid_4x4, 'Строительная ось (G)'),
+            _toolButton(CanvasTool.drawAxis, Icons.architecture, 'Строительная ось (G)'),
             const Divider(height: 16, indent: 8, endIndent: 8),
             _toolButton(CanvasTool.insertValve, Icons.tune, 'Врезка арматуры'),
             _toolButton(CanvasTool.insertWeld, Icons.flare, 'Врезка сварного шва'),

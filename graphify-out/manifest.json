@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789151901.1193128,
-    "seen": 1789152107.8513098,
-    "ast_hash": "2467f91f84e6a59b6d8924707a86f45f",
+    "mtime": 1789217158.900352,
+    "seen": 1789217223.2007942,
+    "ast_hash": "d212d92348ec4b27417276581f1f56a1",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789195779.86419,
-    "seen": 1789195837.201317,
-    "ast_hash": "260aed0fca553f18625f4988aa40269a",
+    "mtime": 1789217606.0398953,
+    "seen": 1789217779.3635242,
+    "ast_hash": "b66179a45f34c1691d0e3150b8736745",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
-    "mtime": 1789195249.87459,
-    "seen": 1789195276.2376716,
-    "ast_hash": "1b119ae88030618ff69ddc44c1bfc6f0",
+    "mtime": 1789196843.742416,
+    "seen": 1789217223.2008276,
+    "ast_hash": "d0b49f7618ec871bcb9e92bfd6a0c908",
     "semantic_hash": ""
   },
   "lib/ui/canvas/smart_callout.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789148787.4513845,
-    "seen": 1789148910.537731,
-    "ast_hash": "0a99fe5ae67727a37eeb811f943d6bfe",
+    "mtime": 1789217612.0497482,
+    "seen": 1789217779.3635347,
+    "ast_hash": "820dc0abeb865e4cfbd8b9667afc55ea",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789152482.4110637,
-    "seen": 1789194981.892763,
-    "ast_hash": "641d2909777722923536908904121145",
+    "mtime": 1789217671.6712992,
+    "seen": 1789217779.3635476,
+    "ast_hash": "8d7748545978738de663560c2e9e9209",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "test/dxf_export_test.dart": {
-    "mtime": 1789142111.091941,
-    "seen": 1789148910.5377562,
-    "ast_hash": "20b4b350f98a3185b5cfdb9c0c33112e",
+    "mtime": 1789217172.3958502,
+    "seen": 1789217223.2009342,
+    "ast_hash": "ae652a568459c118beb489a679a68c3a",
     "semantic_hash": ""
   },
   "test/fitting_catalog_test.dart": {
@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "test/widget_test.dart": {
-    "mtime": 1789142111.0964415,
-    "seen": 1789148910.5377662,
-    "ast_hash": "40755635fd32b0b8517616521a3ba1a2",
+    "mtime": 1789197093.0414891,
+    "seen": 1789217223.2009554,
+    "ast_hash": "9aaf8e365b8e26c978d4ef96e7df1e17",
     "semantic_hash": ""
   },
   "web/manifest.json": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789195825.8109477,
-    "seen": 1789195837.2014437,
-    "ast_hash": "4d370d6d394db237b006ecdb347bd2b7",
+    "mtime": 1789197118.0157585,
+    "seen": 1789217223.2011151,
+    "ast_hash": "77d380510a3c1a53023c88b80fea0500",
     "semantic_hash": ""
   },
   "README.md": {
@@ -906,8 +906,8 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1789142111.089441,
-    "seen": 1789148910.5378463,
+    "mtime": 1789196092.380826,
+    "seen": 1789217223.2011368,
     "ast_hash": "e423b030a5b9c8900f11de4218c300e9",
     "semantic_hash": ""
   },
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789142111.0679417,
-    "seen": 1789148910.5377326,
-    "ast_hash": "b24162d1aad3ca1246e2ac3ff6318401",
+    "mtime": 1789217676.4005744,
+    "seen": 1789217779.3635366,
+    "ast_hash": "abe2e820c056842b47a50acfbe9269b6",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1212,9 +1212,9 @@
     "semantic_hash": ""
   },
   "test/viewport_navigation_test.dart": {
-    "mtime": 1789142111.095941,
-    "seen": 1789148910.5377653,
-    "ast_hash": "7df42797919203066ab39179ea8cdbb6",
+    "mtime": 1789197049.5902936,
+    "seen": 1789217223.2009542,
+    "ast_hash": "58901cc1a2acd78369f2f18c54613fd7",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-09-11-ui-overhaul-and-advanced-tools.md": {
@@ -1242,9 +1242,9 @@
     "semantic_hash": ""
   },
   "test/pipe_assortment_test.dart": {
-    "mtime": 1789142111.0949433,
-    "seen": 1789148910.5377626,
-    "ast_hash": "541ea8acfcc42e59465a9542906232ac",
+    "mtime": 1789197081.4545743,
+    "seen": 1789217223.2009459,
+    "ast_hash": "919a09dbc84ab98e3b0a0c5241c56601",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart": {
@@ -1290,15 +1290,75 @@
     "semantic_hash": ""
   },
   "test/project_identity_test.dart": {
-    "mtime": 1789195455.2152567,
-    "seen": 1789195488.5629458,
-    "ast_hash": "6a86262c98d7cf86cfaff8bfc1c2e85b",
+    "mtime": 1789197022.9176688,
+    "seen": 1789217223.200949,
+    "ast_hash": "7ee4f037540891ed3ce6d1f809c57e6f",
     "semantic_hash": ""
   },
   "test/project_serialization_test.dart": {
-    "mtime": 1789195747.8228152,
-    "seen": 1789195837.201361,
-    "ast_hash": "ba2f2d6194c753bded7980b917de840b",
+    "mtime": 1789197028.4682546,
+    "seen": 1789217223.2009509,
+    "ast_hash": "3c9d5759a7ce3ef8c3c811e1c2c8156e",
+    "semantic_hash": ""
+  },
+  "fix_issues.py": {
+    "mtime": 1789196839.2595322,
+    "seen": 1789217223.200783,
+    "ast_hash": "4cec703a329ab2ffa65517d5eda2a7d8",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/recovery_repository.dart": {
+    "mtime": 1789196108.6153271,
+    "seen": 1789217223.2007966,
+    "ast_hash": "04a72f10f9eb32a3c41c8f5c0dae62de",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/annotation_painter.dart": {
+    "mtime": 1789196843.7414162,
+    "seen": 1789217223.2008233,
+    "ast_hash": "b94ef796eb84a8b288cd827c7267746e",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/fitting_painter.dart": {
+    "mtime": 1789196843.7414162,
+    "seen": 1789217223.200824,
+    "ast_hash": "44da2e2a6c3407a46fbb6cac17e1a179",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/grid_painter.dart": {
+    "mtime": 1789196389.9715846,
+    "seen": 1789217223.2008247,
+    "ast_hash": "f284fa9f09f441f6b411897169111e02",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/pipe_painter.dart": {
+    "mtime": 1789196473.3774946,
+    "seen": 1789217223.200826,
+    "ast_hash": "6375d936ef5b24d9cc22fe77cbe2716b",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/valve_painter.dart": {
+    "mtime": 1789196748.9417028,
+    "seen": 1789217223.200827,
+    "ast_hash": "611ab9530b351f51bd303a84c3d2db06",
+    "semantic_hash": ""
+  },
+  "refactor.py": {
+    "mtime": 1789196577.9201753,
+    "seen": 1789217223.200925,
+    "ast_hash": "781311ff6759cedc1b2c3fd8d0fc664e",
+    "semantic_hash": ""
+  },
+  "update_piping_canvas.py": {
+    "mtime": 1789196806.9597268,
+    "seen": 1789217223.2009568,
+    "ast_hash": "e2e844ccd2d16435c6b86b8f6a6a77eb",
+    "semantic_hash": ""
+  },
+  "test/top_bar_grid_snap_axes_test.dart": {
+    "mtime": 1789217737.7560828,
+    "seen": 1789217779.3635771,
+    "ast_hash": "88a1222a3cbf5fe4a380a80d578d9ff5",
     "semantic_hash": ""
   }
 }
