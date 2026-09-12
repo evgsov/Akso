@@ -62,6 +62,9 @@ class PipingInputController extends ChangeNotifier {
   // Режим компоновки UI
   UiLayoutMode layoutMode = UiLayoutMode.auto;
 
+  bool isSaving = false;
+  bool isLoading = false;
+
   // История и отмена (Undo / Redo)
   final NetworkHistoryManager history = NetworkHistoryManager(maxSnapshots: 50);
 
@@ -1003,17 +1006,30 @@ class PipingInputController extends ChangeNotifier {
   }
 
   Future<void> saveProject() async {
-    currentProject = currentProject.copyWith(network: network);
-    await projectRepository.saveProject(currentProject);
+    isSaving = true;
+    notifyListeners();
+    try {
+      currentProject = currentProject.copyWith(network: network);
+      await projectRepository.saveProject(currentProject);
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadProject() async {
-    final proj = await projectRepository.loadProject();
-    if (proj != null) {
-      currentProject = proj;
-      network = proj.network;
-      // Обязательно обновить историю и уведомить слушателей
-      history.recordState(network);
+    isLoading = true;
+    notifyListeners();
+    try {
+      final proj = await projectRepository.loadProject();
+      if (proj != null) {
+        currentProject = proj;
+        network = proj.network;
+        // Обязательно обновить историю и уведомить слушателей
+        history.recordState(network);
+      }
+    } finally {
+      isLoading = false;
       notifyListeners();
     }
   }

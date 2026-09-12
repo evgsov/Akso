@@ -118,6 +118,11 @@ class EditorTopBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
+            Text(
+              controller.currentProject.title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(width: 16),
 
             // Переключатель видов
             SegmentedButton<ProjectionType>(
@@ -158,47 +163,63 @@ class EditorTopBar extends StatelessWidget {
 
             // Сохранить проект
             OutlinedButton.icon(
-              icon: const Icon(Icons.save, size: 18),
+              icon: controller.isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save, size: 18),
               label: const Text('Сохранить'),
-              onPressed: () async {
-                try {
-                  await controller.saveProject();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Проект успешно сохранён')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ошибка сохранения: $e')),
-                    );
-                  }
-                }
-              },
+              onPressed: controller.isSaving
+                  ? null
+                  : () async {
+                      try {
+                        await controller.saveProject();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Проект успешно сохранён')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Ошибка сохранения: $e')),
+                          );
+                        }
+                      }
+                    },
             ),
             const SizedBox(width: 8),
 
             // Загрузить проект
             OutlinedButton.icon(
-              icon: const Icon(Icons.folder_open, size: 18),
+              icon: controller.isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.folder_open, size: 18),
               label: const Text('Загрузить'),
-              onPressed: () async {
-                try {
-                  await controller.loadProject();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Проект успешно загружен')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ошибка загрузки: $e')),
-                    );
-                  }
-                }
-              },
+              onPressed: controller.isLoading
+                  ? null
+                  : () async {
+                      try {
+                        await controller.loadProject();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Проект успешно загружен')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Ошибка загрузки: $e')),
+                          );
+                        }
+                      }
+                    },
             ),
             const SizedBox(width: 8),
 
