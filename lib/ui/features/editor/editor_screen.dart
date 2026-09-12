@@ -330,6 +330,8 @@ class _EditorScreenState extends State<EditorScreen> {
                   selectedNodeId: controller.selectedNodeId,
                   selectedSegmentId: controller.selectedSegmentId,
                   selectedEquipmentId: controller.selectedEquipmentId,
+                  selectedCalloutId: controller.selectedCalloutId,
+                  calloutTemplates: controller.currentProject.calloutTemplates,
                   activeSystemId: controller.activeSystemId,
                   activeTraceStart: controller.traceStartNode,
                   activeTraceEnd: controller.currentCursorScreenPos,

@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789225294.0405602,
-    "seen": 1789225537.9419944,
-    "ast_hash": "55e3a9dd7ecb00ff320d789de29003c6",
+    "mtime": 1789225835.5222266,
+    "seen": 1789226144.0673614,
+    "ast_hash": "fc7c92508ec22aebe3e08bddf8f0f7d8",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789225316.598168,
-    "seen": 1789225537.942003,
-    "ast_hash": "884d9f65009f85685ee31c76d6244cda",
+    "mtime": 1789225978.0456662,
+    "seen": 1789226144.067371,
+    "ast_hash": "47cdb6f292e1a1c833ececc1b22c3664",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
-    "mtime": 1789223578.1372795,
-    "seen": 1789223866.61708,
-    "ast_hash": "a98eb874c670a8885442ce24ad759992",
+    "mtime": 1789225852.33686,
+    "seen": 1789226144.067382,
+    "ast_hash": "ad64275d6939c161687e60faefa9ca75",
     "semantic_hash": ""
   },
   "lib/ui/canvas/smart_callout.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789222462.699625,
-    "seen": 1789222707.199961,
-    "ast_hash": "0a13e0b958d5c72a135c054a34e0ae1d",
+    "mtime": 1789225984.0277228,
+    "seen": 1789226144.0673854,
+    "ast_hash": "050cc53a807776431fb048a7da58860c",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789224009.3331344,
-    "seen": 1789225537.9421494,
-    "ast_hash": "a3de1c05ab977b9abab10cd839705ac7",
+    "mtime": 1789226131.4550774,
+    "seen": 1789226144.0675337,
+    "ast_hash": "e2465825300d594a2eaa4301e8310618",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1425,6 +1425,18 @@
     "mtime": 1789225494.7469127,
     "seen": 1789225537.9420476,
     "ast_hash": "971e48662c084ce4c33713c1620a17e8",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/painters/callout_painter.dart": {
+    "mtime": 1789225822.3849826,
+    "seen": 1789226144.0673735,
+    "ast_hash": "a1f7df6316c6023b7ce2efda516e2773",
+    "semantic_hash": ""
+  },
+  "test/callout_canvas_test.dart": {
+    "mtime": 1789226102.3344343,
+    "seen": 1789226144.0674193,
+    "ast_hash": "727ecb3e0f1c5a3a3fff7d5c007774cb",
     "semantic_hash": ""
   }
 }

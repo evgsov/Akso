@@ -12,6 +12,7 @@ import 'painters/valve_painter.dart';
 import 'painters/support_painter.dart';
 import 'painters/annotation_painter.dart';
 import 'painters/equipment_painter.dart';
+import 'painters/callout_painter.dart';
 
 
 
@@ -35,6 +36,8 @@ class PipingCanvasPainter extends CustomPainter {
   final String? selectedNodeId;
   final String? selectedSegmentId;
   final String? selectedEquipmentId;
+  final String? selectedCalloutId;
+  final Map<String, String>? calloutTemplates;
   final String? activeSystemId;
   final Node3D? activeTraceStart;
   final Offset? activeTraceEnd;
@@ -51,6 +54,8 @@ class PipingCanvasPainter extends CustomPainter {
     this.selectedNodeId,
     this.selectedSegmentId,
     this.selectedEquipmentId,
+    this.selectedCalloutId,
+    this.calloutTemplates,
     this.activeSystemId,
     this.activeTraceStart,
     this.activeTraceEnd,
@@ -112,6 +117,17 @@ class PipingCanvasPainter extends CustomPainter {
 
     // 5 & 6. Отрисовка сварных стыков, узлов сети и отметок
     AnnotationPainter.paint(canvas, projector, network, selectedNodeId, showWelds, showCallouts);
+
+    // 6.1. Отрисовка умных выносок сети (Callout) поверх графа
+    if (showCallouts) {
+      CalloutPainter.paint(
+        canvas,
+        projector,
+        network,
+        templates: calloutTemplates,
+        selectedCalloutId: selectedCalloutId,
+      );
+    }
 
     // 7. Интерактивная линия трассировки (когда стилус ведет новую трубу)
     if (activeTraceStart != null && activeTraceEnd != null) {

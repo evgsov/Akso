@@ -19,6 +19,7 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recovery_repository.dart';
+import 'painters/callout_painter.dart';
 
 const _uuid = Uuid();
 
@@ -86,6 +87,7 @@ class PipingInputController extends ChangeNotifier {
   String? selectedNodeId;
   String? selectedSegmentId;
   String? selectedEquipmentId;
+  String? selectedCalloutId;
   String? hoveredNodeId;
 
   Node3D? traceStartNode;
@@ -96,7 +98,11 @@ class PipingInputController extends ChangeNotifier {
   // Режим перетаскивания
   bool isDraggingNode = false;
   bool isDraggingEquipment = false;
+  bool isDraggingCallout = false;
   Node3D? _dragEquipmentStartPos;
+  Offset? _dragCalloutStartScreenPos;
+  double _dragCalloutInitialOffsetX = 0.0;
+  double _dragCalloutInitialOffsetY = 0.0;
 
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
@@ -174,9 +180,12 @@ class PipingInputController extends ChangeNotifier {
     selectedNodeId = null;
     selectedSegmentId = null;
     selectedEquipmentId = null;
+    selectedCalloutId = null;
     isDraggingNode = false;
     isDraggingEquipment = false;
+    isDraggingCallout = false;
     _dragEquipmentStartPos = null;
+    _dragCalloutStartScreenPos = null;
     if (!keepTool &&
         currentTool != CanvasTool.select &&
         currentTool != CanvasTool.trace &&
@@ -468,6 +477,22 @@ class PipingInputController extends ChangeNotifier {
         break;
 
       case CanvasTool.select:
+        final hitCalloutId = _findCalloutAtScreenPos(screenPos);
+        if (hitCalloutId != null) {
+          selectedCalloutId = hitCalloutId;
+          selectedNodeId = null;
+          selectedSegmentId = null;
+          selectedEquipmentId = null;
+          isDraggingCallout = true;
+          _dragCalloutStartScreenPos = screenPos;
+          final c = network.callouts[hitCalloutId]!;
+          _dragCalloutInitialOffsetX = c.screenOffsetX;
+          _dragCalloutInitialOffsetY = c.screenOffsetY;
+          notifyListeners();
+          break;
+        }
+
+        selectedCalloutId = null;
         selectedNodeId = hitNodeId;
         selectedSegmentId = hitSegId;
         selectedEquipmentId = _findEquipmentAtScreenPos(screenPos);
@@ -618,6 +643,21 @@ class PipingInputController extends ChangeNotifier {
     // Обновляем привязку
     _updateSnap(screenPos);
 
+    if (isDraggingCallout && selectedCalloutId != null && _dragCalloutStartScreenPos != null) {
+      final callout = network.callouts[selectedCalloutId!];
+      if (callout != null) {
+        final d = screenPos - _dragCalloutStartScreenPos!;
+        final newX = _dragCalloutInitialOffsetX + d.dx;
+        final newY = _dragCalloutInitialOffsetY + d.dy;
+        network.callouts[selectedCalloutId!] = callout.copyWith(
+          screenOffsetX: newX,
+          screenOffsetY: newY,
+        );
+        notifyListeners();
+      }
+      return;
+    }
+
     if (isDraggingNode && selectedNodeId != null) {
       final unproj = projector.unproject(screenPos, currentElevationZ);
       final snapped = _snapToGrid(unproj);
@@ -663,6 +703,15 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка отпускания стилуса / пальца / кнопки мыши
   void handlePointerUp() {
+    if (isDraggingCallout) {
+      history.recordState(network);
+      isDraggingCallout = false;
+      _dragCalloutStartScreenPos = null;
+      notifyListeners();
+      return;
+    }
+    isDraggingCallout = false;
+
     if (isDraggingNode) {
       history.recordState(network);
       isDraggingNode = false;
@@ -1280,8 +1329,16 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Удаление выбранного узла, оборудования или сегмента с каскадной очисткой связей
+  /// Удаление выбранного узла, оборудования, сегмента или выноски с каскадной очисткой связей
   void deleteSelected() {
+    if (selectedCalloutId != null) {
+      network.callouts.remove(selectedCalloutId);
+      selectedCalloutId = null;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
     final selectedNode = selectedNodeId != null ? network.nodes[selectedNodeId] : null;
     final eqToDelete = selectedEquipmentId ?? selectedNode?.equipmentId;
     if (eqToDelete != null && (selectedSegmentId == null || selectedEquipmentId != null || selectedNode?.equipmentId != null)) {
@@ -1401,6 +1458,28 @@ class PipingInputController extends ChangeNotifier {
   /// Получение итогового текста выноски для отображения
   String getCalloutText(Callout callout) {
     return network.generateCalloutText(callout, currentProject.calloutTemplates);
+  }
+
+  /// Поиск выноски под курсором (hit-test по тексту и полочке)
+  String? _findCalloutAtScreenPos(Offset screenPos) {
+    return CalloutPainter.hitTest(
+      screenPos,
+      network,
+      projector,
+      templates: currentProject.calloutTemplates,
+      project: currentProject,
+    );
+  }
+
+  /// Явный выбор выноски по ID
+  void selectCallout(String? calloutId) {
+    selectedCalloutId = calloutId;
+    if (calloutId != null) {
+      selectedNodeId = null;
+      selectedSegmentId = null;
+      selectedEquipmentId = null;
+    }
+    notifyListeners();
   }
 
   Future<void> saveProject() async {

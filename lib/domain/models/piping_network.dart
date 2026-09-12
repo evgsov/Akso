@@ -1027,20 +1027,69 @@ class PipingNetwork {
     return text;
   }
 
+  /// Определение связанного сегмента для объекта выноски (если применимо)
+  String? getTargetSegmentId(CalloutTargetType type, String targetId) {
+    switch (type) {
+      case CalloutTargetType.segment:
+        return targetId;
+      case CalloutTargetType.valve:
+        return valves[targetId]?.segmentId;
+      case CalloutTargetType.weld:
+        return weldJoints[targetId]?.segmentId;
+      case CalloutTargetType.support:
+        return supports[targetId]?.segmentId;
+      case CalloutTargetType.node:
+      case CalloutTargetType.equipment:
+        return null;
+    }
+  }
+
   /// Автогенерация недостающих выносок для сегментов, арматуры и сварных стыков
-  int generateMissingCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+  /// с предотвращением наложения (Collision Avoidance) смещений текста
+  int generateMissingCallouts({
+    double offsetX = 50.0,
+    double offsetY = -50.0,
+    double textHeight = 12.0,
+    double margin = 8.0,
+  }) {
     int addedCount = 0;
     final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
+    final step = textHeight + margin;
+
+    double resolveNonCollidingOffsetY(String? segmentId, double initialOffsetY) {
+      double curY = initialOffsetY;
+      bool collision;
+      int iterations = 0;
+      do {
+        collision = false;
+        for (final existing in callouts.values) {
+          final existingSegId = getTargetSegmentId(existing.targetType, existing.targetId);
+          final sameContext = segmentId != null && existingSegId == segmentId;
+          if (sameContext || (existingSegId == null && segmentId == null)) {
+            if ((existing.screenOffsetX - offsetX).abs() < 40.0 &&
+                (existing.screenOffsetY - curY).abs() < step) {
+              curY += step;
+              collision = true;
+              break;
+            }
+          }
+        }
+        iterations++;
+      } while (collision && iterations < 50);
+      return curY;
+    }
 
     for (final seg in segments.values) {
       if (!existingTargetIds.contains(seg.id)) {
         final id = 'callout_${_uuid.v4()}';
+        final resolvedY = resolveNonCollidingOffsetY(seg.id, offsetY);
         callouts[id] = Callout(
           id: id,
           targetId: seg.id,
           targetType: CalloutTargetType.segment,
           screenOffsetX: offsetX,
-          screenOffsetY: offsetY,
+          screenOffsetY: resolvedY,
+          textHeight: textHeight,
         );
         existingTargetIds.add(seg.id);
         addedCount++;
@@ -1050,12 +1099,14 @@ class PipingNetwork {
     for (final valve in valves.values) {
       if (!existingTargetIds.contains(valve.id)) {
         final id = 'callout_${_uuid.v4()}';
+        final resolvedY = resolveNonCollidingOffsetY(valve.segmentId, offsetY);
         callouts[id] = Callout(
           id: id,
           targetId: valve.id,
           targetType: CalloutTargetType.valve,
           screenOffsetX: offsetX,
-          screenOffsetY: offsetY,
+          screenOffsetY: resolvedY,
+          textHeight: textHeight,
         );
         existingTargetIds.add(valve.id);
         addedCount++;
@@ -1065,12 +1116,14 @@ class PipingNetwork {
     for (final weld in weldJoints.values) {
       if (!existingTargetIds.contains(weld.id)) {
         final id = 'callout_${_uuid.v4()}';
+        final resolvedY = resolveNonCollidingOffsetY(weld.segmentId, offsetY);
         callouts[id] = Callout(
           id: id,
           targetId: weld.id,
           targetType: CalloutTargetType.weld,
           screenOffsetX: offsetX,
-          screenOffsetY: offsetY,
+          screenOffsetY: resolvedY,
+          textHeight: textHeight,
         );
         existingTargetIds.add(weld.id);
         addedCount++;
