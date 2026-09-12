@@ -83,11 +83,26 @@ class PipingInputController extends ChangeNotifier {
   // Режим перетаскивания
   bool isDraggingNode = false;
 
+  late ProjectModel currentProject;
+  final ProjectRepository projectRepository;
+
   PipingInputController({
-    required this.network,
-    required this.projector,
-  }) {
-    history.recordState(network);
+    PipingNetwork? network,
+    PipingNetwork? initialNetwork,
+    AxonometryProjector? projector,
+    ProjectRepository? projectRepository,
+  })  : network = network ?? initialNetwork ?? PipingNetwork(),
+        projector = projector ??
+            const AxonometryProjector(
+              projectionType: ProjectionType.gostFrontal45,
+            ),
+        projectRepository = projectRepository ?? ProjectRepository() {
+    currentProject = ProjectModel(
+      id: _uuid.v4(),
+      title: 'Новый проект',
+      network: this.network,
+    );
+    history.recordState(this.network);
   }
 
   bool get canUndo => history.canUndo;
@@ -963,17 +978,14 @@ class PipingInputController extends ChangeNotifier {
   }
 
   Future<void> saveProject() async {
-    final proj = ProjectModel(
-      id: _uuid.v4(),
-      title: 'Akso Project',
-      network: network,
-    );
-    await ProjectRepository().saveProject(proj);
+    currentProject = currentProject.copyWith(network: network);
+    await projectRepository.saveProject(currentProject);
   }
 
   Future<void> loadProject() async {
-    final proj = await ProjectRepository().loadProject();
+    final proj = await projectRepository.loadProject();
     if (proj != null) {
+      currentProject = proj;
       network = proj.network;
       // Обязательно обновить историю и уведомить слушателей
       history.recordState(network);

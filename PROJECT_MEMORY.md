@@ -189,3 +189,5 @@
   - Выделение бизнес-логики: Созданы сервисы \SpoolCalculator\ и \FittingDetector\, разгрузившие класс \PipingNetwork\ от тысяч строк кода, сохранив инкапсуляцию фасада.
   - Устранена анти-паттерн мутация состояния внутри фазы \uild()\ (из \LayoutBuilder\ в \ditor_screen.dart\).
   - **Реализовано кроссплатформенное сохранение и загрузка проектов:** Интегрирован пакет \ile_picker\, написан \ProjectRepository\ для сериализации проекта (\.akso\, JSON), добавлена обработка File I/O с индикацией (SnackBars) в верхней панели UI.
+- **Архитектурная модернизация и целостность данных (Phase 2):**
+  - **Постоянная идентичность проекта (Persistent Project Identity)**: В PipingInputController добавлено состояние currentProject: ProjectModel. Устранена повторная генерация UUID проекта при каждом сохранении: метод saveProject() обновляет граф сети через currentProject.copyWith(network: network) с сохранением неизменного UUID и метаданных проекта, а loadProject() обновляет currentProject.
