@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +15,7 @@ import '../../domain/models/pipe_segment.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
 import '../../data/repositories/project_repository.dart';
+import '../../data/repositories/recovery_repository.dart';
 
 const _uuid = Uuid();
 
@@ -86,6 +88,8 @@ class PipingInputController extends ChangeNotifier {
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
 
+  Timer? _recoveryTimer;
+
   PipingInputController({
     PipingNetwork? network,
     PipingNetwork? initialNetwork,
@@ -104,6 +108,26 @@ class PipingInputController extends ChangeNotifier {
       network: this.network,
     );
     history.recordState(this.network);
+
+    _recoveryTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      RecoveryRepository().saveRecovery(currentProject.copyWith(network: this.network));
+    });
+  }
+
+  Future<void> tryLoadRecovery() async {
+    final recoveredProject = await RecoveryRepository().loadRecovery();
+    if (recoveredProject != null) {
+      currentProject = recoveredProject;
+      network = recoveredProject.network;
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _recoveryTimer?.cancel();
+    super.dispose();
   }
 
   bool get canUndo => history.canUndo;
