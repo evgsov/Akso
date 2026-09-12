@@ -581,7 +581,17 @@ class DxfWriter {
   }
 
   static void _writeLayers(StringBuffer b, PipingNetwork net) {
-    b.writeln('  0\nSECTION\n  2\nTABLES\n  0\nTABLE\n  2\nLAYER\n 70\n10');
+    b.writeln('  0\nSECTION\n  2\nTABLES');
+
+    // Таблица типов линий (LTYPE)
+    b.writeln('  0\nTABLE\n  2\nLTYPE\n 70\n2');
+    b.writeln('  0\nLTYPE\n  2\nCONTINUOUS\n 70\n0\n  3\nSolid line\n 72\n65\n 73\n0\n 40\n0.0');
+    b.writeln('  0\nLTYPE\n  2\nDASHDOT\n 70\n0\n  3\nDash dot\n 72\n65\n 73\n4\n 40\n19.05\n 49\n12.7\n 49\n-3.175\n 49\n0.0\n 49\n-3.175');
+    b.writeln('  0\nENDTAB');
+
+    // Таблица слоев (LAYER)
+    final layerCount = 16 + net.systems.length;
+    b.writeln('  0\nTABLE\n  2\nLAYER\n 70\n$layerCount');
 
     // Базовые слои
     _writeLayerEntry(b, '0', 7);

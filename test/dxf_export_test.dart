@@ -50,6 +50,10 @@ void main() {
       expect(dxfContent.contains('SECTION'), isTrue);
       expect(dxfContent.contains('HEADER'), isTrue);
       expect(dxfContent.contains('TABLES'), isTrue);
+      expect(dxfContent.contains('ENDTAB'), isTrue);
+      expect(dxfContent.contains('ENDSEC'), isTrue);
+      expect(dxfContent.contains('LTYPE'), isTrue);
+      expect(dxfContent.contains('DASHDOT'), isTrue);
       expect(dxfContent.contains('ENTITIES'), isTrue);
       expect(dxfContent.contains('EOF'), isTrue);
 
