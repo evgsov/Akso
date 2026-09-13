@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../data/dxf/dxf_writer.dart';
@@ -28,6 +30,7 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
   bool is3dMode = false;
   late ProjectionType selectedProjection;
   String statusMessage = '';
+  String? exportedFilePath;
 
   @override
   void initState() {
@@ -70,21 +73,72 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
 
         setState(() {
           statusMessage = 'Файл $fileName готов к отправке!';
+          exportedFilePath = file.path;
         });
       } else {
-        // На десктопе сохраняем в папку Загрузки или рядом с проектом
-        final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/$fileName');
+        // На десктопе даем пользователю выбрать путь
+        String? targetPath;
+        try {
+          final bytes = Uint8List.fromList(utf8.encode(dxfContent));
+          final uri = await FilePicker.saveFile(
+            dialogTitle: 'Сохранить чертеж AutoCAD (DXF)',
+            fileName: fileName,
+            type: FileType.custom,
+            allowedExtensions: ['dxf'],
+            bytes: bytes,
+          );
+          if (uri != null) {
+            targetPath = uri.toFilePath();
+          }
+        } catch (_) {
+          targetPath = null;
+        }
+
+        if (targetPath == null) {
+          final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+          targetPath = '${dir.path}/$fileName';
+        }
+
+        if (!targetPath.toLowerCase().endsWith('.dxf')) {
+          targetPath = '$targetPath.dxf';
+        }
+
+        final file = File(targetPath);
         await file.writeAsString(dxfContent);
 
         setState(() {
-          statusMessage = 'Файл сохранен: ${file.path}';
+          statusMessage = 'Файл сохранен: $targetPath';
+          exportedFilePath = targetPath;
         });
       }
     } catch (e) {
       setState(() {
         statusMessage = 'Ошибка экспорта: $e';
       });
+    }
+  }
+
+  void _openFileLocation() {
+    final path = exportedFilePath;
+    if (path == null) return;
+    if (Platform.isWindows) {
+      Process.run('explorer.exe', ['/select,', path]);
+    } else if (Platform.isMacOS) {
+      Process.run('open', ['-R', path]);
+    } else if (Platform.isLinux) {
+      Process.run('xdg-open', [File(path).parent.path]);
+    }
+  }
+
+  void _openWithCad() {
+    final path = exportedFilePath;
+    if (path == null) return;
+    if (Platform.isWindows) {
+      Process.run('cmd.exe', ['/c', 'start', '', path]);
+    } else if (Platform.isMacOS) {
+      Process.run('open', [path]);
+    } else if (Platform.isLinux) {
+      Process.run('xdg-open', [path]);
     }
   }
 
@@ -174,9 +228,25 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
         ),
       ),
       actions: [
+        if (exportedFilePath != null && !kIsWeb) ...[
+          TextButton.icon(
+            icon: const Icon(Icons.folder_open, size: 16),
+            label: const Text('Показать в папке'),
+            onPressed: _openFileLocation,
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.open_in_new, size: 16),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade700,
+              foregroundColor: Colors.white,
+            ),
+            label: const Text('Открыть в AutoCAD'),
+            onPressed: _openWithCad,
+          ),
+        ],
         TextButton.icon(
           icon: const Icon(Icons.copy, size: 16),
-          label: const Text('Копировать текст DXF'),
+          label: const Text('Копировать'),
           onPressed: () {
             final content = is3dMode
                 ? DxfWriter.generate3dDxf(widget.network, calloutTemplates: widget.calloutTemplates)

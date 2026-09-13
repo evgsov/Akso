@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789227954.5523224,
-    "seen": 1789275879.891393,
-    "ast_hash": "576e7c6c241cb280e0812e321a6ee557",
+    "mtime": 1789322509.8669455,
+    "seen": 1789322689.6598794,
+    "ast_hash": "9d3f37ee8451e9ba958360991e8f67a0",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
-    "mtime": 1789227954.5673225,
-    "seen": 1789275879.8914435,
-    "ast_hash": "32e5c4d3fcb8be6d6757ef4f9430b712",
+    "mtime": 1789322635.2947214,
+    "seen": 1789322689.6599486,
+    "ast_hash": "501aad10c51b6362c1690253d89bc125",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/elevation_panel.dart": {
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "test/dxf_export_test.dart": {
-    "mtime": 1789227954.575822,
-    "seen": 1789275879.8914757,
-    "ast_hash": "ae652a568459c118beb489a679a68c3a",
+    "mtime": 1789321942.721048,
+    "seen": 1789321964.0579183,
+    "ast_hash": "ce60074cbb7cd806c83828e92bba03b2",
     "semantic_hash": ""
   },
   "test/fitting_catalog_test.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789275921.1788697,
-    "seen": 1789275929.192035,
-    "ast_hash": "d672a054da1681a26905eb86e423bd04",
+    "mtime": 1789322679.95716,
+    "seen": 1789322689.660095,
+    "ast_hash": "912f8e2f001c30bfc6aa64ed8025680e",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1449,6 +1449,12 @@
     "mtime": 1789276800.9277563,
     "seen": 1789276888.1529138,
     "ast_hash": "a82a75d99b7e4bb0385647d0d2d628d8",
+    "semantic_hash": ""
+  },
+  "test/verify_autocad_dxf_test.dart": {
+    "mtime": 1789322528.2141287,
+    "seen": 1789322689.6600053,
+    "ast_hash": "72ef20bac1a8476681c57c714cfd1682",
     "semantic_hash": ""
   }
 }

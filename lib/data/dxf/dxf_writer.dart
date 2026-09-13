@@ -598,7 +598,7 @@ class DxfWriter {
   }
 
   static void _writeHeader(StringBuffer b) {
-    b.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1009\n  9\n\$DWGCODEPAGE\n  1\nANSI_1251\n  0\nENDSEC');
+    b.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1009\n  0\nENDSEC');
   }
 
   static void _writeLayers(StringBuffer b, PipingNetwork net) {
