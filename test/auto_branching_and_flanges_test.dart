@@ -152,10 +152,10 @@ void main() {
       network.insertFlange(segmentId: 'seg1', ratio: 0.5, isPair: true);
 
       final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network);
-      expect(dxf2d.contains('АКСО_ФЛАНЦЫ'), isTrue);
+      expect(dxf2d.contains(DxfWriter.toAutoCadString('АКСО_ФЛАНЦЫ')), isTrue);
 
       final dxf3d = DxfWriter.generate3dDxf(network);
-      expect(dxf3d.contains('АКСО_ФЛАНЦЫ'), isTrue);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('АКСО_ФЛАНЦЫ')), isTrue);
     });
   });
 }

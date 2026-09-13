@@ -56,7 +56,7 @@ void main() {
 
       final dxfContent = DxfWriter.generate2dGostAxonometryDxf(network);
 
-      expect(dxfContent.contains('АКСО_ОСИ'), isTrue);
+      expect(dxfContent.contains(DxfWriter.toAutoCadString('АКСО_ОСИ')), isTrue);
       expect(dxfContent.contains('DASHDOT'), isTrue);
       expect(dxfContent.contains('1'), isTrue); // Марка оси
     });

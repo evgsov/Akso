@@ -169,10 +169,10 @@ void main() {
       expect(csv.contains('09Г2С'), isTrue);
 
       final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network);
-      expect(dxf2d.contains('⌀159×4.5'), isTrue);
+      expect(dxf2d.contains(DxfWriter.toAutoCadString('⌀159×4.5')), isTrue);
 
       final dxf3d = DxfWriter.generate3dDxf(network);
-      expect(dxf3d.contains('⌀159×4.5'), isTrue);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('⌀159×4.5')), isTrue);
     });
 
     testWidgets('PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения', (WidgetTester tester) async {
