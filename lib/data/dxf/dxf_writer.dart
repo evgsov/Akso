@@ -13,6 +13,18 @@ import '../../ui/canvas/painters/callout_painter.dart';
 
 /// Генератор файлов AutoCAD DXF (ASCII R2000 / AC1015)
 class DxfWriter {
+  static String _toAutoCadString(String input) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < input.length; i++) {
+      final code = input.codeUnitAt(i);
+      if (code > 127) {
+        buffer.write('\\U+${code.toRadixString(16).padLeft(4, '0').toUpperCase()}');
+      } else {
+        buffer.write(input[i]);
+      }
+    }
+    return buffer.toString();
+  }
   /// Генерация 3D DXF файла (пространственные трубы, слои по системам, 3D-отметки)
   static String generate3dDxf(PipingNetwork network, {Map<String, String>? calloutTemplates}) {
     final buffer = StringBuffer();
@@ -586,7 +598,7 @@ class DxfWriter {
   }
 
   static void _writeHeader(StringBuffer b) {
-    b.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1015\n  9\n\$INSUNITS\n 70\n4\n  0\nENDSEC');
+    b.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1009\n  9\n\$DWGCODEPAGE\n  1\nANSI_1251\n  0\nENDSEC');
   }
 
   static void _writeLayers(StringBuffer b, PipingNetwork net) {
@@ -631,7 +643,7 @@ class DxfWriter {
   }
 
   static void _writeLayerEntry(StringBuffer b, String name, int aciColor, [String linetype = 'CONTINUOUS']) {
-    b.writeln('  0\nLAYER\n  2\n$name\n 70\n0\n 62\n$aciColor\n  6\n$linetype');
+    b.writeln('  0\nLAYER\n  2\n${_toAutoCadString(name)}\n 70\n0\n 62\n$aciColor\n  6\n$linetype');
   }
 
   static void _writeBlocks(StringBuffer b) {
@@ -649,7 +661,7 @@ class DxfWriter {
     required double z2,
   }) {
     b.writeln(
-      '  0\nLINE\n  8\n$layer\n 10\n$x1\n 20\n$y1\n 30\n$z1\n 11\n$x2\n 21\n$y2\n 31\n$z2',
+      '  0\nLINE\n  8\n${_toAutoCadString(layer)}\n 10\n$x1\n 20\n$y1\n 30\n$z1\n 11\n$x2\n 21\n$y2\n 31\n$z2',
     );
   }
 
@@ -662,7 +674,7 @@ class DxfWriter {
     required double y2,
   }) {
     b.writeln(
-      '  0\nLINE\n  8\n$layer\n 10\n$x1\n 20\n$y1\n 30\n0.0\n 11\n$x2\n 21\n$y2\n 31\n0.0',
+      '  0\nLINE\n  8\n${_toAutoCadString(layer)}\n 10\n$x1\n 20\n$y1\n 30\n0.0\n 11\n$x2\n 21\n$y2\n 31\n0.0',
     );
   }
 
@@ -673,7 +685,9 @@ class DxfWriter {
     required double cy,
     required double radius,
   }) {
-    b.writeln('  0\nCIRCLE\n  8\n$layer\n 10\n$cx\n 20\n$cy\n 30\n0.0\n 40\n$radius');
+    b.writeln(
+      '  0\nCIRCLE\n  8\n${_toAutoCadString(layer)}\n 10\n$cx\n 20\n$cy\n 30\n0.0\n 40\n$radius',
+    );
   }
 
   static void _writePoint(
@@ -683,7 +697,7 @@ class DxfWriter {
     required double y,
     required double z,
   }) {
-    b.writeln('  0\nPOINT\n  8\n$layer\n 10\n$x\n 20\n$y\n 30\n$z');
+    b.writeln('  0\nPOINT\n  8\n${_toAutoCadString(layer)}\n 10\n$x\n 20\n$y\n 30\n$z');
   }
 
   static void _writeText(
@@ -694,9 +708,11 @@ class DxfWriter {
     required double y,
     required double z,
     required double height,
+    int align = 0, // 0 = left, 1 = center
   }) {
+    if (text.isEmpty) return;
     b.writeln(
-      '  0\nTEXT\n  8\n$layer\n 10\n$x\n 20\n$y\n 30\n$z\n 40\n$height\n  1\n$text\n 50\n0.0',
+      '  0\nTEXT\n  8\n${_toAutoCadString(layer)}\n 10\n$x\n 20\n$y\n 30\n$z\n 40\n$height\n  1\n${_toAutoCadString(text)}\n 72\n$align\n 11\n$x\n 21\n$y\n 31\n$z',
     );
   }
 

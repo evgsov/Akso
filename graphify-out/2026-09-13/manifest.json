@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
-    "mtime": 1789142111.056941,
-    "seen": 1789148910.5377092,
-    "ast_hash": "6d9326647df72c897b4cdb148b6f9c8c",
+    "mtime": 1789276369.7304163,
+    "seen": 1789276746.470388,
+    "ast_hash": "6ae7e9d47b2441c4aaf4df8ee82d1537",
     "semantic_hash": ""
   },
   "lib/domain/enums/inspection_method.dart": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789227954.5573223,
-    "seen": 1789275879.891417,
-    "ast_hash": "fc7c92508ec22aebe3e08bddf8f0f7d8",
+    "mtime": 1789276509.661511,
+    "seen": 1789276746.4704075,
+    "ast_hash": "1006828c5861ecb73841ea19c2b3c685",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -282,9 +282,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/fitting_properties_sheet.dart": {
-    "mtime": 1789227954.5688229,
-    "seen": 1789275879.891447,
-    "ast_hash": "ebeb86a0644c1c32969349f34cd4d618",
+    "mtime": 1789276865.1566975,
+    "seen": 1789276888.1527667,
+    "ast_hash": "4dcec1a530e0ff1dd04e27d5cd80dbe9",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/materials_specification_dialog.dart": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789275702.6882775,
-    "seen": 1789275879.8914425,
-    "ast_hash": "870b857e7113da3f6655927361cdf755",
+    "mtime": 1789276364.9974177,
+    "seen": 1789276746.4704325,
+    "ast_hash": "4e99b9877217be6ab4f75562209b333e",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1266,8 +1266,8 @@
     "semantic_hash": ""
   },
   "lib/domain/services/fitting_detector.dart": {
-    "mtime": 1789227954.5588236,
-    "seen": 1789275879.8914227,
+    "mtime": 1789276810.7937565,
+    "seen": 1789276888.1527393,
     "ast_hash": "bc5c4d5c106a54b49c797917d48c6192",
     "semantic_hash": ""
   },
@@ -1308,9 +1308,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/fitting_painter.dart": {
-    "mtime": 1789275768.3358092,
-    "seen": 1789275879.8914309,
-    "ast_hash": "a4a08ff53456a268a4d5ce445f626c03",
+    "mtime": 1789276603.0985394,
+    "seen": 1789276746.4704201,
+    "ast_hash": "d43e2d57920c155c5bc31d7ec228c336",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/grid_painter.dart": {
@@ -1431,6 +1431,24 @@
     "mtime": 1789227954.5748222,
     "seen": 1789275879.8914716,
     "ast_hash": "766059f4b08a4dfbb94eb21920b53397",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/equipment_properties_sheet.dart": {
+    "mtime": 1789276687.8188624,
+    "seen": 1789276746.4704359,
+    "ast_hash": "8c710b0fd45114ebc9e8843fa05d9829",
+    "semantic_hash": ""
+  },
+  "patch_network.ps1": {
+    "mtime": 1789276492.083509,
+    "seen": 1789276746.47046,
+    "ast_hash": "bed00bed9abd8091c07d2725305d01a7",
+    "semantic_hash": ""
+  },
+  "test_results.txt": {
+    "mtime": 1789276800.9277563,
+    "seen": 1789276888.1529138,
+    "ast_hash": "a82a75d99b7e4bb0385647d0d2d628d8",
     "semantic_hash": ""
   }
 }

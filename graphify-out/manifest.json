@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789275363.1313343,
-    "seen": 1789275879.8914263,
-    "ast_hash": "85160e64a0b251b91a3ae5b33f6851d4",
+    "mtime": 1789320973.381091,
+    "seen": 1789321003.781951,
+    "ast_hash": "cda322d53a07144bb828de14ee1d7b10",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789275374.013334,
-    "seen": 1789275879.8914394,
-    "ast_hash": "8085fb92e7ac3d74ed23d2db014ced0f",
+    "mtime": 1789320928.2322755,
+    "seen": 1789321003.7819648,
+    "ast_hash": "2e86cc1dafdc7f8c816f35b900aacc7b",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -1308,9 +1308,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/fitting_painter.dart": {
-    "mtime": 1789276603.0985394,
-    "seen": 1789276746.4704201,
-    "ast_hash": "d43e2d57920c155c5bc31d7ec228c336",
+    "mtime": 1789320833.0962543,
+    "seen": 1789321003.7819562,
+    "ast_hash": "98c9e1e43c6b2f564cb4287abadbbb66",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/grid_painter.dart": {
