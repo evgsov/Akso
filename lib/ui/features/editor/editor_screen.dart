@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -213,6 +212,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 _isRightClick = true;
                 _isRightDrag = false;
                 _rightDownPos = event.localPosition;
+                controller.prepareOrbit();
               }
             },
             onPointerMove: (event) {

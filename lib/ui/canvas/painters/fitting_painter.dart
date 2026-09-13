@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/enums/fitting_type.dart';
-import '../../../domain/enums/projection_type.dart';
 import '../../../domain/models/fitting.dart';
 import '../../../domain/models/piping_network.dart';
 import 'pipe_painter.dart';

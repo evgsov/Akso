@@ -301,6 +301,9 @@ class PipingInputController extends ChangeNotifier {
 
   /// Смена типа проекции (ГОСТ 45°, ISO 30°, Орбита 3D)
   void setProjectionType(ProjectionType type) {
+    if (type == ProjectionType.orbit3d && projector.projectionType != ProjectionType.orbit3d) {
+      prepareOrbit();
+    }
     projector = projector.copyWith(projectionType: type);
     if (type == ProjectionType.orbit3d) {
       currentTool = CanvasTool.orbit;
@@ -1155,6 +1158,71 @@ class PipingInputController extends ChangeNotifier {
   void pan(Offset delta) {
     projector = projector.copyWith(panOffset: projector.panOffset + delta);
     notifyListeners();
+  }
+
+  /// Центрирует 3D орбиту вокруг выделенного объекта (или всей схемы)
+  void prepareOrbit() {
+    Node3D newCenter;
+    if (selectedNodeId != null) {
+      newCenter = network.nodes[selectedNodeId] ?? const Node3D(id: 'c', x: 0, y: 0, z: 0);
+    } else if (selectedSegmentId != null) {
+      final seg = network.segments[selectedSegmentId];
+      if (seg != null) {
+        final n1 = network.nodes[seg.startNodeId];
+        final n2 = network.nodes[seg.endNodeId];
+        if (n1 != null && n2 != null) {
+          newCenter = Node3D(
+            id: 'c',
+            x: (n1.x + n2.x) / 2,
+            y: (n1.y + n2.y) / 2,
+            z: (n1.z + n2.z) / 2,
+          );
+        } else {
+          newCenter = const Node3D(id: 'c', x: 0, y: 0, z: 0);
+        }
+      } else {
+        newCenter = const Node3D(id: 'c', x: 0, y: 0, z: 0);
+      }
+    } else if (selectedEquipmentId != null) {
+      final eq = network.equipments[selectedEquipmentId];
+      if (eq != null) {
+        newCenter = Node3D(id: 'c', x: eq.x, y: eq.y, z: eq.z + eq.height / 2);
+      } else {
+        newCenter = const Node3D(id: 'c', x: 0, y: 0, z: 0);
+      }
+    } else {
+      // bounding box of all nodes
+      if (network.nodes.isEmpty) {
+        newCenter = const Node3D(id: 'c', x: 0, y: 0, z: 0);
+      } else {
+        double minX = double.infinity, maxX = -double.infinity;
+        double minY = double.infinity, maxY = -double.infinity;
+        double minZ = double.infinity, maxZ = -double.infinity;
+        for (final n in network.nodes.values) {
+          if (n.x < minX) minX = n.x;
+          if (n.x > maxX) maxX = n.x;
+          if (n.y < minY) minY = n.y;
+          if (n.y > maxY) maxY = n.y;
+          if (n.z < minZ) minZ = n.z;
+          if (n.z > maxZ) maxZ = n.z;
+        }
+        newCenter = Node3D(
+          id: 'c',
+          x: (minX + maxX) / 2,
+          y: (minY + maxY) / 2,
+          z: (minZ + maxZ) / 2,
+        );
+      }
+    }
+
+    // Узнаем, где этот центр находится на экране СЕЙЧАС (до изменения targetCenter)
+    final currentScreenPos = projector.project(newCenter);
+    
+    // Меняем targetCenter и корректируем panOffset, чтобы центр не дернулся
+    projector = projector.copyWith(
+      targetCenter: newCenter,
+      panOffset: currentScreenPos,
+    );
   }
 
   /// Свободное 3D-вращение сцены (Орбита)
