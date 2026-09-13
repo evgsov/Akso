@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789322509.8669455,
-    "seen": 1789322689.6598794,
-    "ast_hash": "9d3f37ee8451e9ba958360991e8f67a0",
+    "mtime": 1789322821.845808,
+    "seen": 1789322903.7277074,
+    "ast_hash": "ede03bc6b64945907ae245c9190b7652",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "test/auto_branching_and_flanges_test.dart": {
-    "mtime": 1789142111.0914414,
-    "seen": 1789148910.5377536,
-    "ast_hash": "5dc426c65bcf82d054854b5e005afa44",
+    "mtime": 1789322826.5440223,
+    "seen": 1789322903.727784,
+    "ast_hash": "5fbbb3a79c868cb538f278541d60020f",
     "semantic_hash": ""
   },
   "test/axonometry_math_test.dart": {
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "test/dxf_export_test.dart": {
-    "mtime": 1789321942.721048,
-    "seen": 1789321964.0579183,
-    "ast_hash": "ce60074cbb7cd806c83828e92bba03b2",
+    "mtime": 1789322871.5594697,
+    "seen": 1789322903.72779,
+    "ast_hash": "8836b670a016825e935a23c0d711d333",
     "semantic_hash": ""
   },
   "test/fitting_catalog_test.dart": {
@@ -1182,9 +1182,9 @@
     "semantic_hash": ""
   },
   "test/construction_axis_test.dart": {
-    "mtime": 1789142111.091941,
-    "seen": 1789148910.5377555,
-    "ast_hash": "9c1941234701856f82209ec08bd20279",
+    "mtime": 1789322836.73561,
+    "seen": 1789322903.727788,
+    "ast_hash": "c8c32f8d6eac9f7ddc3713e4e48b82f8",
     "semantic_hash": ""
   },
   "test/network_history_test.dart": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "test/pipe_assortment_test.dart": {
-    "mtime": 1789227954.578823,
-    "seen": 1789275879.8914845,
-    "ast_hash": "919a09dbc84ab98e3b0a0c5241c56601",
+    "mtime": 1789322848.075557,
+    "seen": 1789322903.727799,
+    "ast_hash": "bd3007917eb35b13c0cccb4dd5cde5f6",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart": {

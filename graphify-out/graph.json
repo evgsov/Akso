@@ -5071,28 +5071,6 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialog",
-      "label": "CustomPipeDimensionDialog",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "custompipedimensiondialog",
-      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialogstate",
-      "label": "_CustomPipeDimensionDialogState",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_custompipedimensiondialogstate",
-      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
-      "source_location": null
-    },
-    {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspector",
       "label": "_DesktopSegmentInspector",
       "_origin": "ast",
@@ -5112,6 +5090,28 @@
       "file_type": "code",
       "norm_label": "_desktopsegmentinspectorstate",
       "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialog",
+      "label": "PipeAssortmentDialog",
+      "_origin": "ast",
+      "community": 123,
+      "community_name": "State",
+      "file_type": "code",
+      "norm_label": "pipeassortmentdialog",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialogstate",
+      "label": "_PipeAssortmentDialogState",
+      "_origin": "ast",
+      "community": 123,
+      "community_name": "State",
+      "file_type": "code",
+      "norm_label": "_pipeassortmentdialogstate",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
       "source_location": null
     },
     {
@@ -5258,28 +5258,6 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialog",
-      "label": "PipeAssortmentDialog",
-      "_origin": "ast",
-      "community": 124,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "pipeassortmentdialog",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialogstate",
-      "label": "_PipeAssortmentDialogState",
-      "_origin": "ast",
-      "community": 124,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_pipeassortmentdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
       "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_searchcontroller",
       "label": "_searchController",
       "_origin": "ast",
@@ -5324,13 +5302,13 @@
       "source_location": null
     },
     {
-      "id": "voidcallback",
-      "label": "VoidCallback",
+      "id": "texteditingcontroller",
+      "label": "TextEditingController",
       "_origin": "ast",
       "community": 124,
       "community_name": "pipe_assortment_dialog.dart",
       "file_type": "code",
-      "norm_label": "voidcallback",
+      "norm_label": "texteditingcontroller",
       "source_file": null,
       "source_location": null
     },
@@ -6037,6 +6015,17 @@
       "source_location": null
     },
     {
+      "id": "package_akso_data_dxf_dxf_writer_dart",
+      "label": "package:akso/data/dxf/dxf_writer.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/data/dxf/dxf_writer.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "package_akso_domain_enums_valve_type_dart",
       "label": "package:akso/domain/enums/valve_type.dart",
       "_origin": "ast",
@@ -6044,6 +6033,17 @@
       "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/enums/valve_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_models_construction_axis_dart",
+      "label": "package:akso/domain/models/construction_axis.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/models/construction_axis.dart",
       "source_file": null,
       "source_location": null
     },
@@ -6070,6 +6070,17 @@
       "source_location": null
     },
     {
+      "id": "package_akso_domain_models_pipe_dimension_dart",
+      "label": "package:akso/domain/models/pipe_dimension.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/models/pipe_dimension.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "package_akso_domain_models_pipe_segment_dart",
       "label": "package:akso/domain/models/pipe_segment.dart",
       "_origin": "ast",
@@ -6081,25 +6092,58 @@
       "source_location": null
     },
     {
-      "id": "test_equipment_test",
-      "label": "equipment_test.dart",
+      "id": "package_akso_ui_features_editor_widgets_pipe_assortment_dialog_dart",
+      "label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
       "_origin": "ast",
       "community": 129,
       "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "equipment_test.dart",
-      "source_file": "test/equipment_test.dart",
+      "norm_label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_equipment_test_main",
+      "id": "test_construction_axis_test",
+      "label": "construction_axis_test.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "construction_axis_test.dart",
+      "source_file": "test/construction_axis_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_construction_axis_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 129,
       "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/equipment_test.dart",
+      "source_file": "test/construction_axis_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_test",
+      "label": "dxf_export_test.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "dxf_export_test.dart",
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/dxf_export_test.dart",
       "source_location": null
     },
     {
@@ -6166,6 +6210,28 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/network_topology_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_pipe_assortment_test",
+      "label": "pipe_assortment_test.dart",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "pipe_assortment_test.dart",
+      "source_file": "test/pipe_assortment_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_pipe_assortment_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 129,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/pipe_assortment_test.dart",
       "source_location": null
     },
     {
@@ -6530,28 +6596,6 @@
       "source_location": null
     },
     {
-      "id": "test_dxf_export_test",
-      "label": "dxf_export_test.dart",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "package:flutter_test/flutter_test.dart",
-      "file_type": "code",
-      "norm_label": "dxf_export_test.dart",
-      "source_file": "test/dxf_export_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_dxf_export_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "package:flutter_test/flutter_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/dxf_export_test.dart",
-      "source_location": null
-    },
-    {
       "id": "test_fitting_catalog_test",
       "label": "fitting_catalog_test.dart",
       "_origin": "ast",
@@ -6593,94 +6637,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/fitting_elements_interaction_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "package_akso_data_dxf_dxf_writer_dart",
-      "label": "package:akso/data/dxf/dxf_writer.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/data/dxf/dxf_writer.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_construction_axis_dart",
-      "label": "package:akso/domain/models/construction_axis.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/construction_axis.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_pipe_dimension_dart",
-      "label": "package:akso/domain/models/pipe_dimension.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/pipe_dimension.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_features_editor_widgets_pipe_assortment_dialog_dart",
-      "label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "test_construction_axis_test",
-      "label": "construction_axis_test.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "construction_axis_test.dart",
-      "source_file": "test/construction_axis_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_construction_axis_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/construction_axis_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_pipe_assortment_test",
-      "label": "pipe_assortment_test.dart",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "pipe_assortment_test.dart",
-      "source_file": "test/pipe_assortment_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_pipe_assortment_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 131,
-      "community_name": "pipe_assortment_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/pipe_assortment_test.dart",
       "source_location": null
     },
     {
@@ -7000,17 +6956,6 @@
       "file_type": "code",
       "norm_label": "_uuid",
       "source_file": "lib/ui/features/editor/widgets/piping_systems_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "package_uuid_uuid_dart",
-      "label": "package:uuid/uuid.dart",
-      "_origin": "ast",
-      "community": 133,
-      "community_name": "piping_systems_dialog.dart",
-      "file_type": "code",
-      "norm_label": "package:uuid/uuid.dart",
-      "source_file": null,
       "source_location": null
     },
     {
@@ -7817,6 +7762,17 @@
       "source_location": null
     },
     {
+      "id": "voidcallback",
+      "label": "VoidCallback",
+      "_origin": "ast",
+      "community": 139,
+      "community_name": "trace_length_input.dart",
+      "file_type": "code",
+      "norm_label": "voidcallback",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "agents_skills_systematic_debugging_creation_log",
       "label": "CREATION-LOG.md",
       "_origin": "ast",
@@ -8266,17 +8222,6 @@
       "source_location": null
     },
     {
-      "id": "domain_enums_projection_type_dart",
-      "label": "../../../../domain/enums/projection_type.dart",
-      "_origin": "ast",
-      "community": 141,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/projection_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "domain_enums_valve_type_dart",
       "label": "../../../../domain/enums/valve_type.dart",
       "_origin": "ast",
@@ -8285,50 +8230,6 @@
       "file_type": "code",
       "norm_label": "../../../../domain/enums/valve_type.dart",
       "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter",
-      "label": "grid_painter.dart",
-      "_origin": "ast",
-      "community": 141,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "grid_painter.dart",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_drawscalebar",
-      "label": "_drawScaleBar",
-      "_origin": "ast",
-      "community": 141,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "_drawscalebar",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_gridpainter",
-      "label": "GridPainter",
-      "_origin": "ast",
-      "community": 141,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "gridpainter",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_painters_grid_painter_paint",
-      "label": "paint",
-      "_origin": "ast",
-      "community": 141,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "paint",
-      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
@@ -8794,6 +8695,204 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet",
+      "label": "equipment_properties_sheet.dart",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "equipment_properties_sheet.dart",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_applychanges",
+      "label": "_applyChanges",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_applychanges",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_createstate",
+      "label": "createState",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "createstate",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_dispose",
+      "label": "dispose",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "dispose",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentid",
+      "label": "equipmentId",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "equipmentid",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentpropertiessheet",
+      "label": "EquipmentPropertiesSheet",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "equipmentpropertiessheet",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentpropertiessheetstate",
+      "label": "_EquipmentPropertiesSheetState",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_equipmentpropertiessheetstate",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_heightctrl",
+      "label": "_heightCtrl",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_heightctrl",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_initstate",
+      "label": "initState",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_lengthctrl",
+      "label": "_lengthCtrl",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_lengthctrl",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_namectrl",
+      "label": "_nameCtrl",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_namectrl",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_network",
+      "label": "network",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "network",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_onmodified",
+      "label": "onModified",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "onmodified",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_type",
+      "label": "_type",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_type",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_widthctrl",
+      "label": "_widthCtrl",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "_widthctrl",
+      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "canvas_input_controller_dart",
+      "label": "../../../canvas/input_controller.dart",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "../../../canvas/input_controller.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "changenotifier",
+      "label": "ChangeNotifier",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "changenotifier",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "custom_pipe_dimension_dialog_dart",
       "label": "custom_pipe_dimension_dialog.dart",
       "_origin": "ast",
@@ -8846,6 +8945,72 @@
       "file_type": "code",
       "norm_label": "canvastool",
       "source_file": "lib/ui/canvas/input_controller.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_input_controller_pipinginputcontroller",
+      "label": "PipingInputController",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "pipinginputcontroller",
+      "source_file": "lib/ui/canvas/input_controller.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_elevation_panel",
+      "label": "elevation_panel.dart",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "elevation_panel.dart",
+      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_elevation_panel_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_elevation_panel_controller",
+      "label": "controller",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_elevation_panel_elevationpanel",
+      "label": "ElevationPanel",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "elevationpanel",
+      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_elevation_panel_showelevationinputdialog",
+      "label": "_showElevationInputDialog",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "tools_panel.dart",
+      "file_type": "code",
+      "norm_label": "_showelevationinputdialog",
+      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
       "source_location": null
     },
     {
@@ -9062,61 +9227,6 @@
       "source_location": "L812"
     },
     {
-      "id": "package_akso_ui_features_editor_editor_screen_dart",
-      "label": "package:akso/ui/features/editor/editor_screen.dart",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "direct_distance_entry_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/editor_screen.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_features_editor_widgets_trace_length_input_dart",
-      "label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "direct_distance_entry_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_flutter_services_dart",
-      "label": "package:flutter/services.dart",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "direct_distance_entry_test.dart",
-      "file_type": "code",
-      "norm_label": "package:flutter/services.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "test_direct_distance_entry_test",
-      "label": "direct_distance_entry_test.dart",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "direct_distance_entry_test.dart",
-      "file_type": "code",
-      "norm_label": "direct_distance_entry_test.dart",
-      "source_file": "test/direct_distance_entry_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_direct_distance_entry_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "direct_distance_entry_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/direct_distance_entry_test.dart",
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_models_piping_network_dart",
       "label": "package:akso/domain/models/piping_network.dart",
       "_origin": "ast",
@@ -9146,6 +9256,17 @@
       "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/canvas/input_controller.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_features_editor_editor_screen_dart",
+      "label": "package:akso/ui/features/editor/editor_screen.dart",
+      "_origin": "ast",
+      "community": 147,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/features/editor/editor_screen.dart",
       "source_file": null,
       "source_location": null
     },
@@ -9180,6 +9301,50 @@
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/widgets/touch_distance_entry_dialog.dart",
       "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_features_editor_widgets_trace_length_input_dart",
+      "label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
+      "_origin": "ast",
+      "community": 147,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_flutter_services_dart",
+      "label": "package:flutter/services.dart",
+      "_origin": "ast",
+      "community": 147,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:flutter/services.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "test_direct_distance_entry_test",
+      "label": "direct_distance_entry_test.dart",
+      "_origin": "ast",
+      "community": 147,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "direct_distance_entry_test.dart",
+      "source_file": "test/direct_distance_entry_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_direct_distance_entry_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 147,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/direct_distance_entry_test.dart",
       "source_location": null
     },
     {
@@ -9535,6 +9700,28 @@
       "source_location": null
     },
     {
+      "id": "test_equipment_test",
+      "label": "equipment_test.dart",
+      "_origin": "ast",
+      "community": 149,
+      "community_name": "callout_canvas_test.dart",
+      "file_type": "code",
+      "norm_label": "equipment_test.dart",
+      "source_file": "test/equipment_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_equipment_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 149,
+      "community_name": "callout_canvas_test.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/equipment_test.dart",
+      "source_location": null
+    },
+    {
       "id": "test_pipe_support_test",
       "label": "pipe_support_test.dart",
       "_origin": "ast",
@@ -9723,50 +9910,6 @@
       "norm_label": "workflow",
       "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
       "source_location": "L16"
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingcatalogdialog",
-      "label": "FittingCatalogDialog",
-      "_origin": "ast",
-      "community": 150,
-      "community_name": "FittingCatalogDialog",
-      "file_type": "code",
-      "norm_label": "fittingcatalogdialog",
-      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingcatalogdialogstate",
-      "label": "_FittingCatalogDialogState",
-      "_origin": "ast",
-      "community": 150,
-      "community_name": "FittingCatalogDialog",
-      "file_type": "code",
-      "norm_label": "_fittingcatalogdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingsettingsdialog",
-      "label": "FittingSettingsDialog",
-      "_origin": "ast",
-      "community": 150,
-      "community_name": "FittingCatalogDialog",
-      "file_type": "code",
-      "norm_label": "fittingsettingsdialog",
-      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "singletickerproviderstatemixin",
-      "label": "SingleTickerProviderStateMixin",
-      "_origin": "ast",
-      "community": 150,
-      "community_name": "FittingCatalogDialog",
-      "file_type": "code",
-      "norm_label": "singletickerproviderstatemixin",
-      "source_file": null,
-      "source_location": null
     },
     {
       "id": "int_get",
@@ -10298,12 +10441,12 @@
     },
     {
       "id": "lib_data_dxf_dxf_writer_toautocadstring",
-      "label": "_toAutoCadString",
+      "label": "toAutoCadString",
       "_origin": "ast",
       "community": 17,
       "community_name": "dxf_writer.dart",
       "file_type": "code",
-      "norm_label": "_toautocadstring",
+      "norm_label": "toautocadstring",
       "source_file": "lib/data/dxf/dxf_writer.dart",
       "source_location": null
     },
@@ -12372,6 +12515,28 @@
       "community_name": "custom_pipe_dimension_dialog.dart",
       "file_type": "code",
       "norm_label": "createstate",
+      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialog",
+      "label": "CustomPipeDimensionDialog",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "custom_pipe_dimension_dialog.dart",
+      "file_type": "code",
+      "norm_label": "custompipedimensiondialog",
+      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialogstate",
+      "label": "_CustomPipeDimensionDialogState",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "custom_pipe_dimension_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_custompipedimensiondialogstate",
       "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
       "source_location": null
     },
@@ -14974,6 +15139,17 @@
       "source_location": null
     },
     {
+      "id": "package_uuid_uuid_dart",
+      "label": "package:uuid/uuid.dart",
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "fitting_properties_sheet.dart",
+      "file_type": "code",
+      "norm_label": "package:uuid/uuid.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "agents_skills_using_git_worktrees_skill",
       "label": "using-git-worktrees/SKILL.md",
       "_origin": "ast",
@@ -15426,6 +15602,39 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingcatalogdialog",
+      "label": "FittingCatalogDialog",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "fitting_catalog_dialog.dart",
+      "file_type": "code",
+      "norm_label": "fittingcatalogdialog",
+      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingcatalogdialogstate",
+      "label": "_FittingCatalogDialogState",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "fitting_catalog_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_fittingcatalogdialogstate",
+      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_fittingsettingsdialog",
+      "label": "FittingSettingsDialog",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "fitting_catalog_dialog.dart",
+      "file_type": "code",
+      "norm_label": "fittingsettingsdialog",
+      "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_fitting_catalog_dialog_formatdeduction",
       "label": "_formatDeduction",
       "_origin": "ast",
@@ -15577,6 +15786,17 @@
       "file_type": "code",
       "norm_label": "_uuid",
       "source_file": "lib/ui/features/editor/widgets/fitting_catalog_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "singletickerproviderstatemixin",
+      "label": "SingleTickerProviderStateMixin",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "fitting_catalog_dialog.dart",
+      "file_type": "code",
+      "norm_label": "singletickerproviderstatemixin",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -16138,6 +16358,18 @@
       "norm_label": "writing data",
       "source_file": ".agents/skills/firebase-firestore/references/enterprise/python_sdk_usage.md",
       "source_location": "L6"
+    },
+    {
+      "id": "agents_skills_firebase_firestore_references_enterprise_security_rules",
+      "label": "enterprise/security_rules.md",
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "Advanced Validation for Business Logic",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "enterprise/security_rules.md",
+      "source_file": ".agents/skills/firebase-firestore/references/enterprise/security_rules.md",
+      "source_location": "L1"
     },
     {
       "id": "agents_skills_firebase_firestore_references_enterprise_security_rules_1_generate_firestore_rules",
@@ -21019,40 +21251,11 @@
       "source_location": "L48"
     },
     {
-      "id": "agents_skills_firebase_firestore_skill",
-      "label": "firebase-firestore/SKILL.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "frontmatter": {
-        "name": "firebase-firestore",
-        "description": "&gt;-",
-        "compatibility": "This skill is best used with the Firebase CLI, but does not require it. Firebase CLI can be accessed through `npx -y firebase-tools@latest`."
-      },
-      "node_kind": "page",
-      "norm_label": "firebase-firestore/skill.md",
-      "source_file": ".agents/skills/firebase-firestore/SKILL.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_enterprise_indexes",
-      "label": "enterprise/indexes.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "enterprise/indexes.md",
-      "source_file": ".agents/skills/firebase-firestore/references/enterprise/indexes.md",
-      "source_location": "L1"
-    },
-    {
       "id": "agents_skills_firebase_firestore_references_enterprise_indexes_cli_commands",
       "label": "CLI Commands",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "cli commands",
@@ -21064,7 +21267,7 @@
       "label": "Config files",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "config files",
@@ -21076,7 +21279,7 @@
       "label": "Firestore Indexes Reference",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "firestore indexes reference",
@@ -21088,7 +21291,7 @@
       "label": "Index Density",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "index density",
@@ -21100,7 +21303,7 @@
       "label": "Index Ordering",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "index ordering",
@@ -21112,7 +21315,7 @@
       "label": "Index Structure",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "index structure",
@@ -21124,7 +21327,7 @@
       "label": "Management",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "management",
@@ -21136,7 +21339,7 @@
       "label": "Query Support Examples",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "query support examples",
@@ -21148,72 +21351,12 @@
       "label": "Unique Indexes",
       "_origin": "ast",
       "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
+      "community_name": "Firestore Indexes Reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "unique indexes",
       "source_file": ".agents/skills/firebase-firestore/references/enterprise/indexes.md",
       "source_location": "L37"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_enterprise_provisioning",
-      "label": "enterprise/provisioning.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "enterprise/provisioning.md",
-      "source_file": ".agents/skills/firebase-firestore/references/enterprise/provisioning.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_enterprise_security_rules",
-      "label": "enterprise/security_rules.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "enterprise/security_rules.md",
-      "source_file": ".agents/skills/firebase-firestore/references/enterprise/security_rules.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_indexes",
-      "label": "standard/indexes.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "standard/indexes.md",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/indexes.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_provisioning",
-      "label": "standard/provisioning.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "standard/provisioning.md",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/provisioning.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "agents_skills_firebase_firestore_references_standard_security_rules",
-      "label": "standard/security_rules.md",
-      "_origin": "ast",
-      "community": 65,
-      "community_name": "firebase-firestore/SKILL.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "standard/security_rules.md",
-      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
-      "source_location": "L1"
     },
     {
       "id": "agents_skills_firebase_firestore_references_enterprise_web_sdk_usage",
@@ -22472,24 +22615,13 @@
       "source_location": "L63"
     },
     {
-      "id": "canvas_input_controller_dart",
-      "label": "../../../canvas/input_controller.dart",
+      "id": "domain_enums_projection_type_dart",
+      "label": "../../../../domain/enums/projection_type.dart",
       "_origin": "ast",
       "community": 72,
       "community_name": "main.dart",
       "file_type": "code",
-      "norm_label": "../../../canvas/input_controller.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "changenotifier",
-      "label": "ChangeNotifier",
-      "_origin": "ast",
-      "community": 72,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "changenotifier",
+      "norm_label": "../../../../domain/enums/projection_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -22560,69 +22692,47 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_canvas_input_controller_pipinginputcontroller",
-      "label": "PipingInputController",
+      "id": "lib_ui_canvas_painters_grid_painter",
+      "label": "grid_painter.dart",
       "_origin": "ast",
       "community": 72,
       "community_name": "main.dart",
       "file_type": "code",
-      "norm_label": "pipinginputcontroller",
-      "source_file": "lib/ui/canvas/input_controller.dart",
+      "norm_label": "grid_painter.dart",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_elevation_panel",
-      "label": "elevation_panel.dart",
+      "id": "lib_ui_canvas_painters_grid_painter_drawscalebar",
+      "label": "_drawScaleBar",
       "_origin": "ast",
       "community": 72,
       "community_name": "main.dart",
       "file_type": "code",
-      "norm_label": "elevation_panel.dart",
-      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "norm_label": "_drawscalebar",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_elevation_panel_build",
-      "label": "build",
+      "id": "lib_ui_canvas_painters_grid_painter_gridpainter",
+      "label": "GridPainter",
       "_origin": "ast",
       "community": 72,
       "community_name": "main.dart",
       "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "norm_label": "gridpainter",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_elevation_panel_controller",
-      "label": "controller",
+      "id": "lib_ui_canvas_painters_grid_painter_paint",
+      "label": "paint",
       "_origin": "ast",
       "community": 72,
       "community_name": "main.dart",
       "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_elevation_panel_elevationpanel",
-      "label": "ElevationPanel",
-      "_origin": "ast",
-      "community": 72,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "elevationpanel",
-      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_elevation_panel_showelevationinputdialog",
-      "label": "_showElevationInputDialog",
-      "_origin": "ast",
-      "community": 72,
-      "community_name": "main.dart",
-      "file_type": "code",
-      "norm_label": "_showelevationinputdialog",
-      "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
+      "norm_label": "paint",
+      "source_file": "lib/ui/canvas/painters/grid_painter.dart",
       "source_location": null
     },
     {
@@ -22904,191 +23014,81 @@
       "source_location": "L5"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet",
-      "label": "equipment_properties_sheet.dart",
+      "id": "agents_skills_firebase_firestore_skill",
+      "label": "firebase-firestore/SKILL.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "equipment_properties_sheet.dart",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "firebase-firestore",
+        "description": "&gt;-",
+        "compatibility": "This skill is best used with the Firebase CLI, but does not require it. Firebase CLI can be accessed through `npx -y firebase-tools@latest`."
+      },
+      "node_kind": "page",
+      "norm_label": "firebase-firestore/skill.md",
+      "source_file": ".agents/skills/firebase-firestore/SKILL.md",
+      "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_applychanges",
-      "label": "_applyChanges",
+      "id": "agents_skills_firebase_firestore_references_enterprise_indexes",
+      "label": "enterprise/indexes.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_applychanges",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "enterprise/indexes.md",
+      "source_file": ".agents/skills/firebase-firestore/references/enterprise/indexes.md",
+      "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_build",
-      "label": "build",
+      "id": "agents_skills_firebase_firestore_references_enterprise_provisioning",
+      "label": "enterprise/provisioning.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "enterprise/provisioning.md",
+      "source_file": ".agents/skills/firebase-firestore/references/enterprise/provisioning.md",
+      "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_createstate",
-      "label": "createState",
+      "id": "agents_skills_firebase_firestore_references_standard_indexes",
+      "label": "standard/indexes.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "standard/indexes.md",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/indexes.md",
+      "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_dispose",
-      "label": "dispose",
+      "id": "agents_skills_firebase_firestore_references_standard_provisioning",
+      "label": "standard/provisioning.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "dispose",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "standard/provisioning.md",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/provisioning.md",
+      "source_location": "L1"
     },
     {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentid",
-      "label": "equipmentId",
+      "id": "agents_skills_firebase_firestore_references_standard_security_rules",
+      "label": "standard/security_rules.md",
       "_origin": "ast",
       "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "equipmentid",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentpropertiessheet",
-      "label": "EquipmentPropertiesSheet",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "equipmentpropertiessheet",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_equipmentpropertiessheetstate",
-      "label": "_EquipmentPropertiesSheetState",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_equipmentpropertiessheetstate",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_heightctrl",
-      "label": "_heightCtrl",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_heightctrl",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_lengthctrl",
-      "label": "_lengthCtrl",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_lengthctrl",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_namectrl",
-      "label": "_nameCtrl",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_namectrl",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_network",
-      "label": "network",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "network",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_onmodified",
-      "label": "onModified",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "onmodified",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_type",
-      "label": "_type",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_type",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_equipment_properties_sheet_widthctrl",
-      "label": "_widthCtrl",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "_widthctrl",
-      "source_file": "lib/ui/features/editor/widgets/equipment_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "texteditingcontroller",
-      "label": "TextEditingController",
-      "_origin": "ast",
-      "community": 76,
-      "community_name": "equipment_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "texteditingcontroller",
-      "source_file": null,
-      "source_location": null
+      "community_name": "firebase-firestore/SKILL.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "standard/security_rules.md",
+      "source_file": ".agents/skills/firebase-firestore/references/standard/security_rules.md",
+      "source_location": "L1"
     },
     {
       "id": "agents_skills_firebase_firestore_references_standard_provisioning_1_create_firebase_json",
@@ -52295,6 +52295,61 @@
     },
     {
       "source": "test_dxf_export_test",
+      "target": "package_akso_data_dxf_dxf_writer_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_dxf_export_test",
+      "target": "package_akso_domain_enums_valve_type_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_dxf_export_test",
+      "target": "package_akso_domain_models_node_3d_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_dxf_export_test",
+      "target": "package_akso_domain_models_pipe_segment_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_dxf_export_test",
+      "target": "package_akso_domain_models_piping_network_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "test_dxf_export_test",
       "target": "package_flutter_test_flutter_test_dart",
       "relation": "imports",
       "_origin": "ast",
@@ -55169,5 +55224,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "91f111d29b58f30f108d51ddd8dbc98d905c7055"
+  "built_at_commit": "8189ccbab27eaa0bdcf6eb37bc43b847b292b793"
 }
