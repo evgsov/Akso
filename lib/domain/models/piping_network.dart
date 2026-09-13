@@ -159,6 +159,11 @@ class PipingNetwork {
   }
 
   /// Удаление оборудования с каскадной очисткой штуцеров и примыкающих элементов
+  void updateEquipment(Equipment updatedEq) {
+    if (!equipments.containsKey(updatedEq.id)) return;
+    equipments[updatedEq.id] = updatedEq;
+  }
+
   void removeEquipment(String eqId) {
     final eq = equipments.remove(eqId);
     if (eq == null) return;

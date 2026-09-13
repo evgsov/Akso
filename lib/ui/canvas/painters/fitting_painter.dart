@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
@@ -14,13 +15,14 @@ class FittingPainter {
     AxonometryProjector projector,
     PipingNetwork network,
     String? selectedNodeId,
-    bool showCallouts,
-  ) {
+    bool showCallouts, {
+    bool isVolumeMode = false,
+  }) {
     for (final fit in network.fittings.values) {
       if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
-        _drawElbowSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts);
+        _drawElbowSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts, isVolumeMode);
       } else if (fit.fittingType == FittingType.tee) {
-        _drawTeeSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts);
+        _drawTeeSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts, isVolumeMode);
       } else if (fit.fittingType == FittingType.reducerConcentric ||
           fit.fittingType == FittingType.reducerEccentric) {
         final node = network.nodes[fit.nodeId];
@@ -39,6 +41,9 @@ class FittingPainter {
 
         _drawReducerSymbol(
           canvas,
+          projector: projector,
+          network: network,
+          isVolumeMode: isVolumeMode,
           center: center,
           angle: angle,
           dn1: fit.dn,
@@ -59,10 +64,13 @@ class FittingPainter {
         final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
 
         final sys = network.systems[s1.systemId];
-        final color = sys != null ? Color(sys.colorValue) : const Color(0xFF1976D2);
+        final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
         _drawFlangeSymbol(
           canvas,
+          projector: projector,
+          network: network,
+          isVolumeMode: isVolumeMode,
           center: center,
           angle: angle,
           dn: fit.dn,
@@ -82,252 +90,202 @@ class FittingPainter {
           dnSecondary: fit.dnSecondary,
           showCallouts: showCallouts,
         );
+      } else if (fit.fittingType == FittingType.cap) {
+        final node = network.nodes[fit.nodeId];
+        if (node == null) continue;
+        final connected = network.getConnectedSegments(fit.nodeId);
+        if (connected.isEmpty) continue;
+
+        final center = projector.project(node);
+        final s1 = connected[0];
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
+        final pOther = projector.project(other1);
+        final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
+
+        final sys = network.systems[s1.systemId];
+        final color = sys != null ? Color(sys.colorValue) : Colors.black87;
+
+        _drawCapSymbol(
+          canvas,
+          projector: projector,
+          network: network,
+          isVolumeMode: isVolumeMode,
+          center: center,
+          angle: angle,
+          dn: fit.dn,
+          color: color,
+        );
       }
     }
   }
 
-  static void _drawReducerSymbol(
-    Canvas canvas, {
-    required Offset center,
-    required double angle,
-    required int dn1,
-    required int dn2,
-    required bool isEccentric,
-    required Color color,
-  }) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-
-    const halfL = 12.0;
-    final w1 = PipePainter.calcStrokeWidth(dn1) * 1.6;
-    final w2 = PipePainter.calcStrokeWidth(dn2) * 1.6;
-
-    final path = Path();
-    if (!isEccentric) {
-      path.moveTo(-halfL, -w1);
-      path.lineTo(halfL, -w2);
-      path.lineTo(halfL, w2);
-      path.lineTo(-halfL, w1);
-      path.close();
-    } else {
-      path.moveTo(-halfL, w1);
-      path.lineTo(halfL, w1);
-      path.lineTo(halfL, w1 - w2 * 2);
-      path.lineTo(-halfL, -w1);
-      path.close();
+  static double _calcWidth(int dn, PipingNetwork network, AxonometryProjector projector, bool isVolumeMode) {
+    double w = PipePainter.calcStrokeWidth(dn);
+    if (isVolumeMode) {
+      final dim = network.pipeCatalog.getDimension(dn);
+      final outerMm = dim != null ? dim.outerDiameterMm : dn.toDouble();
+      w = outerMm * projector.scale;
+      if (w < 2.0) w = 2.0;
     }
-
-    final fillPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = color
-      ..strokeWidth = 1.8
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
-
-    final tp = TextPainter(
-      text: TextSpan(
-        text: '$dn1×$dn2',
-        style: TextStyle(
-          color: color,
-          fontSize: 9.5,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'monospace',
-          backgroundColor: Colors.white.withValues(alpha: 0.8),
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(-tp.width / 2, -w1 - 14));
-
-    canvas.restore();
+    return w;
   }
-
-  static void _drawElbowSymbol(Canvas canvas, AxonometryProjector projector, PipingNetwork network, Fitting fit, String? selectedNodeId, bool showCallouts) {
+  static void _drawElbowSymbol(
+    Canvas canvas,
+    AxonometryProjector projector,
+    PipingNetwork network,
+    Fitting fit,
+    String? selectedNodeId,
+    bool showCallouts,
+    bool isVolumeMode,
+  ) {
     final node = network.nodes[fit.nodeId];
     if (node == null) return;
-    final conn = network.getConnectedSegments(fit.nodeId);
-    if (conn.length != 2) return;
+    final connected = network.getConnectedSegments(fit.nodeId);
+    if (connected.length != 2) return;
 
-    final s1 = conn[0];
-    final s2 = conn[1];
-    final n1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-    final n2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
-    if (n1 == null || n2 == null) return;
+    final sys = network.systems[connected[0].systemId];
+    final color = sys != null ? Color(sys.colorValue) : Colors.black87;
+
+    final s1 = connected[0];
+    final s2 = connected[1];
+
+    final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
+    final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
 
     final ptN = projector.project(node);
-    final pOther1 = projector.project(n1);
-    final pOther2 = projector.project(n2);
+    final ptO1 = projector.project(other1);
+    final ptO2 = projector.project(other2);
 
-    final pt1 = PipePainter.calcPipeTrimmedPoint(
+    final pOut1 = PipePainter.calcPipeTrimmedPoint(
       network: network,
       nodeId: fit.nodeId,
-      otherNodeId: n1.id,
+      otherNodeId: other1.id,
       nodeScreen: ptN,
-      otherScreen: pOther1,
+      otherScreen: ptO1,
       seg: s1,
     );
-    final pt2 = PipePainter.calcPipeTrimmedPoint(
+    final pOut2 = PipePainter.calcPipeTrimmedPoint(
       network: network,
       nodeId: fit.nodeId,
-      otherNodeId: n2.id,
+      otherNodeId: other2.id,
       nodeScreen: ptN,
-      otherScreen: pOther2,
+      otherScreen: ptO2,
       seg: s2,
     );
 
-    final sys = network.systems[s1.systemId];
-    final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
-    final strokeWidth = PipePainter.calcStrokeWidth(fit.dn);
-    final isSelected = fit.nodeId == selectedNodeId;
+    final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
 
-    final arcPath = Path()
-      ..moveTo(pt1.dx, pt1.dy)
-      ..quadraticBezierTo(ptN.dx, ptN.dy, pt2.dx, pt2.dy);
-
-    if (isSelected) {
-      final glowPaint = Paint()
-        ..color = Colors.amber.withValues(alpha: 0.45)
+    if (isVolumeMode) {
+      final dx = pOut2.dx - pOut1.dx;
+      final dy = pOut2.dy - pOut1.dy;
+      final centerElbow = Offset(pOut1.dx + dx / 2, pOut1.dy + dy / 2);
+      
+      final paint = Paint()
+        ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth + 8.0
-        ..strokeCap = StrokeCap.round;
-      canvas.drawPath(arcPath, glowPaint);
-    }
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      
+      final path = Path()
+        ..moveTo(pOut1.dx, pOut1.dy)
+        ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
+      canvas.drawPath(path, paint);
 
-    final elbowPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(arcPath, elbowPaint);
-
-    if (projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
-      final sheenPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.35)
+      _drawWeldTickAt(canvas, pOut1, centerElbow, strokeWidth);
+      _drawWeldTickAt(canvas, pOut2, centerElbow, strokeWidth);
+    } else {
+      final paint = Paint()
+        ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth * 0.35
-        ..strokeCap = StrokeCap.round;
-      canvas.drawPath(arcPath, sheenPaint);
-    }
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.square;
 
-    _drawWeldTickAt(canvas, pt1, ptN, strokeWidth);
-    _drawWeldTickAt(canvas, pt2, ptN, strokeWidth);
+      canvas.drawLine(ptN, pOut1, paint);
+      canvas.drawLine(ptN, pOut2, paint);
+
+      final curvePaint = Paint()
+        ..color = Colors.blueGrey.shade300
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+      final path = Path()
+        ..moveTo(pOut1.dx, pOut1.dy)
+        ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
+      canvas.drawPath(path, curvePaint);
+
+      _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
+      _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
+    }
 
     if (showCallouts) {
-      final midArc = Offset((pt1.dx + 2 * ptN.dx + pt2.dx) / 4, (pt1.dy + 2 * ptN.dy + pt2.dy) / 4);
-      final radMm = fit.effectiveRadiusMm;
-      final angleStr = fit.fittingType == FittingType.elbow45 ? '45°' : '90°';
-      final label = '∠$angleStr R${radMm.round()}';
       final tp = TextPainter(
         text: TextSpan(
-          text: label,
+          text: fit.fittingType.displayName,
           style: TextStyle(
             color: color,
             fontSize: 9.0,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            backgroundColor: Colors.white.withValues(alpha: 0.88),
+            backgroundColor: Colors.white.withValues(alpha: 0.8),
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, midArc - Offset(tp.width / 2, tp.height + 3.0));
+      tp.paint(canvas, ptN + const Offset(10, 10));
     }
   }
 
-  static void _drawWeldTickAt(Canvas canvas, Offset pWeld, Offset pCorner, double strokeWidth) {
-    final dx = pWeld.dx - pCorner.dx;
-    final dy = pWeld.dy - pCorner.dy;
+  static void _drawWeldTickAt(Canvas canvas, Offset pos, Offset towardCenter, double strokeWidth) {
+    final dx = pos.dx - towardCenter.dx;
+    final dy = pos.dy - towardCenter.dy;
     final len = math.sqrt(dx * dx + dy * dy);
-    if (len <= 0) return;
-
-    final perpX = -dy / len;
-    final perpY = dx / len;
-    final tickHalfLen = math.max(4.5, strokeWidth * 0.85);
-
-    final tickPaint = Paint()
-      ..color = const Color(0xFF263238)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.square;
-
+    if (len < 0.1) return;
+    final nx = -dy / len;
+    final ny = dx / len;
+    
+    final halfLen = math.max(strokeWidth * 0.7, 4.0);
+    
+    final paint = Paint()
+      ..color = const Color(0xFF37474F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    
     canvas.drawLine(
-      Offset(pWeld.dx - perpX * tickHalfLen, pWeld.dy - perpY * tickHalfLen),
-      Offset(pWeld.dx + perpX * tickHalfLen, pWeld.dy + perpY * tickHalfLen),
-      tickPaint,
+      Offset(pos.dx - nx * halfLen, pos.dy - ny * halfLen),
+      Offset(pos.dx + nx * halfLen, pos.dy + ny * halfLen),
+      paint,
     );
   }
-
-  static void _drawTeeSymbol(Canvas canvas, AxonometryProjector projector, PipingNetwork network, Fitting fit, String? selectedNodeId, bool showCallouts) {
+  static void _drawTeeSymbol(
+    Canvas canvas,
+    AxonometryProjector projector,
+    PipingNetwork network,
+    Fitting fit,
+    String? selectedNodeId,
+    bool showCallouts,
+    bool isVolumeMode,
+  ) {
     final node = network.nodes[fit.nodeId];
     if (node == null) return;
-    final conn = network.getConnectedSegments(fit.nodeId);
-    if (conn.isEmpty) return;
+    final connected = network.getConnectedSegments(fit.nodeId);
+    if (connected.length < 3) return;
+
+    final segRun1 = connected[0];
+    final segRun2 = connected[1];
+    final segBranch = connected[2];
+
+    final sys = network.systems[segRun1.systemId];
+    final color = sys != null ? Color(sys.colorValue) : Colors.black87;
+
+    final other1 = network.nodes[segRun1.startNodeId == fit.nodeId ? segRun1.endNodeId : segRun1.startNodeId]!;
+    final other2 = network.nodes[segRun2.startNodeId == fit.nodeId ? segRun2.endNodeId : segRun2.startNodeId]!;
+    final otherBranch = network.nodes[segBranch.startNodeId == fit.nodeId ? segBranch.endNodeId : segBranch.startNodeId]!;
 
     final ptN = projector.project(node);
-    final strokeWidth = PipePainter.calcStrokeWidth(fit.dn);
-    final isSelected = fit.nodeId == selectedNodeId;
 
-    final sys = network.systems[conn.first.systemId];
-    final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+    final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
 
-    if (isSelected) {
-      canvas.drawCircle(
-        ptN,
-        strokeWidth + 10.0,
-        Paint()
-          ..color = Colors.amber.withValues(alpha: 0.45)
-          ..style = PaintingStyle.fill,
-      );
-    }
-
-    if (conn.length == 3) {
-      final unitVectors = <List<double>>[];
-      for (final s in conn) {
-        final other = network.nodes[s.startNodeId == fit.nodeId ? s.endNodeId : s.startNodeId];
-        if (other != null) {
-          final vx = other.x - node.x;
-          final vy = other.y - node.y;
-          final vz = other.z - node.z;
-          final len = math.sqrt(vx * vx + vy * vy + vz * vz);
-          if (len > 0) {
-            unitVectors.add([vx / len, vy / len, vz / len]);
-          } else {
-            unitVectors.add([0.0, 0.0, 0.0]);
-          }
-        } else {
-          unitVectors.add([0.0, 0.0, 0.0]);
-        }
-      }
-
-      double minDot = 1.0;
-      int run1Idx = 0;
-      int run2Idx = 1;
-      for (int i = 0; i < 3; i++) {
-        for (int j = i + 1; j < 3; j++) {
-          final dot = unitVectors[i][0] * unitVectors[j][0] +
-              unitVectors[i][1] * unitVectors[j][1] +
-              unitVectors[i][2] * unitVectors[j][2];
-          if (dot < minDot) {
-            minDot = dot;
-            run1Idx = i;
-            run2Idx = j;
-          }
-        }
-      }
-
-      final branchIdx = 3 - run1Idx - run2Idx;
-      final segRun1 = conn[run1Idx];
-      final segRun2 = conn[run2Idx];
-      final segBranch = conn[branchIdx];
-
-      final other1 = network.nodes[segRun1.startNodeId == fit.nodeId ? segRun1.endNodeId : segRun1.startNodeId]!;
-      final other2 = network.nodes[segRun2.startNodeId == fit.nodeId ? segRun2.endNodeId : segRun2.startNodeId]!;
-      final otherBranch = network.nodes[segBranch.startNodeId == fit.nodeId ? segBranch.endNodeId : segBranch.startNodeId]!;
-
+    if (isVolumeMode) {
       final pOut1 = PipePainter.calcPipeTrimmedPoint(
         network: network,
         nodeId: fit.nodeId,
@@ -360,7 +318,7 @@ class FittingPainter {
 
       canvas.drawLine(pOut1, pOut2, teeBodyPaint);
 
-      final branchStroke = PipePainter.calcStrokeWidth(segBranch.dn);
+      final branchStroke = _calcWidth(segBranch.dn, network, projector, isVolumeMode);
       final branchPaint = Paint()
         ..color = color
         ..strokeWidth = branchStroke
@@ -392,8 +350,8 @@ class FittingPainter {
 
     if (showCallouts) {
       final name = fit.dnSecondary != null && fit.dnSecondary != fit.dn
-          ? 'Тройник ${fit.dn}х${fit.dnSecondary}'
-          : 'Тройник Ду${fit.dn}';
+          ? 'Тройник х'
+          : 'Тройник Ду';
       final tp = TextPainter(
         text: TextSpan(
           text: name,
@@ -410,9 +368,63 @@ class FittingPainter {
       tp.paint(canvas, ptN + const Offset(12, -14));
     }
   }
+  static void _drawReducerSymbol(
+    Canvas canvas, {
+    required AxonometryProjector projector,
+    required PipingNetwork network,
+    required bool isVolumeMode,
+    required Offset center,
+    required double angle,
+    required int dn1,
+    required int dn2,
+    required bool isEccentric,
+    required Color color,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+
+    final w1 = _calcWidth(dn1, network, projector, isVolumeMode);
+    final w2 = _calcWidth(dn2, network, projector, isVolumeMode);
+    final len = isVolumeMode ? math.max(w1, w2) * 1.5 : 12.0;
+    
+    final paint = Paint()
+      ..color = color
+      ..style = isVolumeMode ? PaintingStyle.fill : PaintingStyle.stroke
+      ..strokeWidth = isVolumeMode ? 0 : 2.0;
+
+    final path = Path();
+    if (isEccentric) {
+      path.moveTo(-len / 2, -w1 / 2);
+      path.lineTo(len / 2, -w2 / 2);
+      path.lineTo(len / 2, w2 / 2);
+      path.lineTo(-len / 2, w1 / 2);
+      path.close();
+    } else {
+      path.moveTo(-len / 2, -w1 / 2);
+      path.lineTo(len / 2, -w2 / 2);
+      path.lineTo(len / 2, w2 / 2);
+      path.lineTo(-len / 2, w1 / 2);
+      path.close();
+    }
+    canvas.drawPath(path, paint);
+
+    if (isVolumeMode) {
+      final border = Paint()
+        ..color = Colors.black54
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+      canvas.drawPath(path, border);
+    }
+    
+    canvas.restore();
+  }
 
   static void _drawFlangeSymbol(
     Canvas canvas, {
+    required AxonometryProjector projector,
+    required PipingNetwork network,
+    required bool isVolumeMode,
     required Offset center,
     required double angle,
     required int dn,
@@ -425,7 +437,7 @@ class FittingPainter {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(angle);
 
-    final halfH = math.max(8.0, PipePainter.calcStrokeWidth(dn) * 1.6);
+    final halfH = math.max(8.0, _calcWidth(dn, network, projector, isVolumeMode) * 1.6);
     final paint = Paint()
       ..color = color
       ..strokeWidth = 2.4
@@ -477,16 +489,16 @@ class FittingPainter {
       final String label;
       switch (flangeConnectionType) {
         case FlangeConnectionType.toEquipment:
-          label = 'Ру$pressurePn (к оборуд.)';
+          label = 'Ру (к оборуд.)';
           break;
         case FlangeConnectionType.pipeToPipe:
-          label = 'Ру$pressurePn (межтрубн.)';
+          label = 'Ру (межтрубн.)';
           break;
         case FlangeConnectionType.blindFlange:
-          label = 'Заглушка Ру$pressurePn';
+          label = 'Заглушка Ру';
           break;
         case FlangeConnectionType.singleFlange:
-          label = 'Фланец Ру$pressurePn';
+          label = 'Фланец Ру';
           break;
       }
 
@@ -538,5 +550,61 @@ class FittingPainter {
       )..layout();
       tp.paint(canvas, center + const Offset(9, -12));
     }
+  }
+
+  static void _drawCapSymbol(
+    Canvas canvas, {
+    required AxonometryProjector projector,
+    required PipingNetwork network,
+    required bool isVolumeMode,
+    required Offset center,
+    required double angle,
+    required int dn,
+    required Color color,
+  }) {
+    final w = _calcWidth(dn, network, projector, isVolumeMode);
+    
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+    
+    if (isVolumeMode) {
+      final rect = Rect.fromCenter(center: Offset.zero, width: w * 0.8, height: w);
+      final paint = Paint()
+        ..style = PaintingStyle.fill
+        ..shader = ui.Gradient.linear(
+          Offset(0, -w / 2),
+          Offset(0, w / 2),
+          [
+            color.withValues(alpha: 0.6),
+            color.withValues(alpha: 0.9),
+            color.withValues(alpha: 0.5),
+          ],
+          [0.0, 0.5, 1.0],
+        );
+      
+      canvas.drawArc(rect, -math.pi / 2, math.pi, true, paint);
+      
+      final border = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = color.withValues(alpha: 0.8)
+        ..strokeWidth = 1.0;
+      canvas.drawArc(rect, -math.pi / 2, math.pi, true, border);
+    } else {
+      final paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w
+        ..strokeCap = StrokeCap.round;
+        
+      canvas.drawLine(Offset.zero, Offset(w * 0.5, 0), paint);
+      
+      final capEnd = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(w * 0.5, 0), w * 0.6, capEnd);
+    }
+    
+    canvas.restore();
   }
 }

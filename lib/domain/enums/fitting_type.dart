@@ -46,7 +46,7 @@ extension FittingTypeExt on FittingType {
       case FittingType.flange:
         return 'Фланец';
       case FittingType.cap:
-        return 'Заглушка';
+        return 'Заглушка (Днище)';
       case FittingType.directBranch:
         return 'Прямая врезка (У18)';
     }

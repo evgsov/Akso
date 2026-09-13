@@ -4,7 +4,7 @@ import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
-import 'package:akso/ui/features/editor/widgets/tablet_touch_layout.dart';
+import 'package:akso/ui/features/editor/widgets/desktop_cad_layout.dart';
 import 'package:akso/ui/features/editor/widgets/touch_distance_entry_dialog.dart';
 
 void main() {
@@ -305,7 +305,7 @@ void main() {
     });
   });
 
-  group('TabletTouchLayout integration with TouchDistanceEntryDialog', () {
+  group('DesktopCadLayout integration with TouchDistanceEntryDialog', () {
     late PipingInputController controller;
 
     setUp(() {
@@ -323,10 +323,10 @@ void main() {
     testWidgets('button "📐 Точная длина" is hidden when not tracing', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: TabletTouchLayout(
+          home: Scaffold(body: DesktopCadLayout(
             controller: controller,
             canvasWidget: const SizedBox(),
-          ),
+          )),
         ),
       );
       await tester.pumpAndSettle();
@@ -343,10 +343,10 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: TabletTouchLayout(
+          home: Scaffold(body: DesktopCadLayout(
             controller: controller,
             canvasWidget: const SizedBox(),
-          ),
+          )),
         ),
       );
       await tester.pumpAndSettle();
@@ -391,10 +391,10 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: TabletTouchLayout(
+          home: Scaffold(body: DesktopCadLayout(
             controller: controller,
             canvasWidget: const SizedBox(),
-          ),
+          )),
         ),
       );
       await tester.pumpAndSettle();

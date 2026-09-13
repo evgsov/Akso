@@ -46,6 +46,7 @@ class PipingCanvasPainter extends CustomPainter {
   final bool showWelds;
   final bool showCallouts;
   final bool showGrid;
+  final bool isVolumeMode;
   final double currentElevationZ;
 
   PipingCanvasPainter({
@@ -64,6 +65,7 @@ class PipingCanvasPainter extends CustomPainter {
     this.showWelds = true,
     this.showCallouts = true,
     this.showGrid = true,
+    this.isVolumeMode = false,
     this.currentElevationZ = 0.0,
   });
 
@@ -87,6 +89,7 @@ class PipingCanvasPainter extends CustomPainter {
       network,
       selectedEquipmentId: selectedEquipmentId,
       selectedNodeId: selectedNodeId,
+      // isVolumeMode: isVolumeMode, // (optional later)
     );
 
     // 3. Отрисовка труб (сегментов)
@@ -104,16 +107,24 @@ class PipingCanvasPainter extends CustomPainter {
       null,
       screenPoints,
       showCallouts,
+      isVolumeMode,
     );
 
     // 4. Отрисовка арматуры
-    ValvePainter.paint(canvas, projector, network);
+    ValvePainter.paint(canvas, projector, network, isVolumeMode: isVolumeMode);
 
     // 4.1. Отрисовка опор и подвесок
     SupportPainter.paint(canvas, projector, network);
 
     // 4.2. Отрисовка фасонных деталей
-    FittingPainter.paint(canvas, projector, network, selectedNodeId, showCallouts);
+    FittingPainter.paint(
+      canvas,
+      projector,
+      network,
+      selectedNodeId,
+      showCallouts,
+      isVolumeMode: isVolumeMode,
+    );
 
     // 5 & 6. Отрисовка сварных стыков, узлов сети и отметок
     AnnotationPainter.paint(canvas, projector, network, selectedNodeId, showWelds, showCallouts);

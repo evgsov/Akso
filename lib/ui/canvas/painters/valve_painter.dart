@@ -9,8 +9,9 @@ class ValvePainter {
   static void paint(
     Canvas canvas,
     AxonometryProjector projector,
-    PipingNetwork network,
-  ) {
+    PipingNetwork network, {
+    bool isVolumeMode = false,
+  }) {
     for (final valve in network.valves.values) {
       final seg = network.segments[valve.segmentId];
       if (seg == null) continue;
@@ -30,13 +31,21 @@ class ValvePainter {
       final sys = network.systems[seg.systemId];
       final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
+      double size = _calcValveSize(valve.dn);
+      if (isVolumeMode) {
+        // Pseudo-3D: scale valve symbol to match pipe width
+        final outerMm = network.pipeCatalog.getDimension(valve.dn)?.outerDiameterMm ?? valve.dn.toDouble();
+        final strokeWidth = outerMm * projector.scale;
+        size = math.max(16.0, strokeWidth * 2.2); 
+      }
+
       ValveSymbolPainter.drawValve(
         canvas,
         center: valvePos,
         angleRad: angle,
         type: valve.valveType,
         color: color,
-        size: _calcValveSize(valve.dn),
+        size: size,
         isReversed: valve.isReversed,
       );
     }

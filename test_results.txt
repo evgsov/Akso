@@ -1,0 +1,193 @@
+00:00 +0: loading C:/Budget/Akso/test/auto_branching_and_flanges_test.dart
+00:00 +0: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Прямая врезка (У18) не делит катушку магистрали и не производит вычет
+00:00 +0 -1: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Прямая врезка (У18) не делит катушку магистрали и не производит вычет [E]
+  Expected: <1500.0>
+    Actual: <1475.0>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\auto_branching_and_flanges_test.dart 49:7      main.<fn>.<fn>
+  
+00:00 +0 -1: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Стандартный тройник (ГОСТ 17376) производит вычет из обеих сторон катушки
+00:00 +0 -2: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Стандартный тройник (ГОСТ 17376) производит вычет из обеих сторон катушки [E]
+  Expected: <1400.0>
+    Actual: <1375.0>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\auto_branching_and_flanges_test.dart 81:7      main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Врезка фланцевой пары (ГОСТ 33259) формирует стыки и уменьшает длину катушек
+00:00 +1 -2: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests Формирование Спецификации оборудования и материалов (СО по ГОСТ 21.110-2013)
+00:00 +2 -2: C:/Budget/Akso/test/auto_branching_and_flanges_test.dart: Auto-Branching, Flanges, Materials & MTO Tests 2D и 3D DXF экспорт поддерживает слои фланцев и врезок
+00:00 +3 -2: C:/Budget/Akso/test/axonometry_math_test.dart: AxonometryProjector Tests ГОСТ 45° проекция вертикального стояка и горизонтальной трубы
+00:00 +4 -2: C:/Budget/Akso/test/axonometry_math_test.dart: AxonometryProjector Tests ISO 30° обратное преобразование (unproject)
+00:00 +5 -2: C:/Budget/Akso/test/axonometry_math_test.dart: AxonometryProjector Tests ГОСТ 45° обратное преобразование (unproject)
+00:00 +6 -2: C:/Budget/Akso/test/axonometry_math_test.dart: AxonometryProjector Tests 3D Orbit обратное преобразование (unproject)
+00:00 +7 -2: C:/Budget/Akso/test/axonometry_math_test.dart: AxonometryProjector Tests 2D План (topPlan2d) прямое и обратное преобразование
+00:00 +8 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for Node correctly
+00:00 +9 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for Segment as exact midpoint
+00:00 +10 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for Valve at specified ratio
+00:00 +11 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for WeldJoint at specified ratio
+00:00 +12 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for Support at distanceRatio
+00:00 +13 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Computes anchor for Equipment at z + height/2
+00:00 +14 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Target 3D Anchor Calculation Tests Returns null if target not found
+00:00 +15 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Hit-Test & Bounds Tests Calculates valid bounding rectangle for callout
+00:00 +16 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Hit-Test & Bounds Tests hitTest detects point inside callout text area
+00:00 +17 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Hit-Test & Bounds Tests hitTest returns null for distant point
+00:00 +18 -2: C:/Budget/Akso/test/callout_canvas_test.dart: CalloutPainter Hit-Test & Bounds Tests Calculates left shelf bounds for negative screenOffsetX
+00:00 +19 -2: C:/Budget/Akso/test/callout_canvas_test.dart: PipingCanvasPainter Callout Painting Tests Paints network with callouts and selectedCalloutId without throwing
+00:00 +20 -2: C:/Budget/Akso/test/callout_canvas_test.dart: PipingInputController Callout Interaction & Dragging Tests Clicking on callout text in select mode selects it and begins drag
+00:00 +21 -2: C:/Budget/Akso/test/callout_canvas_test.dart: PipingInputController Callout Interaction & Dragging Tests Dragging callout text dynamically updates screenOffsetX and screenOffsetY
+00:00 +22 -2: C:/Budget/Akso/test/callout_canvas_test.dart: PipingInputController Callout Interaction & Dragging Tests deleteSelected removes selected callout and records undo state
+00:00 +23 -2: C:/Budget/Akso/test/callout_canvas_test.dart: PipingInputController Callout Interaction & Dragging Tests cancelCurrentOperation resets callout selection and dragging
+00:00 +24 -2: C:/Budget/Akso/test/callout_canvas_test.dart: Collision Avoidance in generateMissingCallouts Tests Automatically offsets multiple callouts on the same segment to prevent text overlap
+00:00 +25 -2: C:/Budget/Akso/test/callout_test.dart: Callout Domain Model Tests Callout JSON serialization and copyWith
+00:00 +26 -2: C:/Budget/Akso/test/callout_test.dart: Callout Domain Model Tests Callout handles legacy or fallback JSON format
+00:00 +27 -2: C:/Budget/Akso/test/callout_test.dart: Callout Templating Engine Tests Segment template substitution
+00:00 +28 -2: C:/Budget/Akso/test/callout_test.dart: Callout Templating Engine Tests Valve template substitution
+00:00 +29 -2: C:/Budget/Akso/test/callout_test.dart: Callout Templating Engine Tests WeldJoint template substitution
+00:00 +30 -2: C:/Budget/Akso/test/callout_test.dart: Callout Templating Engine Tests Equipment and Support template substitution
+00:00 +31 -2: C:/Budget/Akso/test/callout_test.dart: Callout Templating Engine Tests Custom text override and ignoreCustomText option
+00:00 +32 -2: C:/Budget/Akso/test/callout_test.dart: Missing Callouts Auto-generation Tests generateMissingCallouts generates annotations for un-annotated entities
+00:00 +33 -2: C:/Budget/Akso/test/callout_test.dart: PipingInputController Callout Management Tests Controller handles toggleCalloutMode, updateCallout, and deletion cascading
+00:00 +34 -2: C:/Budget/Akso/test/construction_axis_test.dart: ConstructionAxis Tests Создание и сериализация строительных осей в PipingNetwork
+00:00 +35 -2: C:/Budget/Akso/test/construction_axis_test.dart: ConstructionAxis Tests DXF экспорт включает слой АКСО_ОСИ и текстовые марки осей
+00:00 +36 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: PipingInputController commitTraceWithLength tests commitTraceWithLength commits pipe along X axis in ortho mode
+00:00 +37 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: PipingInputController commitTraceWithLength tests commitTraceWithLength commits pipe along Y axis in ortho mode
+00:00 +38 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: PipingInputController commitTraceWithLength tests commitTraceWithLength follows polar angle snap result when active
+00:00 +39 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: PipingInputController commitTraceWithLength tests commitTraceWithLength works sequentially for polyline pipe tracing
+00:01 +40 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: PipingInputController commitTraceWithLength tests commitTraceWithLength draws construction axis when tool is drawAxis
+00:01 +41 -2: C:/Budget/Akso/test/dxf_export_test.dart: DxfWriter Export Tests 3D DXF экспорт содержит обязательные секции и примитивы
+00:01 +42 -2: C:/Budget/Akso/test/dxf_export_test.dart: DxfWriter Export Tests 3D DXF экспорт содержит обязательные секции и примитивы
+00:01 +43 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +44 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +45 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +46 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +47 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +48 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +49 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +50 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +51 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +52 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +53 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +54 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +55 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +56 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +57 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +58 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +59 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +60 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +61 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +62 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +63 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +64 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +65 -2: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +65 -3: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +65 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting Elements & Exact Weld Count Tests Отводы и вычеты: изменение радиуса гиба R корректно пересчитывает катушки [E]
+  Expected: <850.0>
+    Actual: <825.0>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\fitting_elements_interaction_test.dart 141:7   main.<fn>.<fn>
+  
+00:01 +66 -3: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +67 -3: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +68 -3: C:/Budget/Akso/test/direct_distance_entry_test.dart: TraceLengthInput Widget tests TraceLengthInput renders initial value and responds to enter key
+00:01 +69 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:01 +70 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +71 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +72 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +73 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +74 -3: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +74 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +74 -4: C:/Budget/Akso/test/network_topology_test.dart: PipingNetwork Topology Tests Врезка задвижки автоматически создает сварные стыки и делит катушку [E]
+  Expected: a numeric value within <1.0> of <3000.0>
+    Actual: <2987.5>
+     Which:  differs by <12.5>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\network_topology_test.dart 98:7                main.<fn>.<fn>
+  
+00:02 +75 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +76 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +77 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +78 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +79 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +80 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +81 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +82 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +83 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +84 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +85 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +86 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +87 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +88 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +89 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +90 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +91 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +92 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +93 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +94 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +95 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +96 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +97 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +98 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +99 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:02 +100 -4: C:/Budget/Akso/test/fitting_elements_interaction_test.dart: Fitting UI Interaction Tests FittingPropertiesSheet отображает параметры и позволяет менять режим фланца
+00:03 +101 -4: C:/Budget/Akso/test/direct_distance_entry_test.dart: EditorScreen Direct Distance Entry Integration tests Pressing digit key during trace pops up TraceLengthInput and Enter commits segment
+00:03 +102 -4: C:/Budget/Akso/test/direct_distance_entry_test.dart: EditorScreen Direct Distance Entry Integration tests Pressing digit key during trace pops up TraceLengthInput and Enter commits segment
+00:03 +103 -4: C:/Budget/Akso/test/direct_distance_entry_test.dart: EditorScreen Direct Distance Entry Integration tests Pressing digit key during trace pops up TraceLengthInput and Enter commits segment
+00:03 +104 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:03 +105 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:03 +106 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:03 +107 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:03 +108 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:03 +109 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:04 +110 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:04 +111 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:04 +112 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:04 +113 -4: C:/Budget/Akso/test/pipe_assortment_test.dart: Pipe Dimension & Industrial Assortment Tests PipeAssortmentDialog отображает сортамент и позволяет выбрать диаметр и стенку для черчения
+00:04 +114 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +115 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +116 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +117 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +118 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +119 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +120 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +121 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +122 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +123 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +124 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +125 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +126 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +127 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +128 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +129 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +130 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +131 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +132 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +133 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +134 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +135 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +136 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +137 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +138 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +139 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +140 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:04 +141 -4: C:/Budget/Akso/test/piping_systems_test.dart: PipingSystem & System Management Tests PipingSystemsDialog отображается без оверфлоу, позволяет удалять стандартные пресеты и редактировать сортамент
+00:05 +142 -4: C:/Budget/Akso/test/top_bar_grid_snap_axes_test.dart: EditorTopBar widget tests EditorTopBar displays Grid, Snap, and Axes buttons and responds to taps
+00:05 +143 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: TouchDistanceEntryDialog widget tests renders all dialog elements, chips and direction buttons
+00:05 +144 -4: C:/Budget/Akso/test/widget_test.dart: AksoApp renders DesktopCadLayout on desktop viewports
+00:05 +145 -4: C:/Budget/Akso/test/widget_test.dart: AksoApp renders DesktopCadLayout on desktop viewports
+00:06 +146 -4: C:/Budget/Akso/test/widget_test.dart: AksoApp renders DesktopCadLayout on desktop viewports
+00:06 +147 -4: C:/Budget/Akso/test/widget_test.dart: AksoApp renders DesktopCadLayout on desktop viewports
+00:06 +148 -4: C:/Budget/Akso/test/widget_test.dart: AksoApp renders DesktopCadLayout on desktop viewports
+00:06 +149 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: TouchDistanceEntryDialog widget tests cancels dialog without invoking onCommit
+00:06 +150 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: TouchDistanceEntryDialog widget tests validates length and displays error on invalid number
+00:06 +151 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: DesktopCadLayout integration with TouchDistanceEntryDialog button "📐 Точная длина" is hidden when not tracing
+00:06 +152 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: DesktopCadLayout integration with TouchDistanceEntryDialog button "📐 Точная длина" appears during pipe tracing and opens dialog to commit segment
+00:06 +153 -4: C:/Budget/Akso/test/touch_distance_entry_test.dart: DesktopCadLayout integration with TouchDistanceEntryDialog button "📐 Точная длина" appears during axis drawing and commits axis
+00:07 +154 -4: Some tests failed.

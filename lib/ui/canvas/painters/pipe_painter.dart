@@ -17,8 +17,9 @@ class PipePainter {
     String? selectedSegmentId,
     String? hoveredSegmentId,
     Map<String, Offset> screenPoints,
-    bool showCallouts,
-  ) {
+    bool showCallouts, [
+    bool isVolumeMode = false,
+  ]) {
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
@@ -32,7 +33,14 @@ class PipePainter {
       final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
 
       // Толщина линии зависит от условного прохода DN
-      final strokeWidth = calcStrokeWidth(seg.dn);
+      double strokeWidth = calcStrokeWidth(seg.dn);
+      if (isVolumeMode) {
+        final dim = network.pipeCatalog.getDimension(seg.dn);
+        final outerMm = dim != null ? dim.outerDiameterMm : seg.dn.toDouble();
+        strokeWidth = outerMm * projector.scale;
+        // Ограничиваем минимальную толщину для читаемости
+        if (strokeWidth < 2.0) strokeWidth = 2.0;
+      }
 
       // Отступы на концах труб, если в узлах установлены отводы / тройники / фитинги
       final drawP1 = calcPipeTrimmedPoint(
@@ -71,10 +79,33 @@ class PipePainter {
         ..color = color
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
+        
+      if (isVolumeMode && strokeWidth > 3.0) {
+        final dx = drawP2.dx - drawP1.dx;
+        final dy = drawP2.dy - drawP1.dy;
+        final len = math.sqrt(dx * dx + dy * dy);
+        if (len > 0.1) {
+          final nx = -dy / len;
+          final ny = dx / len;
+          final hw = strokeWidth / 2.0;
+          
+          final lightColor = Color.lerp(color, Colors.white, 0.45)!;
+          final darkColor = Color.lerp(color, Colors.black, 0.35)!;
+          
+          pipePaint.shader = LinearGradient(
+            colors: [darkColor, lightColor, darkColor],
+            stops: const [0.0, 0.4, 1.0],
+          ).createShader(Rect.fromPoints(
+            Offset(drawP1.dx + nx * hw, drawP1.dy + ny * hw),
+            Offset(drawP1.dx - nx * hw, drawP1.dy - ny * hw),
+          ));
+        }
+      }
+
       canvas.drawLine(drawP1, drawP2, pipePaint);
 
-      // В 3D-орбите добавляем объемный блик по центру трубы
-      if (projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
+      // В 3D-орбите добавляем объемный блик по центру трубы (только в каркасном режиме)
+      if (!isVolumeMode && projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
         final sheenPaint = Paint()
           ..color = Colors.white.withValues(alpha: 0.35)
           ..strokeWidth = strokeWidth * 0.35

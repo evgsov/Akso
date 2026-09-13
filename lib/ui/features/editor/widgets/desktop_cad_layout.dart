@@ -11,10 +11,12 @@ import 'dxf_export_dialog.dart';
 import 'elevation_panel.dart';
 import 'fitting_catalog_dialog.dart';
 import 'fitting_properties_sheet.dart';
+import 'equipment_properties_sheet.dart';
 import 'materials_specification_dialog.dart';
 import 'pipe_assortment_dialog.dart';
 import 'piping_systems_dialog.dart';
 import 'weld_journal_dialog.dart';
+import 'touch_distance_entry_dialog.dart';
 
 class DesktopCadLayout extends StatelessWidget {
   final PipingInputController controller;
@@ -68,8 +70,33 @@ class DesktopCadLayout extends StatelessWidget {
                       child: ElevationPanel(controller: controller),
                     ),
 
+                    // Кнопка точного ввода длины (для тач-устройств), появляется при черчении
+                    if (controller.traceStartNode != null || controller.axisStartNode != null)
+                      Positioned(
+                        bottom: 24,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: FilledButton.icon(
+                            key: const Key('tablet_exact_length_button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.amber.shade700,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            ),
+                            icon: const Icon(Icons.straighten, size: 20),
+                            label: const Text(
+                              '📐 Точная длина',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            onPressed: () => _showTouchDistanceEntryDialog(context),
+                          ),
+                        ),
+                      ),
+
                     // Плавающий инспектор свойств выбранного элемента
-                    if (controller.selectedNodeId != null || controller.selectedSegmentId != null)
+                    if (controller.selectedNodeId != null || controller.selectedSegmentId != null || controller.selectedEquipmentId != null)
                       Positioned(
                         right: 16,
                         bottom: 16,
@@ -111,6 +138,36 @@ class DesktopCadLayout extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 14),
             ),
             const SizedBox(width: 16),
+
+            // Кнопки Сохранить / Загрузить
+            IconButton(
+              icon: controller.isSaving ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.save, size: 18),
+              color: Colors.white,
+              tooltip: 'Сохранить проект (Ctrl+S)',
+              onPressed: controller.isSaving ? null : () async {
+                try {
+                  await controller.saveProject();
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Проект сохранён')));
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+                }
+              },
+            ),
+            IconButton(
+              icon: controller.isLoading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.folder_open, size: 18),
+              color: Colors.white,
+              tooltip: 'Загрузить проект',
+              onPressed: controller.isLoading ? null : () async {
+                try {
+                  await controller.loadProject();
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Проект загружен')));
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
+                }
+              },
+            ),
+
+            const VerticalDivider(color: Colors.white24, indent: 8, endIndent: 8),
 
             // Кнопки Undo / Redo
             IconButton(
@@ -328,11 +385,28 @@ class DesktopCadLayout extends StatelessWidget {
           ),
 
           const SizedBox(width: 8),
-          // Переключатель на планшетный вид
-          IconButton(
-            icon: const Icon(Icons.tablet_mac, size: 18, color: Colors.white70),
-            tooltip: 'Переключить в сенсорный стиль (Планшет)',
-            onPressed: () => controller.setLayoutMode(UiLayoutMode.tabletTouch),
+          // Переключатель 3D Объём / Линии
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF334155),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.line_style, size: 16),
+                  tooltip: 'Каркасный вид (Линии)',
+                  color: !controller.isVolumeMode ? Colors.cyanAccent : Colors.white60,
+                  onPressed: () => controller.setVolumeMode(false),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.view_in_ar, size: 16),
+                  tooltip: 'Объёмный вид (Pseudo-3D)',
+                  color: controller.isVolumeMode ? Colors.amberAccent : Colors.white60,
+                  onPressed: () => controller.setVolumeMode(true),
+                ),
+              ],
+            ),
           ),
         ],
         ),
@@ -707,6 +781,18 @@ class DesktopCadLayout extends StatelessWidget {
 
   Widget _buildPropertyInspector(BuildContext context) {
     final isSegment = controller.selectedSegmentId != null;
+    final isEquipment = controller.selectedEquipmentId != null;
+
+    String title = 'Свойства узла';
+    IconData icon = Icons.grain;
+    if (isSegment) {
+      title = 'Свойства трубы';
+      icon = Icons.linear_scale;
+    } else if (isEquipment) {
+      title = 'Оборудование';
+      icon = Icons.precision_manufacturing;
+    }
+
     return Card(
       elevation: 6,
       shadowColor: Colors.black26,
@@ -720,14 +806,11 @@ class DesktopCadLayout extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  isSegment ? Icons.linear_scale : Icons.grain,
-                  size: 18,
-                  color: Colors.indigo,
-                ),
+                Icon(icon, size: 18, color: Colors.indigo),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isSegment ? 'Свойства трубы' : 'Свойства узла',
+                    title,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -740,6 +823,7 @@ class DesktopCadLayout extends StatelessWidget {
                   onPressed: () {
                     controller.selectedNodeId = null;
                     controller.selectedSegmentId = null;
+                    controller.selectedEquipmentId = null;
                     controller.refresh();
                   },
                 ),
@@ -751,7 +835,48 @@ class DesktopCadLayout extends StatelessWidget {
                 controller: controller,
                 segmentId: controller.selectedSegmentId!,
               )
-            else if (controller.selectedNodeId != null) ...[
+            else if (isEquipment) ...[
+              Text('ID: ${controller.selectedEquipmentId}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 4),
+              Text(
+                controller.network.equipments[controller.selectedEquipmentId!]?.name ?? 'Оборудование',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('Свойства оборудования', style: TextStyle(fontSize: 12)),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => EquipmentPropertiesSheet(
+                        network: controller.network,
+                        equipmentId: controller.selectedEquipmentId!,
+                        onModified: controller.refresh,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red.shade300),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Удалить оборудование (Del)', style: TextStyle(fontSize: 11)),
+                  onPressed: controller.deleteSelected,
+                ),
+              ),
+            ] else if (controller.selectedNodeId != null) ...[
               Text('Узел ID: ${controller.selectedNodeId}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
               const SizedBox(height: 4),
               Text(
@@ -958,6 +1083,20 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.insertEquipment:
         return 'Кликните на холсте для размещения оборудования и штуцеров';
     }
+  }
+
+  void _showTouchDistanceEntryDialog(BuildContext context) {
+    TouchDistanceEntryDialog.show(
+      context,
+      onCommit: (lengthMm, {dirX, dirY, dirZ}) {
+        controller.commitTraceWithLength(
+          lengthMm,
+          dirX: dirX,
+          dirY: dirY,
+          dirZ: dirZ,
+        );
+      },
+    );
   }
 }
 

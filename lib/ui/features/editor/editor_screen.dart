@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../../canvas/input_controller.dart';
 import '../../canvas/piping_canvas.dart';
 import 'widgets/desktop_cad_layout.dart';
-import 'widgets/tablet_touch_layout.dart';
 import 'widgets/trace_length_input.dart';
 
 class EditorScreen extends StatefulWidget {
@@ -150,32 +149,17 @@ class _EditorScreenState extends State<EditorScreen> {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        final mode = controller.layoutMode;
-        final isDesktop = mode == UiLayoutMode.desktopCad ||
-            (mode == UiLayoutMode.auto &&
-                defaultTargetPlatform != TargetPlatform.android &&
-                defaultTargetPlatform != TargetPlatform.iOS &&
-                MediaQuery.of(context).size.width >= 900);
-
         final canvas = _buildCanvas(context, controller);
 
-        Widget content;
-        if (isDesktop) {
-          content = Scaffold(
-            backgroundColor: const Color(0xFFF1F5F9),
-            body: SafeArea(
-              child: DesktopCadLayout(
-                controller: controller,
-                canvasWidget: canvas,
-              ),
+        Widget content = Scaffold(
+          backgroundColor: const Color(0xFFF1F5F9),
+          body: SafeArea(
+            child: DesktopCadLayout(
+              controller: controller,
+              canvasWidget: canvas,
             ),
-          );
-        } else {
-          content = TabletTouchLayout(
-            controller: controller,
-            canvasWidget: canvas,
-          );
-        }
+          ),
+        );
 
         return Focus(
           focusNode: _focusNode,
@@ -334,6 +318,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   calloutTemplates: controller.currentProject.calloutTemplates,
                   activeSystemId: controller.activeSystemId,
                   activeTraceStart: controller.traceStartNode,
+                  isVolumeMode: controller.isVolumeMode,
                   activeTraceEnd: controller.currentCursorScreenPos,
                   activeAxisStart: controller.axisStartNode,
                   snapResult: controller.currentSnapResult,

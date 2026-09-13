@@ -71,6 +71,13 @@ class PipingInputController extends ChangeNotifier {
 
   bool isSaving = false;
   bool isLoading = false;
+  bool isVolumeMode = false;
+
+  void setVolumeMode(bool value) {
+    if (isVolumeMode == value) return;
+    isVolumeMode = value;
+    notifyListeners();
+  }
 
   // История и отмена (Undo / Redo)
   final NetworkHistoryManager history = NetworkHistoryManager(maxSnapshots: 50);
