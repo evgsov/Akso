@@ -366,5 +366,50 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets('Subsequent typing in TextField works and backspace does not trigger deleteSelected', (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = PipingInputController(
+        network: PipingNetwork(),
+        projector: const AxonometryProjector(),
+      );
+      controller.setLayoutMode(UiLayoutMode.desktopCad);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EditorScreen(controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final startNode = const Node3D(id: 'n_start', x: 0, y: 0, z: 0);
+      controller.network.nodes[startNode.id] = startNode;
+      controller.traceStartNode = startNode;
+      controller.currentTool = CanvasTool.trace;
+      controller.refresh();
+      await tester.pumpAndSettle();
+
+      // Send first digit: '1'
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+      await tester.pumpAndSettle();
+      expect(find.byType(TraceLengthInput), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+
+      // Enter full length string: '1250'
+      await tester.enterText(find.byKey(const Key('trace_length_text_field')), '1250');
+      await tester.pumpAndSettle();
+      expect(find.text('1250'), findsOneWidget);
+
+      // Verify Backspace key event does not trigger deleteSelected()
+      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+      await tester.pumpAndSettle();
+      expect(controller.network.nodes.containsKey('n_start'), isTrue);
+
+      controller.dispose();
+    });
   });
 }

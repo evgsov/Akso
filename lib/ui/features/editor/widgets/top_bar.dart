@@ -269,7 +269,10 @@ class EditorTopBar extends StatelessWidget {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (_) => WeldJournalDialog(network: controller.network),
+                  builder: (_) => WeldJournalDialog(
+                    network: controller.network,
+                    controller: controller,
+                  ),
                 );
               },
             ),
@@ -306,6 +309,18 @@ class EditorTopBar extends StatelessWidget {
                       ),
                     ),
                     onPressed: controller.toggleSnap,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.straighten, size: 18),
+                    tooltip: 'Размерная линия (Dimension / D)',
+                    color: controller.currentTool == CanvasTool.dimension ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.currentTool == CanvasTool.dimension ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: () => controller.setTool(CanvasTool.dimension),
                   ),
                   IconButton(
                     icon: const Icon(Icons.architecture, size: 18),
@@ -350,6 +365,7 @@ class EditorTopBar extends StatelessWidget {
                   builder: (_) => DxfExportDialog(
                     network: controller.network,
                     currentProjection: controller.projector.projectionType,
+                    activeProjector: controller.projector,
                     calloutTemplates: controller.currentProject.calloutTemplates,
                   ),
                 );

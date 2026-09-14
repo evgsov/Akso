@@ -4,12 +4,16 @@ import 'package:flutter/services.dart';
 /// Плавающий виджет для прямого ввода точной длины отрезка трассировки (Direct Distance Entry).
 class TraceLengthInput extends StatefulWidget {
   final String initialValue;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<double> onSubmitted;
   final VoidCallback onCancel;
 
   const TraceLengthInput({
     super.key,
     required this.initialValue,
+    this.controller,
+    this.focusNode,
     required this.onSubmitted,
     required this.onCancel,
   });
@@ -19,39 +23,63 @@ class TraceLengthInput extends StatefulWidget {
 }
 
 class _TraceLengthInputState extends State<TraceLengthInput> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+  TextEditingController? _internalController;
+  FocusNode? _internalFocusNode;
+
+  TextEditingController get _effectiveController => widget.controller ?? _internalController!;
+  FocusNode get _effectiveFocusNode => widget.focusNode ?? _internalFocusNode!;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
-    _controller.selection = TextSelection.fromPosition(
-      TextPosition(offset: widget.initialValue.length),
-    );
-    _focusNode = FocusNode();
+    if (widget.controller == null) {
+      _internalController = TextEditingController(text: widget.initialValue);
+      _internalController!.selection = TextSelection.fromPosition(
+        TextPosition(offset: widget.initialValue.length),
+      );
+    } else if (widget.controller!.text.isEmpty && widget.initialValue.isNotEmpty) {
+      widget.controller!.text = widget.initialValue;
+      widget.controller!.selection = TextSelection.fromPosition(
+        TextPosition(offset: widget.initialValue.length),
+      );
+    }
+
+    if (widget.focusNode == null) {
+      _internalFocusNode = FocusNode();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _effectiveFocusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void didUpdateWidget(covariant TraceLengthInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue && _controller.text.isEmpty) {
-      _controller.text = widget.initialValue;
-      _controller.selection = TextSelection.fromPosition(
+    if (widget.initialValue != oldWidget.initialValue && _effectiveController.text.isEmpty) {
+      _effectiveController.text = widget.initialValue;
+      _effectiveController.selection = TextSelection.fromPosition(
         TextPosition(offset: widget.initialValue.length),
       );
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_effectiveFocusNode.hasFocus) {
+        _effectiveFocusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
+    _internalController?.dispose();
+    _internalFocusNode?.dispose();
     super.dispose();
   }
 
   void _submit() {
-    final text = _controller.text.trim().replaceAll(',', '.');
+    final text = _effectiveController.text.trim().replaceAll(',', '.');
     final val = double.tryParse(text);
     if (val != null && val > 0 && !val.isNaN && !val.isInfinite) {
       widget.onSubmitted(val);
@@ -110,8 +138,8 @@ class _TraceLengthInputState extends State<TraceLengthInput> {
                 width: 90,
                 child: TextField(
                   key: const Key('trace_length_text_field'),
-                  controller: _controller,
-                  focusNode: _focusNode,
+                  controller: _effectiveController,
+                  focusNode: _effectiveFocusNode,
                   autofocus: true,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [

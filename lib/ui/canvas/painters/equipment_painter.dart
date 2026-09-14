@@ -11,17 +11,18 @@ class EquipmentPainter {
     AxonometryProjector projector,
     PipingNetwork network, {
     String? selectedEquipmentId,
+    Set<String>? selectedEquipmentIds,
     String? selectedNodeId,
   }) {
     if (network.equipments.isEmpty) return;
 
     for (final eq in network.equipments.values) {
       final isSelected = eq.id == selectedEquipmentId ||
+          (selectedEquipmentIds != null && selectedEquipmentIds.contains(eq.id)) ||
           (selectedNodeId != null &&
               network.nodes[selectedNodeId]?.equipmentId == eq.id);
 
       _paintEquipmentBody(canvas, projector, eq, isSelected);
-      _paintNozzles(canvas, projector, eq, selectedNodeId);
       _paintEquipmentLabel(canvas, projector, eq, isSelected);
     }
   }
@@ -34,16 +35,16 @@ class EquipmentPainter {
   ) {
     final fillPaint = Paint()
       ..color = isSelected
-          ? const Color(0x3500BCD4)
+          ? Colors.amber.withValues(alpha: 0.25)
           : const Color(0x201565C0)
       ..style = PaintingStyle.fill;
 
     final edgePaint = Paint()
       ..color = isSelected
-          ? const Color(0xFF00ACC1)
+          ? Colors.amber.shade700
           : const Color(0xFF1565C0)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? 2.0 : 1.4;
+      ..strokeWidth = isSelected ? 2.4 : 1.4;
 
     switch (eq.type) {
       case EquipmentType.box:
@@ -207,92 +208,6 @@ class EquipmentPainter {
     }
   }
 
-  static void _paintNozzles(
-    Canvas canvas,
-    AxonometryProjector projector,
-    Equipment eq,
-    String? selectedNodeId,
-  ) {
-    final nozzlePaint = Paint()
-      ..color = const Color(0xFF00838F)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-
-    final flangePaint = Paint()
-      ..color = const Color(0xFF006064)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
-
-    final nodeFillPaint = Paint()
-      ..color = const Color(0xFF00ACC1)
-      ..style = PaintingStyle.fill;
-
-    for (final nozzle in eq.nozzles) {
-      final isNodeSelected = nozzle.id == selectedNodeId;
-
-      final nx = eq.x + nozzle.localX;
-      final ny = eq.y + nozzle.localY;
-      final nz = eq.z + nozzle.localZ;
-      final pNozzle = projector.projectCoordinates(nx, ny, nz);
-
-      // Отрезок штуцера наружу (200 мм)
-      final dLen = math.sqrt(
-          nozzle.dirX * nozzle.dirX + nozzle.dirY * nozzle.dirY + nozzle.dirZ * nozzle.dirZ);
-      final ndx = dLen > 0 ? nozzle.dirX / dLen : 0.0;
-      final ndy = dLen > 0 ? nozzle.dirY / dLen : 0.0;
-      final ndz = dLen > 0 ? nozzle.dirZ / dLen : 1.0;
-
-      final endX = nx + ndx * 200.0;
-      final endY = ny + ndy * 200.0;
-      final endZ = nz + ndz * 200.0;
-      final pEnd = projector.projectCoordinates(endX, endY, endZ);
-
-      // Рисуем патрубок
-      canvas.drawLine(pNozzle, pEnd, nozzlePaint);
-
-      // Засечка фланца на конце патрубка
-      final stubDx = pEnd.dx - pNozzle.dx;
-      final stubDy = pEnd.dy - pNozzle.dy;
-      final stubLen = math.sqrt(stubDx * stubDx + stubDy * stubDy);
-      if (stubLen > 1.0) {
-        final perpX = -stubDy / stubLen * 6.0;
-        final perpY = stubDx / stubLen * 6.0;
-        canvas.drawLine(
-          Offset(pEnd.dx + perpX, pEnd.dy + perpY),
-          Offset(pEnd.dx - perpX, pEnd.dy - perpY),
-          flangePaint,
-        );
-      }
-
-      // Маркер штуцера в точке подключения (pNozzle)
-      if (isNodeSelected) {
-        final haloPaint = Paint()
-          ..color = const Color(0xFFFFB300)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0;
-        canvas.drawCircle(pNozzle, 7.0, haloPaint);
-      }
-
-      canvas.drawCircle(pNozzle, 4.0, nodeFillPaint);
-      canvas.drawCircle(
-        pNozzle,
-        4.0,
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
-
-      // Подпись штуцера: "Ш-1 (Ду50)"
-      _drawNozzleText(
-        canvas,
-        pNozzle + const Offset(10, -14),
-        '${nozzle.name} (Ду${nozzle.dn})',
-        isNodeSelected,
-      );
-    }
-  }
-
   static void _paintEquipmentLabel(
     Canvas canvas,
     AxonometryProjector projector,
@@ -341,51 +256,5 @@ class EquipmentPainter {
         bgRect.top + 3,
       ),
     );
-  }
-
-  static void _drawNozzleText(
-    Canvas canvas,
-    Offset position,
-    String text,
-    bool isSelected,
-  ) {
-    final textSpan = TextSpan(
-      text: text,
-      style: TextStyle(
-        color: isSelected ? const Color(0xFFE65100) : const Color(0xFF006064),
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    final bgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        position.dx - 4,
-        position.dy - 2,
-        textPainter.width + 8,
-        textPainter.height + 4,
-      ),
-      const Radius.circular(3),
-    );
-
-    canvas.drawRRect(
-      bgRect,
-      Paint()
-        ..color = const Color(0xEEFFFFFF)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawRRect(
-      bgRect,
-      Paint()
-        ..color = isSelected ? const Color(0xFFFFB300) : const Color(0xFFB2EBF2)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
-    );
-
-    textPainter.paint(canvas, position);
   }
 }

@@ -144,6 +144,12 @@ class CalloutPainter {
           y: eq.y,
           z: eq.z + eq.height / 2.0,
         );
+
+      case CalloutTargetType.fitting:
+        final fit = network.fittings[callout.targetId] ??
+            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
+        if (fit == null) return null;
+        return network.nodes[fit.nodeId];
     }
   }
 

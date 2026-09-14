@@ -11,6 +11,7 @@ import 'construction_axis.dart';
 import 'equipment.dart';
 import 'fitting.dart';
 import 'fitting_catalog.dart';
+import 'linear_dimension.dart';
 import 'node_3d.dart';
 import 'pipe_dimension.dart';
 import 'pipe_segment.dart';
@@ -35,6 +36,7 @@ class PipingNetwork {
   final Map<String, Equipment> equipments;
   final Map<String, PipeSupport> supports;
   final Map<String, Callout> callouts;
+  final Map<String, LinearDimension> dimensions;
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
@@ -50,6 +52,7 @@ class PipingNetwork {
     Map<String, Equipment>? equipments,
     Map<String, PipeSupport>? supports,
     Map<String, Callout>? callouts,
+    Map<String, LinearDimension>? dimensions,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
   })  : nodes = nodes ?? {},
@@ -63,6 +66,7 @@ class PipingNetwork {
         equipments = equipments ?? {},
         supports = supports ?? {},
         callouts = callouts ?? {},
+        dimensions = dimensions ?? {},
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
@@ -80,6 +84,7 @@ class PipingNetwork {
       equipments: Map.from(equipments),
       supports: Map.from(supports),
       callouts: Map.from(callouts),
+      dimensions: Map.from(dimensions),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
@@ -109,6 +114,17 @@ class PipingNetwork {
 
     nodes[nodeId] = node.copyWith(x: newX, y: newY, z: newZ);
     FittingDetector.autoDetectFittingsForNode(this, nodeId);
+    for (final entry in dimensions.entries) {
+      if (entry.value.startNodeId == nodeId) {
+        dimensions[entry.key] = entry.value.copyWith(
+          startPoint: Node3D(id: nodeId, x: newX, y: newY, z: newZ),
+        );
+      } else if (entry.value.endNodeId == nodeId) {
+        dimensions[entry.key] = entry.value.copyWith(
+          endPoint: Node3D(id: nodeId, x: newX, y: newY, z: newZ),
+        );
+      }
+    }
     recalculateSpools();
   }
 
@@ -363,6 +379,44 @@ class PipingNetwork {
     weldJoints[id] = weld;
     recalculateSpools();
     return weld;
+  }
+
+  /// Обновление параметров конкретного сварного стыка
+  WeldJoint? updateWeldJoint(String id, WeldJoint Function(WeldJoint) updater) {
+    final w = weldJoints[id];
+    if (w != null) {
+      final updated = updater(w);
+      weldJoints[id] = updated;
+      return updated;
+    }
+    return null;
+  }
+
+  /// Массовое обновление параметров сварных стыков по списку ID
+  void bulkUpdateWeldJoints(
+    Iterable<String> ids, {
+    String? stamp,
+    WeldType? weldType,
+    InspectionMethod? inspectionMethod,
+    String? date,
+    String? steelGrade,
+    String? electrodeGrade,
+    String? notes,
+  }) {
+    for (final id in ids) {
+      final w = weldJoints[id];
+      if (w != null) {
+        weldJoints[id] = w.copyWith(
+          stamp: stamp,
+          weldType: weldType,
+          inspectionMethod: inspectionMethod,
+          date: date,
+          steelGrade: steelGrade,
+          electrodeGrade: electrodeGrade,
+          notes: notes,
+        );
+      }
+    }
   }
 
   /// Врезка арматуры (задвижки, затвора, крана) в участок трубы
@@ -681,9 +735,159 @@ class PipingNetwork {
           }
         }
       }
+    } else if (updatedFit.fittingType == FittingType.directBranch) {
+      final conn = getConnectedSegments(nodeId);
+      if (conn.length == 3) {
+        final branchSeg = identifyBranchSegment(nodeId, conn);
+        final mainSegs = conn.where((s) => s.id != branchSeg?.id).toList();
+        final weldsToRemove = weldJoints.values.where((w) {
+          return mainSegs.any((s) {
+            final r = s.startNodeId == nodeId ? 0.0 : 1.0;
+            return w.segmentId == s.id && (w.ratio - r).abs() < 0.05;
+          });
+        }).map((w) => w.id).toList();
+        for (final id in weldsToRemove) {
+          weldJoints.remove(id);
+        }
+        if (branchSeg != null) {
+          final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
+          ensureWeldExists(branchSeg.id, r, WeldType.u18);
+        }
+      }
+    } else if (updatedFit.fittingType == FittingType.tee) {
+      final conn = getConnectedSegments(nodeId);
+      for (final s in conn) {
+        final r = s.startNodeId == nodeId ? 0.0 : 1.0;
+        ensureWeldExists(s.id, r, updatedFit.weldType);
+      }
     }
 
     recalculateSpools();
+  }
+
+  /// Проверка и создание сварного шва на сегменте в позиции ratio, если такой шов еще не существует
+  WeldJoint? ensureWeldExists(String segmentId, double ratio, WeldType weldType) {
+    final exists = weldJoints.values.any(
+      (w) => w.segmentId == segmentId && (w.ratio - ratio).abs() < 0.05,
+    );
+    if (!exists) {
+      return addWeldJoint(segmentId: segmentId, ratio: ratio, weldType: weldType);
+    }
+    return null;
+  }
+
+  /// Определение сегмента ответвления среди 3 подключенных к узлу сегментов.
+  /// Ответвлением считается сегмент, не лежащий на одной прямой с двумя остальными (магистралью).
+  PipeSegment? identifyBranchSegment(String nodeId, [List<PipeSegment>? connectedSegments]) {
+    final conn = connectedSegments ?? getConnectedSegments(nodeId);
+    if (conn.length != 3) return null;
+
+    final nCenter = nodes[nodeId];
+    if (nCenter == null) return null;
+
+    final dirsX = <double>[];
+    final dirsY = <double>[];
+    final dirsZ = <double>[];
+
+    for (final seg in conn) {
+      final otherId = seg.startNodeId == nodeId ? seg.endNodeId : seg.startNodeId;
+      final other = nodes[otherId];
+      if (other == null) {
+        dirsX.add(0.0);
+        dirsY.add(0.0);
+        dirsZ.add(0.0);
+        continue;
+      }
+      final dx = other.x - nCenter.x;
+      final dy = other.y - nCenter.y;
+      final dz = other.z - nCenter.z;
+      final len = math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (len > 0.0001) {
+        dirsX.add(dx / len);
+        dirsY.add(dy / len);
+        dirsZ.add(dz / len);
+      } else {
+        dirsX.add(0.0);
+        dirsY.add(0.0);
+        dirsZ.add(0.0);
+      }
+    }
+
+    double minDot = 1.0;
+    int best1 = 0;
+    int best2 = 1;
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        final dot = dirsX[i] * dirsX[j] + dirsY[i] * dirsY[j] + dirsZ[i] * dirsZ[j];
+        if (dot < minDot) {
+          minDot = dot;
+          best1 = i;
+          best2 = j;
+        }
+      }
+    }
+
+    for (int i = 0; i < 3; i++) {
+      if (i != best1 && i != best2) {
+        return conn[i];
+      }
+    }
+    return conn.last;
+  }
+
+  /// Синхронизация физических сварных швов для всех фасонных элементов сети (отводов, тройников, врезок, переходов)
+  void syncFittingWeldJoints() {
+    for (final entry in fittings.entries.toList()) {
+      final nodeId = entry.key;
+      final fit = entry.value;
+      final connected = getConnectedSegments(nodeId);
+      if (connected.isEmpty) continue;
+
+      switch (fit.fittingType) {
+        case FittingType.elbow90:
+        case FittingType.elbow45:
+        case FittingType.reducerConcentric:
+        case FittingType.reducerEccentric:
+          for (final seg in connected) {
+            final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+            ensureWeldExists(seg.id, r, fit.weldType);
+          }
+          break;
+
+        case FittingType.tee:
+          for (final seg in connected) {
+            final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+            ensureWeldExists(seg.id, r, fit.weldType);
+          }
+          break;
+
+        case FittingType.directBranch:
+          final branchSeg = identifyBranchSegment(nodeId, connected);
+          if (branchSeg != null) {
+            final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
+            ensureWeldExists(branchSeg.id, r, WeldType.u18);
+          }
+          break;
+
+        case FittingType.cross:
+          for (final seg in connected) {
+            final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+            ensureWeldExists(seg.id, r, fit.weldType);
+          }
+          break;
+
+        case FittingType.flange:
+          break;
+
+        case FittingType.cap:
+          for (final seg in connected) {
+            final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+            ensureWeldExists(seg.id, r, fit.weldType);
+          }
+          break;
+      }
+    }
   }
 
   /// Подключение ответвления к существующей трубе (Revit-like T-branching)
@@ -787,6 +991,7 @@ class PipingNetwork {
         'equipments': equipments.map((k, v) => MapEntry(k, v.toJson())),
         'supports': supports.map((k, v) => MapEntry(k, v.toJson())),
         'callouts': callouts.map((k, v) => MapEntry(k, v.toJson())),
+        'dimensions': dimensions.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
       };
@@ -804,6 +1009,7 @@ class PipingNetwork {
     equipments.clear();
     supports.clear();
     callouts.clear();
+    dimensions.clear();
 
     if (json.containsKey('nodes')) {
       final m = json['nodes'] as Map<String, dynamic>;
@@ -848,6 +1054,10 @@ class PipingNetwork {
     if (json.containsKey('callouts')) {
       final m = json['callouts'] as Map<String, dynamic>;
       m.forEach((k, v) => callouts[k] = Callout.fromJson(v as Map<String, dynamic>));
+    }
+    if (json.containsKey('dimensions')) {
+      final m = json['dimensions'] as Map<String, dynamic>;
+      m.forEach((k, v) => dimensions[k] = LinearDimension.fromJson(v as Map<String, dynamic>));
     }
     if (json.containsKey('catalog')) {
       catalog.loadFromJson(json['catalog'] as Map<String, dynamic>);
@@ -915,10 +1125,22 @@ class PipingNetwork {
             (k, v) => MapEntry(k, Callout.fromJson(v as Map<String, dynamic>)),
           ) ??
           {},
+      dimensions: (json['dimensions'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, LinearDimension.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
       catalog: catalog,
       pipeCatalog: pipeCatalog,
     );
     return net;
+  }
+
+  void addDimension(LinearDimension dim) {
+    dimensions[dim.id] = dim;
+  }
+
+  void removeDimension(String id) {
+    dimensions.remove(id);
   }
 
   /// Генерация текста для выноски по шаблону или возврат customText
@@ -977,6 +1199,21 @@ class PipingNetwork {
             .replaceAll('{LENGTH}', '${v.lengthMm.round()}')
             .replaceAll('{L}', '${v.lengthMm.round()}')
             .replaceAll('{ID}', v.id);
+        break;
+
+      case CalloutTargetType.fitting:
+        final fit = fittings[callout.targetId] ??
+            fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
+        if (fit == null) return callout.customText ?? 'Деталь (удалена)';
+
+        text = text
+            .replaceAll('{NAME}', fit.name ?? fit.fittingType.displayName)
+            .replaceAll('{TYPE}', fit.fittingType.displayName)
+            .replaceAll('{STANDARD}', fit.standard ?? '')
+            .replaceAll('{MATERIAL}', fit.material)
+            .replaceAll('{DN}', '${fit.dn}')
+            .replaceAll('{DN2}', fit.dnSecondary != null ? '${fit.dnSecondary}' : '${fit.dn}')
+            .replaceAll('{ID}', fit.id);
         break;
 
       case CalloutTargetType.weld:
@@ -1041,6 +1278,14 @@ class PipingNetwork {
         return valves[targetId]?.segmentId;
       case CalloutTargetType.weld:
         return weldJoints[targetId]?.segmentId;
+      case CalloutTargetType.fitting:
+        final fit = fittings[targetId] ??
+            fittings.values.where((f) => f.id == targetId).firstOrNull;
+        if (fit != null) {
+          final conn = getConnectedSegments(fit.nodeId);
+          return conn.isNotEmpty ? conn.first.id : null;
+        }
+        return null;
       case CalloutTargetType.support:
         return supports[targetId]?.segmentId;
       case CalloutTargetType.node:
@@ -1057,6 +1302,7 @@ class PipingNetwork {
     double textHeight = 12.0,
     double margin = 8.0,
   }) {
+    syncFittingWeldJoints();
     int addedCount = 0;
     final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
     final step = textHeight + margin;
@@ -1067,7 +1313,7 @@ class PipingNetwork {
       int iterations = 0;
       do {
         collision = false;
-        for (final existing in callouts.values) {
+        for (final existing in callouts.values.toList()) {
           final existingSegId = getTargetSegmentId(existing.targetType, existing.targetId);
           final sameContext = segmentId != null && existingSegId == segmentId;
           if (sameContext || (existingSegId == null && segmentId == null)) {
@@ -1131,6 +1377,40 @@ class PipingNetwork {
           textHeight: textHeight,
         );
         existingTargetIds.add(weld.id);
+        addedCount++;
+      }
+    }
+
+    for (final fit in fittings.values) {
+      if (!existingTargetIds.contains(fit.id) && !existingTargetIds.contains(fit.nodeId)) {
+        final id = 'callout_${_uuid.v4()}';
+        final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+        callouts[id] = Callout(
+          id: id,
+          targetId: fit.id,
+          targetType: CalloutTargetType.fitting,
+          screenOffsetX: offsetX,
+          screenOffsetY: resolvedY,
+          textHeight: textHeight,
+        );
+        existingTargetIds.add(fit.id);
+        addedCount++;
+      }
+    }
+
+    for (final eq in equipments.values) {
+      if (!existingTargetIds.contains(eq.id)) {
+        final id = 'callout_${_uuid.v4()}';
+        final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+        callouts[id] = Callout(
+          id: id,
+          targetId: eq.id,
+          targetType: CalloutTargetType.equipment,
+          screenOffsetX: offsetX,
+          screenOffsetY: resolvedY,
+          textHeight: textHeight,
+        );
+        existingTargetIds.add(eq.id);
         addedCount++;
       }
     }

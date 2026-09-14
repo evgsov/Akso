@@ -3,6 +3,7 @@ enum CalloutTargetType {
   segment,
   valve,
   weld,
+  fitting,
   equipment,
   support,
   node,
@@ -18,6 +19,8 @@ extension CalloutTargetTypeExt on CalloutTargetType {
         return 'Арматура';
       case CalloutTargetType.weld:
         return 'Сварной стык';
+      case CalloutTargetType.fitting:
+        return 'Фасонный элемент';
       case CalloutTargetType.equipment:
         return 'Оборудование';
       case CalloutTargetType.support:
@@ -36,6 +39,8 @@ extension CalloutTargetTypeExt on CalloutTargetType {
         return 'Стык №{ID}';
       case CalloutTargetType.valve:
         return '{NAME} Ду{DN}';
+      case CalloutTargetType.fitting:
+        return '{NAME}';
       case CalloutTargetType.equipment:
         return '{NAME}';
       case CalloutTargetType.support:
@@ -51,6 +56,7 @@ const Map<String, String> defaultCalloutTemplates = {
   'segment': 'Ø{DN}x{WALL} {MATERIAL}',
   'weld': 'Стык №{ID}',
   'valve': '{NAME} Ду{DN}',
+  'fitting': '{NAME}',
   'equipment': '{NAME}',
   'support': '{NAME}',
   'node': 'Узел {ID}',

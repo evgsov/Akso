@@ -19,6 +19,7 @@ class PipePainter {
     Map<String, Offset> screenPoints,
     bool showCallouts, [
     bool isVolumeMode = false,
+    Set<String>? selectedSegmentIds,
   ]) {
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
@@ -28,7 +29,8 @@ class PipePainter {
       final p1 = screenPoints[start.id] ?? projector.project(start);
       final p2 = screenPoints[end.id] ?? projector.project(end);
 
-      final isSelected = seg.id == selectedSegmentId;
+      final isSelected = seg.id == selectedSegmentId ||
+          (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
       final sys = network.systems[seg.systemId];
       final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
 

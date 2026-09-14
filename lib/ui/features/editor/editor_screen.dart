@@ -28,6 +28,8 @@ class _EditorScreenState extends State<EditorScreen> {
   bool _showLengthInput = false;
   String? _initialTraceInput;
   Offset? _lengthInputSpawnPos;
+  final TextEditingController _lengthTextController = TextEditingController();
+  final FocusNode _lengthFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -41,6 +43,8 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   void dispose() {
+    _lengthTextController.dispose();
+    _lengthFocusNode.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -56,7 +60,23 @@ class _EditorScreenState extends State<EditorScreen> {
     if (key == LogicalKeyboardKey.digit7 || key == LogicalKeyboardKey.numpad7) return '7';
     if (key == LogicalKeyboardKey.digit8 || key == LogicalKeyboardKey.numpad8) return '8';
     if (key == LogicalKeyboardKey.digit9 || key == LogicalKeyboardKey.numpad9) return '9';
+    if (key == LogicalKeyboardKey.period || key == LogicalKeyboardKey.comma || key == LogicalKeyboardKey.numpadDecimal) return '.';
     return null;
+  }
+
+  void _submitLengthInput() {
+    final text = _lengthTextController.text.trim().replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null && val > 0 && !val.isNaN && !val.isInfinite) {
+      widget.controller.commitTraceWithLength(val);
+    }
+    setState(() {
+      _showLengthInput = false;
+      _initialTraceInput = null;
+      _lengthInputSpawnPos = null;
+      _lengthTextController.clear();
+    });
+    _focusNode.requestFocus();
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -71,23 +91,58 @@ class _EditorScreenState extends State<EditorScreen> {
           _showLengthInput = false;
           _initialTraceInput = null;
           _lengthInputSpawnPos = null;
+          _lengthTextController.clear();
         });
+        _focusNode.requestFocus();
         return KeyEventResult.handled;
       }
       widget.controller.cancelCurrentOperation();
       return KeyEventResult.handled;
     }
 
+    if (_showLengthInput) {
+      if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        _submitLengthInput();
+        return KeyEventResult.handled;
+      }
+      // Если по какой-то причине фокус ещё не переключился на TextField
+      final digit = _getDigitFromKey(event.logicalKey);
+      if (digit != null && !_lengthFocusNode.hasFocus) {
+        _lengthTextController.text = '${_lengthTextController.text}$digit';
+        _lengthTextController.selection = TextSelection.collapsed(offset: _lengthTextController.text.length);
+        _lengthFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.backspace && !_lengthFocusNode.hasFocus) {
+        final text = _lengthTextController.text;
+        if (text.isNotEmpty) {
+          _lengthTextController.text = text.substring(0, text.length - 1);
+          _lengthTextController.selection = TextSelection.collapsed(offset: _lengthTextController.text.length);
+        }
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
     final isTracing = (widget.controller.currentTool == CanvasTool.trace && widget.controller.traceStartNode != null) ||
-        (widget.controller.currentTool == CanvasTool.drawAxis && widget.controller.axisStartNode != null);
+        (widget.controller.currentTool == CanvasTool.drawAxis && widget.controller.axisStartNode != null) ||
+        (widget.controller.currentTool == CanvasTool.dimension && widget.controller.dimensionStartNode != null) ||
+        ((widget.controller.currentTool == CanvasTool.move || widget.controller.currentTool == CanvasTool.copy) && widget.controller.modifyBasePointWorld != null);
 
     if (isTracing && !isCtrlOrCmd && !HardwareKeyboard.instance.isAltPressed) {
       final digit = _getDigitFromKey(event.logicalKey);
       if (digit != null) {
+        _lengthTextController.text = digit;
+        _lengthTextController.selection = TextSelection.collapsed(offset: digit.length);
         setState(() {
           _initialTraceInput = digit;
           _showLengthInput = true;
           _lengthInputSpawnPos = widget.controller.currentCursorScreenPos;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _lengthFocusNode.requestFocus();
+          }
         });
         return KeyEventResult.handled;
       }
@@ -115,6 +170,21 @@ class _EditorScreenState extends State<EditorScreen> {
 
     if (event.logicalKey == LogicalKeyboardKey.delete || event.logicalKey == LogicalKeyboardKey.backspace) {
       widget.controller.deleteSelected();
+      return KeyEventResult.handled;
+    }
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyD) {
+      widget.controller.duplicateSelection();
+      return KeyEventResult.handled;
+    }
+
+    if (!isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyR) {
+      widget.controller.rotateSelectionAroundZ(90);
+      return KeyEventResult.handled;
+    }
+
+    if (!isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyD) {
+      widget.controller.setTool(CanvasTool.dimension);
       return KeyEventResult.handled;
     }
 
@@ -181,7 +251,8 @@ class _EditorScreenState extends State<EditorScreen> {
         });
 
         final isTracing = (controller.currentTool == CanvasTool.trace && controller.traceStartNode != null) ||
-            (controller.currentTool == CanvasTool.drawAxis && controller.axisStartNode != null);
+            (controller.currentTool == CanvasTool.drawAxis && controller.axisStartNode != null) ||
+            ((controller.currentTool == CanvasTool.move || controller.currentTool == CanvasTool.copy) && controller.modifyBasePointWorld != null);
 
         final showInput = _showLengthInput && isTracing;
 
@@ -315,6 +386,19 @@ class _EditorScreenState extends State<EditorScreen> {
                   selectedSegmentId: controller.selectedSegmentId,
                   selectedEquipmentId: controller.selectedEquipmentId,
                   selectedCalloutId: controller.selectedCalloutId,
+                  selectedDimensionId: controller.selectedDimensionId,
+                  selectedAxisId: controller.selectedAxisId,
+                  previewDimension: controller.previewDimension,
+                  selectedNodeIds: controller.selectedNodeIds,
+                  selectedSegmentIds: controller.selectedSegmentIds,
+                  selectedEquipmentIds: controller.selectedEquipmentIds,
+                  selectedAxisIds: controller.selectedAxisIds,
+                  selectedDimensionIds: controller.selectedDimensionIds,
+                  modifyBasePointWorld: controller.modifyBasePointWorld,
+                  modifyCurrentPointScreen: controller.modifyCurrentPointScreen,
+                  currentTool: controller.currentTool,
+                  selectionBoxRect: controller.selectionBoxRect,
+                  isCrossingSelection: controller.isCrossingSelection,
                   calloutTemplates: controller.currentProject.calloutTemplates,
                   activeSystemId: controller.activeSystemId,
                   activeTraceStart: controller.traceStartNode,
@@ -365,12 +449,15 @@ class _EditorScreenState extends State<EditorScreen> {
         top: top,
         child: TraceLengthInput(
           initialValue: _initialTraceInput ?? '',
+          controller: _lengthTextController,
+          focusNode: _lengthFocusNode,
           onSubmitted: (length) {
             controller.commitTraceWithLength(length);
             setState(() {
               _showLengthInput = false;
               _initialTraceInput = null;
               _lengthInputSpawnPos = null;
+              _lengthTextController.clear();
             });
             _focusNode.requestFocus();
           },
@@ -379,6 +466,7 @@ class _EditorScreenState extends State<EditorScreen> {
               _showLengthInput = false;
               _initialTraceInput = null;
               _lengthInputSpawnPos = null;
+              _lengthTextController.clear();
             });
             _focusNode.requestFocus();
           },
@@ -391,12 +479,15 @@ class _EditorScreenState extends State<EditorScreen> {
           padding: const EdgeInsets.only(top: 24.0),
           child: TraceLengthInput(
             initialValue: _initialTraceInput ?? '',
+            controller: _lengthTextController,
+            focusNode: _lengthFocusNode,
             onSubmitted: (length) {
               controller.commitTraceWithLength(length);
               setState(() {
                 _showLengthInput = false;
                 _initialTraceInput = null;
                 _lengthInputSpawnPos = null;
+                _lengthTextController.clear();
               });
               _focusNode.requestFocus();
             },
@@ -405,6 +496,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 _showLengthInput = false;
                 _initialTraceInput = null;
                 _lengthInputSpawnPos = null;
+                _lengthTextController.clear();
               });
               _focusNode.requestFocus();
             },

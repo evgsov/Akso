@@ -96,7 +96,13 @@ class DesktopCadLayout extends StatelessWidget {
                       ),
 
                     // Плавающий инспектор свойств выбранного элемента
-                    if (controller.selectedNodeId != null || controller.selectedSegmentId != null || controller.selectedEquipmentId != null)
+                    if (controller.selectedNodeId != null ||
+                        controller.selectedSegmentId != null ||
+                        controller.selectedEquipmentId != null ||
+                        controller.selectedDimensionId != null ||
+                        controller.selectedAxisId != null ||
+                        controller.selectedNodeIds.length > 1 ||
+                        controller.selectedSegmentIds.length > 1)
                       Positioned(
                         right: 16,
                         bottom: 16,
@@ -293,7 +299,7 @@ class DesktopCadLayout extends StatelessWidget {
               if (val == 'mto') {
                 showDialog(context: context, builder: (_) => MaterialsSpecificationDialog(network: controller.network));
               } else if (val == 'weld') {
-                showDialog(context: context, builder: (_) => WeldJournalDialog(network: controller.network));
+                showDialog(context: context, builder: (_) => WeldJournalDialog(network: controller.network, controller: controller));
               } else if (val == 'callouts') {
                 CalloutManagerPanel.show(context, controller: controller);
               }
@@ -333,6 +339,18 @@ class DesktopCadLayout extends StatelessWidget {
                     ),
                   ),
                   onPressed: controller.toggleSnap,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.straighten, size: 16),
+                  tooltip: 'Размерная линия (Dimension / D)',
+                  color: controller.currentTool == CanvasTool.dimension ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.currentTool == CanvasTool.dimension ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: () => controller.setTool(CanvasTool.dimension),
                 ),
                 IconButton(
                   icon: const Icon(Icons.architecture, size: 16),
@@ -378,6 +396,7 @@ class DesktopCadLayout extends StatelessWidget {
                 builder: (_) => DxfExportDialog(
                   network: controller.network,
                   currentProjection: controller.projector.projectionType,
+                  activeProjector: controller.projector,
                   calloutTemplates: controller.currentProject.calloutTemplates,
                 ),
               );
@@ -598,21 +617,66 @@ class DesktopCadLayout extends StatelessWidget {
                 ),
               ],
             ] else if (controller.currentTool == CanvasTool.drawAxis) ...[
-              const Text('Строительная ось:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
-              const SizedBox(width: 12),
-              const Text('Марка оси:', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(width: 6),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: TextEditingController(text: controller.currentAxisLabel),
-                  decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6), border: OutlineInputBorder()),
-                  onSubmitted: (val) => controller.setCurrentAxisLabel(val.trim()),
-                ),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: true,
+                    label: Text('Ось здания', style: TextStyle(fontSize: 12)),
+                    icon: Icon(Icons.architecture, size: 14),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    label: Text('Опорная линия', style: TextStyle(fontSize: 12)),
+                    icon: Icon(Icons.linear_scale, size: 14),
+                  ),
+                ],
+                selected: {controller.isBuildingGridAxis},
+                onSelectionChanged: (s) => controller.setIsBuildingGridAxis(s.first),
+                style: const ButtonStyle(visualDensity: VisualDensity.compact),
               ),
-              const SizedBox(width: 16),
-              const Text('Укажите начальную и конечную точку оси на плане', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(width: 12),
+              if (controller.isBuildingGridAxis) ...[
+                const Text('Марка:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 60,
+                  child: TextField(
+                    controller: TextEditingController(text: controller.currentAxisLabel),
+                    decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6), border: OutlineInputBorder()),
+                    onSubmitted: (val) => controller.setCurrentAxisLabel(val.trim()),
+                  ),
+                ),
+                const SizedBox(width: 16),
+              ],
+              Text(
+                controller.isBuildingGridAxis
+                    ? 'Укажите начальную и конечную точку оси на плане'
+                    : 'Укажите начальную и конечную точку опорной линии (сквозная 3D-привязка)',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               if (controller.axisStartNode != null) ...[
+                const SizedBox(width: 16),
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red.shade700,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.close, size: 14),
+                  label: const Text('Отмена (Esc)', style: TextStyle(fontSize: 11)),
+                  onPressed: controller.cancelCurrentOperation,
+                ),
+              ],
+            ] else if (controller.currentTool == CanvasTool.dimension) ...[
+              const Text('Размерная линия (ГОСТ 2.307):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
+              const SizedBox(width: 12),
+              if (controller.dimensionStartNode == null)
+                const Text('Шаг 1/3: Укажите первую точку привязки (кликните на узел сети)', style: TextStyle(fontSize: 12, color: Colors.blueGrey))
+              else if (controller.dimensionEndNode == null)
+                const Text('Шаг 2/3: Укажите вторую точку привязки (кликните на узел сети)', style: TextStyle(fontSize: 12, color: Colors.indigo))
+              else
+                const Text('Шаг 3/3: Укажите положение размерной линии кликом на чертеже', style: TextStyle(fontSize: 12, color: Colors.teal)),
+              if (controller.dimensionStartNode != null) ...[
                 const SizedBox(width: 16),
                 FilledButton.tonalIcon(
                   style: FilledButton.styleFrom(
@@ -716,8 +780,195 @@ class DesktopCadLayout extends StatelessWidget {
               const Text('Оборудование:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
               const SizedBox(width: 12),
               const Text('Кликните на чертеже для размещения емкости Е-1 (1000x1000x2000 мм, штуцер Ш-1 Ду50)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ] else if (controller.currentTool == CanvasTool.move) ...[
+              const Text('Перемещение (M):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
+              const SizedBox(width: 12),
+              Text(
+                controller.modifyBasePointWorld == null
+                    ? 'Шаг 1/2: Укажите базовую точку (кликните на узел, трубу или маркер)'
+                    : 'Шаг 2/2: Укажите вторую точку смещения или введите расстояние с клавиатуры',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: controller.modifyBasePointWorld == null ? Colors.blueGrey : Colors.indigo.shade800,
+                  fontWeight: controller.modifyBasePointWorld == null ? FontWeight.normal : FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red.shade700,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.close, size: 14),
+                label: const Text('Отмена (Esc)', style: TextStyle(fontSize: 11)),
+                onPressed: controller.cancelCurrentOperation,
+              ),
+            ] else if (controller.currentTool == CanvasTool.copy) ...[
+              const Text('Копирование (CO):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.teal)),
+              const SizedBox(width: 12),
+              Text(
+                controller.modifyBasePointWorld == null
+                    ? 'Шаг 1/2: Укажите базовую точку копирования'
+                    : 'Шаг 2/2: Кликните точку вставки (можно кликать многократно) или введите расстояние',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: controller.modifyBasePointWorld == null ? Colors.blueGrey : Colors.teal.shade800,
+                  fontWeight: controller.modifyBasePointWorld == null ? FontWeight.normal : FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.grey.shade100,
+                  foregroundColor: Colors.grey.shade800,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.check, size: 14),
+                label: const Text('Завершить (Esc)', style: TextStyle(fontSize: 11)),
+                onPressed: controller.cancelCurrentOperation,
+              ),
+            ] else if (controller.currentTool == CanvasTool.rotate) ...[
+              const Text('Разворот (RO):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.purple)),
+              const SizedBox(width: 12),
+              Text(
+                controller.modifyBasePointWorld == null
+                    ? 'Шаг 1/2: Укажите центр вращения (базовую точку)'
+                    : 'Шаг 2/2: Укажите угол поворота курсором или выберите быстрый поворот:',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: controller.modifyBasePointWorld == null ? Colors.blueGrey : Colors.purple.shade800,
+                  fontWeight: controller.modifyBasePointWorld == null ? FontWeight.normal : FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => controller.rotateSelectionAroundZ(-90, customCenter: controller.modifyBasePointWorld),
+                child: const Text('↶ -90°', style: TextStyle(fontSize: 11)),
+              ),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => controller.rotateSelectionAroundZ(90, customCenter: controller.modifyBasePointWorld),
+                child: const Text('↷ +90°', style: TextStyle(fontSize: 11)),
+              ),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => controller.rotateSelectionAroundZ(180, customCenter: controller.modifyBasePointWorld),
+                child: const Text('180°', style: TextStyle(fontSize: 11)),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red.shade700,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.close, size: 14),
+                label: const Text('Отмена (Esc)', style: TextStyle(fontSize: 11)),
+                onPressed: controller.cancelCurrentOperation,
+              ),
             ] else ...[
-              const Text('Выбор и навигация: кликните на узел или трубу для редактирования', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              () {
+                final hasSelection = controller.selectedSegmentIds.isNotEmpty ||
+                    controller.selectedNodeIds.isNotEmpty ||
+                    controller.selectedEquipmentIds.isNotEmpty ||
+                    controller.selectedAxisIds.isNotEmpty ||
+                    controller.selectedDimensionIds.isNotEmpty ||
+                    controller.selectedSegmentId != null ||
+                    controller.selectedNodeId != null ||
+                    controller.selectedEquipmentId != null ||
+                    controller.selectedAxisId != null ||
+                    controller.selectedDimensionId != null;
+
+                if (hasSelection) {
+                  final totalCount = controller.selectedSegmentIds.length +
+                      controller.selectedNodeIds.length +
+                      controller.selectedEquipmentIds.length +
+                      controller.selectedAxisIds.length +
+                      controller.selectedDimensionIds.length +
+                      (controller.selectedSegmentId != null && !controller.selectedSegmentIds.contains(controller.selectedSegmentId) ? 1 : 0) +
+                      (controller.selectedNodeId != null && !controller.selectedNodeIds.contains(controller.selectedNodeId) ? 1 : 0) +
+                      (controller.selectedEquipmentId != null && !controller.selectedEquipmentIds.contains(controller.selectedEquipmentId) ? 1 : 0) +
+                      (controller.selectedAxisId != null && !controller.selectedAxisIds.contains(controller.selectedAxisId) ? 1 : 0) +
+                      (controller.selectedDimensionId != null && !controller.selectedDimensionIds.contains(controller.selectedDimensionId) ? 1 : 0);
+
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                        ),
+                        child: Text(
+                          'Выбрано: $totalCount',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: const Icon(Icons.open_with, size: 14),
+                        label: const Text('Переместить (M)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => controller.setTool(CanvasTool.move),
+                      ),
+                      const SizedBox(width: 6),
+                      FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: const Icon(Icons.content_copy, size: 14),
+                        label: const Text('Копировать (CO)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => controller.setTool(CanvasTool.copy),
+                      ),
+                      const SizedBox(width: 6),
+                      FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: const Icon(Icons.rotate_right, size: 14),
+                        label: const Text('Развернуть (RO)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => controller.setTool(CanvasTool.rotate),
+                      ),
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Повернуть против часовой стрелки на 90°',
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                          onPressed: () => controller.rotateSelectionAroundZ(-90),
+                          child: const Text('↶ -90°', style: TextStyle(fontSize: 11)),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Tooltip(
+                        message: 'Повернуть по часовой стрелке на 90°',
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                          onPressed: () => controller.rotateSelectionAroundZ(90),
+                          child: const Text('↷ +90°', style: TextStyle(fontSize: 11)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        tooltip: 'Удалить выбранное (Delete)',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: controller.deleteSelected,
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6)),
+                        onPressed: controller.cancelCurrentOperation,
+                        child: const Text('Снять выбор (Esc)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      ),
+                    ],
+                  );
+                }
+
+                return const Text('Выбор и навигация: кликните на узел или трубу, либо выделите рамкой', style: TextStyle(fontSize: 12, color: Colors.grey));
+              }(),
             ],
           ],
         ),
@@ -736,11 +987,16 @@ class DesktopCadLayout extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            _toolButton(CanvasTool.select, Icons.near_me, 'Выбор и перемещение (V)'),
+            _toolButton(CanvasTool.select, Icons.near_me, 'Выбор (V)'),
             _toolButton(CanvasTool.pan, Icons.pan_tool, 'Панорамирование (H / СКМ)'),
             _toolButton(CanvasTool.orbit, Icons.threed_rotation, '3D Орбита (O / ПКМ)'),
             const Divider(height: 16, indent: 8, endIndent: 8),
+            _toolButton(CanvasTool.move, Icons.open_with, 'Перемещение (M)'),
+            _toolButton(CanvasTool.copy, Icons.content_copy, 'Копирование (CO)'),
+            _toolButton(CanvasTool.rotate, Icons.rotate_right, 'Разворот (RO)'),
+            const Divider(height: 16, indent: 8, endIndent: 8),
             _toolButton(CanvasTool.trace, Icons.edit, 'Трассировка трубы (T)'),
+            _toolButton(CanvasTool.dimension, Icons.straighten, 'Размерная линия (D)'),
             _toolButton(CanvasTool.drawAxis, Icons.architecture, 'Строительная ось (G)'),
             _toolButton(CanvasTool.insertEquipment, Icons.precision_manufacturing, 'Технологическое оборудование (E)'),
             const Divider(height: 16, indent: 8, endIndent: 8),
@@ -780,12 +1036,26 @@ class DesktopCadLayout extends StatelessWidget {
   }
 
   Widget _buildPropertyInspector(BuildContext context) {
-    final isSegment = controller.selectedSegmentId != null;
-    final isEquipment = controller.selectedEquipmentId != null;
+    final isDimension = controller.selectedDimensionId != null;
+    final isAxis = !isDimension && controller.selectedAxisId != null;
+    final isMultiSelect = controller.selectedNodeIds.length > 1 || controller.selectedSegmentIds.length > 1;
+    final isSegment = !isDimension && !isAxis && !isMultiSelect && controller.selectedSegmentId != null;
+    final isEquipment = !isDimension && !isAxis && !isMultiSelect && controller.selectedEquipmentId != null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
-    if (isSegment) {
+    if (isDimension) {
+      title = 'Размерная линия';
+      icon = Icons.straighten;
+    } else if (isAxis) {
+      final axis = controller.network.axes[controller.selectedAxisId!];
+      final isGrid = axis?.isBuildingGrid ?? true;
+      title = isGrid ? 'Ось здания' : 'Опорная линия';
+      icon = isGrid ? Icons.architecture : Icons.linear_scale;
+    } else if (isMultiSelect) {
+      title = 'Выделено (${controller.selectedNodeIds.length} узл., ${controller.selectedSegmentIds.length} труб)';
+      icon = Icons.select_all;
+    } else if (isSegment) {
       title = 'Свойства трубы';
       icon = Icons.linear_scale;
     } else if (isEquipment) {
@@ -824,13 +1094,161 @@ class DesktopCadLayout extends StatelessWidget {
                     controller.selectedNodeId = null;
                     controller.selectedSegmentId = null;
                     controller.selectedEquipmentId = null;
+                    controller.selectedDimensionId = null;
+                    controller.selectedAxisId = null;
+                    controller.selectedNodeIds.clear();
+                    controller.selectedSegmentIds.clear();
                     controller.refresh();
                   },
                 ),
               ],
             ),
             const Divider(height: 14),
-            if (isSegment)
+            if (isDimension) ...[
+              () {
+                final dim = controller.network.dimensions[controller.selectedDimensionId!];
+                if (dim == null) return const Text('Размер не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${dim.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Размер (L):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${dim.measuredLength.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Вынос:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${dim.offsetDistance.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Удалить размер (Del)', style: TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
+            ] else if (isAxis) ...[
+              () {
+                final axis = controller.network.axes[controller.selectedAxisId!];
+                if (axis == null) return const Text('Ось не найдена', style: TextStyle(fontSize: 11, color: Colors.grey));
+                final lengthMm = axis.startPoint.distanceTo(axis.endPoint);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${axis.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Тип:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(
+                          axis.isBuildingGrid ? 'Ось здания' : 'Опорная линия',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+                        ),
+                      ],
+                    ),
+                    if (axis.isBuildingGrid) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Марка:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          Text(axis.label.isEmpty ? '—' : axis.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Длина:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${lengthMm.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'P1: (${axis.startPoint.x.round()}, ${axis.startPoint.y.round()})\nP2: (${axis.endPoint.x.round()}, ${axis.endPoint.y.round()})',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: Text(axis.isBuildingGrid ? 'Удалить ось (Del)' : 'Удалить опорную линию (Del)', style: const TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
+            ] else if (isMultiSelect) ...[
+              Text('Группа объектов', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 4),
+              Text(
+                'Узлов: ${controller.selectedNodeIds.length}   Сегментов: ${controller.selectedSegmentIds.length}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                  icon: const Icon(Icons.copy, size: 15),
+                  label: const Text('Копировать со сдвигом (Ctrl+D)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.duplicateSelection(dx: 500, dy: 500, dz: 0),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                  icon: const Icon(Icons.rotate_90_degrees_cw, size: 15),
+                  label: const Text('Повернуть на 90° (R)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.rotateSelectionAroundZ(90),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red.shade300),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Удалить группу (Del)', style: TextStyle(fontSize: 11)),
+                  onPressed: controller.deleteSelected,
+                ),
+              ),
+            ] else if (isSegment)
               _DesktopSegmentInspector(
                 controller: controller,
                 segmentId: controller.selectedSegmentId!,
@@ -1037,7 +1455,12 @@ class DesktopCadLayout extends StatelessWidget {
             ),
             const SizedBox(width: 24),
             Text(
-              _getHintText(controller.currentTool, controller.traceStartNode != null),
+              _getHintText(
+                controller.currentTool,
+                controller.traceStartNode != null ||
+                    controller.axisStartNode != null ||
+                    controller.dimensionStartNode != null,
+              ),
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
@@ -1067,7 +1490,9 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.trace:
         return 'Кликните на узел или свободное место для начала трассы • СКМ: панорама • Колесо: зум';
       case CanvasTool.select:
-        return 'Потяните узел или стояк для параметрического сдвига • Del: удалить';
+        return 'Клик или рамка для выбора • Drag: перемещение • Ctrl+D: копия • R: поворот • Del: удалить';
+      case CanvasTool.dimension:
+        return 'Кликните на два узла сети, затем укажите вынос размерной линии • Esc: отмена';
       case CanvasTool.drawAxis:
         return 'Кликните для задания начала и конца строительной оси здания';
       case CanvasTool.pan:
@@ -1080,6 +1505,12 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.insertFlange:
       case CanvasTool.insertSupport:
         return 'Нажмите на участок трубы на чертеже для установки элемента';
+      case CanvasTool.move:
+        return 'Укажите базовую точку и вторую точку смещения или введите расстояние • Esc: отмена';
+      case CanvasTool.copy:
+        return 'Укажите базовую точку и точки вставки для копий или введите расстояние • Esc: завершить';
+      case CanvasTool.rotate:
+        return 'Укажите центр вращения и угол разворота выбранных объектов • Esc: отмена';
       case CanvasTool.insertEquipment:
         return 'Кликните на холсте для размещения оборудования и штуцеров';
     }

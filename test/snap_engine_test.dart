@@ -48,11 +48,11 @@ void main() {
         dn: 50,
       );
 
-      // Точка посередине трубы (x=1000, y=0, z=0)
-      final midPoint = const Node3D(id: '', x: 1000, y: 0, z: 0);
-      final midScreenPos = projector.project(midPoint);
+      // Точка на 1/4 длины трубы (x=500, y=0, z=0) вдали от середины и узлов
+      final testPoint = const Node3D(id: '', x: 500, y: 0, z: 0);
+      final testScreenPos = projector.project(testPoint);
       // Смещение на 8 пикселей перпендикулярно
-      final cursor = midScreenPos.translate(0, 8.0);
+      final cursor = testScreenPos.translate(0, 8.0);
 
       final result = snapEngine.findSnap(
         screenPos: cursor,

@@ -4,6 +4,7 @@ import '../../core/math/axonometry_projector.dart';
 import '../../core/math/snap_engine.dart';
 import '../../domain/models/node_3d.dart';
 
+import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/piping_network.dart';
 import 'painters/grid_painter.dart';
 import 'painters/pipe_painter.dart';
@@ -13,6 +14,8 @@ import 'painters/support_painter.dart';
 import 'painters/annotation_painter.dart';
 import 'painters/equipment_painter.dart';
 import 'painters/callout_painter.dart';
+import 'painters/dimension_painter.dart';
+import 'input_controller.dart' show CanvasTool;
 
 
 
@@ -48,6 +51,19 @@ class PipingCanvasPainter extends CustomPainter {
   final bool showGrid;
   final bool isVolumeMode;
   final double currentElevationZ;
+  final String? selectedDimensionId;
+  final String? selectedAxisId;
+  final LinearDimension? previewDimension;
+  final Set<String>? selectedNodeIds;
+  final Set<String>? selectedSegmentIds;
+  final Set<String>? selectedEquipmentIds;
+  final Set<String>? selectedAxisIds;
+  final Set<String>? selectedDimensionIds;
+  final Node3D? modifyBasePointWorld;
+  final Offset? modifyCurrentPointScreen;
+  final CanvasTool? currentTool;
+  final Rect? selectionBoxRect;
+  final bool isCrossingSelection;
 
   PipingCanvasPainter({
     required this.network,
@@ -56,6 +72,19 @@ class PipingCanvasPainter extends CustomPainter {
     this.selectedSegmentId,
     this.selectedEquipmentId,
     this.selectedCalloutId,
+    this.selectedDimensionId,
+    this.selectedAxisId,
+    this.previewDimension,
+    this.selectedNodeIds,
+    this.selectedSegmentIds,
+    this.selectedEquipmentIds,
+    this.selectedAxisIds,
+    this.selectedDimensionIds,
+    this.modifyBasePointWorld,
+    this.modifyCurrentPointScreen,
+    this.currentTool,
+    this.selectionBoxRect,
+    this.isCrossingSelection = false,
     this.calloutTemplates,
     this.activeSystemId,
     this.activeTraceStart,
@@ -88,8 +117,8 @@ class PipingCanvasPainter extends CustomPainter {
       projector,
       network,
       selectedEquipmentId: selectedEquipmentId,
+      selectedEquipmentIds: selectedEquipmentIds,
       selectedNodeId: selectedNodeId,
-      // isVolumeMode: isVolumeMode, // (optional later)
     );
 
     // 3. Отрисовка труб (сегментов)
@@ -108,6 +137,7 @@ class PipingCanvasPainter extends CustomPainter {
       screenPoints,
       showCallouts,
       isVolumeMode,
+      selectedSegmentIds,
     );
 
     // 4. Отрисовка арматуры
@@ -140,6 +170,35 @@ class PipingCanvasPainter extends CustomPainter {
       );
     }
 
+    // 6.2. Отрисовка линейных размеров по ГОСТ 2.307
+    DimensionPainter.paint(
+      canvas,
+      projector,
+      network,
+      previewDimension: previewDimension,
+      selectedDimensionId: selectedDimensionId,
+      selectedDimensionIds: selectedDimensionIds,
+    );
+
+    // 6.3. Подсветка группы выбранных элементов при множественном выборе
+    if (selectedNodeIds != null && selectedNodeIds!.length > 1) {
+      final multiGlow = Paint()
+        ..color = Colors.amber.withValues(alpha: 0.25)
+        ..style = PaintingStyle.fill;
+      final multiRing = Paint()
+        ..color = Colors.amber.shade700
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+      for (final nId in selectedNodeIds!) {
+        final n = network.nodes[nId];
+        if (n != null) {
+          final pt = projector.project(n);
+          canvas.drawCircle(pt, 8.0, multiGlow);
+          canvas.drawCircle(pt, 5.0, multiRing);
+        }
+      }
+    }
+
     // 7. Интерактивная линия трассировки (когда стилус ведет новую трубу)
     if (activeTraceStart != null && activeTraceEnd != null) {
       final pStart = projector.project(activeTraceStart!);
@@ -168,6 +227,182 @@ class PipingCanvasPainter extends CustomPainter {
 
     // 10. HUD длины и угла активного отрезка трассировки
     _drawTraceHud(canvas, size);
+
+    // 11. Рамка множественного выбора (Selection Box)
+    if (selectionBoxRect != null) {
+      _drawSelectionBox(canvas, selectionBoxRect!, isCrossingSelection);
+    }
+
+    // 12. Призрак интерактивной модификации (Перемещение, Копирование, Разворот)
+    if (modifyBasePointWorld != null && modifyCurrentPointScreen != null) {
+      _drawModifyGhostPreview(canvas, size);
+    }
+  }
+
+  void _drawModifyGhostPreview(Canvas canvas, Size size) {
+    if (modifyBasePointWorld == null || modifyCurrentPointScreen == null) return;
+
+    final pBase = projector.project(modifyBasePointWorld!);
+    final pTarget = modifyCurrentPointScreen!;
+    final dScreen = pTarget - pBase;
+
+    // 1. Направляющая линия от базовой точки к курсору
+    final isCopy = currentTool == CanvasTool.copy;
+    final isRotate = currentTool == CanvasTool.rotate;
+    final accentColor = isRotate
+        ? const Color(0xFFAB47BC) // Фиолетовый для разворота
+        : (isCopy ? const Color(0xFF00E5FF) : Colors.amber.shade700);
+
+    final guidePaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.85)
+      ..strokeWidth = 1.5;
+    _drawDashedLine(canvas, pBase, pTarget, guidePaint);
+
+    // Маркеры базовой точки и целевой точки
+    final markerPaint = Paint()
+      ..color = accentColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(pBase, 4.5, markerPaint);
+    canvas.drawCircle(
+      pBase,
+      7.0,
+      Paint()
+        ..color = accentColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+    canvas.drawCircle(pTarget, 3.5, markerPaint);
+
+    // 2. HUD-бейдж расстояния или угла
+    final currentWorld = projector.unproject(pTarget, modifyBasePointWorld!.z);
+    final dx = currentWorld.x - modifyBasePointWorld!.x;
+    final dy = currentWorld.y - modifyBasePointWorld!.y;
+    final dz = currentWorld.z - modifyBasePointWorld!.z;
+    final distMm = math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    String hudText;
+    if (isRotate) {
+      double angleDeg = math.atan2(dy, dx) * 180.0 / math.pi;
+      if (angleDeg < 0) angleDeg += 360.0;
+      hudText = '∡ Угол: ${angleDeg.toStringAsFixed(1)}°';
+    } else {
+      hudText = '${isCopy ? "Копия" : "Смещение"}: ${distMm.toStringAsFixed(0)} мм';
+    }
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: hudText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final midScreen = Offset((pBase.dx + pTarget.dx) / 2, (pBase.dy + pTarget.dy) / 2);
+    final badgePos = computeBadgePosition(
+      cursorOffset: midScreen,
+      badgeSize: Size(tp.width + 16, tp.height + 8),
+      canvasSize: size,
+      offsetDistance: 12.0,
+    );
+    final badgeRect = Rect.fromLTWH(badgePos.dx, badgePos.dy, tp.width + 16, tp.height + 8);
+    final rrect = RRect.fromRectAndRadius(badgeRect, const Radius.circular(5));
+    canvas.drawShadow(Path()..addRRect(rrect), Colors.black.withValues(alpha: 0.4), 3.0, false);
+    canvas.drawRRect(rrect, Paint()..color = const Color(0xE6263238));
+    canvas.drawRRect(rrect, Paint()..color = accentColor..style = PaintingStyle.stroke..strokeWidth = 1.2);
+    tp.paint(canvas, Offset(badgePos.dx + 8, badgePos.dy + 4));
+
+    // 3. Фантомный контур (призрак) перемещаемых / копируемых объектов сети
+    if (!isRotate && dScreen.distance > 2.0) {
+      final ghostStroke = Paint()
+        ..color = accentColor.withValues(alpha: 0.7)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      // Призрак сегментов
+      final segsToGhost = Set<String>.from(selectedSegmentIds ?? const <String>{});
+      if (selectedSegmentId != null) segsToGhost.add(selectedSegmentId!);
+
+      for (final segId in segsToGhost) {
+        final seg = network.segments[segId];
+        if (seg != null) {
+          final sNode = network.nodes[seg.startNodeId];
+          final eNode = network.nodes[seg.endNodeId];
+          if (sNode != null && eNode != null) {
+            final p1 = projector.project(sNode) + dScreen;
+            final p2 = projector.project(eNode) + dScreen;
+            _drawDashedLine(canvas, p1, p2, ghostStroke);
+            canvas.drawCircle(p1, 3.0, Paint()..color = accentColor.withValues(alpha: 0.7));
+            canvas.drawCircle(p2, 3.0, Paint()..color = accentColor.withValues(alpha: 0.7));
+          }
+        }
+      }
+
+      // Призрак изолированных узлов
+      final nodesToGhost = Set<String>.from(selectedNodeIds ?? const <String>{});
+      if (selectedNodeId != null) nodesToGhost.add(selectedNodeId!);
+      for (final nId in nodesToGhost) {
+        final node = network.nodes[nId];
+        if (node != null) {
+          final p = projector.project(node) + dScreen;
+          canvas.drawCircle(p, 4.5, Paint()..color = accentColor.withValues(alpha: 0.7));
+        }
+      }
+
+      // Призрак строительных осей
+      final axesToGhost = Set<String>.from(selectedAxisIds ?? const <String>{});
+      if (selectedAxisId != null) axesToGhost.add(selectedAxisId!);
+      for (final axId in axesToGhost) {
+        final axis = network.axes[axId];
+        if (axis != null) {
+          final p1 = projector.project(axis.startPoint) + dScreen;
+          final p2 = projector.project(axis.endPoint) + dScreen;
+          _drawDashedLine(canvas, p1, p2, ghostStroke);
+        }
+      }
+
+      // Призрак оборудования
+      final eqToGhost = Set<String>.from(selectedEquipmentIds ?? const <String>{});
+      if (selectedEquipmentId != null) eqToGhost.add(selectedEquipmentId!);
+      for (final eqId in eqToGhost) {
+        final eq = network.equipments[eqId];
+        if (eq != null) {
+          final p = projector.project(Node3D(id: 'ghost_eq', x: eq.x, y: eq.y, z: eq.z)) + dScreen;
+          canvas.drawCircle(p, 10.0, Paint()..color = accentColor.withValues(alpha: 0.35));
+          canvas.drawCircle(p, 10.0, ghostStroke);
+        }
+      }
+    }
+  }
+
+  void _drawSelectionBox(Canvas canvas, Rect rect, bool isCrossing) {
+    final fillColor = isCrossing
+        ? const Color(0x224CAF50) // Зеленый для секущей рамки (справа-налево)
+        : const Color(0x222196F3); // Синий для обычной рамки (слева-направо)
+    final strokeColor = isCrossing ? const Color(0xFF4CAF50) : const Color(0xFF2196F3);
+
+    final bgPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(rect, bgPaint);
+
+    final borderPaint = Paint()
+      ..color = strokeColor
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+
+    if (isCrossing) {
+      _drawDashedLine(canvas, rect.topLeft, rect.topRight, borderPaint);
+      _drawDashedLine(canvas, rect.topRight, rect.bottomRight, borderPaint);
+      _drawDashedLine(canvas, rect.bottomRight, rect.bottomLeft, borderPaint);
+      _drawDashedLine(canvas, rect.bottomLeft, rect.topLeft, borderPaint);
+    } else {
+      canvas.drawRect(rect, borderPaint);
+    }
   }
 
   void _drawCoordinateAxes(Canvas canvas, Size size) {
@@ -222,30 +457,51 @@ class PipingCanvasPainter extends CustomPainter {
       final p1 = projector.project(axis.startPoint);
       final p2 = projector.project(axis.endPoint);
 
+      final isSelected = axis.id == selectedAxisId ||
+          (selectedAxisIds != null && selectedAxisIds!.contains(axis.id));
       final axisPaint = Paint()
-        ..color = const Color(0xFF78909C)
-        ..strokeWidth = 1.2
+        ..color = isSelected ? Colors.amber.shade700 : const Color(0xFF78909C)
+        ..strokeWidth = isSelected ? 2.4 : 1.2
         ..style = PaintingStyle.stroke;
 
       _drawDashedLine(canvas, p1, p2, axisPaint);
 
       if (axis.isBuildingGrid && axis.label.isNotEmpty) {
-        _drawGridBubble(canvas, p1, axis.label);
-        _drawGridBubble(canvas, p2, axis.label);
+        _drawGridBubble(canvas, p1, axis.label, isSelected: isSelected);
+        _drawGridBubble(canvas, p2, axis.label, isSelected: isSelected);
+      }
+
+      if (isSelected) {
+        _drawGripHandle(canvas, p1);
+        _drawGripHandle(canvas, p2);
       }
     }
   }
 
-  void _drawGridBubble(Canvas canvas, Offset center, String label) {
+  void _drawGripHandle(Canvas canvas, Offset pt) {
+    const size = 8.0;
+    final rect = Rect.fromCenter(center: pt, width: size, height: size);
+    canvas.drawRect(rect, Paint()..color = Colors.white..style = PaintingStyle.fill);
+    canvas.drawRect(rect, Paint()..color = Colors.amber.shade900..strokeWidth = 1.5..style = PaintingStyle.stroke);
+  }
+
+  void _drawGridBubble(Canvas canvas, Offset center, String label, {bool isSelected = false}) {
     const r = 13.0;
-    canvas.drawCircle(center, r, Paint()..color = Colors.white..style = PaintingStyle.fill);
-    canvas.drawCircle(center, r, Paint()..color = const Color(0xFF546E7A)..strokeWidth = 1.4..style = PaintingStyle.stroke);
+    canvas.drawCircle(center, r, Paint()..color = isSelected ? Colors.amber.shade50 : Colors.white..style = PaintingStyle.fill);
+    canvas.drawCircle(
+      center,
+      r,
+      Paint()
+        ..color = isSelected ? Colors.amber.shade800 : const Color(0xFF546E7A)
+        ..strokeWidth = isSelected ? 2.0 : 1.4
+        ..style = PaintingStyle.stroke,
+    );
 
     final tp = TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(
-          color: Color(0xFF37474F),
+        style: TextStyle(
+          color: isSelected ? Colors.amber.shade900 : const Color(0xFF37474F),
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
@@ -278,7 +534,7 @@ class PipingCanvasPainter extends CustomPainter {
     final pt = snapResult!.screenPoint;
 
     if (snapResult!.type == SnapType.node) {
-      // Зеленый ромб с подсветкой
+      // Зеленый ромб с подсветкой (Endpoint)
       final greenPaint = Paint()
         ..color = const Color(0xFF00C853)
         ..strokeWidth = 2.0
@@ -293,16 +549,119 @@ class PipingCanvasPainter extends CustomPainter {
       canvas.drawCircle(pt, 14.0, Paint()..color = const Color(0xFF00C853).withValues(alpha: 0.2)..style = PaintingStyle.fill);
 
       _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00C853));
-    } else if (snapResult!.type == SnapType.segmentAxis) {
-      // Бирюзовый крестик врезки
-      final cyanPaint = Paint()
-        ..color = const Color(0xFF00B0FF)
-        ..strokeWidth = 2.0;
-      canvas.drawLine(pt - const Offset(8, 8), pt + const Offset(8, 8), cyanPaint);
-      canvas.drawLine(pt - const Offset(-8, 8), pt + const Offset(-8, 8), cyanPaint);
-      canvas.drawCircle(pt, 12.0, Paint()..color = const Color(0xFF00B0FF).withValues(alpha: 0.15)..style = PaintingStyle.fill);
+    } else if (snapResult!.type == SnapType.endpoint) {
+      // Зеленый квадрат AutoCAD (Endpoint / Край оси или опорной линии)
+      const epColor = Color(0xFF00C853);
+      final epPaint = Paint()
+        ..color = epColor
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
+      final rect = Rect.fromCenter(center: pt, width: 14.0, height: 14.0);
+      canvas.drawRect(rect, epPaint);
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..color = epColor.withValues(alpha: 0.2)
+          ..style = PaintingStyle.fill,
+      );
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, epColor);
+    } else if (snapResult!.type == SnapType.midpoint) {
+      // Изумрудно-зеленый треугольник (Midpoint)
+      const midColor = Color(0xFF00E676);
+      final midPaint = Paint()
+        ..color = midColor
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
+      final path = Path()
+        ..moveTo(pt.dx, pt.dy - 10)
+        ..lineTo(pt.dx + 9, pt.dy + 6)
+        ..lineTo(pt.dx - 9, pt.dy + 6)
+        ..close();
+      canvas.drawPath(path, midPaint);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = midColor.withValues(alpha: 0.25)
+          ..style = PaintingStyle.fill,
+      );
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, midColor);
+    } else if (snapResult!.type == SnapType.intersection) {
+      // Ярко-желтый крест пересечения (Intersection)
+      const interColor = Color(0xFFFFD600);
+      final interPaint = Paint()
+        ..color = interColor
+        ..strokeWidth = 2.4;
+      canvas.drawLine(pt - const Offset(8, 8), pt + const Offset(8, 8), interPaint);
+      canvas.drawLine(pt - const Offset(-8, 8), pt + const Offset(-8, 8), interPaint);
+      canvas.drawCircle(pt, 12.0, Paint()..color = interColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, interColor);
+    } else if (snapResult!.type == SnapType.perpendicular) {
+      // Значок прямого угла AutoCAD Perpendicular (L-угол с внутренним квадратиком)
+      const perpColor = Color(0xFF00E5FF);
+      final perpPaint = Paint()
+        ..color = perpColor
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
 
-      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00B0FF));
+      // Отрисовка направляющей перпендикулярной линии от начального узла к точке привязки
+      final startNode = activeTraceStart ?? activeAxisStart ?? modifyBasePointWorld;
+      if (startNode != null) {
+        final startPt = projector.project(startNode);
+        final guidePaint = Paint()
+          ..color = perpColor.withValues(alpha: 0.7)
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke;
+        _drawDashedLine(canvas, startPt, pt, guidePaint);
+      }
+
+      // Символ прямого угла AutoCAD: две перпендикулярные стороны и маленький квадрат в углу
+      final path = Path()
+        ..moveTo(pt.dx - 8, pt.dy - 8)
+        ..lineTo(pt.dx - 8, pt.dy + 8)
+        ..lineTo(pt.dx + 8, pt.dy + 8);
+      path
+        ..moveTo(pt.dx - 8, pt.dy + 2)
+        ..lineTo(pt.dx - 2, pt.dy + 2)
+        ..lineTo(pt.dx - 2, pt.dy + 8);
+      canvas.drawPath(path, perpPaint);
+      canvas.drawCircle(pt, 12.0, Paint()..color = perpColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, perpColor);
+    } else if (snapResult!.type == SnapType.segmentAxis) {
+      // Бирюзовые «песочные часы» (AutoCAD Nearest / Trajectory)
+      const cyanColor = Color(0xFF00B0FF);
+      final cyanPaint = Paint()
+        ..color = cyanColor
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      final path = Path()
+        ..moveTo(pt.dx - 7, pt.dy - 7)
+        ..lineTo(pt.dx + 7, pt.dy + 7)
+        ..lineTo(pt.dx - 7, pt.dy + 7)
+        ..lineTo(pt.dx + 7, pt.dy - 7)
+        ..close();
+      canvas.drawPath(path, cyanPaint);
+      canvas.drawCircle(pt, 12.0, Paint()..color = cyanColor.withValues(alpha: 0.15)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, cyanColor);
+    } else if (snapResult!.type == SnapType.gridAxis) {
+      // Фиолетово-пурпурный маркер привязки к строительной/опорной оси
+      const axisColor = Color(0xFF9C27B0);
+      final purplePaint = Paint()
+        ..color = axisColor
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      final path = Path()
+        ..moveTo(pt.dx - 7, pt.dy - 7)
+        ..lineTo(pt.dx + 7, pt.dy + 7)
+        ..lineTo(pt.dx - 7, pt.dy + 7)
+        ..lineTo(pt.dx + 7, pt.dy - 7)
+        ..close();
+      canvas.drawPath(path, purplePaint);
+      canvas.drawCircle(pt, 12.0, Paint()..color = axisColor.withValues(alpha: 0.15)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, axisColor);
     } else if (snapResult!.type == SnapType.polarAngle) {
       // Направляющий луч от начала трассировки
       final startNode = activeTraceStart ?? activeAxisStart;

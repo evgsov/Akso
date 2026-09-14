@@ -10,6 +10,7 @@ import '../../domain/enums/weld_type.dart';
 import '../../domain/models/callout.dart';
 import '../../domain/models/construction_axis.dart';
 import '../../domain/models/equipment.dart';
+import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/network_history_manager.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
@@ -26,6 +27,10 @@ const _uuid = Uuid();
 enum CanvasTool {
   trace, // Черчение труб
   select, // Выбор и перемещение узлов/стояков
+  move, // Перемещение выделенных элементов с базовой точкой
+  copy, // Копирование выделенных элементов с базовой точкой
+  rotate, // Поворот выделенных элементов вокруг базовой точки
+  dimension, // Линейные размеры по ГОСТ
   insertValve, // Врезка арматуры
   insertReducer, // Врезка перехода диаметров
   insertWeld, // Врезка сварного стыка
@@ -97,9 +102,34 @@ class PipingInputController extends ChangeNotifier {
   String? selectedCalloutId;
   String? hoveredNodeId;
 
+  // Мультиселекция и рамочный выбор
+  final Set<String> selectedNodeIds = {};
+  final Set<String> selectedSegmentIds = {};
+  final Set<String> selectedEquipmentIds = {};
+  final Set<String> selectedAxisIds = {};
+  final Set<String> selectedDimensionIds = {};
+  Rect? selectionBoxRect;
+  Offset? boxSelectStart;
+  bool isCrossingSelection = false;
+
+  // Инструменты редактирования (Move, Copy, Rotate с базовой точкой)
+  Node3D? modifyBasePointWorld;
+  Offset? modifyBasePointScreen;
+  Offset? modifyCurrentPointScreen;
+
+  // Линейные размеры (ГОСТ 2.307)
+  Node3D? dimensionStartNode;
+  Node3D? dimensionEndNode;
+  String? dimensionStartNodeId;
+  String? dimensionEndNodeId;
+  double dimensionOffset = 35.0;
+  String? selectedDimensionId;
+  String? selectedAxisId;
+
   Node3D? traceStartNode;
   Node3D? axisStartNode;
   String currentAxisLabel = '1';
+  bool isBuildingGridAxis = true;
   Offset? currentCursorScreenPos;
 
   // Режим перетаскивания
@@ -178,6 +208,24 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Превью размерной линии в процессе черчения
+  LinearDimension? get previewDimension {
+    if (currentTool != CanvasTool.dimension || dimensionStartNode == null) return null;
+    final endPoint = dimensionEndNode ??
+        (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : (currentCursorScreenPos != null
+                ? projector.unproject(currentCursorScreenPos!, currentElevationZ)
+                : dimensionStartNode!));
+
+    return LinearDimension(
+      id: 'preview_dim',
+      startPoint: dimensionStartNode!,
+      endPoint: endPoint,
+      offsetDistance: dimensionOffset,
+    );
+  }
+
   /// Отмена текущей операции (по клавише Esc, ПКМ или кнопке на экране)
   void cancelCurrentOperation({bool keepTool = false}) {
     traceStartNode = null;
@@ -188,6 +236,22 @@ class PipingInputController extends ChangeNotifier {
     selectedSegmentId = null;
     selectedEquipmentId = null;
     selectedCalloutId = null;
+    selectedDimensionId = null;
+    selectedAxisId = null;
+    selectedNodeIds.clear();
+    selectedEquipmentIds.clear();
+    selectedAxisIds.clear();
+    selectedDimensionIds.clear();
+    modifyBasePointWorld = null;
+    modifyBasePointScreen = null;
+    modifyCurrentPointScreen = null;
+    selectionBoxRect = null;
+    boxSelectStart = null;
+    dimensionStartNode = null;
+    dimensionEndNode = null;
+    dimensionStartNodeId = null;
+    dimensionEndNodeId = null;
+    dimensionOffset = 35.0;
     isDraggingNode = false;
     isDraggingEquipment = false;
     isDraggingCallout = false;
@@ -204,7 +268,14 @@ class PipingInputController extends ChangeNotifier {
 
   void setTool(CanvasTool tool) {
     if (currentTool != tool) {
-      cancelCurrentOperation(keepTool: true);
+      final isModifyTool = tool == CanvasTool.move || tool == CanvasTool.copy || tool == CanvasTool.rotate;
+      if (!isModifyTool) {
+        cancelCurrentOperation(keepTool: true);
+      } else {
+        modifyBasePointWorld = null;
+        modifyBasePointScreen = null;
+        modifyCurrentPointScreen = null;
+      }
       currentTool = tool;
       notifyListeners();
     }
@@ -240,9 +311,9 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get useDirectBranch => network.catalog.defaultBranchId == 'branch_direct_u18';
+  bool get useDirectBranch => network.catalog.defaultBranchId == 'direct_branch_u18';
   set useDirectBranch(bool val) {
-    network.catalog.defaultBranchId = val ? 'branch_direct_u18' : 'branch_tee_gost17376';
+    network.catalog.defaultBranchId = val ? 'direct_branch_u18' : 'tee_gost_17376';
     notifyListeners();
   }
 
@@ -292,6 +363,12 @@ class PipingInputController extends ChangeNotifier {
 
   void setCurrentAxisLabel(String label) {
     currentAxisLabel = label;
+    notifyListeners();
+  }
+
+  void setIsBuildingGridAxis(bool val) {
+    if (isBuildingGridAxis == val) return;
+    isBuildingGridAxis = val;
     notifyListeners();
   }
 
@@ -400,7 +477,10 @@ class PipingInputController extends ChangeNotifier {
         ? currentSnapResult!.snappedNodeId
         : _findNodeAtScreenPos(screenPos);
 
-    final hitSegId = currentSnapResult?.type == SnapType.segmentAxis
+    final hitSegId = ((currentSnapResult?.type == SnapType.segmentAxis ||
+                currentSnapResult?.type == SnapType.midpoint ||
+                currentSnapResult?.type == SnapType.perpendicular) &&
+            network.segments.containsKey(currentSnapResult!.snappedSegmentId))
         ? currentSnapResult!.snappedSegmentId
         : _findSegmentAtScreenPos(screenPos);
 
@@ -434,18 +514,64 @@ class PipingInputController extends ChangeNotifier {
           final axisId = 'axis_${_uuid.v4()}';
           network.axes[axisId] = ConstructionAxis(
             id: axisId,
-            label: currentAxisLabel,
+            label: isBuildingGridAxis ? currentAxisLabel : '',
             startPoint: axisStartNode!,
             endPoint: axisEndNode,
-            isBuildingGrid: true,
+            isBuildingGrid: isBuildingGridAxis,
           );
 
-          // Инкремент марки, если это число
-          final num = int.tryParse(currentAxisLabel);
-          if (num != null) {
-            currentAxisLabel = '${num + 1}';
+          // Инкремент марки, только если это строительная ось и число
+          if (isBuildingGridAxis) {
+            final num = int.tryParse(currentAxisLabel);
+            if (num != null) {
+              currentAxisLabel = '${num + 1}';
+            }
           }
           axisStartNode = null;
+        }
+        break;
+
+      case CanvasTool.dimension:
+        final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : (hitNodeId != null ? network.nodes[hitNodeId]! : projector.unproject(screenPos, currentElevationZ));
+        final snappedNodeId = (currentSnapResult?.type == SnapType.node ? currentSnapResult!.snappedNodeId : hitNodeId);
+
+        if (dimensionStartNode == null) {
+          dimensionStartNode = Node3D(
+            id: 'dim_start_${_uuid.v4()}',
+            x: snapWorld.x,
+            y: snapWorld.y,
+            z: snapWorld.z,
+          );
+          dimensionStartNodeId = snappedNodeId;
+        } else if (dimensionEndNode == null) {
+          dimensionEndNode = Node3D(
+            id: 'dim_end_${_uuid.v4()}',
+            x: snapWorld.x,
+            y: snapWorld.y,
+            z: snapWorld.z,
+          );
+          dimensionEndNodeId = snappedNodeId;
+          _updateDimensionOffset(screenPos);
+        } else {
+          _updateDimensionOffset(screenPos);
+          final dimId = 'dim_${_uuid.v4()}';
+          final newDim = LinearDimension(
+            id: dimId,
+            startPoint: dimensionStartNode!,
+            endPoint: dimensionEndNode!,
+            startNodeId: dimensionStartNodeId,
+            endNodeId: dimensionEndNodeId,
+            offsetDistance: dimensionOffset == 0.0 ? 35.0 : dimensionOffset,
+          );
+          history.recordState(network);
+          network.addDimension(newDim);
+          dimensionStartNode = null;
+          dimensionEndNode = null;
+          dimensionStartNodeId = null;
+          dimensionEndNodeId = null;
+          dimensionOffset = 35.0;
         }
         break;
 
@@ -464,7 +590,22 @@ class PipingInputController extends ChangeNotifier {
         } else if (hitSegId != null) {
           history.recordState(network);
           // Начало ответвления от существующей трубы: делим сегмент в точке касания
-          final ratio = _calcSegmentRatio(hitSegId, screenPos);
+          final double ratio;
+          if (currentSnapResult != null &&
+              (currentSnapResult!.type == SnapType.midpoint || currentSnapResult!.type == SnapType.perpendicular) &&
+              currentSnapResult!.snappedSegmentId == hitSegId &&
+              network.segments.containsKey(hitSegId)) {
+            final seg = network.segments[hitSegId]!;
+            final s = network.nodes[seg.startNodeId]!;
+            final e = network.nodes[seg.endNodeId]!;
+            final w = currentSnapResult!.worldPoint;
+            final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
+            ratio = segLen > 0.001
+                ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
+                : 0.5;
+          } else {
+            ratio = _calcSegmentRatio(hitSegId, screenPos);
+          }
           final midNode = network.splitSegmentAtRatio(hitSegId, ratio);
           if (midNode != null) {
             traceStartNode = midNode;
@@ -493,6 +634,13 @@ class PipingInputController extends ChangeNotifier {
           selectedNodeId = null;
           selectedSegmentId = null;
           selectedEquipmentId = null;
+          selectedDimensionId = null;
+          selectedAxisId = null;
+          selectedNodeIds.clear();
+          selectedSegmentIds.clear();
+          selectedEquipmentIds.clear();
+          selectedAxisIds.clear();
+          selectedDimensionIds.clear();
           isDraggingCallout = true;
           _dragCalloutStartScreenPos = screenPos;
           final c = network.callouts[hitCalloutId]!;
@@ -503,22 +651,175 @@ class PipingInputController extends ChangeNotifier {
         }
 
         selectedCalloutId = null;
-        selectedNodeId = hitNodeId;
-        selectedSegmentId = hitSegId;
         selectedEquipmentId = _findEquipmentAtScreenPos(screenPos);
+
         if (hitNodeId != null) {
           final n = network.nodes[hitNodeId];
           if (n?.equipmentId != null) {
             selectedEquipmentId = n!.equipmentId;
+            selectedEquipmentIds.add(n.equipmentId!);
+          }
+          selectedNodeId = hitNodeId;
+          selectedAxisId = null;
+          if (!selectedNodeIds.contains(hitNodeId)) {
+            selectedNodeIds.clear();
+            selectedSegmentIds.clear();
+            selectedEquipmentIds.clear();
+            selectedAxisIds.clear();
+            selectedDimensionIds.clear();
+            selectedNodeIds.add(hitNodeId);
           }
           isDraggingNode = true;
+        } else if (hitSegId != null) {
+          selectedSegmentId = hitSegId;
+          selectedAxisId = null;
+          if (!selectedSegmentIds.contains(hitSegId)) {
+            selectedNodeIds.clear();
+            selectedSegmentIds.clear();
+            selectedEquipmentIds.clear();
+            selectedAxisIds.clear();
+            selectedDimensionIds.clear();
+            selectedSegmentIds.add(hitSegId);
+          }
         } else if (selectedEquipmentId != null) {
           isDraggingEquipment = true;
+          selectedAxisId = null;
+          if (!selectedEquipmentIds.contains(selectedEquipmentId)) {
+            selectedNodeIds.clear();
+            selectedSegmentIds.clear();
+            selectedEquipmentIds.clear();
+            selectedAxisIds.clear();
+            selectedDimensionIds.clear();
+            selectedEquipmentIds.add(selectedEquipmentId!);
+          }
           final eq = network.equipments[selectedEquipmentId!];
           if (eq != null) {
             final unproj = projector.unproject(screenPos, eq.z);
             _dragEquipmentStartPos = Node3D(id: 'drag', x: unproj.x, y: unproj.y, z: eq.z);
           }
+        } else {
+          final hitDimId = _findDimensionAtScreenPos(screenPos);
+          if (hitDimId != null) {
+            selectedDimensionId = hitDimId;
+            selectedAxisId = null;
+            selectedNodeIds.clear();
+            selectedSegmentIds.clear();
+            selectedEquipmentIds.clear();
+            selectedAxisIds.clear();
+            selectedDimensionIds.clear();
+            selectedDimensionIds.add(hitDimId);
+            selectedNodeId = null;
+            selectedSegmentId = null;
+            selectedEquipmentId = null;
+          } else {
+            final hitAxisId = ((currentSnapResult?.type == SnapType.midpoint ||
+                        currentSnapResult?.type == SnapType.perpendicular ||
+                        currentSnapResult?.type == SnapType.gridAxis ||
+                        currentSnapResult?.type == SnapType.endpoint) &&
+                    network.axes.containsKey(currentSnapResult?.snappedSegmentId))
+                ? currentSnapResult!.snappedSegmentId
+                : _findAxisAtScreenPos(screenPos);
+            if (hitAxisId != null) {
+              selectedAxisId = hitAxisId;
+              selectedDimensionId = null;
+              selectedNodeIds.clear();
+              selectedSegmentIds.clear();
+              selectedEquipmentIds.clear();
+              selectedAxisIds.clear();
+              selectedDimensionIds.clear();
+              selectedAxisIds.add(hitAxisId);
+              selectedNodeId = null;
+              selectedSegmentId = null;
+              selectedEquipmentId = null;
+            } else {
+              selectedAxisId = null;
+              selectedNodeId = null;
+              selectedSegmentId = null;
+              selectedEquipmentId = null;
+              selectedDimensionId = null;
+              selectedNodeIds.clear();
+              selectedSegmentIds.clear();
+              selectedEquipmentIds.clear();
+              selectedAxisIds.clear();
+              selectedDimensionIds.clear();
+              boxSelectStart = screenPos;
+              selectionBoxRect = Rect.fromPoints(screenPos, screenPos);
+            }
+          }
+        }
+        break;
+
+      case CanvasTool.move:
+        final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : projector.unproject(screenPos, currentElevationZ);
+        final snapped = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+            ? snapWorld
+            : _snapToGrid(snapWorld);
+
+        if (modifyBasePointWorld == null) {
+          modifyBasePointWorld = snapped;
+          modifyBasePointScreen = projector.project(snapped);
+          modifyCurrentPointScreen = screenPos;
+        } else {
+          final dx = snapped.x - modifyBasePointWorld!.x;
+          final dy = snapped.y - modifyBasePointWorld!.y;
+          final dz = snapped.z - modifyBasePointWorld!.z;
+          moveSelectedBy(dx: dx, dy: dy, dz: dz);
+          modifyBasePointWorld = null;
+          modifyBasePointScreen = null;
+          modifyCurrentPointScreen = null;
+          setTool(CanvasTool.select);
+        }
+        break;
+
+      case CanvasTool.copy:
+        final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : projector.unproject(screenPos, currentElevationZ);
+        final snapped = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+            ? snapWorld
+            : _snapToGrid(snapWorld);
+
+        if (modifyBasePointWorld == null) {
+          modifyBasePointWorld = snapped;
+          modifyBasePointScreen = projector.project(snapped);
+          modifyCurrentPointScreen = screenPos;
+        } else {
+          final dx = snapped.x - modifyBasePointWorld!.x;
+          final dy = snapped.y - modifyBasePointWorld!.y;
+          final dz = snapped.z - modifyBasePointWorld!.z;
+          duplicateSelection(dx: dx, dy: dy, dz: dz);
+        }
+        break;
+
+      case CanvasTool.rotate:
+        final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
+            ? currentSnapResult!.worldPoint
+            : projector.unproject(screenPos, currentElevationZ);
+        final snapped = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+            ? snapWorld
+            : _snapToGrid(snapWorld);
+
+        if (modifyBasePointWorld == null) {
+          modifyBasePointWorld = snapped;
+          modifyBasePointScreen = projector.project(snapped);
+          modifyCurrentPointScreen = screenPos;
+        } else {
+          final dx = snapped.x - modifyBasePointWorld!.x;
+          final dy = snapped.y - modifyBasePointWorld!.y;
+          double angleDeg = math.atan2(dy, dx) * 180.0 / math.pi;
+          if (angleDeg < 0) angleDeg += 360.0;
+          if (angleSnapMode == AngleSnapMode.ortho90) {
+            angleDeg = (angleDeg / 90.0).round() * 90.0;
+          } else if (angleSnapMode == AngleSnapMode.isometric45) {
+            angleDeg = (angleDeg / 45.0).round() * 45.0;
+          }
+          rotateSelectionAroundZ(angleDeg, customCenter: modifyBasePointWorld);
+          modifyBasePointWorld = null;
+          modifyBasePointScreen = null;
+          modifyCurrentPointScreen = null;
+          setTool(CanvasTool.select);
         }
         break;
 
@@ -526,7 +827,9 @@ class PipingInputController extends ChangeNotifier {
         final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
             ? currentSnapResult!.worldPoint
             : projector.unproject(screenPos, currentElevationZ);
-        final snapped = _snapToGrid(snapWorld);
+        final snapped = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+            ? snapWorld
+            : _snapToGrid(snapWorld);
 
         final eqId = 'eq_${_uuid.v4()}';
         final nozzleId = 'noz_${_uuid.v4()}';
@@ -653,6 +956,15 @@ class PipingInputController extends ChangeNotifier {
     // Обновляем привязку
     _updateSnap(screenPos);
 
+    if (modifyBasePointWorld != null) {
+      if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
+        modifyCurrentPointScreen = currentSnapResult!.screenPoint;
+      } else {
+        modifyCurrentPointScreen = screenPos;
+      }
+      notifyListeners();
+    }
+
     if (isDraggingCallout && selectedCalloutId != null && _dragCalloutStartScreenPos != null) {
       final callout = network.callouts[selectedCalloutId!];
       if (callout != null) {
@@ -668,10 +980,38 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
+    if (currentTool == CanvasTool.dimension && dimensionStartNode != null && dimensionEndNode != null) {
+      _updateDimensionOffset(screenPos);
+      notifyListeners();
+      return;
+    }
+
+    if (boxSelectStart != null) {
+      selectionBoxRect = Rect.fromPoints(boxSelectStart!, screenPos);
+      isCrossingSelection = screenPos.dx < boxSelectStart!.dx;
+      notifyListeners();
+      return;
+    }
+
     if (isDraggingNode && selectedNodeId != null) {
       final unproj = projector.unproject(screenPos, currentElevationZ);
       final snapped = _snapToGrid(unproj);
-      network.moveNode(selectedNodeId!, snapped.x, snapped.y, snapped.z);
+      final targetNode = network.nodes[selectedNodeId!];
+      if (targetNode != null) {
+        final dx = snapped.x - targetNode.x;
+        final dy = snapped.y - targetNode.y;
+        final dz = snapped.z - targetNode.z;
+        if (selectedNodeIds.length > 1 && selectedNodeIds.contains(selectedNodeId)) {
+          for (final nId in selectedNodeIds) {
+            final n = network.nodes[nId];
+            if (n != null) {
+              network.moveNode(nId, n.x + dx, n.y + dy, n.z + dz);
+            }
+          }
+        } else {
+          network.moveNode(selectedNodeId!, snapped.x, snapped.y, snapped.z);
+        }
+      }
       notifyListeners();
       return;
     }
@@ -702,7 +1042,12 @@ class PipingInputController extends ChangeNotifier {
         network: network,
         projector: projector,
         currentElevationZ: currentElevationZ,
-        traceStartNode: traceStartNode ?? axisStartNode,
+        traceStartNode: traceStartNode ??
+            axisStartNode ??
+            dimensionStartNode ??
+            (modifyBasePointWorld != null
+                ? Node3D(id: 'base_point', x: modifyBasePointWorld!.x, y: modifyBasePointWorld!.y, z: modifyBasePointWorld!.z)
+                : null),
         angleMode: angleSnapMode,
         customAngleStepDegrees: customAngleDegrees,
       );
@@ -713,6 +1058,114 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка отпускания стилуса / пальца / кнопки мыши
   void handlePointerUp() {
+    if (selectionBoxRect != null && boxSelectStart != null) {
+      final rect = selectionBoxRect!;
+      if (rect.width > 6.0 || rect.height > 6.0) {
+        final isCrossing = isCrossingSelection;
+        for (final node in network.nodes.values) {
+          final p = projector.project(node);
+          if (rect.contains(p)) {
+            selectedNodeIds.add(node.id);
+          }
+        }
+        for (final seg in network.segments.values) {
+          final n1 = network.nodes[seg.startNodeId];
+          final n2 = network.nodes[seg.endNodeId];
+          if (n1 == null || n2 == null) continue;
+          final p1 = projector.project(n1);
+          final p2 = projector.project(n2);
+          if (isCrossing) {
+            if (rect.contains(p1) || rect.contains(p2) || _segmentIntersectsRect(p1, p2, rect)) {
+              selectedSegmentIds.add(seg.id);
+              selectedNodeIds.add(n1.id);
+              selectedNodeIds.add(n2.id);
+            }
+          } else {
+            if (rect.contains(p1) && rect.contains(p2)) {
+              selectedSegmentIds.add(seg.id);
+              selectedNodeIds.add(n1.id);
+              selectedNodeIds.add(n2.id);
+            }
+          }
+        }
+
+        // Выбор оборудования
+        for (final eq in network.equipments.values) {
+          final p = projector.projectCoordinates(eq.x, eq.y, eq.z);
+          final w = math.max(20.0, (eq.width / 2) * projector.scale);
+          final l = math.max(20.0, (eq.length / 2) * projector.scale);
+          final eqBounds = Rect.fromCenter(center: p, width: w * 2, height: l * 2);
+          if (isCrossing) {
+            if (rect.overlaps(eqBounds) || rect.contains(p)) {
+              selectedEquipmentIds.add(eq.id);
+            }
+          } else {
+            if (rect.contains(eqBounds.topLeft) && rect.contains(eqBounds.bottomRight)) {
+              selectedEquipmentIds.add(eq.id);
+            }
+          }
+        }
+
+        // Выбор строительных и опорных осей
+        for (final axis in network.axes.values) {
+          final p1Native = projector.project(axis.startPoint);
+          final p2Native = projector.project(axis.endPoint);
+
+          final aWorld = Node3D(id: '', x: axis.startPoint.x, y: axis.startPoint.y, z: currentElevationZ);
+          final bWorld = Node3D(id: '', x: axis.endPoint.x, y: axis.endPoint.y, z: currentElevationZ);
+          final p1z = projector.project(aWorld);
+          final p2z = projector.project(bWorld);
+
+          bool matches(Offset p1, Offset p2) {
+            if (isCrossing) {
+              return rect.contains(p1) || rect.contains(p2) || _segmentIntersectsRect(p1, p2, rect);
+            } else {
+              return rect.contains(p1) && rect.contains(p2);
+            }
+          }
+
+          if (matches(p1Native, p2Native) || matches(p1z, p2z)) {
+            selectedAxisIds.add(axis.id);
+          }
+        }
+
+        // Выбор линейных размеров
+        for (final dim in network.dimensions.values) {
+          final p1 = projector.project(dim.startPoint);
+          final p2 = projector.project(dim.endPoint);
+          if (isCrossing) {
+            if (rect.contains(p1) || rect.contains(p2) || _segmentIntersectsRect(p1, p2, rect)) {
+              selectedDimensionIds.add(dim.id);
+            }
+          } else {
+            if (rect.contains(p1) && rect.contains(p2)) {
+              selectedDimensionIds.add(dim.id);
+            }
+          }
+        }
+
+        if (selectedNodeIds.isNotEmpty) {
+          selectedNodeId = selectedNodeIds.first;
+        }
+        if (selectedSegmentIds.isNotEmpty && selectedNodeId == null) {
+          selectedSegmentId = selectedSegmentIds.first;
+        }
+        if (selectedEquipmentIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null) {
+          selectedEquipmentId = selectedEquipmentIds.first;
+        }
+        if (selectedAxisIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null && selectedEquipmentId == null) {
+          selectedAxisId = selectedAxisIds.first;
+        }
+        if (selectedDimensionIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null && selectedEquipmentId == null && selectedAxisId == null) {
+          selectedDimensionId = selectedDimensionIds.first;
+        }
+      }
+      boxSelectStart = null;
+      selectionBoxRect = null;
+      notifyListeners();
+      return;
+    }
+
     if (isDraggingCallout) {
       history.recordState(network);
       isDraggingCallout = false;
@@ -723,6 +1176,7 @@ class PipingInputController extends ChangeNotifier {
     isDraggingCallout = false;
 
     if (isDraggingNode) {
+      _checkAndMergeOpenNodes();
       history.recordState(network);
       isDraggingNode = false;
       notifyListeners();
@@ -764,14 +1218,16 @@ class PipingInputController extends ChangeNotifier {
           final axisId = 'axis_${_uuid.v4()}';
           network.axes[axisId] = ConstructionAxis(
             id: axisId,
-            label: currentAxisLabel,
+            label: isBuildingGridAxis ? currentAxisLabel : '',
             startPoint: axisStartNode!,
             endPoint: axisEndNode,
-            isBuildingGrid: true,
+            isBuildingGrid: isBuildingGridAxis,
           );
-          final num = int.tryParse(currentAxisLabel);
-          if (num != null) {
-            currentAxisLabel = '${num + 1}';
+          if (isBuildingGridAxis) {
+            final num = int.tryParse(currentAxisLabel);
+            if (num != null) {
+              currentAxisLabel = '${num + 1}';
+            }
           }
           axisStartNode = null;
           notifyListeners();
@@ -794,12 +1250,23 @@ class PipingInputController extends ChangeNotifier {
           currentSnapResult!.snappedNodeId != null &&
           currentSnapResult!.snappedNodeId != traceStartNode!.id) {
         targetNodeId = currentSnapResult!.snappedNodeId!;
-      } else if (currentSnapResult!.type == SnapType.segmentAxis && currentSnapResult!.snappedSegmentId != null) {
-        final ratio = _calcSegmentRatio(currentSnapResult!.snappedSegmentId!, endScreenPos);
-        final midNode = network.splitSegmentAtRatio(currentSnapResult!.snappedSegmentId!, ratio);
+      } else if ((currentSnapResult!.type == SnapType.segmentAxis ||
+                  currentSnapResult!.type == SnapType.midpoint ||
+                  currentSnapResult!.type == SnapType.perpendicular) &&
+                 currentSnapResult!.snappedSegmentId != null &&
+                 network.segments.containsKey(currentSnapResult!.snappedSegmentId)) {
+        final segId = currentSnapResult!.snappedSegmentId!;
+        final seg = network.segments[segId]!;
+        final s = network.nodes[seg.startNodeId]!;
+        final e = network.nodes[seg.endNodeId]!;
+        final w = currentSnapResult!.worldPoint;
+        final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
+        final ratio = segLen > 0.001
+            ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
+            : 0.5;
+        final midNode = network.splitSegmentAtRatio(segId, ratio);
         targetNodeId = midNode?.id ??
             (() {
-              final w = currentSnapResult!.worldPoint;
               final n = Node3D(id: 'node_${_uuid.v4()}', x: w.x, y: w.y, z: w.z);
               network.nodes[n.id] = n;
               return n.id;
@@ -1031,18 +1498,55 @@ class PipingInputController extends ChangeNotifier {
       final axisId = 'axis_${_uuid.v4()}';
       network.axes[axisId] = ConstructionAxis(
         id: axisId,
-        label: currentAxisLabel,
+        label: isBuildingGridAxis ? currentAxisLabel : '',
         startPoint: axisStartNode!,
         endPoint: axisEndNode,
-        isBuildingGrid: true,
+        isBuildingGrid: isBuildingGridAxis,
       );
 
-      final num = int.tryParse(currentAxisLabel);
-      if (num != null) {
-        currentAxisLabel = '${num + 1}';
+      if (isBuildingGridAxis) {
+        final num = int.tryParse(currentAxisLabel);
+        if (num != null) {
+          currentAxisLabel = '${num + 1}';
+        }
       }
       axisStartNode = null;
       history.recordState(network);
+
+      if (currentCursorScreenPos != null) {
+        _updateSnap(currentCursorScreenPos!);
+      }
+      notifyListeners();
+    } else if ((currentTool == CanvasTool.move || currentTool == CanvasTool.copy) && modifyBasePointWorld != null) {
+      final startNode = modifyBasePointWorld!;
+      final ({double dirX, double dirY, double dirZ}) dir;
+      if (dirX != null || dirY != null || dirZ != null) {
+        final dx = dirX ?? 0.0;
+        final dy = dirY ?? 0.0;
+        final dz = dirZ ?? 0.0;
+        final mag = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (mag > 1e-6) {
+          dir = (dirX: dx / mag, dirY: dy / mag, dirZ: dz / mag);
+        } else {
+          dir = _computeTraceDirection(startNode);
+        }
+      } else {
+        dir = _computeTraceDirection(startNode);
+      }
+
+      final dx = double.parse((dir.dirX * lengthMm).toStringAsFixed(2));
+      final dy = double.parse((dir.dirY * lengthMm).toStringAsFixed(2));
+      final dz = double.parse((dir.dirZ * lengthMm).toStringAsFixed(2));
+
+      if (currentTool == CanvasTool.move) {
+        moveSelectedBy(dx: dx, dy: dy, dz: dz);
+        modifyBasePointWorld = null;
+        modifyBasePointScreen = null;
+        modifyCurrentPointScreen = null;
+        setTool(CanvasTool.select);
+      } else if (currentTool == CanvasTool.copy) {
+        duplicateSelection(dx: dx, dy: dy, dz: dz);
+      }
 
       if (currentCursorScreenPos != null) {
         _updateSnap(currentCursorScreenPos!);
@@ -1404,12 +1908,85 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Удаление выбранного узла, оборудования, сегмента или выноски с каскадной очисткой связей
+  /// Удаление выбранного узла, оборудования, сегмента, размера или выноски с каскадной очисткой связей
   void deleteSelected() {
     if (selectedCalloutId != null) {
       network.callouts.remove(selectedCalloutId);
       selectedCalloutId = null;
       history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
+    if (selectedDimensionId != null) {
+      network.removeDimension(selectedDimensionId!);
+      selectedDimensionId = null;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
+    if (selectedAxisId != null) {
+      network.axes.remove(selectedAxisId);
+      selectedAxisId = null;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
+    // Множественное удаление
+    if (selectedNodeIds.length > 1 ||
+        selectedSegmentIds.length > 1 ||
+        selectedEquipmentIds.isNotEmpty ||
+        selectedAxisIds.isNotEmpty ||
+        selectedDimensionIds.isNotEmpty ||
+        (selectedNodeIds.isNotEmpty && selectedSegmentIds.isNotEmpty)) {
+      history.recordState(network);
+      for (final eqId in selectedEquipmentIds.toList()) {
+        network.removeEquipment(eqId);
+        network.callouts.removeWhere((_, c) => c.targetId == eqId);
+      }
+      for (final axisId in selectedAxisIds.toList()) {
+        network.axes.remove(axisId);
+      }
+      for (final dimId in selectedDimensionIds.toList()) {
+        network.removeDimension(dimId);
+      }
+      for (final segId in selectedSegmentIds.toList()) {
+        network.segments.remove(segId);
+        network.valves.removeWhere((_, v) => v.segmentId == segId);
+        network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
+        network.supports.removeWhere((_, s) => s.segmentId == segId);
+        network.callouts.removeWhere((_, c) => c.targetId == segId);
+      }
+      for (final nodeId in selectedNodeIds.toList()) {
+        final segs = network.segments.values
+            .where((s) => s.startNodeId == nodeId || s.endNodeId == nodeId)
+            .map((s) => s.id)
+            .toList();
+        for (final sid in segs) {
+          network.segments.remove(sid);
+          network.valves.removeWhere((_, v) => v.segmentId == sid);
+          network.weldJoints.removeWhere((_, w) => w.segmentId == sid);
+          network.supports.removeWhere((_, s) => s.segmentId == sid);
+          network.callouts.removeWhere((_, c) => c.targetId == sid);
+        }
+        network.fittings.remove(nodeId);
+        network.nodes.remove(nodeId);
+        network.callouts.removeWhere((_, c) => c.targetId == nodeId);
+      }
+      selectedNodeIds.clear();
+      selectedSegmentIds.clear();
+      selectedEquipmentIds.clear();
+      selectedAxisIds.clear();
+      selectedDimensionIds.clear();
+      selectedNodeId = null;
+      selectedSegmentId = null;
+      selectedEquipmentId = null;
+      selectedAxisId = null;
+      selectedDimensionId = null;
+      network.autoDetectAllFittings();
+      network.recalculateSpools();
       notifyListeners();
       return;
     }
@@ -1445,6 +2022,7 @@ class PipingInputController extends ChangeNotifier {
       network.nodes.remove(nodeId);
       network.callouts.removeWhere((_, c) => c.targetId == nodeId);
 
+      selectedNodeIds.remove(nodeId);
       selectedNodeId = null;
       selectedSegmentId = null;
       network.recalculateSpools();
@@ -1469,10 +2047,482 @@ class PipingInputController extends ChangeNotifier {
         network.fittings.remove(endNodeId);
       }
 
+      selectedSegmentIds.remove(segId);
       selectedSegmentId = null;
       network.recalculateSpools();
       history.recordState(network);
       notifyListeners();
+    }
+  }
+
+  /// Перемещение всех выделенных элементов на вектор (dx, dy, dz)
+  bool moveSelectedBy({required double dx, required double dy, required double dz}) {
+    if (dx == 0 && dy == 0 && dz == 0) return false;
+
+    final nodeIdsToMove = <String>{...selectedNodeIds};
+    for (final segId in selectedSegmentIds) {
+      final seg = network.segments[segId];
+      if (seg != null) {
+        nodeIdsToMove.add(seg.startNodeId);
+        nodeIdsToMove.add(seg.endNodeId);
+      }
+    }
+    if (nodeIdsToMove.isEmpty && selectedNodeId != null) {
+      nodeIdsToMove.add(selectedNodeId!);
+    }
+
+    // Перемещение узлов
+    for (final nid in nodeIdsToMove) {
+      final n = network.nodes[nid];
+      if (n != null) {
+        network.moveNode(nid, n.x + dx, n.y + dy, n.z + dz);
+      }
+    }
+
+    // Перемещение оборудования
+    final eqIdsToMove = <String>{...selectedEquipmentIds};
+    if (selectedEquipmentId != null) eqIdsToMove.add(selectedEquipmentId!);
+    for (final eqId in eqIdsToMove) {
+      final eq = network.equipments[eqId];
+      if (eq != null) {
+        network.equipments[eqId] = eq.copyWith(
+          x: eq.x + dx,
+          y: eq.y + dy,
+          z: eq.z + dz,
+        );
+      }
+    }
+
+    // Перемещение строительных осей
+    final axisIdsToMove = <String>{...selectedAxisIds};
+    if (selectedAxisId != null) axisIdsToMove.add(selectedAxisId!);
+    for (final axId in axisIdsToMove) {
+      final ax = network.axes[axId];
+      if (ax != null) {
+        network.axes[axId] = ax.copyWith(
+          startPoint: ax.startPoint.copyWith(x: ax.startPoint.x + dx, y: ax.startPoint.y + dy, z: ax.startPoint.z + dz),
+          endPoint: ax.endPoint.copyWith(x: ax.endPoint.x + dx, y: ax.endPoint.y + dy, z: ax.endPoint.z + dz),
+        );
+      }
+    }
+
+    // Перемещение размеров
+    final dimIdsToMove = <String>{...selectedDimensionIds};
+    if (selectedDimensionId != null) dimIdsToMove.add(selectedDimensionId!);
+    for (final dimId in dimIdsToMove) {
+      final dim = network.dimensions[dimId];
+      if (dim != null) {
+        network.dimensions[dimId] = dim.copyWith(
+          startPoint: dim.startPoint.copyWith(x: dim.startPoint.x + dx, y: dim.startPoint.y + dy, z: dim.startPoint.z + dz),
+          endPoint: dim.endPoint.copyWith(x: dim.endPoint.x + dx, y: dim.endPoint.y + dy, z: dim.endPoint.z + dz),
+        );
+      }
+    }
+
+    network.autoDetectAllFittings();
+    network.recalculateSpools();
+    history.recordState(network);
+    notifyListeners();
+    return true;
+  }
+
+  /// Дублирование выделенного подграфа со сдвигом (dx, dy, dz)
+  bool duplicateSelection({double dx = 500.0, double dy = 500.0, double dz = 0.0}) {
+    final nodeIdsToCopy = <String>{...selectedNodeIds};
+    for (final segId in selectedSegmentIds) {
+      final seg = network.segments[segId];
+      if (seg != null) {
+        nodeIdsToCopy.add(seg.startNodeId);
+        nodeIdsToCopy.add(seg.endNodeId);
+      }
+    }
+    if (nodeIdsToCopy.isEmpty && selectedNodeId != null) {
+      nodeIdsToCopy.add(selectedNodeId!);
+    }
+
+    final eqIdsToCopy = <String>{...selectedEquipmentIds};
+    if (selectedEquipmentId != null) eqIdsToCopy.add(selectedEquipmentId!);
+
+    final axisIdsToCopy = <String>{...selectedAxisIds};
+    if (selectedAxisId != null) axisIdsToCopy.add(selectedAxisId!);
+
+    final dimIdsToCopy = <String>{...selectedDimensionIds};
+    if (selectedDimensionId != null) dimIdsToCopy.add(selectedDimensionId!);
+
+    if (nodeIdsToCopy.isEmpty && eqIdsToCopy.isEmpty && axisIdsToCopy.isEmpty && dimIdsToCopy.isEmpty) {
+      return false;
+    }
+
+    history.recordState(network);
+
+    final oldToNewNodeId = <String, String>{};
+    for (final oldId in nodeIdsToCopy) {
+      final oldNode = network.nodes[oldId];
+      if (oldNode == null) continue;
+      final newId = 'node_${_uuid.v4()}';
+      final newNode = Node3D(
+        id: newId,
+        x: oldNode.x + dx,
+        y: oldNode.y + dy,
+        z: oldNode.z + dz,
+      );
+      network.nodes[newId] = newNode;
+      oldToNewNodeId[oldId] = newId;
+    }
+
+    final newSegmentIds = <String>{};
+    for (final seg in network.segments.values.toList()) {
+      if (oldToNewNodeId.containsKey(seg.startNodeId) && oldToNewNodeId.containsKey(seg.endNodeId)) {
+        final newSegId = 'seg_${_uuid.v4()}';
+        final newStartId = oldToNewNodeId[seg.startNodeId]!;
+        final newEndId = oldToNewNodeId[seg.endNodeId]!;
+        final newSeg = seg.copyWith(
+          id: newSegId,
+          startNodeId: newStartId,
+          endNodeId: newEndId,
+        );
+        network.segments[newSegId] = newSeg;
+        newSegmentIds.add(newSegId);
+
+        // Копируем арматуру
+        for (final v in network.valves.values.where((val) => val.segmentId == seg.id).toList()) {
+          final newValveId = 'valve_${_uuid.v4()}';
+          network.valves[newValveId] = v.copyWith(id: newValveId, segmentId: newSegId);
+        }
+
+        // Копируем сварные стыки
+        for (final w in network.weldJoints.values.where((wj) => wj.segmentId == seg.id).toList()) {
+          final newWeldId = 'weld_${_uuid.v4()}';
+          final newWeldNum = network.weldJoints.length + 1;
+          network.weldJoints[newWeldId] = w.copyWith(
+            id: newWeldId,
+            segmentId: newSegId,
+            number: newWeldNum,
+          );
+        }
+
+        // Копируем опоры
+        for (final s in network.supports.values.where((sup) => sup.segmentId == seg.id).toList()) {
+          final newSupId = 'sup_${_uuid.v4()}';
+          network.supports[newSupId] = s.copyWith(id: newSupId, segmentId: newSegId);
+        }
+      }
+    }
+
+    // Копируем оборудование
+    final oldToNewEqId = <String, String>{};
+    for (final oldEqId in eqIdsToCopy) {
+      final oldEq = network.equipments[oldEqId];
+      if (oldEq == null) continue;
+      final newEqId = 'eq_${_uuid.v4()}';
+      network.equipments[newEqId] = oldEq.copyWith(
+        id: newEqId,
+        x: oldEq.x + dx,
+        y: oldEq.y + dy,
+        z: oldEq.z + dz,
+      );
+      oldToNewEqId[oldEqId] = newEqId;
+    }
+
+    // Копируем строительные оси
+    final newAxisIds = <String>{};
+    for (final oldAxId in axisIdsToCopy) {
+      final oldAx = network.axes[oldAxId];
+      if (oldAx == null) continue;
+      final newAxId = 'axis_${_uuid.v4()}';
+      network.axes[newAxId] = oldAx.copyWith(
+        id: newAxId,
+        startPoint: oldAx.startPoint.copyWith(x: oldAx.startPoint.x + dx, y: oldAx.startPoint.y + dy, z: oldAx.startPoint.z + dz),
+        endPoint: oldAx.endPoint.copyWith(x: oldAx.endPoint.x + dx, y: oldAx.endPoint.y + dy, z: oldAx.endPoint.z + dz),
+      );
+      newAxisIds.add(newAxId);
+    }
+
+    // Копируем размеры
+    final newDimIds = <String>{};
+    for (final oldDimId in dimIdsToCopy) {
+      final oldDim = network.dimensions[oldDimId];
+      if (oldDim == null) continue;
+      final newDimId = 'dim_${_uuid.v4()}';
+      network.dimensions[newDimId] = oldDim.copyWith(
+        id: newDimId,
+        startPoint: oldDim.startPoint.copyWith(x: oldDim.startPoint.x + dx, y: oldDim.startPoint.y + dy, z: oldDim.startPoint.z + dz),
+        endPoint: oldDim.endPoint.copyWith(x: oldDim.endPoint.x + dx, y: oldDim.endPoint.y + dy, z: oldDim.endPoint.z + dz),
+      );
+      newDimIds.add(newDimId);
+    }
+
+    network.autoDetectAllFittings();
+    network.recalculateSpools();
+
+    // Выбираем скопированные элементы
+    selectedNodeIds.clear();
+    selectedNodeIds.addAll(oldToNewNodeId.values);
+    selectedSegmentIds.clear();
+    selectedSegmentIds.addAll(newSegmentIds);
+    selectedEquipmentIds.clear();
+    selectedEquipmentIds.addAll(oldToNewEqId.values);
+    selectedAxisIds.clear();
+    selectedAxisIds.addAll(newAxisIds);
+    selectedDimensionIds.clear();
+    selectedDimensionIds.addAll(newDimIds);
+
+    selectedNodeId = selectedNodeIds.isNotEmpty ? selectedNodeIds.first : null;
+    selectedSegmentId = selectedSegmentIds.isNotEmpty ? selectedSegmentIds.first : null;
+    selectedEquipmentId = selectedEquipmentIds.isNotEmpty ? selectedEquipmentIds.first : null;
+    selectedAxisId = selectedAxisIds.isNotEmpty ? selectedAxisIds.first : null;
+    selectedDimensionId = selectedDimensionIds.isNotEmpty ? selectedDimensionIds.first : null;
+
+    history.recordState(network);
+    notifyListeners();
+    return true;
+  }
+
+  /// Поворот выделенных элементов вокруг оси Z на angleDegrees (по часовой стрелке)
+  bool rotateSelectionAroundZ(double angleDegrees, {Node3D? customCenter}) {
+    final nodeIdsToRotate = <String>{...selectedNodeIds};
+    for (final segId in selectedSegmentIds) {
+      final seg = network.segments[segId];
+      if (seg != null) {
+        nodeIdsToRotate.add(seg.startNodeId);
+        nodeIdsToRotate.add(seg.endNodeId);
+      }
+    }
+    if (nodeIdsToRotate.isEmpty && selectedNodeId != null) {
+      nodeIdsToRotate.add(selectedNodeId!);
+    }
+
+    final eqIdsToRotate = <String>{...selectedEquipmentIds};
+    if (selectedEquipmentId != null) eqIdsToRotate.add(selectedEquipmentId!);
+
+    final axisIdsToRotate = <String>{...selectedAxisIds};
+    if (selectedAxisId != null) axisIdsToRotate.add(selectedAxisId!);
+
+    final dimIdsToRotate = <String>{...selectedDimensionIds};
+    if (selectedDimensionId != null) dimIdsToRotate.add(selectedDimensionId!);
+
+    if (nodeIdsToRotate.isEmpty && eqIdsToRotate.isEmpty && axisIdsToRotate.isEmpty && dimIdsToRotate.isEmpty) {
+      return false;
+    }
+
+    history.recordState(network);
+
+    double centerX = 0.0;
+    double centerY = 0.0;
+
+    if (customCenter != null) {
+      centerX = customCenter.x;
+      centerY = customCenter.y;
+    } else {
+      double sumX = 0.0;
+      double sumY = 0.0;
+      int count = 0;
+      for (final id in nodeIdsToRotate) {
+        final n = network.nodes[id];
+        if (n != null) {
+          sumX += n.x;
+          sumY += n.y;
+          count++;
+        }
+      }
+      for (final id in eqIdsToRotate) {
+        final eq = network.equipments[id];
+        if (eq != null) {
+          sumX += eq.x;
+          sumY += eq.y;
+          count++;
+        }
+      }
+      for (final id in axisIdsToRotate) {
+        final ax = network.axes[id];
+        if (ax != null) {
+          sumX += (ax.startPoint.x + ax.endPoint.x) / 2;
+          sumY += (ax.startPoint.y + ax.endPoint.y) / 2;
+          count++;
+        }
+      }
+      if (count == 0) return false;
+      centerX = sumX / count;
+      centerY = sumY / count;
+    }
+
+    final rad = angleDegrees * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+
+    for (final id in nodeIdsToRotate) {
+      final n = network.nodes[id];
+      if (n == null) continue;
+      final relX = n.x - centerX;
+      final relY = n.y - centerY;
+      final rotX = (centerX + relX * cosA - relY * sinA).roundToDouble();
+      final rotY = (centerY + relX * sinA + relY * cosA).roundToDouble();
+      network.moveNode(id, rotX, rotY, n.z);
+    }
+
+    for (final id in eqIdsToRotate) {
+      final eq = network.equipments[id];
+      if (eq == null) continue;
+      final relX = eq.x - centerX;
+      final relY = eq.y - centerY;
+      final rotX = (centerX + relX * cosA - relY * sinA).roundToDouble();
+      final rotY = (centerY + relX * sinA + relY * cosA).roundToDouble();
+      network.equipments[id] = eq.copyWith(x: rotX, y: rotY);
+    }
+
+    for (final id in axisIdsToRotate) {
+      final ax = network.axes[id];
+      if (ax == null) continue;
+      final sRelX = ax.startPoint.x - centerX;
+      final sRelY = ax.startPoint.y - centerY;
+      final sRotX = (centerX + sRelX * cosA - sRelY * sinA).roundToDouble();
+      final sRotY = (centerY + sRelX * sinA + sRelY * cosA).roundToDouble();
+
+      final eRelX = ax.endPoint.x - centerX;
+      final eRelY = ax.endPoint.y - centerY;
+      final eRotX = (centerX + eRelX * cosA - eRelY * sinA).roundToDouble();
+      final eRotY = (centerY + eRelX * sinA + eRelY * cosA).roundToDouble();
+
+      network.axes[id] = ax.copyWith(
+        startPoint: ax.startPoint.copyWith(x: sRotX, y: sRotY),
+        endPoint: ax.endPoint.copyWith(x: eRotX, y: eRotY),
+      );
+    }
+
+    network.autoDetectAllFittings();
+    network.recalculateSpools();
+    history.recordState(network);
+    notifyListeners();
+    return true;
+  }
+
+  void _updateDimensionOffset(Offset screenPos) {
+    if (dimensionStartNode == null || dimensionEndNode == null) return;
+    final p1 = projector.project(dimensionStartNode!);
+    final p2 = projector.project(dimensionEndNode!);
+    final delta = p2 - p1;
+    final dist = delta.distance;
+    if (dist < 1.0) return;
+    final u = delta / dist;
+    final n = Offset(-u.dy, u.dx);
+    final offset = (screenPos.dx - p1.dx) * n.dx + (screenPos.dy - p1.dy) * n.dy;
+    dimensionOffset = offset.abs() < 5.0 ? (offset >= 0 ? 35.0 : -35.0) : offset;
+  }
+
+  String? _findDimensionAtScreenPos(Offset screenPos) {
+    for (final dim in network.dimensions.values) {
+      final p1 = projector.project(dim.startPoint);
+      final p2 = projector.project(dim.endPoint);
+      final delta = p2 - p1;
+      final dist = delta.distance;
+      if (dist < 1.0) continue;
+      final u = delta / dist;
+      final n = Offset(-u.dy, u.dx);
+      final offsetDist = dim.offsetDistance == 0.0 ? 35.0 : dim.offsetDistance;
+      final d1 = p1 + n * offsetDist;
+      final d2 = p2 + n * offsetDist;
+      final lineVec = d2 - d1;
+      final lenSq = lineVec.dx * lineVec.dx + lineVec.dy * lineVec.dy;
+      final t = lenSq == 0 ? 0.0 : (((screenPos.dx - d1.dx) * lineVec.dx + (screenPos.dy - d1.dy) * lineVec.dy) / lenSq).clamp(0.0, 1.0);
+      final proj = d1 + lineVec * t;
+      if ((screenPos - proj).distance <= 12.0) {
+        return dim.id;
+      }
+    }
+    return null;
+  }
+
+  /// Поиск оси или опорной линии под курсором (с проверкой кружков марок, краев и отрезка)
+  String? _findAxisAtScreenPos(Offset screenPos) {
+    const clickDistanceThreshold = 14.0;
+    const endPointRadiusThreshold = 18.0;
+
+    for (final axis in network.axes.values) {
+      final p1 = projector.project(axis.startPoint);
+      final p2 = projector.project(axis.endPoint);
+
+      // Проверка клика в концы осей (кружки марок или края линий)
+      if ((screenPos - p1).distance <= endPointRadiusThreshold ||
+          (screenPos - p2).distance <= endPointRadiusThreshold) {
+        return axis.id;
+      }
+
+      // Также проверяем концы на currentElevationZ, если ось на другой высоте Z
+      if ((axis.startPoint.z - currentElevationZ).abs() > 1.0) {
+        final p1z = projector.projectCoordinates(axis.startPoint.x, axis.startPoint.y, currentElevationZ);
+        final p2z = projector.projectCoordinates(axis.endPoint.x, axis.endPoint.y, currentElevationZ);
+        if ((screenPos - p1z).distance <= endPointRadiusThreshold ||
+            (screenPos - p2z).distance <= endPointRadiusThreshold) {
+          return axis.id;
+        }
+      }
+
+      // Проверка клика по отрезку оси
+      final dist = _distanceToLineSegment(screenPos, p1, p2);
+      if (dist <= clickDistanceThreshold) {
+        return axis.id;
+      }
+
+      // Также проверяем отрезок оси на currentElevationZ
+      if ((axis.startPoint.z - currentElevationZ).abs() > 1.0) {
+        final p1z = projector.projectCoordinates(axis.startPoint.x, axis.startPoint.y, currentElevationZ);
+        final p2z = projector.projectCoordinates(axis.endPoint.x, axis.endPoint.y, currentElevationZ);
+        final distZ = _distanceToLineSegment(screenPos, p1z, p2z);
+        if (distZ <= clickDistanceThreshold) {
+          return axis.id;
+        }
+      }
+    }
+    return null;
+  }
+
+  bool _segmentIntersectsRect(Offset p1, Offset p2, Rect rect) {
+    if (rect.contains(p1) || rect.contains(p2)) return true;
+    final rLeft = rect.left, rRight = rect.right, rTop = rect.top, rBottom = rect.bottom;
+    return _linesIntersect(p1, p2, Offset(rLeft, rTop), Offset(rRight, rTop)) ||
+        _linesIntersect(p1, p2, Offset(rRight, rTop), Offset(rRight, rBottom)) ||
+        _linesIntersect(p1, p2, Offset(rRight, rBottom), Offset(rLeft, rBottom)) ||
+        _linesIntersect(p1, p2, Offset(rLeft, rBottom), Offset(rLeft, rTop));
+  }
+
+  bool _linesIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
+    double ccw(Offset a, Offset b, Offset c) =>
+        (c.dy - a.dy) * (b.dx - a.dx) - (b.dy - a.dy) * (c.dx - a.dx);
+    return (ccw(a1, b1, b2) * ccw(a2, b1, b2) <= 0) &&
+        (ccw(a1, a2, b1) * ccw(a1, a2, b2) <= 0);
+  }
+
+  void _checkAndMergeOpenNodes() {
+    if (selectedNodeId == null) return;
+    final movedNodes = selectedNodeIds.isNotEmpty ? selectedNodeIds.toList() : [selectedNodeId!];
+    for (final mId in movedNodes) {
+      final nodeA = network.nodes[mId];
+      if (nodeA == null) continue;
+      final connsA = network.getConnectedSegments(mId);
+      if (connsA.length != 1) continue;
+
+      for (final otherNode in network.nodes.values) {
+        if (movedNodes.contains(otherNode.id)) continue;
+        final connsOther = network.getConnectedSegments(otherNode.id);
+        if (connsOther.length != 1) continue;
+
+        if (nodeA.distanceTo(otherNode) <= 35.0) {
+          final seg = connsA.first;
+          if (seg.startNodeId == mId) {
+            network.segments[seg.id] = seg.copyWith(startNodeId: otherNode.id);
+          } else {
+            network.segments[seg.id] = seg.copyWith(endNodeId: otherNode.id);
+          }
+          network.nodes.remove(mId);
+          network.fittings.remove(mId);
+          selectedNodeIds.remove(mId);
+          selectedNodeIds.add(otherNode.id);
+          if (selectedNodeId == mId) selectedNodeId = otherNode.id;
+          network.autoDetectAllFittings();
+          network.recalculateSpools();
+          break;
+        }
+      }
     }
   }
 

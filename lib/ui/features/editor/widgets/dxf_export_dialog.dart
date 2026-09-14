@@ -6,19 +6,23 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/math/axonometry_projector.dart';
 import '../../../../data/dxf/dxf_writer.dart';
+import '../../../../domain/enums/dxf_callout_options.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/models/piping_network.dart';
 
 class DxfExportDialog extends StatefulWidget {
   final PipingNetwork network;
   final ProjectionType currentProjection;
+  final AxonometryProjector? activeProjector;
   final Map<String, String>? calloutTemplates;
 
   const DxfExportDialog({
     super.key,
     required this.network,
     required this.currentProjection,
+    this.activeProjector,
     this.calloutTemplates,
   });
 
@@ -29,15 +33,15 @@ class DxfExportDialog extends StatefulWidget {
 class _DxfExportDialogState extends State<DxfExportDialog> {
   bool is3dMode = false;
   late ProjectionType selectedProjection;
+  DxfCalloutType selectedCalloutType = DxfCalloutType.monolithicBlock;
+  DxfCalloutOrientation selectedCalloutOrientation = DxfCalloutOrientation.cameraFacing;
   String statusMessage = '';
   String? exportedFilePath;
 
   @override
   void initState() {
     super.initState();
-    selectedProjection = widget.currentProjection == ProjectionType.orbit3d
-        ? ProjectionType.gostFrontal45
-        : widget.currentProjection;
+    selectedProjection = widget.currentProjection;
   }
 
   Future<void> _exportDxf() async {
@@ -46,15 +50,35 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
       final String fileName;
 
       if (is3dMode) {
-        dxfContent = DxfWriter.generate3dDxf(widget.network, calloutTemplates: widget.calloutTemplates);
+        dxfContent = DxfWriter.generate3dDxf(
+          widget.network,
+          calloutTemplates: widget.calloutTemplates,
+          calloutType: selectedCalloutType,
+          calloutOrientation: selectedCalloutOrientation,
+          activeProjector: widget.activeProjector,
+        );
         fileName = 'akso_scheme_3d.dxf';
       } else {
         dxfContent = DxfWriter.generate2dGostAxonometryDxf(
           widget.network,
           projection: selectedProjection,
+          activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
           calloutTemplates: widget.calloutTemplates,
         );
-        fileName = 'akso_scheme_gost_2d.dxf';
+        fileName = 'akso_scheme_${selectedProjection.name}_2d.dxf';
+      }
+
+      final String? scrContent;
+      const scrFileName = 'akso_scheme_3d_mleaders.scr';
+      if (is3dMode && selectedCalloutType == DxfCalloutType.mleaderScript) {
+        scrContent = DxfWriter.generateMleaderScript(
+          widget.network,
+          calloutTemplates: widget.calloutTemplates,
+          calloutOrientation: selectedCalloutOrientation,
+          activeProjector: widget.activeProjector,
+        );
+      } else {
+        scrContent = null;
       }
 
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -63,21 +87,31 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
         final file = File('${dir.path}/$fileName');
         await file.writeAsString(dxfContent);
 
+        final filesToShare = [XFile(file.path)];
+        if (scrContent != null) {
+          final scrFile = File('${dir.path}/$scrFileName');
+          await scrFile.writeAsString(scrContent);
+          filesToShare.add(XFile(scrFile.path));
+        }
+
         await SharePlus.instance.share(
           ShareParams(
-            files: [XFile(file.path)],
+            files: filesToShare,
             subject: 'Исполнительная схема $fileName',
             text: 'Экспорт схемы трубопроводов Akso в AutoCAD DXF',
           ),
         );
 
         setState(() {
-          statusMessage = 'Файл $fileName готов к отправке!';
+          statusMessage = scrContent != null
+              ? 'Файлы $fileName и $scrFileName готовы к отправке!'
+              : 'Файл $fileName готов к отправке!';
           exportedFilePath = file.path;
         });
       } else {
         // На десктопе даем пользователю выбрать путь
         String? targetPath;
+        bool userCancelled = false;
         try {
           final bytes = Uint8List.fromList(utf8.encode(dxfContent));
           final uri = await FilePicker.saveFile(
@@ -88,10 +122,19 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
             bytes: bytes,
           );
           if (uri != null) {
-            targetPath = uri.toFilePath();
+            targetPath = uri.scheme == 'file' ? uri.toFilePath() : (uri.path.isNotEmpty ? uri.path : uri.toString());
+          } else {
+            userCancelled = true;
           }
         } catch (_) {
           targetPath = null;
+        }
+
+        if (userCancelled) {
+          setState(() {
+            statusMessage = 'Экспорт отменен';
+          });
+          return;
         }
 
         if (targetPath == null) {
@@ -106,8 +149,21 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
         final file = File(targetPath);
         await file.writeAsString(dxfContent);
 
+        String? scrSavedPath;
+        if (scrContent != null) {
+          final parentDir = file.parent.path;
+          final scrPath = '$parentDir/$scrFileName';
+          final scrFile = File(scrPath);
+          await scrFile.writeAsString(scrContent);
+          scrSavedPath = scrPath;
+        }
+
         setState(() {
-          statusMessage = 'Файл сохранен: $targetPath';
+          if (scrSavedPath != null) {
+            statusMessage = 'Файлы сохранены:\n• $targetPath\n• $scrSavedPath\n(Перетащите .scr в AutoCAD для создания нативных МВЫНОСОК)';
+          } else {
+            statusMessage = 'Файл сохранен: $targetPath';
+          }
           exportedFilePath = targetPath;
         });
       }
@@ -154,77 +210,156 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
         ],
       ),
       content: SizedBox(
-        width: 480,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Выберите вариант экспорта для AutoCAD / nanoCAD / Revit:',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            RadioGroup<bool>(
-              groupValue: is3dMode,
-              onChanged: (val) => setState(() => is3dMode = val ?? false),
-              child: Column(
-                children: [
-                  const RadioListTile<bool>(
-                    value: false,
-                    title: Text('Плоская схема в аксонометрии ГОСТ / СПДС (2D DXF)'),
-                    subtitle: Text(
-                      'Готовый к печати чертеж с выносками сварки, клеймами, отметками ∇ и диаметрами на отдельных слоях',
-                    ),
-                  ),
-                  if (!is3dMode)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 32, bottom: 8),
-                      child: DropdownButton<ProjectionType>(
-                        value: selectedProjection,
-                        isExpanded: true,
-                        items: const [
-                          DropdownMenuItem(
-                            value: ProjectionType.gostFrontal45,
-                            child: Text('ГОСТ 21.602 Фронтальная 45° (k=0.5)'),
-                          ),
-                          DropdownMenuItem(
-                            value: ProjectionType.gostMirrored45,
-                            child: Text('ГОСТ Зеркальная 45° (разворот взгляда)'),
-                          ),
-                          DropdownMenuItem(
-                            value: ProjectionType.iso30,
-                            child: Text('ISO Прямоугольная изометрия 30°'),
-                          ),
-                        ],
-                        onChanged: (p) => setState(() => selectedProjection = p!),
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Выберите вариант экспорта для AutoCAD / nanoCAD / Revit:',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              RadioGroup<bool>(
+                groupValue: is3dMode,
+                onChanged: (val) => setState(() => is3dMode = val ?? false),
+                child: Column(
+                  children: [
+                    const RadioListTile<bool>(
+                      value: false,
+                      title: Text('Плоская схема в аксонометрии ГОСТ / СПДС (2D DXF)'),
+                      subtitle: Text(
+                        'Готовый к печати чертеж с выносками сварки, клеймами, отметками ∇ и диаметрами на отдельных слоях',
                       ),
                     ),
-                  const RadioListTile<bool>(
-                    value: true,
-                    title: Text('Пространственная 3D-модель (3D DXF)'),
-                    subtitle: Text(
-                      'Реальные координаты (X, Y, Z). Открывается в AutoCAD 3D или подгружается как семейство/подложка в Revit',
+                    if (!is3dMode)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 32, bottom: 8),
+                        child: DropdownButton<ProjectionType>(
+                          value: selectedProjection,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(
+                              value: ProjectionType.orbit3d,
+                              child: Text('Текущий 3D-ракурс (с орбиты камеры)'),
+                            ),
+                            DropdownMenuItem(
+                              value: ProjectionType.topPlan2d,
+                              child: Text('План сверху (2D вид X, Y)'),
+                            ),
+                            DropdownMenuItem(
+                              value: ProjectionType.gostFrontal45,
+                              child: Text('ГОСТ 21.602 Фронтальная 45° (k=0.5)'),
+                            ),
+                            DropdownMenuItem(
+                              value: ProjectionType.gostMirrored45,
+                              child: Text('ГОСТ Зеркальная 45° (разворот взгляда)'),
+                            ),
+                            DropdownMenuItem(
+                              value: ProjectionType.iso30,
+                              child: Text('ISO Прямоугольная изометрия 30°'),
+                            ),
+                          ],
+                          onChanged: (p) => setState(() => selectedProjection = p!),
+                        ),
+                      ),
+                    const RadioListTile<bool>(
+                      value: true,
+                      title: Text('Пространственная 3D-модель (3D DXF)'),
+                      subtitle: Text(
+                        'Реальные координаты (X, Y, Z). Открывается в AutoCAD 3D или подгружается как семейство/подложка в Revit',
+                      ),
                     ),
+                    if (is3dMode)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 32, right: 8, bottom: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Тип выносок в AutoCAD:',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            DropdownButton<DxfCalloutType>(
+                              value: selectedCalloutType,
+                              isExpanded: true,
+                              items: DxfCalloutType.values.map((type) {
+                                return DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type.displayName, style: const TextStyle(fontSize: 13)),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setState(() => selectedCalloutType = val!),
+                            ),
+                            Container(
+                              margin: const EdgeInsets.only(top: 4, bottom: 8),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      selectedCalloutType.description,
+                                      style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Ракурс / Положение выносок в 3D:',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            DropdownButton<DxfCalloutOrientation>(
+                              value: selectedCalloutOrientation,
+                              isExpanded: true,
+                              items: DxfCalloutOrientation.values.map((ori) {
+                                return DropdownMenuItem(
+                                  value: ori,
+                                  child: Text(ori.displayName, style: const TextStyle(fontSize: 13)),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setState(() => selectedCalloutOrientation = val!),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Выноски поворачиваются по оси Z и ориентируются в сторону выбранного ракурса.',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (statusMessage.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade300),
                   ),
-                ],
-              ),
-            ),
-            if (statusMessage.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade300),
+                  child: Text(
+                    statusMessage,
+                    style: TextStyle(color: Colors.green.shade900, fontSize: 12),
+                  ),
                 ),
-                child: Text(
-                  statusMessage,
-                  style: TextStyle(color: Colors.green.shade900, fontSize: 12),
-                ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       actions: [
@@ -249,8 +384,19 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           label: const Text('Копировать'),
           onPressed: () {
             final content = is3dMode
-                ? DxfWriter.generate3dDxf(widget.network, calloutTemplates: widget.calloutTemplates)
-                : DxfWriter.generate2dGostAxonometryDxf(widget.network, projection: selectedProjection, calloutTemplates: widget.calloutTemplates);
+                ? DxfWriter.generate3dDxf(
+                    widget.network,
+                    calloutTemplates: widget.calloutTemplates,
+                    calloutType: selectedCalloutType,
+                    calloutOrientation: selectedCalloutOrientation,
+                    activeProjector: widget.activeProjector,
+                  )
+                : DxfWriter.generate2dGostAxonometryDxf(
+                    widget.network,
+                    projection: selectedProjection,
+                    activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
+                    calloutTemplates: widget.calloutTemplates,
+                  );
             Clipboard.setData(ClipboardData(text: content));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('DXF скопирован в буфер обмена')),

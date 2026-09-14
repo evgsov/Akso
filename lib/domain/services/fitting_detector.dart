@@ -145,7 +145,8 @@ class FittingDetector {
       }
 
       final def = network.catalog.getDefinition(network.catalog.defaultBranchId);
-      final isDirect = def?.fittingType == FittingType.directBranch;
+      final isDirect = def?.fittingType == FittingType.directBranch ||
+          network.catalog.defaultBranchId == 'direct_branch_u18';
 
       // Определение проходного и ответвленного диаметров тройника
       final dns = connected.map((s) => s.dn).toList()..sort();
@@ -168,6 +169,12 @@ class FittingDetector {
           radiusMm: 0.0,
           cutsMainPipe: false,
         );
+
+        final branchSeg = network.identifyBranchSegment(nodeId, connected);
+        if (branchSeg != null) {
+          final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
+          network.ensureWeldExists(branchSeg.id, r, WeldType.u18);
+        }
       } else {
         network.fittings[nodeId] = Fitting(
           id: 'fit_$nodeId',
@@ -183,6 +190,11 @@ class FittingDetector {
           radiusMm: mainDn * 1.0,
           cutsMainPipe: true,
         );
+
+        for (final seg in connected) {
+          final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+          network.ensureWeldExists(seg.id, r, def?.weldType ?? WeldType.c17);
+        }
       }
     } else if (connected.length >= 4) {
       final s = connected[0];

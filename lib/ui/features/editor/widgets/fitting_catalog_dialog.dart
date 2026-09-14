@@ -776,13 +776,19 @@ class _FittingCatalogDialogState extends State<FittingCatalogDialog> with Single
     if (oldFit == null) return;
 
     final updated = oldFit.copyWith(
+      fittingType: def.fittingType,
       definitionId: def.id,
       name: def.name,
       standard: def.standard,
       material: def.defaultMaterial,
       weldType: def.weldType,
       cutsMainPipe: def.cutsMainPipe,
-      customRadiusMm: def.fixedLengthMm ?? (def.radiusFactor != null ? def.radiusFactor! * oldFit.dn : null),
+      radiusMm: def.fittingType == FittingType.directBranch
+          ? 0.0
+          : (def.radiusFactor != null ? def.radiusFactor! * oldFit.dn : oldFit.radiusMm),
+      customRadiusMm: def.fittingType == FittingType.directBranch
+          ? 0.0
+          : (def.fixedLengthMm ?? (def.radiusFactor != null ? def.radiusFactor! * oldFit.dn : null)),
       buildingLengthMm: def.fixedLengthMm,
       branchLengthMm: def.branchLengthMm,
       flangeConnectionType: def.flangeConnectionType ?? oldFit.flangeConnectionType,

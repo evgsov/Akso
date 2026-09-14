@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import '../../core/math/axonometry_projector.dart';
+import '../../domain/enums/dxf_callout_options.dart';
 import '../../domain/enums/fitting_type.dart';
 import '../../domain/enums/inspection_method.dart';
 import '../../domain/enums/projection_type.dart';
@@ -14,24 +15,43 @@ import '../../ui/canvas/painters/callout_painter.dart';
 /// Генератор файлов AutoCAD DXF (ASCII R2000 / AC1015)
 class DxfWriter {
   static String toAutoCadString(String input) {
+    final clean = input.replaceAll('\r\n', ' ').replaceAll('\n', ' ').replaceAll('\r', ' ');
     final buffer = StringBuffer();
-    for (int i = 0; i < input.length; i++) {
-      final code = input.codeUnitAt(i);
+    for (int i = 0; i < clean.length; i++) {
+      final code = clean.codeUnitAt(i);
       if (code > 127) {
         buffer.write('\\U+${code.toRadixString(16).padLeft(4, '0').toUpperCase()}');
       } else {
-        buffer.write(input[i]);
+        buffer.write(clean[i]);
       }
     }
     return buffer.toString();
   }
   /// Генерация 3D DXF файла (пространственные трубы, слои по системам, 3D-отметки)
-  static String generate3dDxf(PipingNetwork network, {Map<String, String>? calloutTemplates}) {
+  static String generate3dDxf(
+    PipingNetwork network, {
+    Map<String, String>? calloutTemplates,
+    DxfCalloutType calloutType = DxfCalloutType.monolithicBlock,
+    DxfCalloutOrientation calloutOrientation = DxfCalloutOrientation.cameraFacing,
+    AxonometryProjector? activeProjector,
+  }) {
     final buffer = StringBuffer();
+    final extVec = calloutOrientation.getExtrusionVector(activeProjector);
+    final calloutBlocks = _prepareCallouts3d(
+      network,
+      calloutTemplates ?? defaultCalloutTemplates,
+      calloutType: calloutType,
+      calloutOrientation: calloutOrientation,
+      extrusionVector: extVec,
+    );
 
     _writeHeader(buffer);
     _writeLayers(buffer, network);
-    _writeBlocks(buffer);
+    if (calloutType == DxfCalloutType.monolithicBlock) {
+      _writeBlocks(buffer, calloutBlocks);
+    } else {
+      _writeBlocks(buffer, const []);
+    }
 
     buffer.writeln('  0\nSECTION\n  2\nENTITIES');
 
@@ -172,11 +192,12 @@ class DxfWriter {
       }
     }
 
-    // 7. Строительные оси в 3D
+    // 7. Строительные и вспомогательные оси в 3D
     for (final axis in network.axes.values) {
+      final layer = axis.isBuildingGrid ? 'АКСО_ОСИ' : 'АКСО_ВСПОМОГАТЕЛЬНЫЕ';
       _write3dLine(
         buffer,
-        layer: 'АКСО_ОСИ',
+        layer: layer,
         x1: axis.startPoint.x,
         y1: axis.startPoint.y,
         z1: axis.startPoint.z,
@@ -185,7 +206,7 @@ class DxfWriter {
         z2: axis.endPoint.z,
       );
       if (axis.isBuildingGrid && axis.label.isNotEmpty) {
-        _writePoint(buffer, layer: 'АКСО_ОСИ', x: axis.startPoint.x, y: axis.startPoint.y, z: axis.startPoint.z);
+        _writePoint(buffer, layer: layer, x: axis.startPoint.x, y: axis.startPoint.y, z: axis.startPoint.z);
         _writeText(
           buffer,
           layer: 'АКСО_ОСИ_ТЕКСТ',
@@ -198,8 +219,35 @@ class DxfWriter {
       }
     }
 
-    // 8. Умные выноски (Callouts) в 3D
-    _writeCallouts3d(buffer, network, calloutTemplates ?? defaultCalloutTemplates);
+    // 8. Линейные размеры в 3D
+    for (final dim in network.dimensions.values) {
+      _write3dLine(
+        buffer,
+        layer: 'АКСО_РАЗМЕРЫ',
+        x1: dim.startPoint.x,
+        y1: dim.startPoint.y,
+        z1: dim.startPoint.z,
+        x2: dim.endPoint.x,
+        y2: dim.endPoint.y,
+        z2: dim.endPoint.z,
+      );
+      final midX = (dim.startPoint.x + dim.endPoint.x) / 2;
+      final midY = (dim.startPoint.y + dim.endPoint.y) / 2;
+      final midZ = (dim.startPoint.z + dim.endPoint.z) / 2 + 50.0;
+      _writeText(
+        buffer,
+        layer: 'АКСО_РАЗМЕРЫ_ТЕКСТ',
+        text: dim.displayText,
+        x: midX,
+        y: midY,
+        z: midZ,
+        height: 60.0,
+        align: 1,
+      );
+    }
+
+    // 9. Умные выноски (Callouts) в 3D
+    _writeCalloutEntities3d(buffer, calloutBlocks, calloutType, extVec);
 
     buffer.writeln('  0\nENDSEC\n  0\nEOF');
     return buffer.toString();
@@ -210,14 +258,16 @@ class DxfWriter {
   static String generate2dGostAxonometryDxf(
     PipingNetwork network, {
     ProjectionType projection = ProjectionType.gostFrontal45,
+    AxonometryProjector? activeProjector,
     Map<String, String>? calloutTemplates,
   }) {
     final buffer = StringBuffer();
-    final projector = AxonometryProjector(projectionType: projection, scale: 1.0);
+    final projector = activeProjector ?? AxonometryProjector(projectionType: projection, scale: 1.0);
+    final calloutBlocks = _prepareCallouts2d(network, projector, calloutTemplates ?? defaultCalloutTemplates);
 
     _writeHeader(buffer);
     _writeLayers(buffer, network);
-    _writeBlocks(buffer);
+    _writeBlocks(buffer, calloutBlocks);
 
     buffer.writeln('  0\nSECTION\n  2\nENTITIES');
 
@@ -420,14 +470,15 @@ class DxfWriter {
       }
     }
 
-    // 7. Строительные оси в 2D
+    // 7. Строительные и вспомогательные оси в 2D
     for (final axis in network.axes.values) {
+      final layer = axis.isBuildingGrid ? 'АКСО_ОСИ' : 'АКСО_ВСПОМОГАТЕЛЬНЫЕ';
       final p1 = _projectTo2d(projector, axis.startPoint);
       final p2 = _projectTo2d(projector, axis.endPoint);
-      _write2dLine(buffer, layer: 'АКСО_ОСИ', x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
+      _write2dLine(buffer, layer: layer, x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
       if (axis.isBuildingGrid && axis.label.isNotEmpty) {
         const circleR = 40.0;
-        _writeCircle(buffer, layer: 'АКСО_ОСИ', cx: p1.dx, cy: p1.dy, radius: circleR);
+        _writeCircle(buffer, layer: layer, cx: p1.dx, cy: p1.dy, radius: circleR);
         _writeText(
           buffer,
           layer: 'АКСО_ОСИ_ТЕКСТ',
@@ -440,8 +491,63 @@ class DxfWriter {
       }
     }
 
-    // 8. Умные выноски (Callouts) в 2D проекции
-    _writeCallouts2d(buffer, network, projector, calloutTemplates ?? defaultCalloutTemplates);
+    // 8. Линейные размеры по ГОСТ 2.307 в 2D
+    for (final dim in network.dimensions.values) {
+      final p1 = _projectTo2d(projector, dim.startPoint);
+      final p2 = _projectTo2d(projector, dim.endPoint);
+      final delta = p2 - p1;
+      final dist = delta.distance;
+      if (dist < 1.0) continue;
+
+      final u = delta / dist;
+      final n = Offset(-u.dy, u.dx);
+      final offsetDist = dim.offsetDistance == 0.0 ? 35.0 : dim.offsetDistance;
+      final offsetVec = n * offsetDist;
+
+      final d1 = p1 + offsetVec;
+      final d2 = p2 + offsetVec;
+
+      final overshoot = (offsetDist >= 0 ? 15.0 : -15.0);
+      final ext1End = d1 + n * overshoot;
+      final ext2End = d2 + n * overshoot;
+
+      // Выносные линии
+      _write2dLine(buffer, layer: 'АКСО_РАЗМЕРЫ', x1: p1.dx, y1: p1.dy, x2: ext1End.dx, y2: ext1End.dy);
+      _write2dLine(buffer, layer: 'АКСО_РАЗМЕРЫ', x1: p2.dx, y1: p2.dy, x2: ext2End.dx, y2: ext2End.dy);
+
+      // Размерная линия
+      _write2dLine(buffer, layer: 'АКСО_РАЗМЕРЫ', x1: d1.dx, y1: d1.dy, x2: d2.dx, y2: d2.dy);
+
+      // Строительные засечки ГОСТ под углом 45°
+      const tickLen = 20.0;
+      final tickDir = (u + n) / math.sqrt(2) * tickLen;
+      _write2dLine(buffer, layer: 'АКСО_РАЗМЕРЫ', x1: d1.dx - tickDir.dx, y1: d1.dy - tickDir.dy, x2: d1.dx + tickDir.dx, y2: d1.dy + tickDir.dy);
+      _write2dLine(buffer, layer: 'АКСО_РАЗМЕРЫ', x1: d2.dx - tickDir.dx, y1: d2.dy - tickDir.dy, x2: d2.dx + tickDir.dx, y2: d2.dy + tickDir.dy);
+
+      // Текст размера
+      final mid = (d1 + d2) / 2 + n * 12.0;
+      var rotDeg = math.atan2(delta.dy, delta.dx) * 180.0 / math.pi;
+      if (rotDeg > 90.0) {
+        rotDeg -= 180.0;
+      } else if (rotDeg < -90.0) {
+        rotDeg += 180.0;
+      }
+
+      _writeText(
+        buffer,
+        layer: 'АКСО_РАЗМЕРЫ_ТЕКСТ',
+        text: dim.displayText,
+        x: mid.dx,
+        y: mid.dy,
+        z: 0.0,
+        height: 35.0,
+        align: 1,
+        rotation: rotDeg,
+      );
+    }
+
+    // 9. Умные выноски (Callouts) в 2D проекции (AutoCAD BLOCKS + INSERT + ATTRIB)
+    _writeCalloutEntities(buffer, calloutBlocks);
 
     buffer.writeln('  0\nENDSEC\n  0\nEOF');
     return buffer.toString();
@@ -573,28 +679,7 @@ class DxfWriter {
   }
 
   static Offset _projectTo2d(AxonometryProjector projector, Node3D node) {
-    // В CAD Y направлен вверх
-    double rawX2d = 0.0;
-    double rawY2d = 0.0;
-
-    const cos45 = 0.70710678118;
-    const sin45 = 0.70710678118;
-
-    if (projector.projectionType == ProjectionType.gostMirrored45) {
-      rawX2d = -node.y + (node.x * 0.5 * cos45);
-      rawY2d = node.z - (node.x * 0.5 * sin45);
-    } else if (projector.projectionType == ProjectionType.iso30) {
-      const cos30 = 0.86602540378;
-      const sin30 = 0.5;
-      rawX2d = (node.y - node.x) * cos30;
-      rawY2d = node.z + (node.x + node.y) * sin30;
-    } else {
-      // Стандартный ГОСТ 45°
-      rawX2d = node.y - (node.x * 0.5 * cos45);
-      rawY2d = node.z - (node.x * 0.5 * sin45);
-    }
-
-    return Offset(rawX2d, rawY2d);
+    return projector.projectRaw(node.x, node.y, node.z);
   }
 
   static void _writeHeader(StringBuffer b) {
@@ -610,33 +695,49 @@ class DxfWriter {
     b.writeln('  0\nLTYPE\n  2\nDASHDOT\n 70\n0\n  3\nDash dot\n 72\n65\n 73\n4\n 40\n19.05\n 49\n12.7\n 49\n-3.175\n 49\n0.0\n 49\n-3.175');
     b.writeln('  0\nENDTAB');
 
+    // Таблица стилей текста (STYLE) с поддержкой кириллицы (Arial)
+    b.writeln('  0\nTABLE\n  2\nSTYLE\n 70\n1');
+    b.writeln('  0\nSTYLE\n  2\nSTANDARD\n 70\n0\n 40\n0.0\n 41\n1.0\n 50\n0.0\n 71\n0\n 42\n2.5\n  3\narial.ttf\n  4\n');
+    b.writeln('  0\nENDTAB');
+
     // Таблица слоев (LAYER)
-    final layerCount = 18 + net.systems.length;
-    b.writeln('  0\nTABLE\n  2\nLAYER\n 70\n$layerCount');
+    final layers = <_LayerDef>[
+      const _LayerDef('0', 7),
+      const _LayerDef('АКСО_ТРУБЫ', 7),
+      const _LayerDef('АКСО_ОТМЕТКИ', 2),
+      const _LayerDef('АКСО_ОТМЕТКИ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_СВАРКА', 1),
+      const _LayerDef('АКСО_СВАРКА_ВЫНОСКИ', 1),
+      const _LayerDef('АКСО_СВАРКА_ТЕКСТ', 7),
+      const _LayerDef('АКСО_АРМАТУРА', 3),
+      const _LayerDef('АКСО_ДИАМЕТРЫ', 4),
+      const _LayerDef('АКСО_УКЛОНЫ', 30),
+      const _LayerDef('АКСО_ПЕРЕХОДЫ', 5),
+      const _LayerDef('АКСО_ПЕРЕХОДЫ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ФЛАНЦЫ', 6),
+      const _LayerDef('АКСО_ФЛАНЦЫ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ВРЕЗКИ', 1),
+      const _LayerDef('АКСО_ОСИ', 8, 'DASHDOT'),
+      const _LayerDef('АКСО_ОСИ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ВСПОМОГАТЕЛЬНЫЕ', 4, 'DASHDOT'),
+      const _LayerDef('АКСО_РАЗМЕРЫ', 3),
+      const _LayerDef('АКСО_РАЗМЕРЫ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ВЫНОСКИ', 7),
+      const _LayerDef('АКСО_ВЫНОСКИ_ТЕКСТ', 4),
+    ];
 
-    // Базовые слои
-    _writeLayerEntry(b, '0', 7);
-    _writeLayerEntry(b, 'АКСО_ОТМЕТКИ', 2); // Yellow
-    _writeLayerEntry(b, 'АКСО_ОТМЕТКИ_ТЕКСТ', 7);
-    _writeLayerEntry(b, 'АКСО_СВАРКА', 1); // Red
-    _writeLayerEntry(b, 'АКСО_СВАРКА_ВЫНОСКИ', 1);
-    _writeLayerEntry(b, 'АКСО_СВАРКА_ТЕКСТ', 7);
-    _writeLayerEntry(b, 'АКСО_АРМАТУРА', 3); // Green
-    _writeLayerEntry(b, 'АКСО_ДИАМЕТРЫ', 4); // Cyan
-    _writeLayerEntry(b, 'АКСО_УКЛОНЫ', 30); // Orange
-    _writeLayerEntry(b, 'АКСО_ПЕРЕХОДЫ', 5); // Blue
-    _writeLayerEntry(b, 'АКСО_ПЕРЕХОДЫ_ТЕКСТ', 7);
-    _writeLayerEntry(b, 'АКСО_ФЛАНЦЫ', 6); // Magenta
-    _writeLayerEntry(b, 'АКСО_ФЛАНЦЫ_ТЕКСТ', 7);
-    _writeLayerEntry(b, 'АКСО_ВРЕЗКИ', 1); // Red
-    _writeLayerEntry(b, 'АКСО_ОСИ', 8, 'DASHDOT'); // Gray Dash-dot
-    _writeLayerEntry(b, 'АКСО_ОСИ_ТЕКСТ', 7);
-    _writeLayerEntry(b, 'АКСО_ВЫНОСКИ', 7); // White (callout leader lines)
-    _writeLayerEntry(b, 'АКСО_ВЫНОСКИ_ТЕКСТ', 4); // Cyan (callout text)
-
-    // Слои для систем
     for (final sys in net.systems.values) {
-      _writeLayerEntry(b, 'АКСО_${sys.code}', sys.dxfAciColor);
+      layers.add(_LayerDef('АКСО_${sys.code}', sys.dxfAciColor));
+    }
+
+    final uniqueLayers = <String, _LayerDef>{};
+    for (final l in layers) {
+      uniqueLayers.putIfAbsent(l.name, () => l);
+    }
+
+    b.writeln('  0\nTABLE\n  2\nLAYER\n 70\n${uniqueLayers.length}');
+    for (final l in uniqueLayers.values) {
+      _writeLayerEntry(b, l.name, l.aciColor, l.linetype);
     }
 
     b.writeln('  0\nENDTAB\n  0\nENDSEC');
@@ -646,8 +747,60 @@ class DxfWriter {
     b.writeln('  0\nLAYER\n  2\n${toAutoCadString(name)}\n 70\n0\n 62\n$aciColor\n  6\n$linetype');
   }
 
-  static void _writeBlocks(StringBuffer b) {
-    b.writeln('  0\nSECTION\n  2\nBLOCKS\n  0\nENDSEC');
+  static void _writeBlocks(StringBuffer b, [List<_DxfCalloutBlockDef> blocks = const []]) {
+    b.writeln('  0\nSECTION\n  2\nBLOCKS');
+    for (final blk in blocks) {
+      final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
+      final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
+
+      if (blk.isMonolithic) {
+        // Монолитный блок: базовая точка (0, 0, 0) строго на трубе (anchor)!
+        // Вся выноска (маркер, ножка, полочка, текст) собрана в ЕДИНЫЙ монолитный блок.
+        // Ни полочка, ни текст, ни ножка не могут оторваться или разделиться.
+        b.writeln(
+          '  0\nBLOCK\n  8\n0\n  2\n${blk.blockName}\n 70\n0\n 10\n0.0\n 20\n0.0\n 30\n0.0\n  3\n${blk.blockName}',
+        );
+        // 1. Маркер привязки к трубе (кружок в начале ножки)
+        b.writeln(
+          '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius.toStringAsFixed(1)}',
+        );
+        // 2. Ножка выноски от точки привязки к излому
+        b.writeln(
+          '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+        );
+        // 3. Горизонтальная полочка
+        b.writeln(
+          '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localShelfEndX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+        );
+        // 4. Текст на полочке
+        b.writeln(
+          '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${blk.localTextY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}',
+        );
+        b.writeln('  0\nENDBLK\n  8\n0');
+      } else {
+        b.writeln(
+          '  0\nBLOCK\n  8\n0\n  2\n${blk.blockName}\n 70\n0\n 10\n0.0\n 20\n0.0\n 30\n0.0\n  3\n${blk.blockName}',
+        );
+        // Кружок в точке привязки
+        b.writeln(
+          '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius}',
+        );
+        // Наклонная ножка выноски
+        b.writeln(
+          '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx}\n 21\n${blk.dy}\n 31\n${blk.dz}',
+        );
+        // Горизонтальная полочка
+        b.writeln(
+          '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx}\n 20\n${blk.dy}\n 30\n${blk.dz}\n 11\n${blk.shelfEndX}\n 21\n${blk.dy}\n 31\n${blk.dz}',
+        );
+        // Определение атрибута текста (ATTDEF)
+        b.writeln(
+          '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n${blk.textY}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n  3\n${toAutoCadString("Текст выноски")}\n 70\n0',
+        );
+        b.writeln('  0\nENDBLK\n  8\n0');
+      }
+    }
+    b.writeln('  0\nENDSEC');
   }
 
   static void _write3dLine(
@@ -683,10 +836,11 @@ class DxfWriter {
     required String layer,
     required double cx,
     required double cy,
+    double cz = 0.0,
     required double radius,
   }) {
     b.writeln(
-      '  0\nCIRCLE\n  8\n${toAutoCadString(layer)}\n 10\n$cx\n 20\n$cy\n 30\n0.0\n 40\n$radius',
+      '  0\nCIRCLE\n  8\n${toAutoCadString(layer)}\n 10\n$cx\n 20\n$cy\n 30\n$cz\n 40\n$radius',
     );
   }
 
@@ -709,10 +863,11 @@ class DxfWriter {
     required double z,
     required double height,
     int align = 0, // 0 = left, 1 = center
+    double rotation = 0.0,
   }) {
     if (text.isEmpty) return;
     b.writeln(
-      '  0\nTEXT\n  8\n${toAutoCadString(layer)}\n 10\n$x\n 20\n$y\n 30\n$z\n 40\n$height\n  1\n${toAutoCadString(text)}\n 72\n$align\n 11\n$x\n 21\n$y\n 31\n$z',
+      '  0\nTEXT\n  8\n${toAutoCadString(layer)}\n 10\n$x\n 20\n$y\n 30\n$z\n 40\n$height\n  1\n${toAutoCadString(text)}\n 72\n$align\n 11\n$x\n 21\n$y\n 31\n$z${rotation != 0.0 ? '\n 50\n$rotation' : ''}',
     );
   }
 
@@ -851,64 +1006,127 @@ class DxfWriter {
     );
   }
 
-  // --- Экспорт Callouts (Умные Выноски) ---
+  // --- Экспорт Callouts (Умные Выноски как аннотационные блоки AutoCAD) ---
 
-  /// Экспорт умных выносок в 3D DXF (TEXT + LINE на слоях АКСО_ВЫНОСКИ / АКСО_ВЫНОСКИ_ТЕКСТ)
-  static void _writeCallouts3d(
-    StringBuffer buffer,
+
+  /// Подготовка определений блоков выносок для 3D DXF
+  static List<_DxfCalloutBlockDef> _prepareCallouts3d(
     PipingNetwork network,
-    Map<String, String> templates,
-  ) {
-    for (final callout in network.callouts.values) {
+    Map<String, String> templates, {
+    DxfCalloutType calloutType = DxfCalloutType.monolithicBlock,
+    DxfCalloutOrientation calloutOrientation = DxfCalloutOrientation.cameraFacing,
+    ({double nx, double ny, double nz}) extrusionVector = (nx: 0.0, ny: 0.0, nz: 1.0),
+  }) {
+    final blocks = <_DxfCalloutBlockDef>[];
+    int idx = 0;
+
+    // Собираем выноски: если пользователь еще не создал выноски в проекте,
+    // автоматически генерируем 3D-выноски для сегментов, чтобы трубы в 3D не оставались без подписей
+    final sourceCallouts = <Callout>[];
+    if (network.callouts.isNotEmpty) {
+      sourceCallouts.addAll(network.callouts.values);
+    } else {
+      for (final seg in network.segments.values) {
+        sourceCallouts.add(Callout(
+          id: 'auto_seg_${seg.id}',
+          targetId: seg.id,
+          targetType: CalloutTargetType.segment,
+          screenOffsetX: 50.0,
+          screenOffsetY: -50.0,
+        ));
+      }
+    }
+
+    final double axX, axY;
+    if (extrusionVector.nx.abs() < 1 / 64 && extrusionVector.ny.abs() < 1 / 64) {
+      axX = 1.0;
+      axY = 0.0;
+    } else {
+      axX = -extrusionVector.ny;
+      axY = extrusionVector.nx;
+    }
+
+    for (final callout in sourceCallouts) {
       final anchor = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor == null) continue;
 
       final text = network.generateCalloutText(callout, templates);
       if (text.isEmpty) continue;
 
-      // Смещение текста (конвертируем экранные пиксели в мировые мм, грубый масштаб)
-      const screenToWorld = 5.0; // 1 px ≈ 5 мм в мировых координатах
-      final textX = anchor.x + callout.screenOffsetX * screenToWorld;
-      final textY = anchor.y;
-      final textZ = anchor.z + callout.screenOffsetY.abs() * screenToWorld;
+      final userDist = math.sqrt(callout.screenOffsetX * callout.screenOffsetX + callout.screenOffsetY * callout.screenOffsetY);
+      final scale = (userDist * 3.5).clamp(200.0, 700.0);
+      final isRight = callout.screenOffsetX >= 0;
+      final shelfLen = math.max(140.0, text.length * 35.0);
 
-      // Ножка выноски (наклонная линия от объекта до излома)
-      _write3dLine(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ',
-        x1: anchor.x, y1: anchor.y, z1: anchor.z,
-        x2: textX, y2: textY, z2: textZ,
-      );
+      // Локальные координаты выноски в плоскости, повернутой лицом к камере/ракурсу:
+      // Локальная ось X направлена горизонтально по экрану (axX, axY, 0)
+      // Локальная ось Y направлена вертикально вверх по оси Z (0, 0, 1)
+      final localElbowX = isRight ? scale * 0.7 : -scale * 0.7;
+      final localElbowY = math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0);
+      final localShelfEndX = isRight ? localElbowX + shelfLen : localElbowX - shelfLen;
+      final localTextX = isRight ? localElbowX + 10.0 : localElbowX - shelfLen + 10.0;
+      final localTextY = localElbowY + 15.0;
 
-      // Горизонтальная полочка
-      final shelfLen = text.length * 40.0; // примерная ширина текста
-      _write3dLine(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ',
-        x1: textX, y1: textY, z1: textZ,
-        x2: textX + shelfLen, y2: textY, z2: textZ,
-      );
+      // Мировые 3D-координаты точки излома (WCS)
+      final double elbowX, elbowY, elbowZ;
+      if (extrusionVector.nx.abs() < 1 / 64 && extrusionVector.ny.abs() < 1 / 64) {
+        // Вид сверху (план XY)
+        elbowX = anchor.x + localElbowX;
+        elbowY = anchor.y + localElbowY;
+        elbowZ = anchor.z;
+      } else {
+        // Вертикальная плоскость (аксонометрия, изометрия, фасад)
+        elbowX = anchor.x + localElbowX * axX;
+        elbowY = anchor.y + localElbowX * axY;
+        elbowZ = anchor.z + localElbowY;
+      }
 
-      // Текст над полочкой
-      _writeText(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+      idx++;
+      blocks.add(_DxfCalloutBlockDef(
+        blockName: 'CALLOUT_SHELF_$idx',
         text: text,
-        x: textX + 10.0,
-        y: textY,
-        z: textZ + 15.0,
-        height: 50.0,
-      );
+        dx: elbowX - anchor.x,
+        dy: elbowY - anchor.y,
+        dz: elbowZ - anchor.z,
+        shelfEndX: elbowX - anchor.x + (isRight ? shelfLen : -shelfLen),
+        textX: localTextX,
+        textY: localTextY,
+        textZ: 0.0,
+        localElbowX: localElbowX,
+        localElbowY: localElbowY,
+        localShelfEndX: localShelfEndX,
+        localTextX: localTextX,
+        localTextY: localTextY,
+        textHeight: 45.0,
+        circleRadius: 12.0,
+        anchorX: anchor.x,
+        anchorY: anchor.y,
+        anchorZ: anchor.z,
+        elbowX: elbowX,
+        elbowY: elbowY,
+        elbowZ: elbowZ,
+        shelfLen: shelfLen,
+        isRight: isRight,
+        isMonolithic: calloutType == DxfCalloutType.monolithicBlock,
+        nx: extrusionVector.nx,
+        ny: extrusionVector.ny,
+        nz: extrusionVector.nz,
+      ));
     }
+    return blocks;
   }
 
-  /// Экспорт умных выносок в 2D ГОСТ DXF (LINE + TEXT с ножкой и полочкой)
-  static void _writeCallouts2d(
-    StringBuffer buffer,
+  /// Подготовка определений блоков выносок для 2D аксонометрии / проекции
+  static List<_DxfCalloutBlockDef> _prepareCallouts2d(
     PipingNetwork network,
     AxonometryProjector projector,
     Map<String, String> templates,
   ) {
+    final blocks = <_DxfCalloutBlockDef>[];
+    int idx = 0;
+    final effectiveScale = projector.scale > 0.001 ? (1.0 / projector.scale) : 5.0;
+    final px2cad = effectiveScale.clamp(1.0, 25.0);
+
     for (final callout in network.callouts.values) {
       final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;
@@ -917,59 +1135,308 @@ class DxfWriter {
       if (text.isEmpty) continue;
 
       final anchorScreen = _projectTo2d(projector, anchor3D);
-
-      // Конвертируем экранное смещение выноски в 2D CAD координаты
-      // Масштаб: screenOffset пиксели → мировые единицы (1 px ≈ 5 мм)
-      const px2cad = 5.0;
-      final textPos = Offset(
-        anchorScreen.dx + callout.screenOffsetX * px2cad,
-        anchorScreen.dy - callout.screenOffsetY * px2cad, // Инвертируем Y (в CAD Y↑)
-      );
-
-      // Ножка выноски (наклонная от точки привязки до излома)
-      _write2dLine(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ',
-        x1: anchorScreen.dx,
-        y1: anchorScreen.dy,
-        x2: textPos.dx,
-        y2: textPos.dy,
-      );
-
-      // Горизонтальная полочка
-      final shelfLen = text.length * 35.0;
+      final dx = callout.screenOffsetX * px2cad;
+      final dy = -callout.screenOffsetY * px2cad; // Инвертируем Y для CAD (Y вверх)
+      final shelfLen = math.max(100.0, text.length * 35.0);
       final isRight = callout.screenOffsetX >= 0;
-      final shelfEndX = isRight ? textPos.dx + shelfLen : textPos.dx - shelfLen;
+      final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
+      final textX = isRight ? dx + 10.0 : dx - shelfLen + 10.0;
+      final textY = dy + 15.0;
 
-      _write2dLine(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ',
-        x1: textPos.dx,
-        y1: textPos.dy,
-        x2: shelfEndX,
-        y2: textPos.dy,
-      );
-
-      // Текст над полочкой (редактируемый TEXT в AutoCAD)
-      final textLeft = isRight ? textPos.dx + 10.0 : textPos.dx - shelfLen + 10.0;
-      _writeText(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+      idx++;
+      blocks.add(_DxfCalloutBlockDef(
+        blockName: 'CALLOUT_2D_$idx',
         text: text,
-        x: textLeft,
-        y: textPos.dy + 15.0,
-        z: 0.0,
-        height: 40.0,
-      );
+        dx: dx,
+        dy: dy,
+        dz: 0.0,
+        shelfEndX: shelfEndX,
+        textX: textX,
+        textY: textY,
+        textZ: 0.0,
+        textHeight: 40.0,
+        circleRadius: 8.0,
+        anchorX: anchorScreen.dx,
+        anchorY: anchorScreen.dy,
+        anchorZ: 0.0,
+      ));
+    }
+    return blocks;
+  }
 
-      // Кружок в точке привязки (как по ГОСТ 2.316)
-      _writeCircle(
-        buffer,
-        layer: 'АКСО_ВЫНОСКИ',
-        cx: anchorScreen.dx,
-        cy: anchorScreen.dy,
-        radius: 8.0,
-      );
+  /// Преобразование точки WCS (мировые координаты) в OCS (объектная система координат AutoCAD)
+  /// для сущностей с вектором выдавливания 210, 220, 230 по алгоритму Arbitrary Axis Algorithm (AutoCAD)
+  static ({double x, double y, double z}) _wcsToOcs(
+    double wx,
+    double wy,
+    double wz,
+    ({double nx, double ny, double nz}) normal,
+  ) {
+    if (normal.nx.abs() < 1 / 64 && normal.ny.abs() < 1 / 64) {
+      if (normal.nz < 0) {
+        return (x: -wx, y: wy, z: -wz);
+      }
+      return (x: wx, y: wy, z: wz);
+    }
+
+    // Arbitrary Axis Algorithm (спецификация AutoCAD DXF):
+    // Wy = (0, 0, 1)
+    // Ax = (Wy x N) / |Wy x N| = (-Ny, Nx, 0) / sqrt(Nx^2 + Ny^2)
+    final lenAx = math.sqrt(normal.nx * normal.nx + normal.ny * normal.ny);
+    final axX = -normal.ny / lenAx;
+    final axY = normal.nx / lenAx;
+    const axZ = 0.0;
+
+    // Ay = N x Ax = (Ny*0 - Nz*axY, Nz*axX - Nx*0, Nx*axY - Ny*axX)
+    final ayX = -normal.nz * axY;
+    final ayY = normal.nz * axX;
+    final ayZ = normal.nx * axY - normal.ny * axX;
+
+    // Скалярные произведения вектора WCS с базисными векторами OCS (Ax, Ay, Az)
+    final ox = wx * axX + wy * axY + wz * axZ;
+    final oy = wx * ayX + wy * ayY + wz * ayZ;
+    final oz = wx * normal.nx + wy * normal.ny + wz * normal.nz;
+
+    return (x: ox, y: oy, z: oz);
+  }
+
+  /// Запись сущностей 3D-выносок в секцию ENTITIES в зависимости от выбранного DxfCalloutType
+  static void _writeCalloutEntities3d(
+    StringBuffer b,
+    List<_DxfCalloutBlockDef> blocks,
+    DxfCalloutType calloutType,
+    ({double nx, double ny, double nz}) extVec,
+  ) {
+    final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
+    final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
+
+    for (final blk in blocks) {
+      if (calloutType == DxfCalloutType.monolithicBlock) {
+        // Способ 1: Вставка монолитного блока
+        // Базовая точка блока (0, 0, 0) в точке привязки на трубе (anchor).
+        // Внутри блока: маркер привязки + ножка + полочка + текст!
+        // Вектор выдавливания (210, 220, 230) ориентирует весь блок лицом к камере/ракурсу.
+        // ВАЖНО: В AutoCAD для INSERT с вектором 210, 220, 230 координаты 10, 20, 30 задаются в OCS!
+        final ocsAnchor = _wcsToOcs(blk.anchorX, blk.anchorY, blk.anchorZ, extVec);
+        b.writeln(
+          '  0\nINSERT\n  8\n$calloutLayer\n  2\n${blk.blockName}\n 10\n${ocsAnchor.x.toStringAsFixed(3)}\n 20\n${ocsAnchor.y.toStringAsFixed(3)}\n 30\n${ocsAnchor.z.toStringAsFixed(3)}\n210\n${extVec.nx.toStringAsFixed(6)}\n220\n${extVec.ny.toStringAsFixed(6)}\n230\n${extVec.nz.toStringAsFixed(6)}',
+        );
+      } else if (calloutType == DxfCalloutType.mleaderScript) {
+        // Способ 3: Нативные МВЫНОСКИ (AcDbMLeader) через скрипт AutoCAD
+        // В сам DXF НЕ пишем фиктивные палочки и разрозненный текст, чтобы в чертеже
+        // не оставалось дублирующего мусора. Мультивыноски со стрелками и авто-полками
+        // создаются через сопровождающий файл скрипта .scr.
+        continue;
+      } else {
+        // Способ 2: Раздельные примитивы (nativeLeader)
+        // 1. Маркер точки привязки на трубе (кружок на высоте трубы)
+        _writeCircle(
+          b,
+          layer: 'АКСО_ВЫНОСКИ',
+          cx: blk.anchorX,
+          cy: blk.anchorY,
+          cz: blk.anchorZ,
+          radius: blk.circleRadius,
+        );
+
+        // 2. Ножка выноски от трубы к излому
+        _write3dLine(
+          b,
+          layer: 'АКСО_ВЫНОСКИ',
+          x1: blk.anchorX,
+          y1: blk.anchorY,
+          z1: blk.anchorZ,
+          x2: blk.elbowX,
+          y2: blk.elbowY,
+          z2: blk.elbowZ,
+        );
+
+        final double axX, axY;
+        if (extVec.nx.abs() < 1 / 64 && extVec.ny.abs() < 1 / 64) {
+          axX = 1.0;
+          axY = 0.0;
+        } else {
+          axX = -extVec.ny;
+          axY = extVec.nx;
+        }
+
+        final shelfSigned = blk.isRight ? blk.shelfLen : -blk.shelfLen;
+        final shelfEndX = blk.elbowX + shelfSigned * axX;
+        final shelfEndY = blk.elbowY + shelfSigned * axY;
+        final shelfEndZ = blk.elbowZ;
+
+        // 3. Полочка выноски
+        _write3dLine(
+          b,
+          layer: 'АКСО_ВЫНОСКИ',
+          x1: blk.elbowX,
+          y1: blk.elbowY,
+          z1: blk.elbowZ,
+          x2: shelfEndX,
+          y2: shelfEndY,
+          z2: shelfEndZ,
+        );
+
+        if (extVec.nx.abs() < 1 / 64 && extVec.ny.abs() < 1 / 64) {
+          // Горизонтальный текст (план сверху XY)
+          final textX = blk.isRight ? blk.elbowX + 10.0 : blk.elbowX - blk.shelfLen + 10.0;
+          final textY = blk.elbowY + 15.0;
+          final textZ = blk.elbowZ;
+          _writeText(
+            b,
+            layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+            text: blk.text,
+            x: textX,
+            y: textY,
+            z: textZ,
+            height: blk.textHeight,
+          );
+        } else {
+          // Вертикальный текст по Z, развернутый лицом к нормали extVec
+          final textWorldDist = blk.isRight ? 10.0 : -blk.shelfLen + 10.0;
+          final textWorldX = blk.elbowX + textWorldDist * axX;
+          final textWorldY = blk.elbowY + textWorldDist * axY;
+          final textWorldZ = blk.elbowZ + 15.0;
+
+          final ocsText = _wcsToOcs(textWorldX, textWorldY, textWorldZ, extVec);
+
+          b.writeln(
+            '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${ocsText.x.toStringAsFixed(3)}\n 20\n${ocsText.y.toStringAsFixed(3)}\n 30\n${ocsText.z.toStringAsFixed(3)}\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}\n210\n${extVec.nx.toStringAsFixed(6)}\n220\n${extVec.ny.toStringAsFixed(6)}\n230\n${extVec.nz.toStringAsFixed(6)}',
+          );
+        }
+      }
     }
   }
+
+  /// Генерация скрипта команд AutoCAD (.scr) для создания нативных МВЫНОСОК (AcDbMLeader)
+  static String generateMleaderScript(
+    PipingNetwork network, {
+    Map<String, String>? calloutTemplates,
+    DxfCalloutOrientation calloutOrientation = DxfCalloutOrientation.cameraFacing,
+    AxonometryProjector? activeProjector,
+  }) {
+    final templates = calloutTemplates ?? defaultCalloutTemplates;
+    final buffer = StringBuffer();
+    // UTF-8 BOM для гарантированного распознавания кодировки кириллицы в AutoCAD (без зависаний)
+    buffer.write('\uFEFF');
+    buffer.writeln(';; Akso Piping Network MLEADER Script for AutoCAD');
+    buffer.writeln('(setvar "CMDECHO" 0)');
+    buffer.writeln('(setvar "OSMODE" 0)');
+    buffer.writeln('(command "_.LAYER" "_M" "АКСО_ВЫНОСКИ" "")');
+
+    final extVec = calloutOrientation.getExtrusionVector(activeProjector);
+    final blocks = _prepareCallouts3d(
+      network,
+      templates,
+      calloutType: DxfCalloutType.mleaderScript,
+      calloutOrientation: calloutOrientation,
+      extrusionVector: extVec,
+    );
+
+    for (final blk in blocks) {
+      final cleanText = blk.text
+          .replaceAll('\\', '\\\\')
+          .replaceAll('"', '\\"')
+          .replaceAll('\r\n', ' ')
+          .replaceAll('\n', ' ')
+          .replaceAll('\r', ' ');
+      buffer.writeln(
+        '(command "_.MLEADER" "_non" (list ${blk.anchorX.toStringAsFixed(1)} ${blk.anchorY.toStringAsFixed(1)} ${blk.anchorZ.toStringAsFixed(1)}) "_non" (list ${blk.elbowX.toStringAsFixed(1)} ${blk.elbowY.toStringAsFixed(1)} ${blk.elbowZ.toStringAsFixed(1)}) "$cleanText")',
+      );
+    }
+
+    buffer.writeln('(setvar "CMDECHO" 1)');
+    buffer.writeln('(princ "\\nAkso: All MLEADERs created successfully!\\n")');
+    buffer.writeln('(princ)');
+    return buffer.toString();
+  }
+
+  /// Запись сущностей вставки блоков выносок в секцию ENTITIES (INSERT + ATTRIB + SEQEND)
+  static void _writeCalloutEntities(StringBuffer b, List<_DxfCalloutBlockDef> blocks) {
+    final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
+    final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
+    for (final blk in blocks) {
+      b.writeln(
+        '  0\nINSERT\n  8\n$calloutLayer\n  2\n${blk.blockName}\n 10\n${blk.anchorX}\n 20\n${blk.anchorY}\n 30\n${blk.anchorZ}\n 66\n1',
+      );
+      final worldTextX = blk.anchorX + blk.textX;
+      final worldTextY = blk.anchorY + blk.textY;
+      final worldTextZ = blk.anchorZ + blk.textZ;
+      b.writeln(
+        '  0\nATTRIB\n  8\n$calloutTextLayer\n 10\n$worldTextX\n 20\n$worldTextY\n 30\n$worldTextZ\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n 70\n0',
+      );
+      b.writeln('  0\nSEQEND\n  8\n$calloutLayer');
+    }
+  }
+}
+
+/// Вспомогательный класс описания геометрии блока выноски AutoCAD
+class _DxfCalloutBlockDef {
+  final String blockName;
+  final String text;
+  final double dx;
+  final double dy;
+  final double dz;
+  final double shelfEndX;
+  final double textX;
+  final double textY;
+  final double textZ;
+  final double localElbowX;
+  final double localElbowY;
+  final double localShelfEndX;
+  final double localTextX;
+  final double localTextY;
+  final double textHeight;
+  final double circleRadius;
+  final double anchorX;
+  final double anchorY;
+  final double anchorZ;
+  final double elbowX;
+  final double elbowY;
+  final double elbowZ;
+  final double shelfLen;
+  final bool isRight;
+  final bool isMonolithic;
+  final double nx;
+  final double ny;
+  final double nz;
+
+  const _DxfCalloutBlockDef({
+    required this.blockName,
+    required this.text,
+    required this.dx,
+    required this.dy,
+    required this.dz,
+    required this.shelfEndX,
+    required this.textX,
+    required this.textY,
+    required this.textZ,
+    this.localElbowX = 0.0,
+    this.localElbowY = 0.0,
+    this.localShelfEndX = 0.0,
+    this.localTextX = 0.0,
+    this.localTextY = 0.0,
+    required this.textHeight,
+    required this.circleRadius,
+    required this.anchorX,
+    required this.anchorY,
+    required this.anchorZ,
+    this.elbowX = 0.0,
+    this.elbowY = 0.0,
+    this.elbowZ = 0.0,
+    this.shelfLen = 140.0,
+    this.isRight = true,
+    this.isMonolithic = false,
+    this.nx = 0.0,
+    this.ny = 0.0,
+    this.nz = 1.0,
+  });
+}
+
+class _LayerDef {
+  final String name;
+  final int aciColor;
+  final String linetype;
+
+  const _LayerDef(this.name, this.aciColor, [this.linetype = 'CONTINUOUS']);
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/models/callout.dart';
 import '../../../canvas/input_controller.dart';
 
@@ -371,6 +372,10 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.equipment:
         final eq = net.equipments[callout.targetId];
         return eq != null ? eq.name : callout.targetId;
+      case CalloutTargetType.fitting:
+        final f = net.fittings[callout.targetId] ??
+            net.fittings.values.where((fit) => fit.id == callout.targetId).firstOrNull;
+        return f != null ? (f.name ?? f.fittingType.displayName) : callout.targetId;
       case CalloutTargetType.support:
         final sup = net.supports[callout.targetId];
         return sup != null ? sup.name : callout.targetId;
@@ -387,6 +392,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         return Colors.amber.shade900;
       case CalloutTargetType.weld:
         return Colors.deepPurple.shade700;
+      case CalloutTargetType.fitting:
+        return Colors.indigo.shade700;
       case CalloutTargetType.equipment:
         return Colors.teal.shade700;
       case CalloutTargetType.support:
