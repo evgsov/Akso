@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
@@ -171,11 +172,12 @@ class CalloutPainter {
     );
 
     final effectiveTemplates = templates ?? project?.calloutTemplates ?? defaultCalloutTemplates;
-    final text = network.generateCalloutText(callout, effectiveTemplates);
+    final topText = network.generateCalloutText(callout, effectiveTemplates);
+    final bottomText = network.generateCalloutBottomText(callout, effectiveTemplates);
 
-    final tp = TextPainter(
+    final topTp = TextPainter(
       text: TextSpan(
-        text: text,
+        text: topText,
         style: TextStyle(
           fontSize: callout.textHeight,
           fontFamily: 'monospace',
@@ -185,20 +187,39 @@ class CalloutPainter {
       textDirection: TextDirection.ltr,
     )..layout();
 
+    double bottomHeight = 0.0;
+    double maxTextWidth = topTp.width;
+    if (bottomText != null && bottomText.trim().isNotEmpty) {
+      final bottomTp = TextPainter(
+        text: TextSpan(
+          text: bottomText,
+          style: TextStyle(
+            fontSize: callout.textHeight * 0.9,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      bottomHeight = bottomTp.height + 4.0;
+      maxTextWidth = math.max(maxTextWidth, bottomTp.width);
+    }
+
+    final totalHeight = topTp.height + 6.0 + bottomHeight;
     final isRight = callout.screenOffsetX >= 0;
     if (isRight) {
       return Rect.fromLTWH(
         textPos.dx,
-        textPos.dy - tp.height - 4.0,
-        tp.width + 10.0,
-        tp.height + 6.0,
+        textPos.dy - topTp.height - 4.0,
+        maxTextWidth + 10.0,
+        totalHeight,
       );
     } else {
       return Rect.fromLTWH(
-        textPos.dx - tp.width - 10.0,
-        textPos.dy - tp.height - 4.0,
-        tp.width + 10.0,
-        tp.height + 6.0,
+        textPos.dx - maxTextWidth - 10.0,
+        textPos.dy - topTp.height - 4.0,
+        maxTextWidth + 10.0,
+        totalHeight,
       );
     }
   }
@@ -242,14 +263,15 @@ class CalloutPainter {
       anchorScreen.dy + callout.screenOffsetY,
     );
 
-    final text = network.generateCalloutText(callout, templates);
+    final topText = network.generateCalloutText(callout, templates);
+    final bottomText = network.generateCalloutBottomText(callout, templates);
     final isRight = callout.screenOffsetX >= 0;
 
     final primaryColor = isSelected ? const Color(0xFF2563EB) : Color(callout.textColor);
 
-    final tp = TextPainter(
+    final topTp = TextPainter(
       text: TextSpan(
-        text: text,
+        text: topText,
         style: TextStyle(
           color: primaryColor,
           fontSize: callout.textHeight,
@@ -260,7 +282,24 @@ class CalloutPainter {
       textDirection: TextDirection.ltr,
     )..layout();
 
-    final shelfLength = tp.width + 8.0;
+    TextPainter? bottomTp;
+    if (bottomText != null && bottomText.trim().isNotEmpty) {
+      bottomTp = TextPainter(
+        text: TextSpan(
+          text: bottomText,
+          style: TextStyle(
+            color: primaryColor.withValues(alpha: 0.9),
+            fontSize: callout.textHeight * 0.9,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
+
+    final maxTextWidth = math.max(topTp.width, bottomTp?.width ?? 0.0);
+    final shelfLength = maxTextWidth + 8.0;
     final shelfEnd = Offset(
       isRight ? textPos.dx + shelfLength : textPos.dx - shelfLength,
       textPos.dy,
@@ -285,16 +324,15 @@ class CalloutPainter {
     // 3. Горизонтальная полочка выноски (подчеркивание текста по ГОСТ 2.316)
     canvas.drawLine(textPos, shelfEnd, linePaint);
 
-    // 4. Прямоугольник текста и фон (чтобы линии чертежа сзади не мешали чтению)
-    final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;
-    final textTop = textPos.dy - tp.height - 2.0;
-
+    // 4. Фон для текста над и под полочкой
+    final bgTop = textPos.dy - topTp.height - 4.0;
+    final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         isRight ? textPos.dx : textPos.dx - shelfLength,
-        textPos.dy - tp.height - 4.0,
+        bgTop,
         shelfLength,
-        tp.height + 4.0,
+        totalHeight,
       ),
       const Radius.circular(3.0),
     );
@@ -307,7 +345,15 @@ class CalloutPainter {
     );
 
     // Отрисовка текста над полочкой
-    tp.paint(canvas, Offset(textLeft, textTop));
+    final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;
+    final textTop = textPos.dy - topTp.height - 2.0;
+    topTp.paint(canvas, Offset(textLeft, textTop));
+
+    // Отрисовка текста под полочкой (если есть)
+    if (bottomTp != null) {
+      final bottomTextTop = textPos.dy + 2.0;
+      bottomTp.paint(canvas, Offset(textLeft, bottomTextTop));
+    }
 
     // 5. Визуальный маркер выделения выноски (CAD handle/grip)
     if (isSelected) {

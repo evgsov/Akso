@@ -976,6 +976,7 @@ class PipingNetwork {
   /// 6. Пересчет длин катушек (трубных заготовок) для всей сети
   /// Вычитает строительные длины отводов, задвижек, затворов и сварочные зазоры
   void recalculateSpools() {
+    cleanOrphanedCallouts();
     SpoolCalculator.recalculateSpools(this);
   }
 
@@ -1143,23 +1144,13 @@ class PipingNetwork {
     dimensions.remove(id);
   }
 
-  /// Генерация текста для выноски по шаблону или возврат customText
-  String generateCalloutText(
-    Callout callout,
-    Map<String, String> templates, {
-    bool ignoreCustomText = false,
-  }) {
-    if (!ignoreCustomText && callout.customText != null && callout.customText!.trim().isNotEmpty) {
-      return callout.customText!;
-    }
-
-    final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
+  /// Подстановка плейсхолдеров шаблона для целевого объекта выноски
+  String formatCalloutTemplate(CalloutTargetType targetType, String targetId, String template) {
     var text = template;
-
-    switch (callout.targetType) {
+    switch (targetType) {
       case CalloutTargetType.segment:
-        final seg = segments[callout.targetId];
-        if (seg == null) return callout.customText ?? 'Труба (удалена)';
+        final seg = segments[targetId];
+        if (seg == null) return 'Труба (удалена)';
 
         final dStr = seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
             ? seg.outerDiameterMm.toStringAsFixed(0)
@@ -1189,8 +1180,8 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.valve:
-        final v = valves[callout.targetId];
-        if (v == null) return callout.customText ?? 'Арматура (удалена)';
+        final v = valves[targetId];
+        if (v == null) return 'Арматура (удалена)';
 
         text = text
             .replaceAll('{NAME}', v.name)
@@ -1202,9 +1193,9 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.fitting:
-        final fit = fittings[callout.targetId] ??
-            fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
-        if (fit == null) return callout.customText ?? 'Деталь (удалена)';
+        final fit = fittings[targetId] ??
+            fittings.values.where((f) => f.id == targetId).firstOrNull;
+        if (fit == null) return 'Деталь (удалена)';
 
         text = text
             .replaceAll('{NAME}', fit.name ?? fit.fittingType.displayName)
@@ -1217,8 +1208,8 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.weld:
-        final w = weldJoints[callout.targetId];
-        if (w == null) return callout.customText ?? 'Стык (удален)';
+        final w = weldJoints[targetId];
+        if (w == null) return 'Стык (удален)';
 
         final numStr = w.number > 0 ? '${w.number}' : w.id;
         text = text
@@ -1234,8 +1225,8 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.equipment:
-        final eq = equipments[callout.targetId];
-        if (eq == null) return callout.customText ?? 'Оборудование (удалено)';
+        final eq = equipments[targetId];
+        if (eq == null) return 'Оборудование (удалено)';
 
         text = text
             .replaceAll('{NAME}', eq.name)
@@ -1244,8 +1235,8 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.support:
-        final sup = supports[callout.targetId];
-        if (sup == null) return callout.customText ?? 'Опора (удалена)';
+        final sup = supports[targetId];
+        if (sup == null) return 'Опора (удалена)';
 
         text = text
             .replaceAll('{NAME}', sup.name)
@@ -1255,8 +1246,8 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.node:
-        final node = nodes[callout.targetId];
-        if (node == null) return callout.customText ?? 'Узел (удален)';
+        final node = nodes[targetId];
+        if (node == null) return 'Узел (удален)';
 
         text = text
             .replaceAll('{ID}', node.id)
@@ -1265,8 +1256,56 @@ class PipingNetwork {
             .replaceAll('{Z}', '${node.z.round()}');
         break;
     }
-
     return text;
+  }
+
+  /// Генерация верхнего текста для выноски по шаблону или возврат customText
+  String generateCalloutText(
+    Callout callout,
+    Map<String, String> templates, {
+    bool ignoreCustomText = false,
+  }) {
+    if (!ignoreCustomText && callout.customText != null && callout.customText!.trim().isNotEmpty) {
+      final lines = callout.customText!.split('\n');
+      return lines.first;
+    }
+
+    final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
+    final topTemplate = template.split('\n').first;
+    return formatCalloutTemplate(callout.targetType, callout.targetId, topTemplate);
+  }
+
+  /// Генерация нижнего текста для двухполочной выноски (под полочкой)
+  String? generateCalloutBottomText(
+    Callout callout,
+    Map<String, String> templates, {
+    bool ignoreCustomText = false,
+  }) {
+    if (!ignoreCustomText && callout.customBottomText != null && callout.customBottomText!.trim().isNotEmpty) {
+      return callout.customBottomText!;
+    }
+    if (!ignoreCustomText && callout.customText != null && callout.customText!.contains('\n')) {
+      final lines = callout.customText!.split('\n');
+      if (lines.length > 1 && lines[1].trim().isNotEmpty) {
+        return lines.sublist(1).join('\n');
+      }
+    }
+
+    final bottomKey = '${callout.targetType.name}_bottom';
+    final bottomTemplate = templates[bottomKey];
+    if (bottomTemplate != null && bottomTemplate.trim().isNotEmpty) {
+      return formatCalloutTemplate(callout.targetType, callout.targetId, bottomTemplate);
+    }
+
+    final template = templates[callout.targetType.name];
+    if (template != null && template.contains('\n')) {
+      final lines = template.split('\n');
+      if (lines.length > 1 && lines[1].trim().isNotEmpty) {
+        return formatCalloutTemplate(callout.targetType, callout.targetId, lines.sublist(1).join('\n'));
+      }
+    }
+
+    return null;
   }
 
   /// Определение связанного сегмента для объекта выноски (если применимо)
@@ -1426,5 +1465,45 @@ class PipingNetwork {
   /// Удаление выноски из сети
   void removeCallout(String id) {
     callouts.remove(id);
+  }
+
+  /// Очистка осиротевших выносок (ссылающихся на несуществующие трубы, арматуру, стыки, фитинги, оборудование, опоры)
+  int cleanOrphanedCallouts() {
+    final toRemove = <String>[];
+    for (final entry in callouts.entries) {
+      final c = entry.value;
+      bool exists = true;
+      switch (c.targetType) {
+        case CalloutTargetType.segment:
+          exists = segments.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.valve:
+          exists = valves.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.weld:
+          exists = weldJoints.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.fitting:
+          exists = fittings.containsKey(c.targetId) ||
+              fittings.values.any((f) => f.id == c.targetId || f.nodeId == c.targetId);
+          break;
+        case CalloutTargetType.equipment:
+          exists = equipments.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.support:
+          exists = supports.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.node:
+          exists = nodes.containsKey(c.targetId);
+          break;
+      }
+      if (!exists) {
+        toRemove.add(entry.key);
+      }
+    }
+    for (final id in toRemove) {
+      callouts.remove(id);
+    }
+    return toRemove.length;
   }
 }

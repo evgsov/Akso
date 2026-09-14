@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/models/callout.dart';
 import '../../../canvas/input_controller.dart';
 
 /// Модальная панель управления умными выносками (Smart Callouts Manager)
+/// с поддержкой адаптивного размера, двухполочных выносок по ГОСТ и конструктора шаблонов
 class CalloutManagerPanel extends StatefulWidget {
   final PipingInputController controller;
 
@@ -27,9 +29,57 @@ class CalloutManagerPanel extends StatefulWidget {
 class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   CalloutTargetType? _selectedFilterType;
   String _searchQuery = '';
+  bool _isMaximized = false;
+
+  // Состояние конструктора шаблонов
+  CalloutTargetType _templateType = CalloutTargetType.segment;
+  final TextEditingController _topTemplateController = TextEditingController();
+  final TextEditingController _bottomTemplateController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplateForType(_templateType);
+  }
+
+  @override
+  void dispose() {
+    _topTemplateController.dispose();
+    _bottomTemplateController.dispose();
+    super.dispose();
+  }
+
+  void _loadTemplateForType(CalloutTargetType type) {
+    final templates = widget.controller.currentProject.calloutTemplates;
+    final top = templates[type.name] ?? type.defaultTemplate;
+    final bottom = templates['${type.name}_bottom'] ?? '';
+    _topTemplateController.text = top;
+    _bottomTemplateController.text = bottom;
+  }
+
+  void _saveCurrentTemplate() {
+    widget.controller.updateCalloutTemplate(_templateType.name, _topTemplateController.text);
+    widget.controller.updateCalloutTemplate('${_templateType.name}_bottom', _bottomTemplateController.text);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Шаблон для ${_templateType.displayName} успешно сохранен'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _resetTemplateToDefault() {
+    _topTemplateController.text = _templateType.defaultTemplate;
+    _bottomTemplateController.text = '';
+    _saveCurrentTemplate();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = _isMaximized ? screenSize.width * 0.98 : math.min(1150.0, screenSize.width * 0.92);
+    final dialogHeight = _isMaximized ? screenSize.height * 0.96 : math.min(780.0, screenSize.height * 0.88);
+
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
@@ -42,9 +92,10 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           }
           if (_searchQuery.trim().isNotEmpty) {
             final query = _searchQuery.trim().toLowerCase();
-            final text = widget.controller.getCalloutText(c).toLowerCase();
+            final topText = widget.controller.getCalloutText(c).toLowerCase();
+            final bottomText = (widget.controller.getCalloutBottomText(c) ?? '').toLowerCase();
             final targetId = c.targetId.toLowerCase();
-            if (!text.contains(query) && !targetId.contains(query)) {
+            if (!topText.contains(query) && !bottomText.contains(query) && !targetId.contains(query)) {
               return false;
             }
           }
@@ -53,23 +104,57 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            width: 960,
-            height: 650,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: dialogWidth,
+            height: dialogHeight,
             padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeader(context, allCallouts.length),
-                const SizedBox(height: 16),
-                _buildToolbar(context),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: filteredCallouts.isEmpty
-                      ? _buildEmptyState(allCallouts.isEmpty)
-                      : _buildCalloutsTable(filteredCallouts),
-                ),
-              ],
+            child: DefaultTabController(
+              length: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(context, allCallouts.length),
+                  const SizedBox(height: 12),
+                  const TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    labelColor: Colors.indigo,
+                    indicatorColor: Colors.indigo,
+                    tabs: [
+                      Tab(
+                        icon: Icon(Icons.table_chart_outlined, size: 18),
+                        text: 'Выноски в проекте',
+                      ),
+                      Tab(
+                        icon: Icon(Icons.tune_outlined, size: 18),
+                        text: 'Конструктор шаблонов (ГОСТ / AutoCAD)',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        // Вкладка 1: Таблица выносок
+                        Column(
+                          children: [
+                            _buildToolbar(context),
+                            const SizedBox(height: 12),
+                            Expanded(
+                              child: filteredCallouts.isEmpty
+                                  ? _buildEmptyState(allCallouts.isEmpty)
+                                  : _buildCalloutsTable(filteredCallouts),
+                            ),
+                          ],
+                        ),
+                        // Вкладка 2: Конструктор шаблонов
+                        _buildTemplateBuilderTab(context),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -103,6 +188,15 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           ],
         ),
         const Spacer(),
+        IconButton(
+          icon: Icon(_isMaximized ? Icons.fullscreen_exit : Icons.fullscreen),
+          tooltip: _isMaximized ? 'Восстановить размер' : 'Развернуть на весь экран',
+          onPressed: () {
+            setState(() {
+              _isMaximized = !_isMaximized;
+            });
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
@@ -228,15 +322,15 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
             child: DataTable(
               headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
               dataRowMinHeight: 48,
-              dataRowMaxHeight: 56,
+              dataRowMaxHeight: 64,
               columnSpacing: 20,
               columns: const [
                 DataColumn(label: Text('Тип', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Объект', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Режим', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Текст выноски', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Текст над/под полкой', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Смещение', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Удалить', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
               rows: callouts.map((callout) {
                 return _buildDataRow(callout);
@@ -250,7 +344,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
   DataRow _buildDataRow(Callout callout) {
     final targetDescription = _getTargetDescription(callout);
-    final renderedText = widget.controller.getCalloutText(callout);
+    final topText = widget.controller.getCalloutText(callout);
+    final bottomText = widget.controller.getCalloutBottomText(callout);
 
     return DataRow(
       key: ValueKey(callout.id),
@@ -277,7 +372,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         // 2. Объект
         DataCell(
           SizedBox(
-            width: 140,
+            width: 150,
             child: Text(
               targetDescription,
               overflow: TextOverflow.ellipsis,
@@ -309,31 +404,41 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
             ],
           ),
         ),
-        // 4. Текст выноски
+        // 4. Текст выноски (двухполочный)
         DataCell(
           SizedBox(
             width: 320,
-            child: callout.isCustom
-                ? TextFormField(
-                    initialValue: callout.customText ?? renderedText,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    const Text('Над: ', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        topText,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    style: const TextStyle(fontSize: 13),
-                    onFieldSubmitted: (newText) {
-                      widget.controller.updateCalloutCustomText(callout.id, newText);
-                    },
-                  )
-                : Tooltip(
-                    message: 'Генерируется динамически по шаблону проекта',
-                    child: Text(
-                      renderedText,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  ],
+                ),
+                if (bottomText != null && bottomText.isNotEmpty)
+                  Row(
+                    children: [
+                      const Text('Под: ', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: Text(
+                          bottomText,
+                          style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
+              ],
+            ),
           ),
         ),
         // 5. Смещение
@@ -343,18 +448,400 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ),
-        // 6. Удалить
+        // 6. Действия
         DataCell(
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-            tooltip: 'Удалить выноску',
-            onPressed: () {
-              widget.controller.removeCallout(callout.id);
-            },
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (callout.isCustom)
+                IconButton(
+                  icon: const Icon(Icons.edit_note, size: 20, color: Colors.indigo),
+                  tooltip: 'Редактировать текст над и под полкой',
+                  onPressed: () => _showEditCalloutDialog(context, callout),
+                ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                tooltip: 'Удалить выноску',
+                onPressed: () {
+                  widget.controller.removeCallout(callout.id);
+                },
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
+
+  void _showEditCalloutDialog(BuildContext context, Callout callout) {
+    final topCtrl = TextEditingController(text: callout.customText ?? widget.controller.getCalloutText(callout));
+    final bottomCtrl = TextEditingController(text: callout.customBottomText ?? widget.controller.getCalloutBottomText(callout) ?? '');
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Редактирование выноски (${callout.targetType.displayName})'),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: topCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Текст над полкой (основной)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: bottomCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Текст под полкой (дополнительный)',
+                  hintText: 'Оставьте пустым, если не требуется',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () {
+              widget.controller.updateCalloutCustomText(callout.id, topCtrl.text);
+              widget.controller.updateCalloutCustomBottomText(
+                callout.id,
+                bottomCtrl.text.trim().isEmpty ? null : bottomCtrl.text,
+              );
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTemplateBuilderTab(BuildContext context) {
+    final availablePlaceholders = _getPlaceholdersForType(_templateType);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Выбор типа объекта
+          Row(
+            children: [
+              const Text('Категория элементов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(width: 16),
+              DropdownButton<CalloutTargetType>(
+                value: _templateType,
+                items: CalloutTargetType.values.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type.displayName),
+                  );
+                }).toList(),
+                onChanged: (newType) {
+                  if (newType != null) {
+                    setState(() {
+                      _templateType = newType;
+                      _loadTemplateForType(newType);
+                    });
+                  }
+                },
+              ),
+              const Spacer(),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: const Text('Сбросить к стандарту ГОСТ'),
+                onPressed: _resetTemplateToDefault,
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Сохранить шаблон'),
+                style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                onPressed: _saveCurrentTemplate,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 2. Доступные плейсхолдеры (чипы)
+          Card(
+            color: Colors.blue.shade50.withValues(alpha: 0.5),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: Colors.blue.shade200),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.touch_app_outlined, size: 18, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text(
+                        'Кликните на чип для вставки плейсхолдера в шаблон:',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: availablePlaceholders.entries.map((entry) {
+                      return ActionChip(
+                        label: Text('${entry.key} — ${entry.value}'),
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: Colors.indigo.shade200),
+                        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        onPressed: () {
+                          _insertChip(entry.key);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Поля редактирования текста над и под полкой
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _topTemplateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Текст над полкой (основной)',
+                        hintText: 'например: Ø{DN}x{WALL} {MATERIAL}',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.arrow_upward, size: 18),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _bottomTemplateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Текст под полкой (дополнительный)',
+                        hintText: 'например: {STANDARD} или оставьте пустым',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.arrow_downward, size: 18),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              // 4. Интерактивный предпросмотр выноски
+              Expanded(
+                child: Container(
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Stack(
+                    children: [
+                      const Positioned(
+                        top: 8,
+                        left: 12,
+                        child: Text(
+                          'ПРЕДПРОСМОТР ВЫНОСКИ (ГОСТ 2.316)',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                      ),
+                      Center(
+                        child: _buildCalloutPreview(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _insertChip(String placeholder) {
+    // Вставляем в верхнее поле, если активно или по умолчанию
+    final text = _topTemplateController.text;
+    final selection = _topTemplateController.selection;
+    if (selection.start >= 0 && selection.end >= 0) {
+      final newText = text.replaceRange(selection.start, selection.end, placeholder);
+      _topTemplateController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start + placeholder.length),
+      );
+    } else {
+      _topTemplateController.text = text + placeholder;
+    }
+    setState(() {});
+  }
+
+  Widget _buildCalloutPreview() {
+    final previewTop = _formatPreviewText(_topTemplateController.text);
+    final previewBottom = _formatPreviewText(_bottomTemplateController.text);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Точка на объекте
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E293B),
+            shape: BoxShape.circle,
+          ),
+        ),
+        // Линия-ножка
+        Container(
+          width: 30,
+          height: 1.5,
+          color: const Color(0xFF1E293B),
+        ),
+        // Полочка с текстом
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              previewTop.isNotEmpty ? previewTop : 'Текст над полкой',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              height: 1.5,
+              width: math.max(140.0, math.max(previewTop.length, previewBottom.length) * 8.5),
+              color: const Color(0xFF1E293B),
+            ),
+            if (previewBottom.isNotEmpty)
+              Text(
+                previewBottom,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: Color(0xFF475569),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatPreviewText(String template) {
+    if (template.isEmpty) return '';
+    return template
+        .replaceAll('{DN}', '80')
+        .replaceAll('{DN2}', '50')
+        .replaceAll('{WALL}', '4.0')
+        .replaceAll('{S}', '4.0')
+        .replaceAll('{D_OUT}', '89')
+        .replaceAll('{OD}', '89')
+        .replaceAll('{OUTER_DIAMETER}', '89')
+        .replaceAll('{MATERIAL}', 'Сталь 20')
+        .replaceAll('{STANDARD}', 'ГОСТ 10704-91')
+        .replaceAll('{SYSTEM}', 'В1')
+        .replaceAll('{ID}', '12')
+        .replaceAll('{NUM}', '12')
+        .replaceAll('{NUMBER}', '12')
+        .replaceAll('{STAMP}', 'СВ-01')
+        .replaceAll('{TYPE}', 'Задвижка')
+        .replaceAll('{NAME}', 'Задвижка 30с41нж')
+        .replaceAll('{LENGTH}', '2400')
+        .replaceAll('{L}', '2400')
+        .replaceAll('{STEEL}', 'Сталь 20')
+        .replaceAll('{ELECTRODE}', 'УОНИ-13/55');
+  }
+
+  Map<String, String> _getPlaceholdersForType(CalloutTargetType type) {
+    switch (type) {
+      case CalloutTargetType.segment:
+        return {
+          '{DN}': 'Диаметр условный (напр. 80)',
+          '{WALL}': 'Толщина стенки (напр. 4.0)',
+          '{D_OUT}': 'Наружный диаметр (напр. 89)',
+          '{MATERIAL}': 'Марка стали (напр. Сталь 20)',
+          '{SYSTEM}': 'Код системы (напр. В1)',
+          '{LENGTH}': 'Длина трубы (мм)',
+          '{ID}': 'Идентификатор трубы',
+        };
+      case CalloutTargetType.valve:
+        return {
+          '{NAME}': 'Наименование арматуры',
+          '{DN}': 'Диаметр условный',
+          '{TYPE}': 'Тип арматуры (задвижка/кран/клапан)',
+          '{LENGTH}': 'Строительная длина (мм)',
+          '{ID}': 'Идентификатор арматуры',
+        };
+      case CalloutTargetType.weld:
+        return {
+          '{NUM}': 'Номер шва в журнале (напр. 1)',
+          '{STAMP}': 'Клеймо сварщика (напр. СВ-01)',
+          '{TYPE}': 'Тип сварного шва (С17/У18)',
+          '{STEEL}': 'Марка стали стыкуемых труб',
+          '{ELECTRODE}': 'Марка электрода',
+          '{ID}': 'Идентификатор шва',
+        };
+      case CalloutTargetType.fitting:
+        return {
+          '{NAME}': 'Наименование детали',
+          '{TYPE}': 'Тип фитинга (отвод/тройник/переход)',
+          '{STANDARD}': 'Стандарт ГОСТ',
+          '{MATERIAL}': 'Материал детали',
+          '{DN}': 'Основной диаметр',
+          '{DN2}': 'Вторичный диаметр (для переходов)',
+        };
+      case CalloutTargetType.equipment:
+        return {
+          '{NAME}': 'Наименование оборудования',
+          '{TYPE}': 'Тип (насос/бак/котел)',
+          '{ID}': 'Идентификатор',
+        };
+      case CalloutTargetType.support:
+        return {
+          '{NAME}': 'Наименование опоры',
+          '{TYPE}': 'Тип опоры',
+          '{ID}': 'Идентификатор',
+        };
+      case CalloutTargetType.node:
+        return {
+          '{ID}': 'Номер узла',
+          '{X}': 'Координата X (мм)',
+          '{Y}': 'Координата Y (мм)',
+          '{Z}': 'Отметка Z (мм)',
+        };
+    }
   }
 
   String _getTargetDescription(Callout callout) {
@@ -403,3 +890,4 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     }
   }
 }
+

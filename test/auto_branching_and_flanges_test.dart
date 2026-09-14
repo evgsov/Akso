@@ -43,12 +43,12 @@ void main() {
       expect(fit.weldType, equals(WeldType.u18));
       expect(fit.material, equals('09Г2С'));
 
-      // Катушки магистрали (seg1_a и seg1_b по 1500 мм) не должны иметь вычета от врезки
-      final spoolA = network.spools.values.firstWhere((s) => s.segmentId == 'seg1_a');
-      final spoolB = network.spools.values.firstWhere((s) => s.segmentId == 'seg1_b');
-      expect(spoolA.cutLengthMm, equals(1500.0));
-      expect(spoolB.cutLengthMm, equals(1500.0));
-      expect(spoolA.material, equals('09Г2С'));
+      // Катушка магистрали (seg1_a и seg1_b) остается единой сквозной катушкой 3000 мм без разрезания врезкой
+      final mainSpools = network.spools.values.where((s) => s.segmentId == 'seg1_a' || s.segmentId == 'seg1_b').toList();
+      expect(mainSpools.length, equals(1));
+      final spoolMain = mainSpools.first;
+      expect(spoolMain.cutLengthMm, equals(3000.0));
+      expect(spoolMain.material, equals('09Г2С'));
     });
 
     test('Стандартный тройник (ГОСТ 17376) производит вычет из обеих сторон катушки', () {

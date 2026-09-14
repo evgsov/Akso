@@ -25,6 +25,7 @@ class _EditorScreenState extends State<EditorScreen> {
   bool _isRightClick = false;
   bool _isRightDrag = false;
   Offset? _rightDownPos;
+  bool _justFinishedMiddleClick = false;
   bool _showLengthInput = false;
   String? _initialTraceInput;
   Offset? _lengthInputSpawnPos;
@@ -273,6 +274,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     _focusNode.requestFocus();
                     if (event.buttons & kMiddleMouseButton != 0) {
                       _isMiddleClick = true;
+                      _justFinishedMiddleClick = false;
                 final now = DateTime.now();
                 // Двойной клик колесом мыши (СКМ): классический жест Zoom to Fit
                 if (_lastMiddleClickTime != null && now.difference(_lastMiddleClickTime!).inMilliseconds < 350) {
@@ -311,6 +313,10 @@ class _EditorScreenState extends State<EditorScreen> {
               }
               if (_isMiddleClick) {
                 _isMiddleClick = false;
+                _justFinishedMiddleClick = true;
+                Future.microtask(() {
+                  _justFinishedMiddleClick = false;
+                });
               }
             },
             onPointerHover: (event) {
@@ -333,7 +339,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 _baseScale = 1.0;
               },
               onScaleUpdate: (details) {
-                if (_isMiddleClick || _isRightClick) return;
+                if (_isMiddleClick || _isRightClick || _justFinishedMiddleClick) return;
 
                 if (details.pointerCount > 1) {
                   // Мультитач на планшете (зум и панорамирование двумя пальцами)
@@ -361,13 +367,15 @@ class _EditorScreenState extends State<EditorScreen> {
               onScaleEnd: (details) {
                 _lastFocalPoint = null;
                 _baseScale = 1.0;
-                if (!_isMiddleClick && !_isRightClick) {
+                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick) {
                   controller.handlePointerUp();
                 }
               },
               onTapDown: (details) {
-                if (!_isMiddleClick && !_isRightClick) {
-                  controller.handlePointerDown(details.localPosition);
+                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick) {
+                  final isShift = HardwareKeyboard.instance.isShiftPressed;
+                  final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+                  controller.handlePointerDown(details.localPosition, isShift: isShift, isCtrl: isCtrl);
                 }
               },
               onDoubleTap: () {

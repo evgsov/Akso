@@ -31,6 +31,7 @@ class FittingPainter {
 
         final center = projector.project(node);
         final s1 = connected[0];
+        final s2 = connected[1];
         final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
         final pOther = projector.project(other1);
         final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
@@ -45,11 +46,30 @@ class FittingPainter {
           isVolumeMode: isVolumeMode,
           center: center,
           angle: angle,
-          dn1: fit.dn,
-          dn2: fit.dnSecondary ?? fit.dn,
+          dn1: s1.dn,
+          dn2: s2.dn,
           isEccentric: fit.fittingType == FittingType.reducerEccentric,
           color: color,
         );
+
+        if (showCallouts) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: fit.fittingType == FittingType.reducerEccentric
+                  ? 'Переход Э ${s1.dn}х${s2.dn}'
+                  : 'Переход К ${s1.dn}х${s2.dn}',
+              style: TextStyle(
+                color: color,
+                fontSize: 9.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                backgroundColor: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, center + const Offset(12, -14));
+        }
       } else if (fit.fittingType == FittingType.flange) {
         final node = network.nodes[fit.nodeId];
         if (node == null) continue;
@@ -394,10 +414,12 @@ class FittingPainter {
 
     final path = Path();
     if (isEccentric) {
-      path.moveTo(-len / 2, -w1 / 2);
-      path.lineTo(len / 2, -w2 / 2);
-      path.lineTo(len / 2, w2 / 2);
-      path.lineTo(-len / 2, w1 / 2);
+      // Нижняя образующая прямая (Flat on Bottom): Y = max(w1, w2) / 2
+      final flatBottomY = math.max(w1, w2) / 2;
+      path.moveTo(-len / 2, flatBottomY - w1);
+      path.lineTo(len / 2, flatBottomY - w2);
+      path.lineTo(len / 2, flatBottomY);
+      path.lineTo(-len / 2, flatBottomY);
       path.close();
     } else {
       path.moveTo(-len / 2, -w1 / 2);

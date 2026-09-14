@@ -321,5 +321,74 @@ void main() {
       expect(controller.network.segments.containsKey('seg1'), isFalse);
       expect(controller.network.callouts.containsKey(callout.id), isFalse);
     });
+
+    test('Two-tier callout with customBottomText and bottom text generation', () {
+      final network = PipingNetwork();
+      network.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      network.nodes['n2'] = const Node3D(id: 'n2', x: 1000, y: 0, z: 0);
+      network.systems['s1'] = const PipingSystem(id: 's1', name: 'Система 1', code: 'В1', colorValue: 0xFF0000FF, dxfAciColor: 1);
+      network.segments['seg1'] = const PipeSegment(
+        id: 'seg1',
+        startNodeId: 'n1',
+        endNodeId: 'n2',
+        systemId: 's1',
+        dn: 150,
+        wallThicknessMm: 4.5,
+        material: '12Х18Н10Т',
+      );
+
+      // 1. Two-tier via newline in customText
+      const c1 = Callout(
+        id: 'c1',
+        targetId: 'seg1',
+        targetType: CalloutTargetType.segment,
+        customText: 'Ø159x4.5\nГОСТ 9941-81',
+      );
+      expect(network.generateCalloutText(c1, const {}), equals('Ø159x4.5'));
+      expect(network.generateCalloutBottomText(c1, const {}), equals('ГОСТ 9941-81'));
+
+      // 2. Two-tier via customBottomText
+      const c2 = Callout(
+        id: 'c2',
+        targetId: 'seg1',
+        targetType: CalloutTargetType.segment,
+        customText: 'Ø159x4.5',
+        customBottomText: 'L=1000 мм',
+      );
+      expect(network.generateCalloutText(c2, const {}), equals('Ø159x4.5'));
+      expect(network.generateCalloutBottomText(c2, const {}), equals('L=1000 мм'));
+
+      // 3. Two-tier via bottom template
+      const c3 = Callout(
+        id: 'c3',
+        targetId: 'seg1',
+        targetType: CalloutTargetType.segment,
+      );
+      final customTemplates = {
+        'segment': 'Ø{DN}x{WALL}',
+        'segment_bottom': '{MATERIAL} / {SYSTEM}',
+      };
+      expect(network.generateCalloutText(c3, customTemplates), equals('Ø150x4.5'));
+      expect(network.generateCalloutBottomText(c3, customTemplates), equals('12Х18Н10Т / В1'));
+
+      // 4. JSON serialization roundtrip for customBottomText
+      final json = c2.toJson();
+      final restored = Callout.fromJson(json);
+      expect(restored.customBottomText, equals('L=1000 мм'));
+      expect(restored.copyWith(clearCustomBottomText: true).customBottomText, isNull);
+
+      // 5. cleanOrphanedCallouts test
+      network.callouts['c1'] = c1;
+      network.callouts['c_orphan'] = const Callout(
+        id: 'c_orphan',
+        targetId: 'non_existent_seg',
+        targetType: CalloutTargetType.segment,
+      );
+      expect(network.callouts.length, equals(2));
+      final cleaned = network.cleanOrphanedCallouts();
+      expect(cleaned, equals(1));
+      expect(network.callouts.containsKey('c_orphan'), isFalse);
+      expect(network.callouts.containsKey('c1'), isTrue);
+    });
   });
 }

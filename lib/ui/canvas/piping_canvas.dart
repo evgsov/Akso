@@ -202,24 +202,30 @@ class PipingCanvasPainter extends CustomPainter {
     // 7. Интерактивная линия трассировки (когда стилус ведет новую трубу)
     if (activeTraceStart != null && activeTraceEnd != null) {
       final pStart = projector.project(activeTraceStart!);
+      final effectiveScreenEnd = (snapResult != null && snapResult!.type != SnapType.none)
+          ? snapResult!.screenPoint
+          : activeTraceEnd!;
       final tracePaint = Paint()
         ..color = Colors.teal
         ..strokeWidth = 3.0
         ..strokeCap = StrokeCap.round;
 
       // Пунктирная направляющая
-      canvas.drawLine(pStart, activeTraceEnd!, tracePaint);
-      canvas.drawCircle(activeTraceEnd!, 5.0, tracePaint);
+      canvas.drawLine(pStart, effectiveScreenEnd, tracePaint);
+      canvas.drawCircle(effectiveScreenEnd, 5.0, tracePaint);
     }
 
     // 8. Интерактивная линия строительной оси
     if (activeAxisStart != null && activeTraceEnd != null) {
       final pAxisStart = projector.project(activeAxisStart!);
+      final effectiveScreenEnd = (snapResult != null && snapResult!.type != SnapType.none)
+          ? snapResult!.screenPoint
+          : activeTraceEnd!;
       final axisPreviewPaint = Paint()
         ..color = const Color(0xFF78909C)
         ..strokeWidth = 2.0;
-      _drawDashedLine(canvas, pAxisStart, activeTraceEnd!, axisPreviewPaint);
-      canvas.drawCircle(activeTraceEnd!, 5.0, axisPreviewPaint);
+      _drawDashedLine(canvas, pAxisStart, effectiveScreenEnd, axisPreviewPaint);
+      canvas.drawCircle(effectiveScreenEnd, 5.0, axisPreviewPaint);
     }
 
     // 9. Индикатор магнитной привязки и полярных углов
@@ -759,8 +765,12 @@ class PipingCanvasPainter extends CustomPainter {
     const paddingV = 4.0;
     final badgeSize = Size(tp.width + paddingH * 2, tp.height + paddingV * 2);
 
+    final effectiveScreenEnd = (snapResult != null && snapResult!.type != SnapType.none)
+        ? snapResult!.screenPoint
+        : activeTraceEnd!;
+
     final badgePos = computeBadgePosition(
-      cursorOffset: activeTraceEnd!,
+      cursorOffset: effectiveScreenEnd,
       badgeSize: badgeSize,
       canvasSize: size,
     );

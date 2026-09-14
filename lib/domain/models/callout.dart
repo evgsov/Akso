@@ -69,6 +69,7 @@ class Callout {
   final String targetId;
   final CalloutTargetType targetType;
   final String? customText;
+  final String? customBottomText;
   final double screenOffsetX;
   final double screenOffsetY;
   final double textHeight;
@@ -79,6 +80,7 @@ class Callout {
     required this.targetId,
     required this.targetType,
     this.customText,
+    this.customBottomText,
     this.screenOffsetX = 50.0,
     this.screenOffsetY = -50.0,
     this.textHeight = 12.0,
@@ -86,14 +88,18 @@ class Callout {
   });
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
-  bool get isCustom => customText != null && customText!.trim().isNotEmpty;
+  bool get isCustom =>
+      (customText != null && customText!.trim().isNotEmpty) ||
+      (customBottomText != null && customBottomText!.trim().isNotEmpty);
 
   Callout copyWith({
     String? id,
     String? targetId,
     CalloutTargetType? targetType,
     String? customText,
+    String? customBottomText,
     bool clearCustomText = false,
+    bool clearCustomBottomText = false,
     double? screenOffsetX,
     double? screenOffsetY,
     double? textHeight,
@@ -104,6 +110,7 @@ class Callout {
       targetId: targetId ?? this.targetId,
       targetType: targetType ?? this.targetType,
       customText: clearCustomText ? null : (customText ?? this.customText),
+      customBottomText: clearCustomBottomText ? null : (customBottomText ?? this.customBottomText),
       screenOffsetX: screenOffsetX ?? this.screenOffsetX,
       screenOffsetY: screenOffsetY ?? this.screenOffsetY,
       textHeight: textHeight ?? this.textHeight,
@@ -115,7 +122,8 @@ class Callout {
         'id': id,
         'targetId': targetId,
         'targetType': targetType.name,
-        'customText': customText,
+        if (customText != null) 'customText': customText,
+        if (customBottomText != null) 'customBottomText': customBottomText,
         'screenOffsetX': screenOffsetX,
         'screenOffsetY': screenOffsetY,
         'textHeight': textHeight,
@@ -141,6 +149,7 @@ class Callout {
       targetId: json['targetId'] as String,
       targetType: parsedType,
       customText: json['customText'] as String?,
+      customBottomText: json['customBottomText'] as String? ?? json['bottomText'] as String?,
       screenOffsetX: (json['screenOffsetX'] as num?)?.toDouble() ?? 50.0,
       screenOffsetY: (json['screenOffsetY'] as num?)?.toDouble() ?? -50.0,
       textHeight: (json['textHeight'] as num?)?.toDouble() ?? 12.0,
@@ -157,6 +166,7 @@ class Callout {
           targetId == other.targetId &&
           targetType == other.targetType &&
           customText == other.customText &&
+          customBottomText == other.customBottomText &&
           screenOffsetX == other.screenOffsetX &&
           screenOffsetY == other.screenOffsetY &&
           textHeight == other.textHeight &&
@@ -168,6 +178,7 @@ class Callout {
         targetId,
         targetType,
         customText,
+        customBottomText,
         screenOffsetX,
         screenOffsetY,
         textHeight,
@@ -176,5 +187,5 @@ class Callout {
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, offset: ($screenOffsetX, $screenOffsetY))';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY))';
 }

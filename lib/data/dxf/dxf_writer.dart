@@ -776,6 +776,12 @@ class DxfWriter {
         b.writeln(
           '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${blk.localTextY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}',
         );
+        if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+          final bottomY = blk.localElbowY - blk.textHeight - 10.0;
+          b.writeln(
+            '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${bottomY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.bottomText!)}',
+          );
+        }
         b.writeln('  0\nENDBLK\n  8\n0');
       } else {
         b.writeln(
@@ -797,6 +803,12 @@ class DxfWriter {
         b.writeln(
           '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n${blk.textY}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n  3\n${toAutoCadString("Текст выноски")}\n 70\n0',
         );
+        if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+          final bottomY = blk.textY - blk.textHeight - 20.0;
+          b.writeln(
+            '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n$bottomY\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.bottomText!)}\n  2\nBOTTOM_TEXT\n  3\n${toAutoCadString("Текст под полкой")}\n 70\n0',
+          );
+        }
         b.writeln('  0\nENDBLK\n  8\n0');
       }
     }
@@ -1052,11 +1064,13 @@ class DxfWriter {
 
       final text = network.generateCalloutText(callout, templates);
       if (text.isEmpty) continue;
+      final bottomText = network.generateCalloutBottomText(callout, templates);
 
       final userDist = math.sqrt(callout.screenOffsetX * callout.screenOffsetX + callout.screenOffsetY * callout.screenOffsetY);
       final scale = (userDist * 3.5).clamp(200.0, 700.0);
       final isRight = callout.screenOffsetX >= 0;
-      final shelfLen = math.max(140.0, text.length * 35.0);
+      final maxLen = (bottomText != null && bottomText.isNotEmpty) ? math.max(text.length, bottomText.length) : text.length;
+      final shelfLen = math.max(140.0, maxLen * 35.0);
 
       // Локальные координаты выноски в плоскости, повернутой лицом к камере/ракурсу:
       // Локальная ось X направлена горизонтально по экрану (axX, axY, 0)
@@ -1085,6 +1099,7 @@ class DxfWriter {
       blocks.add(_DxfCalloutBlockDef(
         blockName: 'CALLOUT_SHELF_$idx',
         text: text,
+        bottomText: bottomText,
         dx: elbowX - anchor.x,
         dy: elbowY - anchor.y,
         dz: elbowZ - anchor.z,
@@ -1133,11 +1148,13 @@ class DxfWriter {
 
       final text = network.generateCalloutText(callout, templates);
       if (text.isEmpty) continue;
+      final bottomText = network.generateCalloutBottomText(callout, templates);
 
       final anchorScreen = _projectTo2d(projector, anchor3D);
       final dx = callout.screenOffsetX * px2cad;
       final dy = -callout.screenOffsetY * px2cad; // Инвертируем Y для CAD (Y вверх)
-      final shelfLen = math.max(100.0, text.length * 35.0);
+      final maxLen = (bottomText != null && bottomText.isNotEmpty) ? math.max(text.length, bottomText.length) : text.length;
+      final shelfLen = math.max(100.0, maxLen * 35.0);
       final isRight = callout.screenOffsetX >= 0;
       final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
       final textX = isRight ? dx + 10.0 : dx - shelfLen + 10.0;
@@ -1147,6 +1164,7 @@ class DxfWriter {
       blocks.add(_DxfCalloutBlockDef(
         blockName: 'CALLOUT_2D_$idx',
         text: text,
+        bottomText: bottomText,
         dx: dx,
         dy: dy,
         dz: 0.0,
@@ -1334,7 +1352,10 @@ class DxfWriter {
     );
 
     for (final blk in blocks) {
-      final cleanText = blk.text
+      final fullText = (blk.bottomText != null && blk.bottomText!.isNotEmpty)
+          ? '${blk.text}\\P${blk.bottomText!}'
+          : blk.text;
+      final cleanText = fullText
           .replaceAll('\\', '\\\\')
           .replaceAll('"', '\\"')
           .replaceAll('\r\n', ' ')
@@ -1365,6 +1386,12 @@ class DxfWriter {
       b.writeln(
         '  0\nATTRIB\n  8\n$calloutTextLayer\n 10\n$worldTextX\n 20\n$worldTextY\n 30\n$worldTextZ\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n 70\n0',
       );
+      if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+        final bottomY = worldTextY - blk.textHeight - 20.0;
+        b.writeln(
+          '  0\nATTRIB\n  8\n$calloutTextLayer\n 10\n$worldTextX\n 20\n$bottomY\n 30\n$worldTextZ\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.bottomText!)}\n  2\nBOTTOM_TEXT\n 70\n0',
+        );
+      }
       b.writeln('  0\nSEQEND\n  8\n$calloutLayer');
     }
   }
@@ -1374,6 +1401,7 @@ class DxfWriter {
 class _DxfCalloutBlockDef {
   final String blockName;
   final String text;
+  final String? bottomText;
   final double dx;
   final double dy;
   final double dz;
@@ -1404,6 +1432,7 @@ class _DxfCalloutBlockDef {
   const _DxfCalloutBlockDef({
     required this.blockName,
     required this.text,
+    this.bottomText,
     required this.dx,
     required this.dy,
     required this.dz,

@@ -132,14 +132,30 @@ class PipingInputController extends ChangeNotifier {
   bool isBuildingGridAxis = true;
   Offset? currentCursorScreenPos;
 
-  // Режим перетаскивания
+  // Режим перетаскивания и ручек (Grip Editing)
   bool isDraggingNode = false;
   bool isDraggingEquipment = false;
   bool isDraggingCallout = false;
+  String? _potentialDragNodeId;
+  Offset? _dragNodeStartScreenPos;
+  String? _potentialDragEquipmentId;
+  Offset? _dragEquipmentStartScreenPos;
   Node3D? _dragEquipmentStartPos;
   Offset? _dragCalloutStartScreenPos;
   double _dragCalloutInitialOffsetX = 0.0;
   double _dragCalloutInitialOffsetY = 0.0;
+
+  // Grip Mode: активный перенос узла кликом мыши (AutoCAD Grip Editing)
+  String? activeGripNodeId;
+  Node3D? _gripOriginalNodePosition;
+
+  // Grip Mode для строительных осей
+  String? activeGripAxisId;
+  bool? isGripAxisStart;
+
+  // Модификаторы для рамочного выбора
+  bool _boxSelectIsShift = false;
+  bool _boxSelectIsCtrl = false;
 
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
@@ -255,6 +271,22 @@ class PipingInputController extends ChangeNotifier {
     isDraggingNode = false;
     isDraggingEquipment = false;
     isDraggingCallout = false;
+    _potentialDragNodeId = null;
+    _dragNodeStartScreenPos = null;
+    _potentialDragEquipmentId = null;
+    _dragEquipmentStartScreenPos = null;
+    if (activeGripNodeId != null && _gripOriginalNodePosition != null) {
+      network.moveNode(
+        activeGripNodeId!,
+        _gripOriginalNodePosition!.x,
+        _gripOriginalNodePosition!.y,
+        _gripOriginalNodePosition!.z,
+      );
+      activeGripNodeId = null;
+      _gripOriginalNodePosition = null;
+    }
+    activeGripAxisId = null;
+    isGripAxisStart = null;
     _dragEquipmentStartPos = null;
     _dragCalloutStartScreenPos = null;
     if (!keepTool &&
@@ -467,11 +499,45 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Обработка нажатия на холст
-  void handlePointerDown(Offset screenPos) {
+  void handlePointerDown(Offset screenPos, {bool isShift = false, bool isCtrl = false}) {
     currentCursorScreenPos = screenPos;
 
     // Обновляем привязку
     _updateSnap(screenPos);
+
+    // 1. Завершение Grip-переноса узла кликом ЛКМ
+    if (activeGripNodeId != null) {
+      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+          ? currentSnapResult!.worldPoint
+          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+      network.moveNode(activeGripNodeId!, snapWorld.x, snapWorld.y, snapWorld.z);
+      _checkAndMergeOpenNodes();
+      history.recordState(network);
+      activeGripNodeId = null;
+      _gripOriginalNodePosition = null;
+      notifyListeners();
+      return;
+    }
+
+    // 2. Завершение Grip-растяжения оси кликом ЛКМ
+    if (activeGripAxisId != null && isGripAxisStart != null) {
+      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+          ? currentSnapResult!.worldPoint
+          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+      final axis = network.axes[activeGripAxisId!];
+      if (axis != null) {
+        if (isGripAxisStart == true) {
+          network.axes[activeGripAxisId!] = axis.copyWith(startPoint: snapWorld);
+        } else {
+          network.axes[activeGripAxisId!] = axis.copyWith(endPoint: snapWorld);
+        }
+        history.recordState(network);
+      }
+      activeGripAxisId = null;
+      isGripAxisStart = null;
+      notifyListeners();
+      return;
+    }
 
     final hitNodeId = currentSnapResult?.type == SnapType.node
         ? currentSnapResult!.snappedNodeId
@@ -628,6 +694,24 @@ class PipingInputController extends ChangeNotifier {
         break;
 
       case CanvasTool.select:
+        // Проверка клика по ручкам на концах выделенной оси (Grip Handles)
+        if (selectedAxisId != null && network.axes.containsKey(selectedAxisId)) {
+          final axis = network.axes[selectedAxisId!]!;
+          final p1 = projector.project(axis.startPoint);
+          final p2 = projector.project(axis.endPoint);
+          if ((screenPos - p1).distance <= 14.0) {
+            activeGripAxisId = selectedAxisId;
+            isGripAxisStart = true;
+            notifyListeners();
+            break;
+          } else if ((screenPos - p2).distance <= 14.0) {
+            activeGripAxisId = selectedAxisId;
+            isGripAxisStart = false;
+            notifyListeners();
+            break;
+          }
+        }
+
         final hitCalloutId = _findCalloutAtScreenPos(screenPos);
         if (hitCalloutId != null) {
           selectedCalloutId = hitCalloutId;
@@ -659,6 +743,36 @@ class PipingInputController extends ChangeNotifier {
             selectedEquipmentId = n!.equipmentId;
             selectedEquipmentIds.add(n.equipmentId!);
           }
+          if (isShift) {
+            selectedNodeIds.remove(hitNodeId);
+            if (selectedNodeId == hitNodeId) {
+              selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
+            }
+            notifyListeners();
+            break;
+          }
+          if (isCtrl) {
+            if (selectedNodeIds.contains(hitNodeId)) {
+              selectedNodeIds.remove(hitNodeId);
+              if (selectedNodeId == hitNodeId) {
+                selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
+              }
+            } else {
+              selectedNodeIds.add(hitNodeId);
+              selectedNodeId = hitNodeId;
+            }
+            notifyListeners();
+            break;
+          }
+
+          // Повторный клик по уже выделенному единственному узлу переводит его в режим ручки (Grip Mode)
+          if (selectedNodeId == hitNodeId && selectedNodeIds.length == 1 && n != null) {
+            activeGripNodeId = hitNodeId;
+            _gripOriginalNodePosition = Node3D(id: n.id, x: n.x, y: n.y, z: n.z);
+            notifyListeners();
+            break;
+          }
+
           selectedNodeId = hitNodeId;
           selectedAxisId = null;
           if (!selectedNodeIds.contains(hitNodeId)) {
@@ -669,8 +783,34 @@ class PipingInputController extends ChangeNotifier {
             selectedDimensionIds.clear();
             selectedNodeIds.add(hitNodeId);
           }
-          isDraggingNode = true;
+          _potentialDragNodeId = hitNodeId;
+          _dragNodeStartScreenPos = screenPos;
+          isDraggingNode = false;
+          notifyListeners();
+          break;
         } else if (hitSegId != null) {
+          if (isShift) {
+            selectedSegmentIds.remove(hitSegId);
+            if (selectedSegmentId == hitSegId) {
+              selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+            }
+            notifyListeners();
+            break;
+          }
+          if (isCtrl) {
+            if (selectedSegmentIds.contains(hitSegId)) {
+              selectedSegmentIds.remove(hitSegId);
+              if (selectedSegmentId == hitSegId) {
+                selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+              }
+            } else {
+              selectedSegmentIds.add(hitSegId);
+              selectedSegmentId = hitSegId;
+            }
+            notifyListeners();
+            break;
+          }
+
           selectedSegmentId = hitSegId;
           selectedAxisId = null;
           if (!selectedSegmentIds.contains(hitSegId)) {
@@ -681,25 +821,72 @@ class PipingInputController extends ChangeNotifier {
             selectedDimensionIds.clear();
             selectedSegmentIds.add(hitSegId);
           }
+          notifyListeners();
+          break;
         } else if (selectedEquipmentId != null) {
-          isDraggingEquipment = true;
+          final eqId = selectedEquipmentId!;
+          if (isShift) {
+            selectedEquipmentIds.remove(eqId);
+            selectedEquipmentId = selectedEquipmentIds.isEmpty ? null : selectedEquipmentIds.first;
+            notifyListeners();
+            break;
+          }
+          if (isCtrl) {
+            if (selectedEquipmentIds.contains(eqId)) {
+              selectedEquipmentIds.remove(eqId);
+              selectedEquipmentId = selectedEquipmentIds.isEmpty ? null : selectedEquipmentIds.first;
+            } else {
+              selectedEquipmentIds.add(eqId);
+              selectedEquipmentId = eqId;
+            }
+            notifyListeners();
+            break;
+          }
+
+          selectedEquipmentId = eqId;
           selectedAxisId = null;
-          if (!selectedEquipmentIds.contains(selectedEquipmentId)) {
+          if (!selectedEquipmentIds.contains(eqId)) {
             selectedNodeIds.clear();
             selectedSegmentIds.clear();
             selectedEquipmentIds.clear();
             selectedAxisIds.clear();
             selectedDimensionIds.clear();
-            selectedEquipmentIds.add(selectedEquipmentId!);
+            selectedEquipmentIds.add(eqId);
           }
-          final eq = network.equipments[selectedEquipmentId!];
+          _potentialDragEquipmentId = eqId;
+          _dragEquipmentStartScreenPos = screenPos;
+          isDraggingEquipment = false;
+          final eq = network.equipments[eqId];
           if (eq != null) {
             final unproj = projector.unproject(screenPos, eq.z);
             _dragEquipmentStartPos = Node3D(id: 'drag', x: unproj.x, y: unproj.y, z: eq.z);
           }
+          notifyListeners();
+          break;
         } else {
           final hitDimId = _findDimensionAtScreenPos(screenPos);
           if (hitDimId != null) {
+            if (isShift) {
+              selectedDimensionIds.remove(hitDimId);
+              if (selectedDimensionId == hitDimId) {
+                selectedDimensionId = selectedDimensionIds.isEmpty ? null : selectedDimensionIds.first;
+              }
+              notifyListeners();
+              break;
+            }
+            if (isCtrl) {
+              if (selectedDimensionIds.contains(hitDimId)) {
+                selectedDimensionIds.remove(hitDimId);
+                if (selectedDimensionId == hitDimId) {
+                  selectedDimensionId = selectedDimensionIds.isEmpty ? null : selectedDimensionIds.first;
+                }
+              } else {
+                selectedDimensionIds.add(hitDimId);
+                selectedDimensionId = hitDimId;
+              }
+              notifyListeners();
+              break;
+            }
             selectedDimensionId = hitDimId;
             selectedAxisId = null;
             selectedNodeIds.clear();
@@ -711,6 +898,8 @@ class PipingInputController extends ChangeNotifier {
             selectedNodeId = null;
             selectedSegmentId = null;
             selectedEquipmentId = null;
+            notifyListeners();
+            break;
           } else {
             final hitAxisId = ((currentSnapResult?.type == SnapType.midpoint ||
                         currentSnapResult?.type == SnapType.perpendicular ||
@@ -720,6 +909,27 @@ class PipingInputController extends ChangeNotifier {
                 ? currentSnapResult!.snappedSegmentId
                 : _findAxisAtScreenPos(screenPos);
             if (hitAxisId != null) {
+              if (isShift) {
+                selectedAxisIds.remove(hitAxisId);
+                if (selectedAxisId == hitAxisId) {
+                  selectedAxisId = selectedAxisIds.isEmpty ? null : selectedAxisIds.first;
+                }
+                notifyListeners();
+                break;
+              }
+              if (isCtrl) {
+                if (selectedAxisIds.contains(hitAxisId)) {
+                  selectedAxisIds.remove(hitAxisId);
+                  if (selectedAxisId == hitAxisId) {
+                    selectedAxisId = selectedAxisIds.isEmpty ? null : selectedAxisIds.first;
+                  }
+                } else {
+                  selectedAxisIds.add(hitAxisId);
+                  selectedAxisId = hitAxisId;
+                }
+                notifyListeners();
+                break;
+              }
               selectedAxisId = hitAxisId;
               selectedDimensionId = null;
               selectedNodeIds.clear();
@@ -731,23 +941,31 @@ class PipingInputController extends ChangeNotifier {
               selectedNodeId = null;
               selectedSegmentId = null;
               selectedEquipmentId = null;
+              notifyListeners();
+              break;
             } else {
-              selectedAxisId = null;
-              selectedNodeId = null;
-              selectedSegmentId = null;
-              selectedEquipmentId = null;
-              selectedDimensionId = null;
-              selectedNodeIds.clear();
-              selectedSegmentIds.clear();
-              selectedEquipmentIds.clear();
-              selectedAxisIds.clear();
-              selectedDimensionIds.clear();
+              // Клик по пустому холсту
+              if (!isShift && !isCtrl) {
+                selectedAxisId = null;
+                selectedNodeId = null;
+                selectedSegmentId = null;
+                selectedEquipmentId = null;
+                selectedDimensionId = null;
+                selectedNodeIds.clear();
+                selectedSegmentIds.clear();
+                selectedEquipmentIds.clear();
+                selectedAxisIds.clear();
+                selectedDimensionIds.clear();
+              }
               boxSelectStart = screenPos;
               selectionBoxRect = Rect.fromPoints(screenPos, screenPos);
+              _boxSelectIsShift = isShift;
+              _boxSelectIsCtrl = isCtrl;
+              notifyListeners();
+              break;
             }
           }
         }
-        break;
 
       case CanvasTool.move:
         final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
@@ -986,6 +1204,47 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
+    // Активное растяжение строительной оси за ручку-маркер
+    if (activeGripAxisId != null && isGripAxisStart != null) {
+      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+          ? currentSnapResult!.worldPoint
+          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+      final axis = network.axes[activeGripAxisId!];
+      if (axis != null) {
+        if (isGripAxisStart == true) {
+          network.axes[activeGripAxisId!] = axis.copyWith(startPoint: snapWorld);
+        } else {
+          network.axes[activeGripAxisId!] = axis.copyWith(endPoint: snapWorld);
+        }
+        notifyListeners();
+      }
+      return;
+    }
+
+    // Активное перемещение узла в Grip Mode
+    if (activeGripNodeId != null) {
+      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
+          ? currentSnapResult!.worldPoint
+          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+      network.moveNode(activeGripNodeId!, snapWorld.x, snapWorld.y, snapWorld.z);
+      notifyListeners();
+      return;
+    }
+
+    // Проверка порога перетаскивания для узлов (порог 6 px)
+    if (_potentialDragNodeId != null && !isDraggingNode && _dragNodeStartScreenPos != null) {
+      if ((screenPos - _dragNodeStartScreenPos!).distance > 6.0) {
+        isDraggingNode = true;
+      }
+    }
+
+    // Проверка порога перетаскивания для оборудования (порог 6 px)
+    if (_potentialDragEquipmentId != null && !isDraggingEquipment && _dragEquipmentStartScreenPos != null) {
+      if ((screenPos - _dragEquipmentStartScreenPos!).distance > 6.0) {
+        isDraggingEquipment = true;
+      }
+    }
+
     if (boxSelectStart != null) {
       selectionBoxRect = Rect.fromPoints(boxSelectStart!, screenPos);
       isCrossingSelection = screenPos.dx < boxSelectStart!.dx;
@@ -1058,14 +1317,25 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка отпускания стилуса / пальца / кнопки мыши
   void handlePointerUp() {
+    if (activeGripAxisId != null || activeGripNodeId != null) {
+      // В режиме Grip Edit отпускание кнопки мыши не фиксирует элемент (фиксация по следующему клику ЛКМ)
+      return;
+    }
+
     if (selectionBoxRect != null && boxSelectStart != null) {
       final rect = selectionBoxRect!;
       if (rect.width > 6.0 || rect.height > 6.0) {
         final isCrossing = isCrossingSelection;
+        final boxedNodeIds = <String>{};
+        final boxedSegmentIds = <String>{};
+        final boxedEquipmentIds = <String>{};
+        final boxedAxisIds = <String>{};
+        final boxedDimensionIds = <String>{};
+
         for (final node in network.nodes.values) {
           final p = projector.project(node);
           if (rect.contains(p)) {
-            selectedNodeIds.add(node.id);
+            boxedNodeIds.add(node.id);
           }
         }
         for (final seg in network.segments.values) {
@@ -1076,15 +1346,15 @@ class PipingInputController extends ChangeNotifier {
           final p2 = projector.project(n2);
           if (isCrossing) {
             if (rect.contains(p1) || rect.contains(p2) || _segmentIntersectsRect(p1, p2, rect)) {
-              selectedSegmentIds.add(seg.id);
-              selectedNodeIds.add(n1.id);
-              selectedNodeIds.add(n2.id);
+              boxedSegmentIds.add(seg.id);
+              boxedNodeIds.add(n1.id);
+              boxedNodeIds.add(n2.id);
             }
           } else {
             if (rect.contains(p1) && rect.contains(p2)) {
-              selectedSegmentIds.add(seg.id);
-              selectedNodeIds.add(n1.id);
-              selectedNodeIds.add(n2.id);
+              boxedSegmentIds.add(seg.id);
+              boxedNodeIds.add(n1.id);
+              boxedNodeIds.add(n2.id);
             }
           }
         }
@@ -1097,11 +1367,11 @@ class PipingInputController extends ChangeNotifier {
           final eqBounds = Rect.fromCenter(center: p, width: w * 2, height: l * 2);
           if (isCrossing) {
             if (rect.overlaps(eqBounds) || rect.contains(p)) {
-              selectedEquipmentIds.add(eq.id);
+              boxedEquipmentIds.add(eq.id);
             }
           } else {
             if (rect.contains(eqBounds.topLeft) && rect.contains(eqBounds.bottomRight)) {
-              selectedEquipmentIds.add(eq.id);
+              boxedEquipmentIds.add(eq.id);
             }
           }
         }
@@ -1125,7 +1395,7 @@ class PipingInputController extends ChangeNotifier {
           }
 
           if (matches(p1Native, p2Native) || matches(p1z, p2z)) {
-            selectedAxisIds.add(axis.id);
+            boxedAxisIds.add(axis.id);
           }
         }
 
@@ -1135,36 +1405,75 @@ class PipingInputController extends ChangeNotifier {
           final p2 = projector.project(dim.endPoint);
           if (isCrossing) {
             if (rect.contains(p1) || rect.contains(p2) || _segmentIntersectsRect(p1, p2, rect)) {
-              selectedDimensionIds.add(dim.id);
+              boxedDimensionIds.add(dim.id);
             }
           } else {
             if (rect.contains(p1) && rect.contains(p2)) {
-              selectedDimensionIds.add(dim.id);
+              boxedDimensionIds.add(dim.id);
             }
           }
         }
 
-        if (selectedNodeIds.isNotEmpty) {
-          selectedNodeId = selectedNodeIds.first;
-        }
-        if (selectedSegmentIds.isNotEmpty && selectedNodeId == null) {
-          selectedSegmentId = selectedSegmentIds.first;
-        }
-        if (selectedEquipmentIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null) {
-          selectedEquipmentId = selectedEquipmentIds.first;
-        }
-        if (selectedAxisIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null && selectedEquipmentId == null) {
-          selectedAxisId = selectedAxisIds.first;
-        }
-        if (selectedDimensionIds.isNotEmpty && selectedNodeId == null && selectedSegmentId == null && selectedEquipmentId == null && selectedAxisId == null) {
-          selectedDimensionId = selectedDimensionIds.first;
+        if (_boxSelectIsShift) {
+          selectedNodeIds.removeAll(boxedNodeIds);
+          selectedSegmentIds.removeAll(boxedSegmentIds);
+          selectedEquipmentIds.removeAll(boxedEquipmentIds);
+          selectedAxisIds.removeAll(boxedAxisIds);
+          selectedDimensionIds.removeAll(boxedDimensionIds);
+          if (selectedNodeId != null && !selectedNodeIds.contains(selectedNodeId)) {
+            selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
+          }
+          if (selectedSegmentId != null && !selectedSegmentIds.contains(selectedSegmentId)) {
+            selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+          }
+        } else if (_boxSelectIsCtrl) {
+          selectedNodeIds.addAll(boxedNodeIds);
+          selectedSegmentIds.addAll(boxedSegmentIds);
+          selectedEquipmentIds.addAll(boxedEquipmentIds);
+          selectedAxisIds.addAll(boxedAxisIds);
+          selectedDimensionIds.addAll(boxedDimensionIds);
+          if (selectedNodeId == null && selectedNodeIds.isNotEmpty) {
+            selectedNodeId = selectedNodeIds.first;
+          }
+        } else {
+          selectedNodeIds
+            ..clear()
+            ..addAll(boxedNodeIds);
+          selectedSegmentIds
+            ..clear()
+            ..addAll(boxedSegmentIds);
+          selectedEquipmentIds
+            ..clear()
+            ..addAll(boxedEquipmentIds);
+          selectedAxisIds
+            ..clear()
+            ..addAll(boxedAxisIds);
+          selectedDimensionIds
+            ..clear()
+            ..addAll(boxedDimensionIds);
+          selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
+          selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+          selectedEquipmentId = selectedEquipmentIds.isEmpty ? null : selectedEquipmentIds.first;
+          selectedAxisId = selectedAxisIds.isEmpty ? null : selectedAxisIds.first;
+          selectedDimensionId = selectedDimensionIds.isEmpty ? null : selectedDimensionIds.first;
         }
       }
       boxSelectStart = null;
       selectionBoxRect = null;
+      _boxSelectIsShift = false;
+      _boxSelectIsCtrl = false;
+      _potentialDragNodeId = null;
+      _dragNodeStartScreenPos = null;
+      _potentialDragEquipmentId = null;
+      _dragEquipmentStartScreenPos = null;
       notifyListeners();
       return;
     }
+
+    _potentialDragNodeId = null;
+    _dragNodeStartScreenPos = null;
+    _potentialDragEquipmentId = null;
+    _dragEquipmentStartScreenPos = null;
 
     if (isDraggingCallout) {
       history.recordState(network);
@@ -2571,7 +2880,7 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Обновление пользовательского текста выноски
+  /// Обновление пользовательского текста выноски (над полкой)
   void updateCalloutCustomText(String id, String customText) {
     final callout = network.callouts[id];
     if (callout == null) return;
@@ -2580,9 +2889,30 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Получение итогового текста выноски для отображения
+  /// Обновление пользовательского текста выноски под полкой
+  void updateCalloutCustomBottomText(String id, String? customBottomText) {
+    final callout = network.callouts[id];
+    if (callout == null) return;
+    network.callouts[id] = callout.copyWith(customBottomText: customBottomText);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Получение итогового текста выноски для отображения над полкой
   String getCalloutText(Callout callout) {
     return network.generateCalloutText(callout, currentProject.calloutTemplates);
+  }
+
+  /// Получение итогового текста выноски для отображения под полкой
+  String? getCalloutBottomText(Callout callout) {
+    return network.generateCalloutBottomText(callout, currentProject.calloutTemplates);
+  }
+
+  /// Обновление глобального шаблона выносок в текущем проекте
+  void updateCalloutTemplate(String key, String template) {
+    currentProject.calloutTemplates[key] = template;
+    history.recordState(network);
+    notifyListeners();
   }
 
   /// Поиск выноски под курсором (hit-test по тексту и полочке)
