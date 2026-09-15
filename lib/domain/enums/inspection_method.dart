@@ -20,6 +20,25 @@ enum InspectionMethod {
 }
 
 extension InspectionMethodExt on InspectionMethod {
+  String get code {
+    switch (this) {
+      case InspectionMethod.vik:
+        return 'ВИК';
+      case InspectionMethod.rk:
+        return 'РК';
+      case InspectionMethod.uzk:
+        return 'УЗК';
+      case InspectionMethod.pvk:
+        return 'ПВК';
+      case InspectionMethod.hydro:
+        return 'ГИ';
+      case InspectionMethod.none:
+        return '—';
+    }
+  }
+
+  String get shortName => code;
+
   String get displayName {
     switch (this) {
       case InspectionMethod.vik:

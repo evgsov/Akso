@@ -45,7 +45,7 @@ void main() {
       expect(controller.isDraggingNode, isFalse);
     });
 
-    test('1.3: Grip Edit: clicking selected node activates grip mode, next LMB commits', () {
+    test('1.3: Repeated click on selected node keeps it selected without accidental dragging', () {
       final n1 = Node3D(id: 'node_1', x: 0, y: 0, z: 0);
       network.nodes[n1.id] = n1;
       final p1 = projector.project(n1);
@@ -56,21 +56,17 @@ void main() {
       expect(controller.selectedNodeId, equals('node_1'));
       expect(controller.activeGripNodeId, isNull);
 
-      // Второй клик по уже выделенному узлу — активирует Grip Mode
+      // Второй клик по уже выделенному узлу — не переводит его в залипающий Grip Mode
       controller.handlePointerDown(p1);
-      expect(controller.activeGripNodeId, equals('node_1'));
+      controller.handlePointerUp();
+      expect(controller.selectedNodeId, equals('node_1'));
+      expect(controller.activeGripNodeId, isNull);
 
-      // Перемещение курсора без зажатия кнопки мыши тянет узел за курсором
+      // Перемещение курсора без зажатия кнопки мыши НЕ должно тянуть узел за собой
       final pTarget = projector.projectCoordinates(1000, 500, 0);
       controller.handlePointerMove(pTarget);
-      expect(network.nodes['node_1']!.x, equals(1000.0));
-      expect(network.nodes['node_1']!.y, equals(500.0));
-
-      // Следующий клик ЛКМ подтверждает и фиксирует положение
-      controller.handlePointerDown(pTarget);
-      expect(controller.activeGripNodeId, isNull);
-      expect(network.nodes['node_1']!.x, equals(1000.0));
-      expect(network.nodes['node_1']!.y, equals(500.0));
+      expect(network.nodes['node_1']!.x, equals(0.0));
+      expect(network.nodes['node_1']!.y, equals(0.0));
     });
 
     test('1.4: Empty canvas click deselects cleanly', () {

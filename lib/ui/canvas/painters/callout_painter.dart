@@ -316,15 +316,12 @@ class CalloutPainter {
       ..color = primaryColor
       ..strokeWidth = isSelected ? 2.0 : 1.2
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
 
     canvas.drawLine(anchorScreen, textPos, linePaint);
 
-    // 3. Горизонтальная полочка выноски (подчеркивание текста по ГОСТ 2.316)
-    canvas.drawLine(textPos, shelfEnd, linePaint);
-
-    // 4. Фон для текста над и под полочкой
+    // 3. Фон для текста над и под полочкой (рисуем ДО линии полочки для четкости)
     final bgTop = textPos.dy - topTp.height - 4.0;
     final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
     final bgRect = RRect.fromRectAndRadius(
@@ -334,15 +331,18 @@ class CalloutPainter {
         shelfLength,
         totalHeight,
       ),
-      const Radius.circular(3.0),
+      const Radius.circular(2.0),
     );
 
     canvas.drawRRect(
       bgRect,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.88)
+        ..color = Colors.white.withValues(alpha: 0.92)
         ..style = PaintingStyle.fill,
     );
+
+    // 4. Горизонтальная полочка выноски (поверх белой плашки по ГОСТ 2.316)
+    canvas.drawLine(textPos, shelfEnd, linePaint);
 
     // Отрисовка текста над полочкой
     final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;

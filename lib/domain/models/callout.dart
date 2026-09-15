@@ -49,14 +49,34 @@ extension CalloutTargetTypeExt on CalloutTargetType {
         return 'Узел {ID}';
     }
   }
+
+  /// Стандартный шаблон нижней полки по умолчанию для данного типа
+  String? get defaultBottomTemplate {
+    switch (this) {
+      case CalloutTargetType.segment:
+        return '{SYSTEM}';
+      case CalloutTargetType.weld:
+        return '{TYPE} {STAMP}';
+      case CalloutTargetType.valve:
+        return '{SYSTEM} {MATERIAL}';
+      case CalloutTargetType.fitting:
+        return '{STANDARD} {MATERIAL}';
+      default:
+        return null;
+    }
+  }
 }
 
 /// Стандартные шаблоны выносок для проекта
 const Map<String, String> defaultCalloutTemplates = {
   'segment': 'Ø{DN}x{WALL} {MATERIAL}',
+  'segment_bottom': '{SYSTEM}',
   'weld': 'Стык №{ID}',
+  'weld_bottom': '{TYPE} {STAMP}',
   'valve': '{NAME} Ду{DN}',
+  'valve_bottom': '{SYSTEM} {MATERIAL}',
   'fitting': '{NAME}',
+  'fitting_bottom': '{STANDARD} {MATERIAL}',
   'equipment': '{NAME}',
   'support': '{NAME}',
   'node': 'Узел {ID}',

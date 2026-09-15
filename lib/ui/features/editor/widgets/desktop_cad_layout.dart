@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../domain/enums/fitting_type.dart';
+import '../../../../domain/enums/inspection_method.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/enums/weld_type.dart';
@@ -101,6 +103,9 @@ class DesktopCadLayout extends StatelessWidget {
                         controller.selectedEquipmentId != null ||
                         controller.selectedDimensionId != null ||
                         controller.selectedAxisId != null ||
+                        controller.selectedValveId != null ||
+                        controller.selectedSupportId != null ||
+                        controller.selectedWeldId != null ||
                         controller.selectedNodeIds.length > 1 ||
                         controller.selectedSegmentIds.length > 1)
                       Positioned(
@@ -737,6 +742,10 @@ class DesktopCadLayout extends StatelessWidget {
                   if (pn != null) controller.setFlangePressurePn(pn);
                 },
               ),
+            ] else if (controller.currentTool == CanvasTool.insertCap) ...[
+              const Text('Заглушка / днище (ГОСТ 6533):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
+              const SizedBox(width: 12),
+              const Text('Нажмите на концевой узел или открытый конец трубы для установки днища', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ] else if (controller.currentTool == CanvasTool.insertWeld) ...[
               const Text('Врезка сварного стыка:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo)),
               const SizedBox(width: 12),
@@ -1004,6 +1013,7 @@ class DesktopCadLayout extends StatelessWidget {
             _toolButton(CanvasTool.insertWeld, Icons.flare, 'Врезка сварного шва'),
             _toolButton(CanvasTool.insertReducer, Icons.call_split, 'Врезка перехода'),
             _toolButton(CanvasTool.insertFlange, Icons.radio_button_checked, 'Врезка фланцев'),
+            _toolButton(CanvasTool.insertCap, Icons.block, 'Заглушка / днище'),
             _toolButton(CanvasTool.insertSupport, Icons.format_underlined, 'Опора / подвеска трубы'),
             const Divider(height: 16, indent: 8, endIndent: 8),
             IconButton(
@@ -1039,8 +1049,11 @@ class DesktopCadLayout extends StatelessWidget {
     final isDimension = controller.selectedDimensionId != null;
     final isAxis = !isDimension && controller.selectedAxisId != null;
     final isMultiSelect = controller.selectedNodeIds.length > 1 || controller.selectedSegmentIds.length > 1;
-    final isSegment = !isDimension && !isAxis && !isMultiSelect && controller.selectedSegmentId != null;
-    final isEquipment = !isDimension && !isAxis && !isMultiSelect && controller.selectedEquipmentId != null;
+    final isValve = !isDimension && !isAxis && !isMultiSelect && controller.selectedValveId != null;
+    final isSupport = !isDimension && !isAxis && !isMultiSelect && !isValve && controller.selectedSupportId != null;
+    final isWeld = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && controller.selectedWeldId != null;
+    final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedSegmentId != null;
+    final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedEquipmentId != null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
@@ -1055,6 +1068,15 @@ class DesktopCadLayout extends StatelessWidget {
     } else if (isMultiSelect) {
       title = 'Выделено (${controller.selectedNodeIds.length} узл., ${controller.selectedSegmentIds.length} труб)';
       icon = Icons.select_all;
+    } else if (isValve) {
+      title = 'Арматура';
+      icon = Icons.settings_input_component;
+    } else if (isSupport) {
+      title = 'Опора трубы';
+      icon = Icons.vertical_align_bottom;
+    } else if (isWeld) {
+      title = 'Сварной стык';
+      icon = Icons.join_inner;
     } else if (isSegment) {
       title = 'Свойства трубы';
       icon = Icons.linear_scale;
@@ -1068,7 +1090,7 @@ class DesktopCadLayout extends StatelessWidget {
       shadowColor: Colors.black26,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        width: 260,
+        width: 310,
         padding: const EdgeInsets.all(14),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1096,6 +1118,9 @@ class DesktopCadLayout extends StatelessWidget {
                     controller.selectedEquipmentId = null;
                     controller.selectedDimensionId = null;
                     controller.selectedAxisId = null;
+                    controller.selectedValveId = null;
+                    controller.selectedSupportId = null;
+                    controller.selectedWeldId = null;
                     controller.selectedNodeIds.clear();
                     controller.selectedSegmentIds.clear();
                     controller.refresh();
@@ -1248,6 +1273,341 @@ class DesktopCadLayout extends StatelessWidget {
                   onPressed: controller.deleteSelected,
                 ),
               ),
+            ] else if (isValve) ...[
+              () {
+                final valve = controller.network.valves[controller.selectedValveId!];
+                if (valve == null) return const Text('Арматура не найдена', style: TextStyle(fontSize: 11, color: Colors.grey));
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${valve.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Тип:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButton<ValveType>(
+                            value: valve.valveType,
+                            isDense: true,
+                            isExpanded: true,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            items: ValveType.values.map((vt) {
+                              return DropdownMenuItem(
+                                value: vt,
+                                child: Text(vt.displayName, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (newType) {
+                              if (newType == null) return;
+                              controller.history.recordState(controller.network);
+                              controller.network.updateValve(
+                                valve.id,
+                                valve.copyWith(valveType: newType),
+                              );
+                              controller.refresh();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Диаметр DN:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('Ду ${valve.dn}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Строит. длина:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${valve.lengthMm.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Позиция:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${(valve.ratio * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Рукоятка: ${valve.handleAngleDeg.round()}°', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            controller.history.recordState(controller.network);
+                            final nextAngle = (valve.handleAngleDeg + 90.0) % 360.0;
+                            controller.network.updateValve(
+                              valve.id,
+                              valve.copyWith(handleAngleDeg: nextAngle),
+                            );
+                            controller.refresh();
+                          },
+                          child: const Text('Поворот +90°', style: TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Фланцевая:', style: TextStyle(fontSize: 11)),
+                        Switch(
+                          value: valve.isFlanged,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          onChanged: (val) {
+                            controller.history.recordState(controller.network);
+                            controller.network.updateValve(
+                              valve.id,
+                              valve.copyWith(isFlanged: val),
+                            );
+                            controller.refresh();
+                          },
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Инвертировать:', style: TextStyle(fontSize: 11)),
+                        Switch(
+                          value: valve.isReversed,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          onChanged: (val) {
+                            controller.history.recordState(controller.network);
+                            controller.network.updateValve(
+                              valve.id,
+                              valve.copyWith(isReversed: val),
+                            );
+                            controller.refresh();
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Удалить арматуру (Del)', style: TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
+            ] else if (isSupport) ...[
+              () {
+                final support = controller.network.supports[controller.selectedSupportId!];
+                if (support == null) return const Text('Опора не найдена', style: TextStyle(fontSize: 11, color: Colors.grey));
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${support.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Тип:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButton<PipeSupportType>(
+                            value: support.type,
+                            isDense: true,
+                            isExpanded: true,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            items: PipeSupportType.values.map((st) {
+                              return DropdownMenuItem(
+                                value: st,
+                                child: Text(st.displayName, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (newType) {
+                              if (newType == null) return;
+                              controller.history.recordState(controller.network);
+                              controller.network.updateSupport(
+                                support.id,
+                                support.copyWith(type: newType),
+                              );
+                              controller.refresh();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Маркировка:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(
+                          support.name.isNotEmpty ? support.name : support.type.shortCode,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Позиция:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${(support.distanceRatio * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Удалить опору (Del)', style: TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
+            ] else if (isWeld) ...[
+              () {
+                final weld = controller.network.weldJoints[controller.selectedWeldId!];
+                if (weld == null) return const Text('Сварной стык не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${weld.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Номер шва:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('№ ${weld.number}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Клеймо:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(weld.stamp.isNotEmpty ? weld.stamp : '—', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Тип:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButton<WeldType>(
+                            value: weld.weldType,
+                            isDense: true,
+                            isExpanded: true,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            items: WeldType.values.map((wt) {
+                              return DropdownMenuItem(
+                                value: wt,
+                                child: Text(wt.shortName, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (newType) {
+                              if (newType == null) return;
+                              controller.history.recordState(controller.network);
+                              controller.network.updateWeldJoint(
+                                weld.id,
+                                (w) => w.copyWith(weldType: newType),
+                              );
+                              controller.refresh();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Контроль:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButton<InspectionMethod>(
+                            value: weld.inspectionMethod,
+                            isDense: true,
+                            isExpanded: true,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            items: InspectionMethod.values.map((im) {
+                              return DropdownMenuItem(
+                                value: im,
+                                child: Text(im.code, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (newMethod) {
+                              if (newMethod == null) return;
+                              controller.history.recordState(controller.network);
+                              controller.network.updateWeldJoint(
+                                weld.id,
+                                (w) => w.copyWith(inspectionMethod: newMethod),
+                              );
+                              controller.refresh();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Сталь:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(weld.steelGrade, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Позиция:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('${(weld.ratio * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Удалить стык (Del)', style: TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
             ] else if (isSegment)
               _DesktopSegmentInspector(
                 controller: controller,
@@ -1295,46 +1655,236 @@ class DesktopCadLayout extends StatelessWidget {
                 ),
               ),
             ] else if (controller.selectedNodeId != null) ...[
-              Text('Узел ID: ${controller.selectedNodeId}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              const SizedBox(height: 4),
-              Text(
-                'Отметка: ${controller.network.nodes[controller.selectedNodeId]?.elevationString ?? "0.000 м"}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
-                  icon: const Icon(Icons.tune, size: 16),
-                  label: const Text('Настроить деталь / фитинг', style: TextStyle(fontSize: 12)),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => FittingPropertiesSheet(
-                        network: controller.network,
-                        nodeId: controller.selectedNodeId!,
-                        onModified: controller.refresh,
+              () {
+                final nodeId = controller.selectedNodeId!;
+                final node = controller.network.nodes[nodeId];
+                final connected = controller.network.getConnectedSegments(nodeId);
+                final fit = controller.network.fittings[nodeId];
+                final isEndNode = connected.length == 1 && node?.equipmentId == null;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Узел ID: $nodeId', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Отметка: ${node?.elevationString ?? "0.000 м"}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    Text('Подключено труб: ${connected.length}', style: const TextStyle(fontSize: 11)),
+                    const SizedBox(height: 10),
+
+                    // Если на узле уже установлен фитинг (днище, фланец и т.д.)
+                    if (fit != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.indigo.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.indigo.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  fit.fittingType == FittingType.cap
+                                      ? Icons.block
+                                      : (fit.fittingType == FittingType.flange
+                                          ? Icons.radio_button_checked
+                                          : (fit.fittingType == FittingType.directBranch
+                                              ? Icons.merge_type
+                                              : (fit.fittingType == FittingType.tee ? Icons.call_split : Icons.tune))),
+                                  size: 16,
+                                  color: Colors.indigo,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    fit.displayName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ду: ${fit.dn}  |  ${fit.standard ?? "ГОСТ"}',
+                              style: const TextStyle(fontSize: 11, color: Colors.black87),
+                            ),
+                            if (fit.fittingType == FittingType.tee || fit.fittingType == FittingType.directBranch) ...[
+                              const SizedBox(height: 8),
+                              const Text('Исполнение ответвления:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87)),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                width: double.infinity,
+                                child: SegmentedButton<FittingType>(
+                                  style: const ButtonStyle(
+                                    visualDensity: VisualDensity.compact,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: FittingType.tee,
+                                      label: Text('Тройник (3 стыка)', style: TextStyle(fontSize: 10)),
+                                      icon: Icon(Icons.call_split, size: 14),
+                                    ),
+                                    ButtonSegment(
+                                      value: FittingType.directBranch,
+                                      label: Text('Врезка У18 (1 шов)', style: TextStyle(fontSize: 10)),
+                                      icon: Icon(Icons.merge_type, size: 14),
+                                    ),
+                                  ],
+                                  selected: {fit.fittingType},
+                                  onSelectionChanged: (set) {
+                                    final newType = set.first;
+                                    controller.history.recordState(controller.network);
+                                    if (newType == FittingType.directBranch) {
+                                      controller.network.updateFitting(
+                                        nodeId,
+                                        fit.copyWith(
+                                          fittingType: FittingType.directBranch,
+                                          name: 'Прямая врезка У18',
+                                          standard: 'ГОСТ 16037-80 У18',
+                                          weldType: WeldType.u18,
+                                          radiusMm: 0.0,
+                                          cutsMainPipe: false,
+                                        ),
+                                      );
+                                    } else {
+                                      controller.network.updateFitting(
+                                        nodeId,
+                                        fit.copyWith(
+                                          fittingType: FittingType.tee,
+                                          name: 'Тройник равнопроходный Ду${fit.dn}',
+                                          standard: 'ГОСТ 17376-2001',
+                                          weldType: WeldType.c17,
+                                          radiusMm: fit.dn * 1.0,
+                                          cutsMainPipe: true,
+                                        ),
+                                      );
+                                    }
+                                    controller.refresh();
+                                  },
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                                    onPressed: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        builder: (_) => FittingPropertiesSheet(
+                                          network: controller.network,
+                                          nodeId: nodeId,
+                                          onModified: controller.refresh,
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Свойства', style: TextStyle(fontSize: 11)),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    controller.history.recordState(controller.network);
+                                    controller.network.removeFitting(nodeId);
+                                    controller.refresh();
+                                  },
+                                  child: const Text('Снять', style: TextStyle(fontSize: 11)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: BorderSide(color: Colors.red.shade300),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text('Удалить узел (Del)', style: TextStyle(fontSize: 11)),
-                  onPressed: controller.deleteSelected,
-                ),
-              ),
+                      const SizedBox(height: 10),
+                    ] else if (isEndNode) ...[
+                      // Быстрые кнопки для концевого узла трубы
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.indigo.shade600,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.block, size: 16),
+                          label: const Text('Установить днище (заглушку)', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            controller.history.recordState(controller.network);
+                            controller.network.attachCapToNode(nodeId);
+                            controller.refresh();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                          icon: const Icon(Icons.radio_button_checked, size: 16),
+                          label: const Text('Установить концевой фланец', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            controller.history.recordState(controller.network);
+                            controller.network.attachEndFlangeToNode(
+                              nodeId,
+                              flangeConnectionType: FlangeConnectionType.toEquipment,
+                              pressurePn: controller.flangePressurePn,
+                              material: controller.activeMaterial,
+                            );
+                            controller.refresh();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: const Icon(Icons.tune, size: 16),
+                        label: const Text('Настроить деталь / фитинг', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => FittingPropertiesSheet(
+                              network: controller.network,
+                              nodeId: nodeId,
+                              onModified: controller.refresh,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: BorderSide(color: Colors.red.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Удалить узел (Del)', style: TextStyle(fontSize: 11)),
+                        onPressed: controller.deleteSelected,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
             ],
           ],
         ),
@@ -1503,8 +2053,9 @@ class DesktopCadLayout extends StatelessWidget {
       case CanvasTool.insertWeld:
       case CanvasTool.insertReducer:
       case CanvasTool.insertFlange:
+      case CanvasTool.insertCap:
       case CanvasTool.insertSupport:
-        return 'Нажмите на участок трубы на чертеже для установки элемента';
+        return 'Нажмите на участок трубы или концевой узел для установки элемента';
       case CanvasTool.move:
         return 'Укажите базовую точку и вторую точку смещения или введите расстояние • Esc: отмена';
       case CanvasTool.copy:

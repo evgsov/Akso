@@ -44,29 +44,29 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
             const SizedBox(height: 8),
             Text('Подключено участков труб: ${connected.length}'),
             const SizedBox(height: 12),
-            if (connected.length == 1 && widget.network.nodes[widget.nodeId]?.equipmentId == null)
+            if (connected.length == 1 && widget.network.nodes[widget.nodeId]?.equipmentId == null) ...[
               FilledButton.icon(
                 icon: const Icon(Icons.block),
                 label: const Text('Установить заглушку (днище)'),
                 onPressed: () {
-                  final s = connected[0];
-                  final newFit = Fitting(
-                    id: 'fit_${widget.nodeId}',
-                    nodeId: widget.nodeId,
-                    fittingType: FittingType.cap,
-                    dn: s.dn,
-                    radiusMm: FittingType.cap.defaultDeductionMm(s.dn),
-                    material: s.material,
-                    weldType: WeldType.c17,
-                  );
-                  setState(() {
-                    widget.network.fittings[widget.nodeId] = newFit;
-                  });
+                  widget.network.attachCapToNode(widget.nodeId);
+                  setState(() {});
                   widget.onModified?.call();
                   Navigator.pop(context);
                 },
               ),
-            if (connected.length == 1) const SizedBox(height: 8),
+              const SizedBox(height: 8),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.radio_button_checked),
+                label: const Text('Установить концевой фланец'),
+                onPressed: () {
+                  widget.network.attachEndFlangeToNode(widget.nodeId);
+                  setState(() {});
+                  widget.onModified?.call();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
             if (connected.length == 3)
               FilledButton.icon(
                 icon: const Icon(Icons.alt_route),
@@ -476,6 +476,23 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: BorderSide(color: Colors.red.shade300),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 16),
+              label: const Text('Удалить деталь / фитинг'),
+              onPressed: () {
+                widget.network.removeFitting(widget.nodeId);
+                widget.onModified?.call();
+                Navigator.of(context).pop();
+              },
+            ),
           ),
         ],
       ),

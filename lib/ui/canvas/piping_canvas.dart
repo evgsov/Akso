@@ -40,6 +40,9 @@ class PipingCanvasPainter extends CustomPainter {
   final String? selectedSegmentId;
   final String? selectedEquipmentId;
   final String? selectedCalloutId;
+  final String? selectedValveId;
+  final String? selectedSupportId;
+  final String? selectedWeldId;
   final Map<String, String>? calloutTemplates;
   final String? activeSystemId;
   final Node3D? activeTraceStart;
@@ -72,6 +75,9 @@ class PipingCanvasPainter extends CustomPainter {
     this.selectedSegmentId,
     this.selectedEquipmentId,
     this.selectedCalloutId,
+    this.selectedValveId,
+    this.selectedSupportId,
+    this.selectedWeldId,
     this.selectedDimensionId,
     this.selectedAxisId,
     this.previewDimension,
@@ -141,10 +147,22 @@ class PipingCanvasPainter extends CustomPainter {
     );
 
     // 4. Отрисовка арматуры
-    ValvePainter.paint(canvas, projector, network, isVolumeMode: isVolumeMode);
+    ValvePainter.paint(
+      canvas,
+      projector,
+      network,
+      isVolumeMode: isVolumeMode,
+      selectedValveId: selectedValveId,
+    );
 
     // 4.1. Отрисовка опор и подвесок
-    SupportPainter.paint(canvas, projector, network);
+    SupportPainter.paint(
+      canvas,
+      projector,
+      network,
+      isVolumeMode: isVolumeMode,
+      selectedSupportId: selectedSupportId,
+    );
 
     // 4.2. Отрисовка фасонных деталей
     FittingPainter.paint(
@@ -157,7 +175,15 @@ class PipingCanvasPainter extends CustomPainter {
     );
 
     // 5 & 6. Отрисовка сварных стыков, узлов сети и отметок
-    AnnotationPainter.paint(canvas, projector, network, selectedNodeId, showWelds, showCallouts);
+    AnnotationPainter.paint(
+      canvas,
+      projector,
+      network,
+      selectedNodeId,
+      showWelds,
+      showCallouts,
+      selectedWeldId: selectedWeldId,
+    );
 
     // 6.1. Отрисовка умных выносок сети (Callout) поверх графа
     if (showCallouts) {

@@ -147,6 +147,46 @@ void main() {
       final sp1Updated = net.spools.values.firstWhere((s) => s.segmentId == 's1');
       expect(sp1Updated.cutLengthMm, 700.0); // 1000 - 300 = 700 мм
     });
+
+    test('attachCapToNode устанавливает эллиптическое днище и создает 1 монтажный стык', () {
+      expect(network.weldJoints.length, 0);
+      expect(network.fittings['n2'], isNull);
+
+      final cap = network.attachCapToNode('n2');
+      expect(cap, isNotNull);
+      expect(cap!.fittingType, FittingType.cap);
+      expect(cap.dn, 100);
+      expect(network.fittings['n2'], equals(cap));
+      expect(network.weldJoints.length, 1);
+      final weld = network.weldJoints.values.first;
+      expect(weld.segmentId, 'seg1');
+      expect(weld.ratio, 1.0);
+
+      // Удаление фитинга через removeFitting убирает заглушку и стык
+      network.removeFitting('n2');
+      expect(network.fittings['n2'], isNull);
+      expect(network.weldJoints.length, 0);
+    });
+
+    test('attachEndFlangeToNode устанавливает концевой фланец на открытый конец трубы', () {
+      expect(network.weldJoints.length, 0);
+      expect(network.fittings['n1'], isNull);
+
+      final flange = network.attachEndFlangeToNode(
+        'n1',
+        flangeConnectionType: FlangeConnectionType.toEquipment,
+        pressurePn: 16,
+      );
+      expect(flange, isNotNull);
+      expect(flange!.fittingType, FittingType.flange);
+      expect(flange.dn, 100);
+      expect(flange.isFlangePair, isFalse);
+      expect(network.fittings['n1'], equals(flange));
+      expect(network.weldJoints.length, 1);
+      final weld = network.weldJoints.values.first;
+      expect(weld.segmentId, 'seg1');
+      expect(weld.ratio, 0.0);
+    });
   });
 
   group('FittingCatalog & Collection Tests', () {
@@ -254,3 +294,4 @@ void main() {
     });
   });
 }
+

@@ -39,18 +39,20 @@ class FittingPainter {
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
-        _drawReducerSymbol(
-          canvas,
-          projector: projector,
-          network: network,
-          isVolumeMode: isVolumeMode,
-          center: center,
-          angle: angle,
-          dn1: s1.dn,
-          dn2: s2.dn,
-          isEccentric: fit.fittingType == FittingType.reducerEccentric,
-          color: color,
-        );
+        if (!isVolumeMode) {
+          _drawReducerSymbol(
+            canvas,
+            projector: projector,
+            network: network,
+            isVolumeMode: isVolumeMode,
+            center: center,
+            angle: angle,
+            dn1: s1.dn,
+            dn2: s2.dn,
+            isEccentric: fit.fittingType == FittingType.reducerEccentric,
+            color: color,
+          );
+        }
 
         if (showCallouts) {
           final tp = TextPainter(
@@ -108,6 +110,7 @@ class FittingPainter {
           dn: fit.dn,
           dnSecondary: fit.dnSecondary,
           showCallouts: showCallouts,
+          isVolumeMode: isVolumeMode,
         );
       } else if (fit.fittingType == FittingType.cap) {
         final node = network.nodes[fit.nodeId];
@@ -124,16 +127,18 @@ class FittingPainter {
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
-        _drawCapSymbol(
-          canvas,
-          projector: projector,
-          network: network,
-          isVolumeMode: isVolumeMode,
-          center: center,
-          angle: angle,
-          dn: fit.dn,
-          color: color,
-        );
+        if (!isVolumeMode) {
+          _drawCapSymbol(
+            canvas,
+            projector: projector,
+            network: network,
+            isVolumeMode: isVolumeMode,
+            center: center,
+            angle: angle,
+            dn: fit.dn,
+            color: color,
+          );
+        }
       }
     }
   }
@@ -195,46 +200,45 @@ class FittingPainter {
     final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
 
     if (isVolumeMode) {
-      final dx = pOut2.dx - pOut1.dx;
-      final dy = pOut2.dy - pOut1.dy;
-      final centerElbow = Offset(pOut1.dx + dx / 2, pOut1.dy + dy / 2);
-      
-      final paint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      
-      final path = Path()
-        ..moveTo(pOut1.dx, pOut1.dy)
-        ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
-      canvas.drawPath(path, paint);
-
-      _drawWeldTickAt(canvas, pOut1, centerElbow, strokeWidth);
-      _drawWeldTickAt(canvas, pOut2, centerElbow, strokeWidth);
-    } else {
-      final paint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.square;
-
-      canvas.drawLine(ptN, pOut1, paint);
-      canvas.drawLine(ptN, pOut2, paint);
-
-      final curvePaint = Paint()
-        ..color = Colors.blueGrey.shade300
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0;
-      final path = Path()
-        ..moveTo(pOut1.dx, pOut1.dy)
-        ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
-      canvas.drawPath(path, curvePaint);
-
-      _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
-      _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
+      if (showCallouts) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: fit.fittingType.displayName,
+            style: TextStyle(
+              color: color,
+              fontSize: 9.0,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              backgroundColor: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, ptN + const Offset(10, 10));
+      }
+      return;
     }
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.square;
+
+    canvas.drawLine(ptN, pOut1, paint);
+    canvas.drawLine(ptN, pOut2, paint);
+
+    final curvePaint = Paint()
+      ..color = Colors.blueGrey.shade300
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    final path = Path()
+      ..moveTo(pOut1.dx, pOut1.dy)
+      ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
+    canvas.drawPath(path, curvePaint);
+
+    _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
+    _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
 
     if (showCallouts) {
       final tp = TextPainter(
@@ -290,82 +294,42 @@ class FittingPainter {
     if (connected.length < 3) return;
 
     final segRun1 = connected[0];
-    final segRun2 = connected[1];
-    final segBranch = connected[2];
 
     final sys = network.systems[segRun1.systemId];
     final color = sys != null ? Color(sys.colorValue) : Colors.black87;
-
-    final other1 = network.nodes[segRun1.startNodeId == fit.nodeId ? segRun1.endNodeId : segRun1.startNodeId]!;
-    final other2 = network.nodes[segRun2.startNodeId == fit.nodeId ? segRun2.endNodeId : segRun2.startNodeId]!;
-    final otherBranch = network.nodes[segBranch.startNodeId == fit.nodeId ? segBranch.endNodeId : segBranch.startNodeId]!;
 
     final ptN = projector.project(node);
 
     final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
 
     if (isVolumeMode) {
-      final pOut1 = PipePainter.calcPipeTrimmedPoint(
-        network: network,
-        nodeId: fit.nodeId,
-        otherNodeId: other1.id,
-        nodeScreen: ptN,
-        otherScreen: projector.project(other1),
-        seg: segRun1,
-      );
-      final pOut2 = PipePainter.calcPipeTrimmedPoint(
-        network: network,
-        nodeId: fit.nodeId,
-        otherNodeId: other2.id,
-        nodeScreen: ptN,
-        otherScreen: projector.project(other2),
-        seg: segRun2,
-      );
-      final pOutBranch = PipePainter.calcPipeTrimmedPoint(
-        network: network,
-        nodeId: fit.nodeId,
-        otherNodeId: otherBranch.id,
-        nodeScreen: ptN,
-        otherScreen: projector.project(otherBranch),
-        seg: segBranch,
-      );
-
-      final teeBodyPaint = Paint()
-        ..color = color
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.square;
-
-      canvas.drawLine(pOut1, pOut2, teeBodyPaint);
-
-      final branchStroke = _calcWidth(segBranch.dn, network, projector, isVolumeMode);
-      final branchPaint = Paint()
-        ..color = color
-        ..strokeWidth = branchStroke
-        ..strokeCap = StrokeCap.square;
-      canvas.drawLine(ptN, pOutBranch, branchPaint);
-
-      final hubRadius = math.max(strokeWidth * 0.7, 4.5);
-      final hubPaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(ptN, hubRadius, hubPaint);
-
-      final collarPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
-      canvas.drawCircle(ptN, hubRadius, collarPaint);
-
-      _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
-      _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
-      _drawWeldTickAt(canvas, pOutBranch, ptN, branchStroke);
-    } else {
-      final teePaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
-      canvas.drawCircle(ptN, math.max(7.0, strokeWidth * 0.9), teePaint);
+      if (showCallouts) {
+        final name = fit.dnSecondary != null && fit.dnSecondary != fit.dn
+            ? 'Тройник ${fit.dn}х${fit.dnSecondary}'
+            : 'Тройник Ду${fit.dn}';
+        final tp = TextPainter(
+          text: TextSpan(
+            text: name,
+            style: TextStyle(
+              color: color,
+              fontSize: 9.0,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              backgroundColor: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, ptN + const Offset(12, -14));
+      }
+      return;
     }
+
+    final teePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(ptN, math.max(7.0, strokeWidth * 0.9), teePaint);
 
     if (showCallouts) {
       final name = fit.dnSecondary != null && fit.dnSecondary != fit.dn
@@ -405,39 +369,89 @@ class FittingPainter {
 
     final w1 = _calcWidth(dn1, network, projector, isVolumeMode);
     final w2 = _calcWidth(dn2, network, projector, isVolumeMode);
-    final len = isVolumeMode ? math.max(w1, w2) * 1.5 : 12.0;
-    
-    final paint = Paint()
-      ..color = color
-      ..style = isVolumeMode ? PaintingStyle.fill : PaintingStyle.stroke
-      ..strokeWidth = isVolumeMode ? 0 : 2.0;
+    final len = isVolumeMode ? math.max(w1, w2) * 1.5 : 14.0;
+    final halfLen = len / 2.0;
 
     final path = Path();
     if (isEccentric) {
       // Нижняя образующая прямая (Flat on Bottom): Y = max(w1, w2) / 2
       final flatBottomY = math.max(w1, w2) / 2;
-      path.moveTo(-len / 2, flatBottomY - w1);
-      path.lineTo(len / 2, flatBottomY - w2);
-      path.lineTo(len / 2, flatBottomY);
-      path.lineTo(-len / 2, flatBottomY);
+      path.moveTo(-halfLen, flatBottomY - w1);
+      path.lineTo(halfLen, flatBottomY - w2);
+      path.lineTo(halfLen, flatBottomY);
+      path.lineTo(-halfLen, flatBottomY);
       path.close();
     } else {
-      path.moveTo(-len / 2, -w1 / 2);
-      path.lineTo(len / 2, -w2 / 2);
-      path.lineTo(len / 2, w2 / 2);
-      path.lineTo(-len / 2, w1 / 2);
+      path.moveTo(-halfLen, -w1 / 2);
+      path.lineTo(halfLen, -w2 / 2);
+      path.lineTo(halfLen, w2 / 2);
+      path.lineTo(-halfLen, w1 / 2);
       path.close();
     }
-    canvas.drawPath(path, paint);
 
     if (isVolumeMode) {
+      final fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..shader = ui.Gradient.linear(
+          Offset(0, -math.max(w1, w2) / 2),
+          Offset(0, math.max(w1, w2) / 2),
+          [
+            color.withValues(alpha: 0.65),
+            Colors.white.withValues(alpha: 0.85),
+            color,
+            color.withValues(alpha: 0.5),
+          ],
+          [0.0, 0.35, 0.7, 1.0],
+        );
+      canvas.drawPath(path, fillPaint);
+
       final border = Paint()
-        ..color = Colors.black54
+        ..color = Colors.black87
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0;
+        ..strokeWidth = 1.2;
       canvas.drawPath(path, border);
+    } else {
+      // 2D СПДС / ГОСТ: фоновая подложка для изоляции от фона и трубы
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill,
+      );
+
+      // Векторные образующие конуса
+      final strokePaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.square
+        ..strokeJoin = StrokeJoin.miter;
+      canvas.drawPath(path, strokePaint);
+
+      // Торцевые засечки стыков (поперечные черточки на входе и выходе)
+      final tickPaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4;
+
+      if (isEccentric) {
+        final flatBottomY = math.max(w1, w2) / 2;
+        canvas.drawLine(Offset(-halfLen, flatBottomY - w1 - 1.5), Offset(-halfLen, flatBottomY + 1.5), tickPaint);
+        canvas.drawLine(Offset(halfLen, flatBottomY - w2 - 1.5), Offset(halfLen, flatBottomY + 1.5), tickPaint);
+      } else {
+        canvas.drawLine(Offset(-halfLen, -w1 / 2 - 1.5), Offset(-halfLen, w1 / 2 + 1.5), tickPaint);
+        canvas.drawLine(Offset(halfLen, -w2 / 2 - 1.5), Offset(halfLen, w2 / 2 + 1.5), tickPaint);
+      }
+
+      // Тонкая осевая линия по ГОСТ
+      final centerPaint = Paint()
+        ..color = color.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8;
+      final axisY = isEccentric ? (math.max(w1, w2) / 2 - (w1 + w2) / 4) : 0.0;
+      canvas.drawLine(Offset(-halfLen - 3.0, axisY), Offset(halfLen + 3.0, axisY), centerPaint);
     }
-    
+
     canvas.restore();
   }
 
@@ -464,46 +478,48 @@ class FittingPainter {
       ..strokeWidth = 2.4
       ..strokeCap = StrokeCap.square;
 
-    switch (flangeConnectionType) {
-      case FlangeConnectionType.pipeToPipe:
-        const gap = 3.0;
-        canvas.drawLine(Offset(-gap, -halfH), Offset(-gap, halfH), paint);
-        canvas.drawLine(Offset(gap, -halfH), Offset(gap, halfH), paint);
-        final gasketPaint = Paint()
-          ..color = Colors.amber.shade800
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(Offset.zero, 2.0, gasketPaint);
-        break;
+    if (!isVolumeMode) {
+      switch (flangeConnectionType) {
+        case FlangeConnectionType.pipeToPipe:
+          const gap = 3.0;
+          canvas.drawLine(Offset(-gap, -halfH), Offset(-gap, halfH), paint);
+          canvas.drawLine(Offset(gap, -halfH), Offset(gap, halfH), paint);
+          final gasketPaint = Paint()
+            ..color = Colors.amber.shade800
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(Offset.zero, 2.0, gasketPaint);
+          break;
 
-      case FlangeConnectionType.toEquipment:
-        canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
-        final gasketPaint = Paint()
-          ..color = Colors.amber.shade800
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(const Offset(0.5, 0), 2.0, gasketPaint);
+        case FlangeConnectionType.toEquipment:
+          canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
+          final gasketPaint = Paint()
+            ..color = Colors.amber.shade800
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(const Offset(0.5, 0), 2.0, gasketPaint);
 
-        final eqPaint = Paint()
-          ..color = Colors.blueGrey.shade400
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8;
-        canvas.drawLine(Offset(3.5, -halfH * 1.15), Offset(3.5, halfH * 1.15), eqPaint);
-        canvas.drawRect(Rect.fromLTWH(3.5, -halfH * 0.6, 7.0, halfH * 1.2), eqPaint);
-        break;
+          final eqPaint = Paint()
+            ..color = Colors.blueGrey.shade400
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.8;
+          canvas.drawLine(Offset(3.5, -halfH * 1.15), Offset(3.5, halfH * 1.15), eqPaint);
+          canvas.drawRect(Rect.fromLTWH(3.5, -halfH * 0.6, 7.0, halfH * 1.2), eqPaint);
+          break;
 
-      case FlangeConnectionType.blindFlange:
-        canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
-        final blindPaint = Paint()
-          ..color = Colors.blueGrey.shade700
-          ..style = PaintingStyle.fill;
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(Rect.fromLTWH(1.5, -halfH * 1.05, 4.0, halfH * 2.1), const Radius.circular(1.0)),
-          blindPaint,
-        );
-        break;
+        case FlangeConnectionType.blindFlange:
+          canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
+          final blindPaint = Paint()
+            ..color = Colors.blueGrey.shade700
+            ..style = PaintingStyle.fill;
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(Rect.fromLTWH(1.5, -halfH * 1.05, 4.0, halfH * 2.1), const Radius.circular(1.0)),
+            blindPaint,
+          );
+          break;
 
-      case FlangeConnectionType.singleFlange:
-        canvas.drawLine(Offset(0, -halfH), Offset(0, halfH), paint);
-        break;
+        case FlangeConnectionType.singleFlange:
+          canvas.drawLine(Offset(0, -halfH), Offset(0, halfH), paint);
+          break;
+      }
     }
 
     if (showCallouts) {
@@ -548,12 +564,15 @@ class FittingPainter {
     required int dn,
     int? dnSecondary,
     required bool showCallouts,
+    bool isVolumeMode = false,
   }) {
-    final weldPaint = Paint()
-      ..color = const Color(0xFF455A64)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(center, 7.0, weldPaint);
+    if (!isVolumeMode) {
+      final weldPaint = Paint()
+        ..color = const Color(0xFF455A64)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawCircle(center, 7.0, weldPaint);
+    }
 
     if (showCallouts) {
       final tp = TextPainter(
@@ -584,48 +603,72 @@ class FittingPainter {
     required Color color,
   }) {
     final w = _calcWidth(dn, network, projector, isVolumeMode);
-    
+    final capRadius = math.max(w * 0.5, 4.0);
+    final capDepth = math.max(w * 0.45, 5.0);
+
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(angle);
-    
+
+    final capRect = Rect.fromCenter(center: Offset(capDepth * 0.3, 0), width: capDepth * 1.4, height: capRadius * 2);
+
     if (isVolumeMode) {
-      final rect = Rect.fromCenter(center: Offset.zero, width: w * 0.8, height: w);
       final paint = Paint()
         ..style = PaintingStyle.fill
         ..shader = ui.Gradient.linear(
-          Offset(0, -w / 2),
-          Offset(0, w / 2),
+          Offset(0, -capRadius),
+          Offset(0, capRadius),
           [
             color.withValues(alpha: 0.6),
-            color.withValues(alpha: 0.9),
+            Colors.white.withValues(alpha: 0.8),
+            color,
             color.withValues(alpha: 0.5),
           ],
-          [0.0, 0.5, 1.0],
+          [0.0, 0.35, 0.7, 1.0],
         );
-      
-      canvas.drawArc(rect, -math.pi / 2, math.pi, true, paint);
-      
+
+      canvas.drawArc(capRect, -math.pi / 2, math.pi, true, paint);
+
       final border = Paint()
         ..style = PaintingStyle.stroke
-        ..color = color.withValues(alpha: 0.8)
+        ..color = Colors.black87
         ..strokeWidth = 1.0;
-      canvas.drawArc(rect, -math.pi / 2, math.pi, true, border);
+      canvas.drawArc(capRect, -math.pi / 2, math.pi, true, border);
     } else {
-      final paint = Paint()
+      // 2D СПДС / ГОСТ эллиптическое днище
+      // Фоновая подложка
+      canvas.drawArc(
+        capRect,
+        -math.pi / 2,
+        math.pi,
+        true,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill,
+      );
+
+      final strokePaint = Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w
-        ..strokeCap = StrokeCap.round;
-        
-      canvas.drawLine(Offset.zero, Offset(w * 0.5, 0), paint);
-      
-      final capEnd = Paint()
-        ..color = color
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(w * 0.5, 0), w * 0.6, capEnd);
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.square;
+
+      // Выпуклая дуга днища
+      canvas.drawArc(capRect, -math.pi / 2, math.pi, false, strokePaint);
+
+      // Приварной стык (основание днища)
+      canvas.drawLine(Offset(capDepth * 0.3, -capRadius - 1.5), Offset(capDepth * 0.3, capRadius + 1.5), strokePaint);
+
+      // Осевая риска
+      canvas.drawLine(
+        Offset(capDepth * 0.3 - 2.0, 0),
+        Offset(capDepth * 0.3 + capDepth * 0.7 + 3.0, 0),
+        Paint()
+          ..color = color.withValues(alpha: 0.5)
+          ..strokeWidth = 0.8,
+      );
     }
-    
+
     canvas.restore();
   }
 }

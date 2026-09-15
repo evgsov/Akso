@@ -67,6 +67,11 @@ class EditorToolsPanel extends StatelessWidget {
                       label: Text('Фланец'),
                     ),
                     ButtonSegment(
+                      value: CanvasTool.insertCap,
+                      icon: Icon(Icons.block, size: 18),
+                      label: Text('Заглушка'),
+                    ),
+                    ButtonSegment(
                       value: CanvasTool.insertSupport,
                       icon: Icon(Icons.format_underlined, size: 18),
                       label: Text('Опора'),
@@ -286,6 +291,21 @@ class EditorToolsPanel extends StatelessWidget {
                   const SizedBox(width: 16),
                   const Text(
                     'Нажмите на участок трубы на холсте для врезки фланцев (ГОСТ 33259)',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (controller.currentTool == CanvasTool.insertCap) ...[
+            const Divider(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: const [
+                  Text('Заглушка / днище (ГОСТ 6533): ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Нажмите на концевой узел или открытый конец трубы на холсте для установки днища',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

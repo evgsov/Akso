@@ -110,6 +110,39 @@ class AxonometryProjector {
     return Offset(screenX, screenY);
   }
 
+  /// Вычисление глубины точки (Z-depth) вдоль луча взгляда камеры.
+  /// Чем больше значение depth, тем глубже (дальше) точка находится от наблюдателя.
+  /// Используется для Painter's algorithm (Z-сортировки) в 3D.
+  double computeDepth(double x, double y, double z) {
+    switch (projectionType) {
+      case ProjectionType.orbit3d:
+        final dx = x - targetCenter.x;
+        final dy = y - targetCenter.y;
+        final dz = z - targetCenter.z;
+
+        final cosA = math.cos(orbitAzimuth);
+        final sinA = math.sin(orbitAzimuth);
+        final y1 = dx * sinA + dy * cosA;
+
+        final cosE = math.cos(orbitElevation);
+        final sinE = math.sin(orbitElevation);
+        return y1 * cosE - dz * sinE;
+
+      case ProjectionType.gostFrontal45:
+      case ProjectionType.gostMirrored45:
+        return x;
+
+      case ProjectionType.iso30:
+        return (x + y) * 0.70710678118;
+
+      case ProjectionType.topPlan2d:
+        return -z;
+    }
+  }
+
+  /// Вычисление глубины узла Node3D
+  double computeNodeDepth(Node3D node) => computeDepth(node.x, node.y, node.z);
+
   /// Вычисление охватывающего 2D-прямоугольника (в raw 2D-координатах) для набора 3D-узлов
   Rect? computeRawBoundingBox(Iterable<Node3D> nodes) {
     if (nodes.isEmpty) return null;

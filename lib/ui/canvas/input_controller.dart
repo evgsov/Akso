@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../core/math/snap_engine.dart';
+import '../../domain/enums/fitting_type.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
@@ -20,6 +21,8 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recovery_repository.dart';
+import 'controllers/selection_controller.dart';
+import 'controllers/tracing_controller.dart';
 import 'painters/callout_painter.dart';
 
 const _uuid = Uuid();
@@ -35,6 +38,7 @@ enum CanvasTool {
   insertReducer, // Врезка перехода диаметров
   insertWeld, // Врезка сварного стыка
   insertFlange, // Врезка фланцев
+  insertCap, // Установка заглушки / днища
   insertSupport, // Установка опор и подвесок
   drawAxis, // Черчение строительных осей
   insertEquipment, // Размещение оборудования со штуцерами
@@ -90,27 +94,77 @@ class PipingInputController extends ChangeNotifier {
   // Движок магнитных привязок и полярных углов
   final SnapEngine snapEngine = const SnapEngine();
   SnapResult? currentSnapResult;
-  AngleSnapMode angleSnapMode = AngleSnapMode.ortho90;
-  double customAngleDegrees = 15.0;
   bool isSnapEnabled = true;
   bool showGrid = true;
 
-  // Интерактивное состояние
-  String? selectedNodeId;
-  String? selectedSegmentId;
-  String? selectedEquipmentId;
-  String? selectedCalloutId;
+  // Модульные подконтроллеры селекции и трассировки
+  final SelectionController selectionController = SelectionController();
+  final TracingController tracingController = TracingController();
+
+  // Привязка свойств трассировки к TracingController
+  AngleSnapMode get angleSnapMode => tracingController.angleSnapMode;
+  set angleSnapMode(AngleSnapMode val) => tracingController.angleSnapMode = val;
+
+  double get customAngleDegrees => tracingController.customAngleDegrees;
+  set customAngleDegrees(double val) => tracingController.customAngleDegrees = val;
+
+  Node3D? get traceStartNode => tracingController.traceStartNode;
+  set traceStartNode(Node3D? val) => tracingController.traceStartNode = val;
+
+  Node3D? get axisStartNode => tracingController.axisStartNode;
+  set axisStartNode(Node3D? val) => tracingController.axisStartNode = val;
+
+  String get currentAxisLabel => tracingController.currentAxisLabel;
+  set currentAxisLabel(String val) => tracingController.currentAxisLabel = val;
+
+  bool get isBuildingGridAxis => tracingController.isBuildingGridAxis;
+  set isBuildingGridAxis(bool val) => tracingController.isBuildingGridAxis = val;
+
+  // Привязка интерактивного состояния и селекции к SelectionController
+  String? get selectedNodeId => selectionController.selectedNodeId;
+  set selectedNodeId(String? id) => selectionController.selectedNodeId = id;
+
+  String? get selectedSegmentId => selectionController.selectedSegmentId;
+  set selectedSegmentId(String? id) => selectionController.selectedSegmentId = id;
+
+  String? get selectedEquipmentId => selectionController.selectedEquipmentId;
+  set selectedEquipmentId(String? id) => selectionController.selectedEquipmentId = id;
+
+  String? get selectedCalloutId => selectionController.selectedCalloutId;
+  set selectedCalloutId(String? id) => selectionController.selectedCalloutId = id;
+
+  String? get selectedAxisId => selectionController.selectedAxisId;
+  set selectedAxisId(String? id) => selectionController.selectedAxisId = id;
+
+  String? get selectedDimensionId => selectionController.selectedDimensionId;
+  set selectedDimensionId(String? id) => selectionController.selectedDimensionId = id;
+
+  String? get selectedValveId => selectionController.selectedValveId;
+  set selectedValveId(String? id) => selectionController.selectedValveId = id;
+
+  String? get selectedSupportId => selectionController.selectedSupportId;
+  set selectedSupportId(String? id) => selectionController.selectedSupportId = id;
+
+  String? get selectedWeldId => selectionController.selectedWeldId;
+  set selectedWeldId(String? id) => selectionController.selectedWeldId = id;
+
   String? hoveredNodeId;
 
   // Мультиселекция и рамочный выбор
-  final Set<String> selectedNodeIds = {};
-  final Set<String> selectedSegmentIds = {};
-  final Set<String> selectedEquipmentIds = {};
-  final Set<String> selectedAxisIds = {};
-  final Set<String> selectedDimensionIds = {};
-  Rect? selectionBoxRect;
-  Offset? boxSelectStart;
-  bool isCrossingSelection = false;
+  Set<String> get selectedNodeIds => selectionController.selectedNodeIds;
+  Set<String> get selectedSegmentIds => selectionController.selectedSegmentIds;
+  Set<String> get selectedEquipmentIds => selectionController.selectedEquipmentIds;
+  Set<String> get selectedAxisIds => selectionController.selectedAxisIds;
+  Set<String> get selectedDimensionIds => selectionController.selectedDimensionIds;
+
+  Rect? get selectionBoxRect => selectionController.selectionBoxRect;
+  set selectionBoxRect(Rect? val) => selectionController.selectionBoxRect = val;
+
+  Offset? get boxSelectStart => selectionController.boxSelectStart;
+  set boxSelectStart(Offset? val) => selectionController.boxSelectStart = val;
+
+  bool get isCrossingSelection => selectionController.isCrossingSelection;
+  set isCrossingSelection(bool val) => selectionController.isCrossingSelection = val;
 
   // Инструменты редактирования (Move, Copy, Rotate с базовой точкой)
   Node3D? modifyBasePointWorld;
@@ -123,23 +177,25 @@ class PipingInputController extends ChangeNotifier {
   String? dimensionStartNodeId;
   String? dimensionEndNodeId;
   double dimensionOffset = 35.0;
-  String? selectedDimensionId;
-  String? selectedAxisId;
-
-  Node3D? traceStartNode;
-  Node3D? axisStartNode;
-  String currentAxisLabel = '1';
-  bool isBuildingGridAxis = true;
   Offset? currentCursorScreenPos;
 
   // Режим перетаскивания и ручек (Grip Editing)
   bool isDraggingNode = false;
   bool isDraggingEquipment = false;
   bool isDraggingCallout = false;
+  bool isDraggingValve = false;
+  bool isDraggingSupport = false;
+  bool isDraggingWeld = false;
   String? _potentialDragNodeId;
   Offset? _dragNodeStartScreenPos;
   String? _potentialDragEquipmentId;
   Offset? _dragEquipmentStartScreenPos;
+  String? _potentialDragValveId;
+  Offset? _dragValveStartScreenPos;
+  String? _potentialDragSupportId;
+  Offset? _dragSupportStartScreenPos;
+  String? _potentialDragWeldId;
+  Offset? _dragWeldStartScreenPos;
   Node3D? _dragEquipmentStartPos;
   Offset? _dragCalloutStartScreenPos;
   double _dragCalloutInitialOffsetX = 0.0;
@@ -154,8 +210,10 @@ class PipingInputController extends ChangeNotifier {
   bool? isGripAxisStart;
 
   // Модификаторы для рамочного выбора
-  bool _boxSelectIsShift = false;
-  bool _boxSelectIsCtrl = false;
+  bool get _boxSelectIsShift => selectionController.boxSelectIsShift;
+  set _boxSelectIsShift(bool val) => selectionController.boxSelectIsShift = val;
+  bool get _boxSelectIsCtrl => selectionController.boxSelectIsCtrl;
+  set _boxSelectIsCtrl(bool val) => selectionController.boxSelectIsCtrl = val;
 
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
@@ -224,6 +282,12 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Полная очистка выделения всех элементов
+  void clearSelection() {
+    selectionController.clearSelection();
+    notifyListeners();
+  }
+
   /// Превью размерной линии в процессе черчения
   LinearDimension? get previewDimension {
     if (currentTool != CanvasTool.dimension || dimensionStartNode == null) return null;
@@ -271,10 +335,19 @@ class PipingInputController extends ChangeNotifier {
     isDraggingNode = false;
     isDraggingEquipment = false;
     isDraggingCallout = false;
+    isDraggingValve = false;
+    isDraggingSupport = false;
+    isDraggingWeld = false;
     _potentialDragNodeId = null;
     _dragNodeStartScreenPos = null;
     _potentialDragEquipmentId = null;
     _dragEquipmentStartScreenPos = null;
+    _potentialDragValveId = null;
+    _dragValveStartScreenPos = null;
+    _potentialDragSupportId = null;
+    _dragSupportStartScreenPos = null;
+    _potentialDragWeldId = null;
+    _dragWeldStartScreenPos = null;
     if (activeGripNodeId != null && _gripOriginalNodePosition != null) {
       network.moveNode(
         activeGripNodeId!,
@@ -735,6 +808,79 @@ class PipingInputController extends ChangeNotifier {
         }
 
         selectedCalloutId = null;
+
+        final hitValveId = _findValveAtScreenPos(screenPos);
+        if (hitValveId != null) {
+          selectedValveId = hitValveId;
+          selectedSupportId = null;
+          selectedWeldId = null;
+          selectedNodeId = null;
+          selectedSegmentId = null;
+          selectedEquipmentId = null;
+          selectedDimensionId = null;
+          selectedAxisId = null;
+          selectedCalloutId = null;
+          selectedNodeIds.clear();
+          selectedSegmentIds.clear();
+          selectedEquipmentIds.clear();
+          selectedAxisIds.clear();
+          selectedDimensionIds.clear();
+          _potentialDragValveId = hitValveId;
+          _dragValveStartScreenPos = screenPos;
+          isDraggingValve = false;
+          notifyListeners();
+          break;
+        }
+
+        final hitWeldId = _findWeldAtScreenPos(screenPos);
+        if (hitWeldId != null) {
+          selectedWeldId = hitWeldId;
+          selectedValveId = null;
+          selectedSupportId = null;
+          selectedNodeId = null;
+          selectedSegmentId = null;
+          selectedEquipmentId = null;
+          selectedDimensionId = null;
+          selectedAxisId = null;
+          selectedCalloutId = null;
+          selectedNodeIds.clear();
+          selectedSegmentIds.clear();
+          selectedEquipmentIds.clear();
+          selectedAxisIds.clear();
+          selectedDimensionIds.clear();
+          _potentialDragWeldId = hitWeldId;
+          _dragWeldStartScreenPos = screenPos;
+          isDraggingWeld = false;
+          notifyListeners();
+          break;
+        }
+
+        final hitSupportId = _findSupportAtScreenPos(screenPos);
+        if (hitSupportId != null) {
+          selectedSupportId = hitSupportId;
+          selectedValveId = null;
+          selectedWeldId = null;
+          selectedNodeId = null;
+          selectedSegmentId = null;
+          selectedEquipmentId = null;
+          selectedDimensionId = null;
+          selectedAxisId = null;
+          selectedCalloutId = null;
+          selectedNodeIds.clear();
+          selectedSegmentIds.clear();
+          selectedEquipmentIds.clear();
+          selectedAxisIds.clear();
+          selectedDimensionIds.clear();
+          _potentialDragSupportId = hitSupportId;
+          _dragSupportStartScreenPos = screenPos;
+          isDraggingSupport = false;
+          notifyListeners();
+          break;
+        }
+
+        selectedValveId = null;
+        selectedSupportId = null;
+        selectedWeldId = null;
         selectedEquipmentId = _findEquipmentAtScreenPos(screenPos);
 
         if (hitNodeId != null) {
@@ -765,10 +911,11 @@ class PipingInputController extends ChangeNotifier {
             break;
           }
 
-          // Повторный клик по уже выделенному единственному узлу переводит его в режим ручки (Grip Mode)
+          // Повторный клик по уже выделенному единственному узлу оставляет его выделенным без залипания за курсором
           if (selectedNodeId == hitNodeId && selectedNodeIds.length == 1 && n != null) {
-            activeGripNodeId = hitNodeId;
-            _gripOriginalNodePosition = Node3D(id: n.id, x: n.x, y: n.y, z: n.z);
+            _potentialDragNodeId = hitNodeId;
+            _dragNodeStartScreenPos = screenPos;
+            isDraggingNode = false;
             notifyListeners();
             break;
           }
@@ -951,6 +1098,9 @@ class PipingInputController extends ChangeNotifier {
                 selectedSegmentId = null;
                 selectedEquipmentId = null;
                 selectedDimensionId = null;
+                selectedValveId = null;
+                selectedSupportId = null;
+                selectedWeldId = null;
                 selectedNodeIds.clear();
                 selectedSegmentIds.clear();
                 selectedEquipmentIds.clear();
@@ -1125,6 +1275,19 @@ class PipingInputController extends ChangeNotifier {
         break;
 
       case CanvasTool.insertFlange:
+        if (hitNodeId != null) {
+          final conn = network.getConnectedSegments(hitNodeId);
+          if (conn.length == 1) {
+            history.recordState(network);
+            network.attachEndFlangeToNode(
+              hitNodeId,
+              flangeConnectionType: isFlangePair ? FlangeConnectionType.pipeToPipe : FlangeConnectionType.toEquipment,
+              pressurePn: flangePressurePn,
+              material: activeMaterial,
+            );
+            break;
+          }
+        }
         if (hitSegId != null) {
           history.recordState(network);
           final ratio = _calcSegmentRatio(hitSegId, screenPos);
@@ -1135,6 +1298,29 @@ class PipingInputController extends ChangeNotifier {
             pressurePn: flangePressurePn,
             material: activeMaterial,
           );
+        }
+        break;
+
+      case CanvasTool.insertCap:
+        if (hitNodeId != null) {
+          final conn = network.getConnectedSegments(hitNodeId);
+          if (conn.length == 1) {
+            history.recordState(network);
+            network.attachCapToNode(hitNodeId);
+            break;
+          }
+        } else if (hitSegId != null) {
+          final seg = network.segments[hitSegId];
+          if (seg != null) {
+            final ratio = _calcSegmentRatio(hitSegId, screenPos);
+            final targetNodeId = ratio < 0.5 ? seg.startNodeId : seg.endNodeId;
+            final conn = network.getConnectedSegments(targetNodeId);
+            if (conn.length == 1) {
+              history.recordState(network);
+              network.attachCapToNode(targetNodeId);
+              break;
+            }
+          }
         }
         break;
 
@@ -1245,6 +1431,27 @@ class PipingInputController extends ChangeNotifier {
       }
     }
 
+    // Проверка порога перетаскивания для арматуры (порог 6 px)
+    if (_potentialDragValveId != null && !isDraggingValve && _dragValveStartScreenPos != null) {
+      if ((screenPos - _dragValveStartScreenPos!).distance > 6.0) {
+        isDraggingValve = true;
+      }
+    }
+
+    // Проверка порога перетаскивания для опор (порог 6 px)
+    if (_potentialDragSupportId != null && !isDraggingSupport && _dragSupportStartScreenPos != null) {
+      if ((screenPos - _dragSupportStartScreenPos!).distance > 6.0) {
+        isDraggingSupport = true;
+      }
+    }
+
+    // Проверка порога перетаскивания для сварных стыков (порог 6 px)
+    if (_potentialDragWeldId != null && !isDraggingWeld && _dragWeldStartScreenPos != null) {
+      if ((screenPos - _dragWeldStartScreenPos!).distance > 6.0) {
+        isDraggingWeld = true;
+      }
+    }
+
     if (boxSelectStart != null) {
       selectionBoxRect = Rect.fromPoints(boxSelectStart!, screenPos);
       isCrossingSelection = screenPos.dx < boxSelectStart!.dx;
@@ -1286,6 +1493,75 @@ class PipingInputController extends ChangeNotifier {
           network.moveEquipment(selectedEquipmentId!, dx, dy, 0);
           _dragEquipmentStartPos = Node3D(id: 'drag', x: snapped.x, y: snapped.y, z: eq.z);
           notifyListeners();
+        }
+      }
+      return;
+    }
+
+    if (isDraggingValve && selectedValveId != null) {
+      final valve = network.valves[selectedValveId!];
+      if (valve != null) {
+        final seg = network.segments[valve.segmentId];
+        if (seg != null) {
+          final s = network.nodes[seg.startNodeId];
+          final e = network.nodes[seg.endNodeId];
+          if (s != null && e != null) {
+            final p1 = projector.project(s);
+            final p2 = projector.project(e);
+            final v = p2 - p1;
+            final len2 = v.dx * v.dx + v.dy * v.dy;
+            if (len2 > 0.001) {
+              final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.05, 0.95);
+              network.valves[selectedValveId!] = valve.copyWith(ratio: t);
+              notifyListeners();
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    if (isDraggingSupport && selectedSupportId != null) {
+      final support = network.supports[selectedSupportId!];
+      if (support != null) {
+        final seg = network.segments[support.segmentId];
+        if (seg != null) {
+          final s = network.nodes[seg.startNodeId];
+          final e = network.nodes[seg.endNodeId];
+          if (s != null && e != null) {
+            final p1 = projector.project(s);
+            final p2 = projector.project(e);
+            final v = p2 - p1;
+            final len2 = v.dx * v.dx + v.dy * v.dy;
+            if (len2 > 0.001) {
+              final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.0, 1.0);
+              network.supports[selectedSupportId!] = support.copyWith(distanceRatio: t);
+              notifyListeners();
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    if (isDraggingWeld && selectedWeldId != null) {
+      final weld = network.weldJoints[selectedWeldId!];
+      if (weld != null) {
+        final seg = network.segments[weld.segmentId];
+        if (seg != null) {
+          final s = network.nodes[seg.startNodeId];
+          final e = network.nodes[seg.endNodeId];
+          if (s != null && e != null) {
+            final p1 = projector.project(s);
+            final p2 = projector.project(e);
+            final v = p2 - p1;
+            final len2 = v.dx * v.dx + v.dy * v.dy;
+            if (len2 > 0.001) {
+              final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.0, 1.0);
+              network.weldJoints[selectedWeldId!] = weld.copyWith(ratio: t);
+              notifyListeners();
+            }
+          }
         }
       }
       return;
@@ -1474,6 +1750,38 @@ class PipingInputController extends ChangeNotifier {
     _dragNodeStartScreenPos = null;
     _potentialDragEquipmentId = null;
     _dragEquipmentStartScreenPos = null;
+    _potentialDragValveId = null;
+    _dragValveStartScreenPos = null;
+    _potentialDragSupportId = null;
+    _dragSupportStartScreenPos = null;
+    _potentialDragWeldId = null;
+    _dragWeldStartScreenPos = null;
+
+    if (isDraggingValve) {
+      network.recalculateSpools();
+      history.recordState(network);
+      isDraggingValve = false;
+      notifyListeners();
+      return;
+    }
+    isDraggingValve = false;
+
+    if (isDraggingSupport) {
+      history.recordState(network);
+      isDraggingSupport = false;
+      notifyListeners();
+      return;
+    }
+    isDraggingSupport = false;
+
+    if (isDraggingWeld) {
+      network.recalculateSpools();
+      history.recordState(network);
+      isDraggingWeld = false;
+      notifyListeners();
+      return;
+    }
+    isDraggingWeld = false;
 
     if (isDraggingCallout) {
       history.recordState(network);
@@ -1661,48 +1969,14 @@ class PipingInputController extends ChangeNotifier {
 
   /// Вычисляет единичный направляющий 3D-вектор от startNode к текущей цели привязки или курсору
   ({double dirX, double dirY, double dirZ}) _computeTraceDirection(Node3D startNode) {
-    double dirX = 1.0;
-    double dirY = 0.0;
-    double dirZ = 0.0;
-
-    if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
-      final snapWorld = currentSnapResult!.worldPoint;
-      final dx = snapWorld.x - startNode.x;
-      final dy = snapWorld.y - startNode.y;
-      final dz = snapWorld.z - startNode.z;
-      final dist = math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (dist > 1e-6) {
-        dirX = dx / dist;
-        dirY = dy / dist;
-        dirZ = dz / dist;
-      }
-    } else if (currentCursorScreenPos != null) {
-      final rawWorld = projector.unproject(currentCursorScreenPos!, currentElevationZ);
-      final rawDx = rawWorld.x - startNode.x;
-      final rawDy = rawWorld.y - startNode.y;
-      final rawDz = rawWorld.z - startNode.z;
-
-      if (angleSnapMode == AngleSnapMode.ortho90) {
-        if (rawDx.abs() >= rawDy.abs()) {
-          dirX = rawDx >= 0 ? 1.0 : -1.0;
-          dirY = 0.0;
-          dirZ = 0.0;
-        } else {
-          dirX = 0.0;
-          dirY = rawDy >= 0 ? 1.0 : -1.0;
-          dirZ = 0.0;
-        }
-      } else {
-        final dist = math.sqrt(rawDx * rawDx + rawDy * rawDy + rawDz * rawDz);
-        if (dist > 1e-6) {
-          dirX = rawDx / dist;
-          dirY = rawDy / dist;
-          dirZ = rawDz / dist;
-        }
-      }
-    }
-
-    return (dirX: dirX, dirY: dirY, dirZ: dirZ);
+    return tracingController.computeTraceDirection(
+      startNode: startNode,
+      projector: projector,
+      currentElevationZ: currentElevationZ,
+      currentCursorScreenPos: currentCursorScreenPos,
+      currentSnapResult: currentSnapResult,
+      isSnapEnabled: isSnapEnabled,
+    );
   }
 
   /// Фиксация конца трассировки трубы или строительной оси на заданном расстоянии (Direct Distance Entry / Touch UI)
@@ -1711,24 +1985,21 @@ class PipingInputController extends ChangeNotifier {
 
     if (currentTool == CanvasTool.trace && traceStartNode != null) {
       final startNode = traceStartNode!;
-      final ({double dirX, double dirY, double dirZ}) dir;
-      if (dirX != null || dirY != null || dirZ != null) {
-        final dx = dirX ?? 0.0;
-        final dy = dirY ?? 0.0;
-        final dz = dirZ ?? 0.0;
-        final mag = math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (mag > 1e-6) {
-          dir = (dirX: dx / mag, dirY: dy / mag, dirZ: dz / mag);
-        } else {
-          dir = _computeTraceDirection(startNode);
-        }
-      } else {
-        dir = _computeTraceDirection(startNode);
-      }
-
-      final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
-      final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
-      final endZ = double.parse((startNode.z + dir.dirZ * lengthMm).toStringAsFixed(2));
+      final end = tracingController.calculateEndPoint(
+        startNode: startNode,
+        lengthMm: lengthMm,
+        projector: projector,
+        currentElevationZ: currentElevationZ,
+        currentCursorScreenPos: currentCursorScreenPos,
+        currentSnapResult: currentSnapResult,
+        isSnapEnabled: isSnapEnabled,
+        dirX: dirX,
+        dirY: dirY,
+        dirZ: dirZ,
+      );
+      final endX = end.x;
+      final endY = end.y;
+      final endZ = end.z;
 
       String targetNodeId;
       final existingNode = network.nodes.values.cast<Node3D?>().firstWhere(
@@ -1780,23 +2051,20 @@ class PipingInputController extends ChangeNotifier {
       notifyListeners();
     } else if (currentTool == CanvasTool.drawAxis && axisStartNode != null) {
       final startNode = axisStartNode!;
-      final ({double dirX, double dirY, double dirZ}) dir;
-      if (dirX != null || dirY != null || dirZ != null) {
-        final dx = dirX ?? 0.0;
-        final dy = dirY ?? 0.0;
-        final dz = dirZ ?? 0.0;
-        final mag = math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (mag > 1e-6) {
-          dir = (dirX: dx / mag, dirY: dy / mag, dirZ: dz / mag);
-        } else {
-          dir = _computeTraceDirection(startNode);
-        }
-      } else {
-        dir = _computeTraceDirection(startNode);
-      }
-
-      final endX = double.parse((startNode.x + dir.dirX * lengthMm).toStringAsFixed(2));
-      final endY = double.parse((startNode.y + dir.dirY * lengthMm).toStringAsFixed(2));
+      final end = tracingController.calculateEndPoint(
+        startNode: startNode,
+        lengthMm: lengthMm,
+        projector: projector,
+        currentElevationZ: currentElevationZ,
+        currentCursorScreenPos: currentCursorScreenPos,
+        currentSnapResult: currentSnapResult,
+        isSnapEnabled: isSnapEnabled,
+        dirX: dirX,
+        dirY: dirY,
+        dirZ: dirZ,
+      );
+      final endX = end.x;
+      final endY = end.y;
 
       final axisEndNode = Node3D(
         id: 'axis_end_${_uuid.v4()}',
@@ -1864,6 +2132,62 @@ class PipingInputController extends ChangeNotifier {
     }
   }
 
+
+  /// Поиск арматуры в радиусе 18 пикселей от курсора
+  String? _findValveAtScreenPos(Offset screenPos) {
+    for (final valve in network.valves.values) {
+      final seg = network.segments[valve.segmentId];
+      if (seg == null) continue;
+      final s = network.nodes[seg.startNodeId];
+      final e = network.nodes[seg.endNodeId];
+      if (s == null || e == null) continue;
+      final worldPos = valve.calculatePosition(s, e);
+      final p = projector.project(worldPos);
+      if ((p - screenPos).distance <= 18.0) {
+        return valve.id;
+      }
+    }
+    return null;
+  }
+
+  /// Поиск сварного стыка в радиусе 14 пикселей от курсора
+  String? _findWeldAtScreenPos(Offset screenPos) {
+    for (final weld in network.weldJoints.values) {
+      final seg = network.segments[weld.segmentId];
+      if (seg == null) continue;
+      final s = network.nodes[seg.startNodeId];
+      final e = network.nodes[seg.endNodeId];
+      if (s == null || e == null) continue;
+      final worldPos = weld.calculatePosition(s, e);
+      final p = projector.project(worldPos);
+      if ((p - screenPos).distance <= 14.0) {
+        return weld.id;
+      }
+    }
+    return null;
+  }
+
+  /// Поиск опоры в радиусе 16 пикселей от курсора
+  String? _findSupportAtScreenPos(Offset screenPos) {
+    for (final support in network.supports.values) {
+      final seg = network.segments[support.segmentId];
+      if (seg == null) continue;
+      final s = network.nodes[seg.startNodeId];
+      final e = network.nodes[seg.endNodeId];
+      if (s == null || e == null) continue;
+      final worldPos = support.calculatePosition(s, e);
+      final p = projector.project(worldPos);
+      if ((p - screenPos).distance <= 16.0) {
+        return support.id;
+      }
+    }
+    return null;
+  }
+
+  /// Публичные методы поиска элементов по экрану для тестов и контроллера
+  String? findValveAtScreenPos(Offset screenPos) => _findValveAtScreenPos(screenPos);
+  String? findWeldAtScreenPos(Offset screenPos) => _findWeldAtScreenPos(screenPos);
+  String? findSupportAtScreenPos(Offset screenPos) => _findSupportAtScreenPos(screenPos);
 
   /// Поиск узла в радиусе 18 пикселей от курсора
   String? _findNodeAtScreenPos(Offset screenPos) {
@@ -2243,6 +2567,38 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
+    if (selectedValveId != null) {
+      final vId = selectedValveId!;
+      network.valves.remove(vId);
+      network.callouts.removeWhere((_, c) => c.targetId == vId);
+      selectedValveId = null;
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
+    if (selectedSupportId != null) {
+      final sId = selectedSupportId!;
+      network.supports.remove(sId);
+      network.callouts.removeWhere((_, c) => c.targetId == sId);
+      selectedSupportId = null;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
+    if (selectedWeldId != null) {
+      final wId = selectedWeldId!;
+      network.weldJoints.remove(wId);
+      network.callouts.removeWhere((_, c) => c.targetId == wId);
+      selectedWeldId = null;
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
+
     // Множественное удаление
     if (selectedNodeIds.length > 1 ||
         selectedSegmentIds.length > 1 ||
@@ -2294,6 +2650,9 @@ class PipingInputController extends ChangeNotifier {
       selectedEquipmentId = null;
       selectedAxisId = null;
       selectedDimensionId = null;
+      selectedValveId = null;
+      selectedSupportId = null;
+      selectedWeldId = null;
       network.autoDetectAllFittings();
       network.recalculateSpools();
       notifyListeners();
@@ -2315,27 +2674,12 @@ class PipingInputController extends ChangeNotifier {
 
     if (selectedNodeId != null) {
       final nodeId = selectedNodeId!;
-      final segsToRemove = network.segments.values
-          .where((s) => s.startNodeId == nodeId || s.endNodeId == nodeId)
-          .map((s) => s.id)
-          .toList();
-
-      for (final segId in segsToRemove) {
-        network.segments.remove(segId);
-        network.valves.removeWhere((_, v) => v.segmentId == segId);
-        network.weldJoints.removeWhere((_, w) => w.segmentId == segId);
-        network.supports.removeWhere((_, s) => s.segmentId == segId);
-        network.callouts.removeWhere((_, c) => c.targetId == segId);
-      }
-      network.fittings.remove(nodeId);
-      network.nodes.remove(nodeId);
-      network.callouts.removeWhere((_, c) => c.targetId == nodeId);
+      history.recordState(network);
+      network.dissolveNode(nodeId);
 
       selectedNodeIds.remove(nodeId);
       selectedNodeId = null;
       selectedSegmentId = null;
-      network.recalculateSpools();
-      history.recordState(network);
       notifyListeners();
     } else if (selectedSegmentId != null) {
       final segId = selectedSegmentId!;
@@ -2785,21 +3129,8 @@ class PipingInputController extends ChangeNotifier {
     return null;
   }
 
-  bool _segmentIntersectsRect(Offset p1, Offset p2, Rect rect) {
-    if (rect.contains(p1) || rect.contains(p2)) return true;
-    final rLeft = rect.left, rRight = rect.right, rTop = rect.top, rBottom = rect.bottom;
-    return _linesIntersect(p1, p2, Offset(rLeft, rTop), Offset(rRight, rTop)) ||
-        _linesIntersect(p1, p2, Offset(rRight, rTop), Offset(rRight, rBottom)) ||
-        _linesIntersect(p1, p2, Offset(rRight, rBottom), Offset(rLeft, rBottom)) ||
-        _linesIntersect(p1, p2, Offset(rLeft, rBottom), Offset(rLeft, rTop));
-  }
-
-  bool _linesIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
-    double ccw(Offset a, Offset b, Offset c) =>
-        (c.dy - a.dy) * (b.dx - a.dx) - (b.dy - a.dy) * (c.dx - a.dx);
-    return (ccw(a1, b1, b2) * ccw(a2, b1, b2) <= 0) &&
-        (ccw(a1, a2, b1) * ccw(a1, a2, b2) <= 0);
-  }
+  bool _segmentIntersectsRect(Offset p1, Offset p2, Rect rect) =>
+      SelectionController.segmentIntersectsRect(p1, p2, rect);
 
   void _checkAndMergeOpenNodes() {
     if (selectedNodeId == null) return;

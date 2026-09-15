@@ -26,6 +26,7 @@ class _EditorScreenState extends State<EditorScreen> {
   bool _isRightDrag = false;
   Offset? _rightDownPos;
   bool _justFinishedMiddleClick = false;
+  bool _justFinishedRightClick = false;
   bool _showLengthInput = false;
   String? _initialTraceInput;
   Offset? _lengthInputSpawnPos;
@@ -310,6 +311,10 @@ class _EditorScreenState extends State<EditorScreen> {
                 _isRightClick = false;
                 _isRightDrag = false;
                 _rightDownPos = null;
+                _justFinishedRightClick = true;
+                Future.microtask(() {
+                  _justFinishedRightClick = false;
+                });
               }
               if (_isMiddleClick) {
                 _isMiddleClick = false;
@@ -339,7 +344,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 _baseScale = 1.0;
               },
               onScaleUpdate: (details) {
-                if (_isMiddleClick || _isRightClick || _justFinishedMiddleClick) return;
+                if (_isMiddleClick || _isRightClick || _justFinishedMiddleClick || _justFinishedRightClick) return;
 
                 if (details.pointerCount > 1) {
                   // Мультитач на планшете (зум и панорамирование двумя пальцами)
@@ -367,12 +372,12 @@ class _EditorScreenState extends State<EditorScreen> {
               onScaleEnd: (details) {
                 _lastFocalPoint = null;
                 _baseScale = 1.0;
-                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick) {
+                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick && !_justFinishedRightClick) {
                   controller.handlePointerUp();
                 }
               },
               onTapDown: (details) {
-                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick) {
+                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick && !_justFinishedRightClick) {
                   final isShift = HardwareKeyboard.instance.isShiftPressed;
                   final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
                   controller.handlePointerDown(details.localPosition, isShift: isShift, isCtrl: isCtrl);
@@ -381,6 +386,12 @@ class _EditorScreenState extends State<EditorScreen> {
               onDoubleTap: () {
                 // Двойное касание по холсту: вписать всё в экран
                 controller.zoomToFit();
+              },
+              onSecondaryTapDown: (details) {
+                controller.cancelCurrentOperation();
+              },
+              onSecondaryTapUp: (details) {
+                controller.cancelCurrentOperation();
               },
               onSecondaryTap: () {
                 controller.cancelCurrentOperation();
@@ -394,6 +405,9 @@ class _EditorScreenState extends State<EditorScreen> {
                   selectedSegmentId: controller.selectedSegmentId,
                   selectedEquipmentId: controller.selectedEquipmentId,
                   selectedCalloutId: controller.selectedCalloutId,
+                  selectedValveId: controller.selectedValveId,
+                  selectedSupportId: controller.selectedSupportId,
+                  selectedWeldId: controller.selectedWeldId,
                   selectedDimensionId: controller.selectedDimensionId,
                   selectedAxisId: controller.selectedAxisId,
                   previewDimension: controller.previewDimension,

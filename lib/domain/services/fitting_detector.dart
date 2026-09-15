@@ -12,17 +12,20 @@ class FittingDetector {
   }
 
   static void autoDetectFittingsForNode(PipingNetwork network, String nodeId) {
-    // Если фитинг уже вручную настроен (прямая врезка, фланец), сохраняем его
+    // Если фитинг уже вручную настроен (прямая врезка, фланец, заглушка), сохраняем его
     final existingFit = network.fittings[nodeId];
     if (existingFit != null &&
         (existingFit.fittingType == FittingType.directBranch ||
-            existingFit.fittingType == FittingType.flange)) {
+            existingFit.fittingType == FittingType.flange ||
+            existingFit.fittingType == FittingType.cap)) {
       return;
     }
 
     final connected = network.getConnectedSegments(nodeId);
     if (connected.length < 2) {
-      if (existingFit != null && existingFit.fittingType != FittingType.flange) {
+      if (existingFit != null &&
+          existingFit.fittingType != FittingType.flange &&
+          existingFit.fittingType != FittingType.cap) {
         network.fittings.remove(nodeId);
       }
       return;

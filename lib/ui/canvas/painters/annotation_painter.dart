@@ -12,8 +12,9 @@ class AnnotationPainter {
     PipingNetwork network,
     String? selectedNodeId,
     bool showWelds,
-    bool showCallouts,
-  ) {
+    bool showCallouts, {
+    String? selectedWeldId,
+  }) {
     if (showWelds) {
       for (final weld in network.weldJoints.values) {
         final seg = network.segments[weld.segmentId];
@@ -29,6 +30,18 @@ class AnnotationPainter {
           p1.dx + (p2.dx - p1.dx) * weld.ratio,
           p1.dy + (p2.dy - p1.dy) * weld.ratio,
         );
+
+        if (weld.id == selectedWeldId) {
+          final glowPaint = Paint()
+            ..color = Colors.cyanAccent.withValues(alpha: 0.35)
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(weldPos, 14.0, glowPaint);
+          final borderPaint = Paint()
+            ..color = Colors.cyanAccent
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5;
+          canvas.drawCircle(weldPos, 14.0, borderPaint);
+        }
 
         SmartCallout.drawWeldCallout(
           canvas,

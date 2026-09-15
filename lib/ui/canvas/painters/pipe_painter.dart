@@ -7,6 +7,7 @@ import '../../../domain/models/fitting.dart';
 import '../../../domain/models/pipe_segment.dart';
 import '../../../domain/models/piping_network.dart';
 import '../smart_callout.dart';
+import 'solid_3d_engine.dart';
 
 class PipePainter {
   static void paint(
@@ -21,7 +22,63 @@ class PipePainter {
     bool isVolumeMode = false,
     Set<String>? selectedSegmentIds,
   ]) {
-    for (final seg in network.segments.values) {
+    if (isVolumeMode) {
+      // Честная 3D твердотельная модель с полигональными цилиндрами, Z-сортировкой и направленным освещением
+      Solid3dEngine.renderNetwork(
+        canvas,
+        projector,
+        network,
+        selectedSegmentId: selectedSegmentId,
+        selectedSegmentIds: selectedSegmentIds,
+      );
+
+      // Отрисовка бейджей выбранных труб и аннотаций
+      for (final seg in network.segments.values) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final isSelected = seg.id == selectedSegmentId ||
+            (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
+        final p1 = screenPoints[start.id] ?? projector.project(start);
+        final p2 = screenPoints[end.id] ?? projector.project(end);
+
+        if (isSelected) {
+          final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+          final lenMm = start.distanceTo(end);
+          drawSelectedDimensionBadge(canvas, mid, lenMm, seg);
+        }
+
+        if (seg.slope > 0.0001 && showCallouts) {
+          SmartCallout.drawSlopeCallout(canvas, p1: p1, p2: p2, slope: seg.slope);
+        }
+        if (showCallouts) {
+          final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+          final sys = network.systems[seg.systemId];
+          final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+          SmartCallout.drawDiameterCallout(canvas, midPoint: mid, text: seg.shortCallout, color: color);
+        }
+      }
+      return;
+    }
+
+    // 2D СПДС / ГОСТ режим: сортировка сегментов по глубине (Painter's algorithm)
+    final sortedSegments = network.segments.values.toList()
+      ..sort((a, b) {
+        final startA = network.nodes[a.startNodeId];
+        final endA = network.nodes[a.endNodeId];
+        final depthA = (startA != null && endA != null)
+            ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
+            : 0.0;
+        final startB = network.nodes[b.startNodeId];
+        final endB = network.nodes[b.endNodeId];
+        final depthB = (startB != null && endB != null)
+            ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
+            : 0.0;
+        return depthB.compareTo(depthA);
+      });
+
+    for (final seg in sortedSegments) {
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;

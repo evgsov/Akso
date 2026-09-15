@@ -216,4 +216,110 @@ class SmartCallout {
 
     canvas.restore();
   }
+
+  /// Отрисовка умной выноски для арматуры, фасонных деталей и оборудования
+  /// по ГОСТ 2.316 / ГОСТ 21.101 с двухполочной полочкой:
+  /// - Сверху: наименование / тип / Ду (например, "Задвижка 30ч6бр Ду100")
+  /// - Снизу: ГОСТ / марка стали / позиция (например, "ГОСТ 5762-2002 / Поз. 4")
+  static void drawElementCallout(
+    Canvas canvas, {
+    required Offset anchorPoint,
+    required String topText,
+    String? bottomText,
+    Color color = Colors.black87,
+    bool isLeftSided = false,
+    double leaderLength = 35.0,
+    double minShelfLength = 65.0,
+  }) {
+    // 1. Измерить текст над и под полочкой
+    final topTp = TextPainter(
+      text: TextSpan(
+        text: topText,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'monospace',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    TextPainter? bottomTp;
+    if (bottomText != null && bottomText.trim().isNotEmpty) {
+      bottomTp = TextPainter(
+        text: TextSpan(
+          text: bottomText,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.85),
+            fontSize: 10,
+            fontFamily: 'monospace',
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
+
+    final maxTextWidth = math.max(topTp.width, bottomTp?.width ?? 0.0);
+    final shelfLength = math.max(minShelfLength, maxTextWidth + 10.0);
+    final shelfDirection = isLeftSided ? -1.0 : 1.0;
+
+    // 2. Точка начала на элементе: засечка/точка
+    final dotPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(anchorPoint, 3.0, dotPaint);
+
+    // 3. Точка излома (начало полочки)
+    final elbowPoint = Offset(
+      anchorPoint.dx + (isLeftSided ? -leaderLength * 0.7 : leaderLength * 0.7),
+      anchorPoint.dy - leaderLength * 0.7,
+    );
+
+    // 4. Конец полочки
+    final shelfEndPoint = Offset(
+      elbowPoint.dx + shelfLength * shelfDirection,
+      elbowPoint.dy,
+    );
+
+    // 5. Белая фоновая плашка под текстом для изоляции от чертежа
+    final shelfLeft = isLeftSided ? shelfEndPoint.dx : elbowPoint.dx;
+    final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+    final bgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        shelfLeft,
+        elbowPoint.dy - topTp.height - 3.0,
+        shelfLength,
+        totalHeight,
+      ),
+      const Radius.circular(2.0),
+    );
+    canvas.drawRRect(
+      bgRect,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.9)
+        ..style = PaintingStyle.fill,
+    );
+
+    // 6. Линия-выноска и полочка
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+
+    final path = Path()
+      ..moveTo(anchorPoint.dx, anchorPoint.dy)
+      ..lineTo(elbowPoint.dx, elbowPoint.dy)
+      ..lineTo(shelfEndPoint.dx, shelfEndPoint.dy);
+    canvas.drawPath(path, linePaint);
+
+    // 7. Отрисовка текста
+    final textX = isLeftSided ? shelfEndPoint.dx + 4 : elbowPoint.dx + 4;
+    topTp.paint(canvas, Offset(textX, elbowPoint.dy - topTp.height - 2.0));
+
+    if (bottomTp != null) {
+      bottomTp.paint(canvas, Offset(textX, elbowPoint.dy + 2.0));
+    }
+  }
 }

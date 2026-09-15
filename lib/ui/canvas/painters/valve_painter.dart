@@ -11,7 +11,11 @@ class ValvePainter {
     AxonometryProjector projector,
     PipingNetwork network, {
     bool isVolumeMode = false,
+    String? selectedValveId,
   }) {
+    // В объемном 3D-режиме арматура визуализируется твердотельными телами в Solid3dEngine
+    if (isVolumeMode) return;
+
     for (final valve in network.valves.values) {
       final seg = network.segments[valve.segmentId];
       if (seg == null) continue;
@@ -37,6 +41,18 @@ class ValvePainter {
         final outerMm = network.pipeCatalog.getDimension(valve.dn)?.outerDiameterMm ?? valve.dn.toDouble();
         final strokeWidth = outerMm * projector.scale;
         size = math.max(16.0, strokeWidth * 2.2); 
+      }
+
+      if (valve.id == selectedValveId) {
+        final highlightPaint = Paint()
+          ..color = Colors.cyanAccent.withValues(alpha: 0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.0;
+        final glowPaint = Paint()
+          ..color = Colors.cyanAccent.withValues(alpha: 0.25)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(valvePos, size * 0.9 + 4.0, glowPaint);
+        canvas.drawCircle(valvePos, size * 0.9 + 4.0, highlightPaint);
       }
 
       ValveSymbolPainter.drawValve(

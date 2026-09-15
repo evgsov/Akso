@@ -10,6 +10,7 @@ import '../../domain/enums/weld_type.dart';
 import '../../domain/models/callout.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/services/element_3d_geometry.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
 
 /// Генератор файлов AutoCAD DXF (ASCII R2000 / AC1015)
@@ -90,13 +91,23 @@ class DxfWriter {
       );
     }
 
-    // 2. Сварные стыки в 3D
+    // 2. Сварные стыки в 3D (пространственные кольца усиления шва и засечки)
     for (final weld in network.weldJoints.values) {
       final seg = network.segments[weld.segmentId];
       if (seg == null) continue;
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
+
+      final weldLines = Element3dGeometry.generateWeld3d(
+        weld,
+        start,
+        end,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+      for (final l in weldLines) {
+        _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+      }
 
       final pos = weld.calculatePosition(start, end);
       _writePoint(buffer, layer: 'АКСО_СВАРКА', x: pos.x, y: pos.y, z: pos.z);
@@ -111,13 +122,23 @@ class DxfWriter {
       );
     }
 
-    // 3. Арматура в 3D
+    // 3. Арматура в 3D (пространственный корпус, шпиндель, штурвал со спицами, фланцы)
     for (final valve in network.valves.values) {
       final seg = network.segments[valve.segmentId];
       if (seg == null) continue;
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
+
+      final valveLines = Element3dGeometry.generateValve3d(
+        valve,
+        start,
+        end,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+      for (final l in valveLines) {
+        _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+      }
 
       final pos = valve.calculatePosition(start, end);
       _writeText(
@@ -128,6 +149,37 @@ class DxfWriter {
         y: pos.y,
         z: pos.z + 100.0,
         height: 70.0,
+      );
+    }
+
+    // 3.1. Опоры и подвески в 3D (хомуты, стойки, башмаки)
+    for (final support in network.supports.values) {
+      final seg = network.segments[support.segmentId];
+      if (seg == null) continue;
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final supportLines = Element3dGeometry.generateSupport3d(
+        support,
+        start,
+        end,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+      for (final l in supportLines) {
+        _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+      }
+
+      final pos = support.calculatePosition(start, end);
+      final label = support.name.isNotEmpty ? support.name : support.type.shortCode;
+      _writeText(
+        buffer,
+        layer: 'АКСО_ОПОРЫ_ТЕКСТ',
+        text: label,
+        x: pos.x,
+        y: pos.y,
+        z: pos.z - 60.0,
+        height: 50.0,
       );
     }
 
@@ -144,11 +196,31 @@ class DxfWriter {
       );
     }
 
-    // 5. Переходы в 3D
+    // 5. Переходы в 3D (3D каркас конуса с образующими)
     for (final fit in network.fittings.values) {
       if (fit.fittingType == FittingType.reducerConcentric || fit.fittingType == FittingType.reducerEccentric) {
         final node = network.nodes[fit.nodeId];
         if (node == null) continue;
+        final connectedSegs = network.getConnectedSegments(fit.nodeId);
+        if (connectedSegs.length >= 2) {
+          final seg1 = connectedSegs[0];
+          final seg2 = connectedSegs[1];
+          final other1 = network.nodes[seg1.startNodeId == fit.nodeId ? seg1.endNodeId : seg1.startNodeId];
+          final other2 = network.nodes[seg2.startNodeId == fit.nodeId ? seg2.endNodeId : seg2.startNodeId];
+          if (other1 != null && other2 != null) {
+            final lines = Element3dGeometry.generateReducer3d(
+              fit,
+              node,
+              other1,
+              other2,
+              d1: seg1.outerDiameterMm,
+              d2: seg2.outerDiameterMm,
+            );
+            for (final l in lines) {
+              _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+            }
+          }
+        }
         final typeName = fit.fittingType == FittingType.reducerEccentric ? 'Переход эксц.' : 'Переход конц.';
         _writePoint(buffer, layer: 'АКСО_ПЕРЕХОДЫ', x: node.x, y: node.y, z: node.z);
         _writeText(
@@ -163,16 +235,61 @@ class DxfWriter {
       }
     }
 
-    // 6. Фланцы и врезки в 3D
+    // 6. Фланцы, заглушки и врезки в 3D
     for (final fit in network.fittings.values) {
       final node = network.nodes[fit.nodeId];
       if (node == null) continue;
+      final connectedSegs = network.getConnectedSegments(fit.nodeId);
+
       if (fit.fittingType == FittingType.flange) {
+        if (connectedSegs.isNotEmpty) {
+          final seg = connectedSegs.first;
+          final otherNodeId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+          final otherNode = network.nodes[otherNodeId];
+          if (otherNode != null) {
+            final lines = Element3dGeometry.generateFlange3d(
+              fit,
+              node,
+              otherNode,
+              pipeOuterDiameter: seg.outerDiameterMm,
+            );
+            for (final l in lines) {
+              _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+            }
+          }
+        }
         _writePoint(buffer, layer: 'АКСО_ФЛАНЦЫ', x: node.x, y: node.y, z: node.z);
         _writeText(
           buffer,
           layer: 'АКСО_ФЛАНЦЫ_ТЕКСТ',
           text: fit.displayName,
+          x: node.x,
+          y: node.y,
+          z: node.z + 80.0,
+          height: 45.0,
+        );
+      } else if (fit.fittingType == FittingType.cap) {
+        if (connectedSegs.isNotEmpty) {
+          final seg = connectedSegs.first;
+          final otherNodeId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+          final otherNode = network.nodes[otherNodeId];
+          if (otherNode != null) {
+            final lines = Element3dGeometry.generateCap3d(
+              fit,
+              node,
+              otherNode,
+              pipeOuterDiameter: seg.outerDiameterMm,
+            );
+            for (final l in lines) {
+              _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+            }
+          }
+        }
+        _writePoint(buffer, layer: 'АКСО_ЗАГЛУШКИ', x: node.x, y: node.y, z: node.z);
+        _writeText(
+          buffer,
+          layer: 'АКСО_ЗАГЛУШКИ_ТЕКСТ',
+          text: 'Заглушка Ду${fit.dn}',
           x: node.x,
           y: node.y,
           z: node.z + 80.0,
@@ -724,6 +841,15 @@ class DxfWriter {
       const _LayerDef('АКСО_РАЗМЕРЫ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ВЫНОСКИ', 7),
       const _LayerDef('АКСО_ВЫНОСКИ_ТЕКСТ', 4),
+      const _LayerDef('АКСО_3D_АРМАТУРА', 1),
+      const _LayerDef('АКСО_3D_СВАРНЫЕ_СТЫКИ', 3),
+      const _LayerDef('АКСО_3D_ОПОРЫ', 6),
+      const _LayerDef('АКСО_ОПОРЫ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_3D_ФЛАНЦЫ', 2),
+      const _LayerDef('АКСО_3D_ПЕРЕХОДЫ', 5),
+      const _LayerDef('АКСО_3D_ЗАГЛУШКИ', 7),
+      const _LayerDef('АКСО_ЗАГЛУШКИ', 7),
+      const _LayerDef('АКСО_ЗАГЛУШКИ_ТЕКСТ', 7),
     ];
 
     for (final sys in net.systems.values) {

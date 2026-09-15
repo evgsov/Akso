@@ -6,6 +6,7 @@ import '../enums/valve_type.dart';
 import '../enums/weld_type.dart';
 import '../services/fitting_detector.dart';
 import '../services/spool_calculator.dart';
+import '../services/topology_service.dart';
 import 'callout.dart';
 import 'construction_axis.dart';
 import 'equipment.dart';
@@ -70,6 +71,49 @@ class PipingNetwork {
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
+  /// Добавление нового узла в 3D координатах сети
+  Node3D addNode({required double x, required double y, required double z}) {
+    final id = 'node_${_uuid.v4()}';
+    final node = Node3D(id: id, x: x, y: y, z: z);
+    nodes[id] = node;
+    return node;
+  }
+
+  /// Создание копии сети с возможностью подмены полей
+  PipingNetwork copyWith({
+    Map<String, Node3D>? nodes,
+    Map<String, PipeSegment>? segments,
+    Map<String, Valve>? valves,
+    Map<String, WeldJoint>? weldJoints,
+    Map<String, Fitting>? fittings,
+    Map<String, PipeSpool>? spools,
+    Map<String, PipingSystem>? systems,
+    Map<String, ConstructionAxis>? axes,
+    Map<String, Equipment>? equipments,
+    Map<String, PipeSupport>? supports,
+    Map<String, Callout>? callouts,
+    Map<String, LinearDimension>? dimensions,
+    FittingCatalog? catalog,
+    PipeAssortmentCatalog? pipeCatalog,
+  }) {
+    return PipingNetwork(
+      nodes: nodes ?? Map.from(this.nodes),
+      segments: segments ?? Map.from(this.segments),
+      valves: valves ?? Map.from(this.valves),
+      weldJoints: weldJoints ?? Map.from(this.weldJoints),
+      fittings: fittings ?? Map.from(this.fittings),
+      spools: spools ?? Map.from(this.spools),
+      systems: systems ?? Map.from(this.systems),
+      axes: axes ?? Map.from(this.axes),
+      equipments: equipments ?? Map.from(this.equipments),
+      supports: supports ?? Map.from(this.supports),
+      callouts: callouts ?? Map.from(this.callouts),
+      dimensions: dimensions ?? Map.from(this.dimensions),
+      catalog: catalog ?? this.catalog,
+      pipeCatalog: pipeCatalog ?? this.pipeCatalog,
+    );
+  }
+
   /// Создание полной копии сети для иммутабельности и Undo/Redo
   PipingNetwork clone() {
     return PipingNetwork(
@@ -92,9 +136,7 @@ class PipingNetwork {
 
   /// Получение списка сегментов, подключенных к узлу
   List<PipeSegment> getConnectedSegments(String nodeId) {
-    return segments.values
-        .where((s) => s.startNodeId == nodeId || s.endNodeId == nodeId)
-        .toList();
+    return TopologyService.getConnectedSegments(this, nodeId);
   }
 
   /// 1. Перемещение узла в 3D (стилусом или вводом координат)
@@ -322,22 +364,7 @@ class PipingNetwork {
   }
 
   void _cascadeShift(String currentNodeId, double dx, double dy, double dz, Set<String> visited) {
-    visited.add(currentNodeId);
-    final node = nodes[currentNodeId];
-    if (node != null) {
-      nodes[currentNodeId] = node.copyWith(
-        x: node.x + dx,
-        y: node.y + dy,
-        z: node.z + dz,
-      );
-    }
-
-    for (final s in getConnectedSegments(currentNodeId)) {
-      final nextNodeId = s.startNodeId == currentNodeId ? s.endNodeId : s.startNodeId;
-      if (!visited.contains(nextNodeId)) {
-        _cascadeShift(nextNodeId, dx, dy, dz, visited);
-      }
-    }
+    TopologyService.cascadeShift(this, currentNodeId, dx, dy, dz, visited);
   }
 
   /// 5. Скольжение арматуры вдоль трубы
@@ -501,83 +528,12 @@ class PipingNetwork {
   /// Разделение сегмента трубы на два участка в точке ratio (0.0 < ratio < 1.0)
   /// Возвращает созданный промежуточный узел
   Node3D? splitSegmentAtRatio(String segmentId, double ratio) {
-    final oldSeg = segments[segmentId];
-    if (oldSeg == null) return null;
-    final startNode = nodes[oldSeg.startNodeId];
-    final endNode = nodes[oldSeg.endNodeId];
-    if (startNode == null || endNode == null) return null;
+    return TopologyService.splitSegmentAtRatio(this, segmentId, ratio, idGenerator: () => _uuid.v4());
+  }
 
-    final midX = startNode.x + (endNode.x - startNode.x) * ratio;
-    final midY = startNode.y + (endNode.y - startNode.y) * ratio;
-    final midZ = startNode.z + (endNode.z - startNode.z) * ratio;
-
-    final midNodeId = 'node_${_uuid.v4()}';
-    final midNode = Node3D(id: midNodeId, x: midX, y: midY, z: midZ);
-    nodes[midNodeId] = midNode;
-
-    segments.remove(segmentId);
-
-    final seg1Id = '${segmentId}_a';
-    final seg2Id = '${segmentId}_b';
-
-    final seg1 = oldSeg.copyWith(
-      id: seg1Id,
-      endNodeId: midNodeId,
-    );
-    final seg2 = oldSeg.copyWith(
-      id: seg2Id,
-      startNodeId: midNodeId,
-    );
-
-    segments[seg1Id] = seg1;
-    segments[seg2Id] = seg2;
-
-    // Переносим существующие сварные швы на новые сегменты
-    final affectedWelds = weldJoints.values.where((w) => w.segmentId == segmentId).toList();
-    for (final w in affectedWelds) {
-      weldJoints.remove(w.id);
-      if (w.ratio <= ratio) {
-        final newRatio = ratio > 0.0001 ? (w.ratio / ratio).clamp(0.0, 1.0) : 0.0;
-        weldJoints[w.id] = w.copyWith(segmentId: seg1Id, ratio: newRatio);
-      } else {
-        final newRatio = (1.0 - ratio) > 0.0001 ? ((w.ratio - ratio) / (1.0 - ratio)).clamp(0.0, 1.0) : 0.0;
-        weldJoints[w.id] = w.copyWith(segmentId: seg2Id, ratio: newRatio);
-      }
-    }
-
-    // Переносим арматуру
-    final affectedValves = valves.values.where((v) => v.segmentId == segmentId).toList();
-    for (final v in affectedValves) {
-      valves.remove(v.id);
-      if (v.ratio <= ratio) {
-        final newRatio = ratio > 0.0001 ? (v.ratio / ratio).clamp(0.05, 0.95) : 0.5;
-        valves[v.id] = v.copyWith(segmentId: seg1Id, ratio: newRatio);
-      } else {
-        final newRatio = (1.0 - ratio) > 0.0001 ? ((v.ratio - ratio) / (1.0 - ratio)).clamp(0.05, 0.95) : 0.5;
-        valves[v.id] = v.copyWith(segmentId: seg2Id, ratio: newRatio);
-      }
-    }
-
-    // Переносим опоры и подвески
-    final affectedSupports = supports.values.where((s) => s.segmentId == segmentId).toList();
-    for (final s in affectedSupports) {
-      supports.remove(s.id);
-      if (s.distanceRatio <= ratio) {
-        final newRatio = ratio > 0.0001 ? (s.distanceRatio / ratio).clamp(0.0, 1.0) : 0.0;
-        supports[s.id] = s.copyWith(segmentId: seg1Id, distanceRatio: newRatio);
-      } else {
-        final newRatio = (1.0 - ratio) > 0.0001 ? ((s.distanceRatio - ratio) / (1.0 - ratio)).clamp(0.0, 1.0) : 0.0;
-        supports[s.id] = s.copyWith(segmentId: seg2Id, distanceRatio: newRatio);
-      }
-    }
-
-    // Обновляем целевой сегмент для выносок
-    final affectedCallouts = callouts.values.where((c) => c.targetId == segmentId).toList();
-    for (final c in affectedCallouts) {
-      callouts[c.id] = c.copyWith(targetId: seg1Id);
-    }
-
-    return midNode;
+  /// Удаление узла со сращиванием примыкающих труб (Dissolve Node / Merge Pipes)
+  bool dissolveNode(String nodeId) {
+    return TopologyService.dissolveNode(this, nodeId);
   }
 
   /// Врезка перехода (концентрического или эксцентрического) в сегмент трубы
@@ -696,6 +652,113 @@ class PipingNetwork {
     return fit;
   }
 
+  /// Установка днища (заглушки) на концевой узел трубы
+  Fitting? attachCapToNode(String nodeId) {
+    final node = nodes[nodeId];
+    if (node == null) return null;
+    final conn = getConnectedSegments(nodeId);
+    if (conn.isEmpty) return null;
+
+    final s = conn[0];
+    final def = catalog.getDefinition(catalog.defaultCapId);
+    final rad = def != null ? def.calculateDeduction(s.dn) : FittingType.cap.defaultDeductionMm(s.dn);
+
+    final fitId = 'cap_$nodeId';
+    final fit = Fitting(
+      id: fitId,
+      nodeId: nodeId,
+      fittingType: FittingType.cap,
+      dn: s.dn,
+      radiusMm: rad,
+      name: 'Днище (заглушка) Ду${s.dn}',
+      standard: def?.standard ?? 'ГОСТ 6533-78',
+      material: s.material,
+      weldType: def?.weldType ?? WeldType.c17,
+      definitionId: def?.id,
+    );
+    fittings[nodeId] = fit;
+
+    final r = s.startNodeId == nodeId ? 0.0 : 1.0;
+    ensureWeldExists(s.id, r, fit.weldType);
+
+    recalculateSpools();
+    return fit;
+  }
+
+  /// Установка концевого фланца на открытый конец трубы (к оборудованию, глухой фланец или воротниковый)
+  Fitting? attachEndFlangeToNode(
+    String nodeId, {
+    FlangeConnectionType flangeConnectionType = FlangeConnectionType.toEquipment,
+    int pressurePn = 16,
+    String? material,
+  }) {
+    final node = nodes[nodeId];
+    if (node == null) return null;
+    final conn = getConnectedSegments(nodeId);
+    if (conn.isEmpty) return null;
+
+    final s = conn[0];
+    final def = catalog.getDefinition(catalog.defaultFlangeId);
+    final flangeDn = s.dn;
+    final flangeMat = material ?? s.material;
+    final rad = def != null ? def.calculateDeduction(flangeDn) : (flangeDn <= 50 ? 18.0 : 22.0);
+
+    String fitName;
+    if (flangeConnectionType == FlangeConnectionType.blindFlange) {
+      fitName = 'Заглушка фланцевая Ду$flangeDn Ру$pressurePn';
+    } else {
+      fitName = 'Фланец концевой Ду$flangeDn Ру$pressurePn (${flangeConnectionType.displayName})';
+    }
+
+    final fitId = 'flange_$nodeId';
+    final fit = Fitting(
+      id: fitId,
+      nodeId: nodeId,
+      fittingType: FittingType.flange,
+      definitionId: def?.id,
+      dn: flangeDn,
+      radiusMm: rad,
+      name: fitName,
+      standard: def?.standard ?? 'ГОСТ 33259-2015',
+      material: flangeMat,
+      weldType: def?.weldType ?? WeldType.c17,
+      pressurePn: pressurePn,
+      isFlangePair: false,
+      flangeConnectionType: flangeConnectionType,
+      customWeldCount: flangeConnectionType == FlangeConnectionType.blindFlange ? 0 : 1,
+    );
+    fittings[nodeId] = fit;
+
+    final r = s.startNodeId == nodeId ? 0.0 : 1.0;
+    if (fit.effectiveWeldCount > 0) {
+      ensureWeldExists(s.id, r, fit.weldType);
+    }
+
+    recalculateSpools();
+    return fit;
+  }
+
+  /// Удаление фитинга в узле со сбросом монтажных стыков и пересчетом катушек
+  void removeFitting(String nodeId) {
+    if (!fittings.containsKey(nodeId)) return;
+    fittings.remove(nodeId);
+
+    // Удаляем концевые стыки на подключенных сегментах
+    final conn = getConnectedSegments(nodeId);
+    for (final seg in conn) {
+      final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+      final toRemove = weldJoints.values
+          .where((w) => w.segmentId == seg.id && (w.ratio - r).abs() < 0.05)
+          .map((w) => w.id)
+          .toList();
+      for (final wid in toRemove) {
+        weldJoints.remove(wid);
+      }
+    }
+
+    recalculateSpools();
+  }
+
   /// Обновление параметров фитинга в узле с пересчетом швов и катушек
   void updateFitting(String nodeId, Fitting updatedFit) {
     fittings[nodeId] = updatedFit;
@@ -765,6 +828,17 @@ class PipingNetwork {
     recalculateSpools();
   }
 
+  /// Обновление параметров арматуры с пересчетом катушек
+  void updateValve(String valveId, Valve updatedValve) {
+    valves[valveId] = updatedValve;
+    recalculateSpools();
+  }
+
+  /// Обновление параметров опоры
+  void updateSupport(String supportId, PipeSupport updatedSupport) {
+    supports[supportId] = updatedSupport;
+  }
+
   /// Проверка и создание сварного шва на сегменте в позиции ratio, если такой шов еще не существует
   WeldJoint? ensureWeldExists(String segmentId, double ratio, WeldType weldType) {
     final exists = weldJoints.values.any(
@@ -779,61 +853,7 @@ class PipingNetwork {
   /// Определение сегмента ответвления среди 3 подключенных к узлу сегментов.
   /// Ответвлением считается сегмент, не лежащий на одной прямой с двумя остальными (магистралью).
   PipeSegment? identifyBranchSegment(String nodeId, [List<PipeSegment>? connectedSegments]) {
-    final conn = connectedSegments ?? getConnectedSegments(nodeId);
-    if (conn.length != 3) return null;
-
-    final nCenter = nodes[nodeId];
-    if (nCenter == null) return null;
-
-    final dirsX = <double>[];
-    final dirsY = <double>[];
-    final dirsZ = <double>[];
-
-    for (final seg in conn) {
-      final otherId = seg.startNodeId == nodeId ? seg.endNodeId : seg.startNodeId;
-      final other = nodes[otherId];
-      if (other == null) {
-        dirsX.add(0.0);
-        dirsY.add(0.0);
-        dirsZ.add(0.0);
-        continue;
-      }
-      final dx = other.x - nCenter.x;
-      final dy = other.y - nCenter.y;
-      final dz = other.z - nCenter.z;
-      final len = math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (len > 0.0001) {
-        dirsX.add(dx / len);
-        dirsY.add(dy / len);
-        dirsZ.add(dz / len);
-      } else {
-        dirsX.add(0.0);
-        dirsY.add(0.0);
-        dirsZ.add(0.0);
-      }
-    }
-
-    double minDot = 1.0;
-    int best1 = 0;
-    int best2 = 1;
-
-    for (int i = 0; i < 3; i++) {
-      for (int j = i + 1; j < 3; j++) {
-        final dot = dirsX[i] * dirsX[j] + dirsY[i] * dirsY[j] + dirsZ[i] * dirsZ[j];
-        if (dot < minDot) {
-          minDot = dot;
-          best1 = i;
-          best2 = j;
-        }
-      }
-    }
-
-    for (int i = 0; i < 3; i++) {
-      if (i != best1 && i != best2) {
-        return conn[i];
-      }
-    }
-    return conn.last;
+    return TopologyService.identifyBranchSegment(this, nodeId, connectedSegments);
   }
 
   /// Синхронизация физических сварных швов для всех фасонных элементов сети (отводов, тройников, врезок, переходов)
@@ -1183,12 +1203,19 @@ class PipingNetwork {
         final v = valves[targetId];
         if (v == null) return 'Арматура (удалена)';
 
+        final seg = segments[v.segmentId];
+        final sysCode = (seg != null && systems[seg.systemId] != null) ? systems[seg.systemId]!.code : '';
+        final material = seg?.material ?? 'Ст20';
+
         text = text
             .replaceAll('{NAME}', v.name)
             .replaceAll('{DN}', '${v.dn}')
             .replaceAll('{TYPE}', v.valveType.displayName)
             .replaceAll('{LENGTH}', '${v.lengthMm.round()}')
             .replaceAll('{L}', '${v.lengthMm.round()}')
+            .replaceAll('{MATERIAL}', material)
+            .replaceAll('{SYSTEM}', sysCode)
+            .replaceAll('{PN}', 'Ру16')
             .replaceAll('{ID}', v.id);
         break;
 
@@ -1197,11 +1224,18 @@ class PipingNetwork {
             fittings.values.where((f) => f.id == targetId).firstOrNull;
         if (fit == null) return 'Деталь (удалена)';
 
+        final conn = getConnectedSegments(fit.nodeId);
+        final firstSeg = conn.isNotEmpty ? conn.first : null;
+        final sysCode = (firstSeg != null && systems[firstSeg.systemId] != null) ? systems[firstSeg.systemId]!.code : '';
+        final material = fit.material.isNotEmpty ? fit.material : (firstSeg?.material ?? 'Ст20');
+        final standard = (fit.standard != null && fit.standard!.isNotEmpty) ? fit.standard! : 'ГОСТ 17375';
+
         text = text
             .replaceAll('{NAME}', fit.name ?? fit.fittingType.displayName)
             .replaceAll('{TYPE}', fit.fittingType.displayName)
-            .replaceAll('{STANDARD}', fit.standard ?? '')
-            .replaceAll('{MATERIAL}', fit.material)
+            .replaceAll('{STANDARD}', standard)
+            .replaceAll('{MATERIAL}', material)
+            .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{DN}', '${fit.dn}')
             .replaceAll('{DN2}', fit.dnSecondary != null ? '${fit.dnSecondary}' : '${fit.dn}')
             .replaceAll('{ID}', fit.id);
@@ -1212,6 +1246,19 @@ class PipingNetwork {
         if (w == null) return 'Стык (удален)';
 
         final numStr = w.number > 0 ? '${w.number}' : w.id;
+        final seg = segments[w.segmentId];
+        final dStr = seg != null
+            ? (seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
+                ? seg.outerDiameterMm.toStringAsFixed(0)
+                : seg.outerDiameterMm.toStringAsFixed(1))
+            : '';
+        final sStr = seg != null
+            ? (seg.wallThicknessMm.truncateToDouble() == seg.wallThicknessMm
+                ? seg.wallThicknessMm.toStringAsFixed(0)
+                : seg.wallThicknessMm.toStringAsFixed(1))
+            : '';
+        final dnStr = seg != null ? '${seg.dn}' : '';
+
         text = text
             .replaceAll('{ID}', numStr)
             .replaceAll('{NUM}', '${w.number}')
@@ -1221,6 +1268,13 @@ class PipingNetwork {
             .replaceAll('{STEEL}', w.steelGrade)
             .replaceAll('{MATERIAL}', w.steelGrade)
             .replaceAll('{ELECTRODE}', w.electrodeGrade)
+            .replaceAll('{METHOD}', w.inspectionMethod.shortName)
+            .replaceAll('{DN}', dnStr)
+            .replaceAll('{WALL}', sStr)
+            .replaceAll('{S}', sStr)
+            .replaceAll('{D_OUT}', dStr)
+            .replaceAll('{OD}', dStr)
+            .replaceAll('{DIAMETER}', dStr)
             .replaceAll('{WELD_ID}', w.id);
         break;
 
@@ -1292,9 +1346,10 @@ class PipingNetwork {
     }
 
     final bottomKey = '${callout.targetType.name}_bottom';
-    final bottomTemplate = templates[bottomKey];
+    final bottomTemplate = templates[bottomKey] ?? callout.targetType.defaultBottomTemplate;
     if (bottomTemplate != null && bottomTemplate.trim().isNotEmpty) {
-      return formatCalloutTemplate(callout.targetType, callout.targetId, bottomTemplate);
+      final formatted = formatCalloutTemplate(callout.targetType, callout.targetId, bottomTemplate);
+      if (formatted.trim().isNotEmpty) return formatted.trim();
     }
 
     final template = templates[callout.targetType.name];

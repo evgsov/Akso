@@ -20,11 +20,18 @@ class ValveSymbolPainter {
 
     final strokePaint = Paint()
       ..color = color
-      ..strokeWidth = 1.6
+      ..strokeWidth = 1.3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
+
+    final hatchPaint = Paint()
+      ..color = color.withValues(alpha: 0.55)
+      ..strokeWidth = 0.8
       ..style = PaintingStyle.stroke;
 
     final fillPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.white.withValues(alpha: 0.95)
       ..style = PaintingStyle.fill;
 
     final halfL = size * 0.9;
@@ -32,78 +39,97 @@ class ValveSymbolPainter {
 
     switch (type) {
       case ValveType.gateValve:
-        // Задвижка клиновая: два встречных треугольника + шток + маховик
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
-        // Шток вверх
-        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.5), strokePaint);
-        // Маховик (круг или перекладина)
-        canvas.drawOval(
-          Rect.fromCenter(center: Offset(0, -halfH * 1.5), width: halfL * 0.9, height: halfH * 0.7),
-          strokePaint,
-        );
+        // Задвижка клиновая по ГОСТ 21.205: два контурных треугольника с тонкой штриховкой + шпиндель + маховик со спицами
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint);
+        // Шток вверх с упорным кольцом (буртиком)
+        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.55), strokePaint);
+        canvas.drawLine(Offset(-2.0, -halfH * 0.7), Offset(2.0, -halfH * 0.7), strokePaint);
+        // Маховик (эллипс со спицами-перекрестием)
+        final wheelCenter = Offset(0, -halfH * 1.55);
+        final wheelRect = Rect.fromCenter(center: wheelCenter, width: halfL * 0.85, height: halfH * 0.65);
+        canvas.drawOval(wheelRect, fillPaint);
+        canvas.drawOval(wheelRect, strokePaint);
+        canvas.drawLine(Offset(-halfL * 0.35, wheelCenter.dy), Offset(halfL * 0.35, wheelCenter.dy), hatchPaint);
+        canvas.drawLine(Offset(0, wheelCenter.dy - halfH * 0.28), Offset(0, wheelCenter.dy + halfH * 0.28), hatchPaint);
         break;
 
       case ValveType.butterflyValve:
-        // Затвор дисковый «баттерфляй»: два треугольника + центральная вертикальная полоса (диск) + рукоятка
+        // Затвор дисковый «баттерфляй»: встречные треугольники + центральный диск + рукоятка поворота
         _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
-        // Диск поворотный
+        // Поворотный диск по центру
         final diskPaint = Paint()
           ..color = color
-          ..strokeWidth = 2.4
+          ..strokeWidth = 2.0
           ..style = PaintingStyle.stroke;
-        canvas.drawLine(Offset(0, -halfH * 1.1), Offset(0, halfH * 1.1), diskPaint);
-        // Рукоятка
-        canvas.drawLine(Offset(0, -halfH * 1.1), Offset(halfL * 0.6, -halfH * 1.7), strokePaint);
+        canvas.drawLine(Offset(0, -halfH * 1.15), Offset(0, halfH * 1.15), diskPaint);
+        // Шпиндель и рукоятка управления с фиксатором
+        canvas.drawLine(Offset(0, -halfH * 1.15), Offset(halfL * 0.65, -halfH * 1.75), strokePaint);
+        canvas.drawCircle(Offset(halfL * 0.65, -halfH * 1.75), 1.8, strokePaint);
         break;
 
       case ValveType.ballValve:
-        // Кран шаровой: два треугольника + круг в центре + рукоятка
+        // Кран шаровой: треугольники + окружность шаровой пробки с протоком + рычаг
         _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
-        canvas.drawCircle(Offset.zero, halfH * 0.6, fillPaint);
-        canvas.drawCircle(Offset.zero, halfH * 0.6, strokePaint);
-        // Рукоятка-рычаг
-        canvas.drawLine(Offset.zero, Offset(halfL * 0.8, -halfH * 1.4), strokePaint);
+        canvas.drawCircle(Offset.zero, halfH * 0.65, fillPaint);
+        canvas.drawCircle(Offset.zero, halfH * 0.65, strokePaint);
+        // Открытый проход в шаре
+        canvas.drawLine(Offset(-halfH * 0.65, 0), Offset(halfH * 0.65, 0), hatchPaint);
+        // Рукоятка-рычаг с накладкой
+        canvas.drawLine(Offset.zero, Offset(halfL * 0.85, -halfH * 1.45), strokePaint);
+        canvas.drawCircle(Offset(halfL * 0.85, -halfH * 1.45), 2.2, Paint()..color = color..style = PaintingStyle.fill);
         break;
 
       case ValveType.checkValve:
-        // Клапан обратный: треугольники, левый залит, показывает направление потока
+        // Клапан обратный по ГОСТ 21.205: контурные треугольники + стрелка направления потока + наклонное седло
         _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
-        final solidPaint = Paint()
+        // Наклонное седло клапана (затвор)
+        canvas.drawLine(Offset(-halfL * 0.25, -halfH * 0.85), Offset(halfL * 0.25, halfH * 0.85), strokePaint);
+        // Стрелка направления потока вдоль оси трубы
+        final arrowPaint = Paint()
           ..color = color
-          ..style = PaintingStyle.fill;
-        final rightTri = Path()
-          ..moveTo(0, 0)
-          ..lineTo(halfL, -halfH)
-          ..lineTo(halfL, halfH)
-          ..close();
-        canvas.drawPath(rightTri, solidPaint);
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(Offset(-halfL * 0.6, 0), Offset(halfL * 0.6, 0), arrowPaint);
+        // Наконечник стрелки
+        final arrowHead = Path()
+          ..moveTo(halfL * 0.6, 0)
+          ..lineTo(halfL * 0.35, -halfH * 0.4)
+          ..moveTo(halfL * 0.6, 0)
+          ..lineTo(halfL * 0.35, halfH * 0.4);
+        canvas.drawPath(arrowHead, arrowPaint);
         break;
 
       case ValveType.strainer:
-        // Фильтр сетчатый осадочный (грязевик): треугольники + косой отстойник
+        // Фильтр сетчатый осадочный (грязевик): треугольники + косой отстойник с металлической сеткой
         _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
         final branchPath = Path()
           ..moveTo(0, 0)
-          ..lineTo(halfL * 0.6, halfH * 1.8)
-          ..lineTo(halfL * 0.2, halfH * 2.0)
-          ..lineTo(-halfL * 0.2, halfH * 0.8)
+          ..lineTo(halfL * 0.65, halfH * 1.85)
+          ..lineTo(halfL * 0.25, halfH * 2.05)
+          ..lineTo(-halfL * 0.2, halfH * 0.85)
           ..close();
         canvas.drawPath(branchPath, fillPaint);
         canvas.drawPath(branchPath, strokePaint);
+        // Сетка фильтра (cross-hatch линии)
+        canvas.drawLine(Offset(0, halfH * 0.8), Offset(halfL * 0.45, halfH * 1.4), hatchPaint);
+        canvas.drawLine(Offset(0, halfH * 1.2), Offset(halfL * 0.35, halfH * 1.8), hatchPaint);
+        // Сливная пробка на отстойнике
+        canvas.drawLine(Offset(halfL * 0.25, halfH * 2.05), Offset(halfL * 0.65, halfH * 1.85), strokePaint);
         break;
 
       case ValveType.waterMeter:
-        // Счетчик воды / водомер: треугольники + круг с буквой 'В'
+        // Счетчик воды / водомер: треугольники + измерительная камера с буквой 'В' и импульсными засечками
         _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
-        canvas.drawCircle(Offset.zero, halfH * 0.9, fillPaint);
-        canvas.drawCircle(Offset.zero, halfH * 0.9, strokePaint);
+        canvas.drawCircle(Offset.zero, halfH * 0.95, fillPaint);
+        canvas.drawCircle(Offset.zero, halfH * 0.95, strokePaint);
         final tp = TextPainter(
           text: TextSpan(
             text: 'В',
             style: TextStyle(
               color: color,
-              fontSize: halfH * 1.1,
+              fontSize: halfH * 1.15,
               fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -112,67 +138,55 @@ class ValveSymbolPainter {
         break;
 
       case ValveType.balancingValve:
-        // Балансировочный клапан
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        // Балансировочный клапан: треугольники + измерительные штуцеры давления
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint);
         canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.4), strokePaint);
-        // Два штуцера для подключения манометра
-        canvas.drawCircle(Offset(-halfL * 0.4, -halfH * 0.9), 2.0, strokePaint);
-        canvas.drawCircle(Offset(halfL * 0.4, -halfH * 0.9), 2.0, strokePaint);
+        // Измерительные ниппели со штуцерами
+        canvas.drawLine(Offset(-halfL * 0.45, -halfH * 0.4), Offset(-halfL * 0.45, -halfH * 1.1), strokePaint);
+        canvas.drawLine(Offset(halfL * 0.45, -halfH * 0.4), Offset(halfL * 0.45, -halfH * 1.1), strokePaint);
+        canvas.drawCircle(Offset(-halfL * 0.45, -halfH * 1.1), 1.8, strokePaint);
+        canvas.drawCircle(Offset(halfL * 0.45, -halfH * 1.1), 1.8, strokePaint);
         break;
 
       case ValveType.pressureGauge:
-        // Манометр: бобышка + круг со стрелкой
-        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.5), strokePaint);
-        canvas.drawCircle(Offset(0, -halfH * 2.5), halfH * 1.0, fillPaint);
-        canvas.drawCircle(Offset(0, -halfH * 2.5), halfH * 1.0, strokePaint);
-        canvas.drawLine(
-          Offset(0, -halfH * 2.5),
-          Offset(halfH * 0.6, -halfH * 3.1),
-          strokePaint,
-        );
+        // Манометр: штуцерная бобышка + циферблат со стрелкой и шкалой
+        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.4), strokePaint);
+        final gaugeCenter = Offset(0, -halfH * 2.5);
+        final gaugeRadius = halfH * 1.1;
+        canvas.drawCircle(gaugeCenter, gaugeRadius, fillPaint);
+        canvas.drawCircle(gaugeCenter, gaugeRadius, strokePaint);
+        // Стрелка манометра
+        canvas.drawLine(gaugeCenter, Offset(halfH * 0.6, -halfH * 3.1), strokePaint);
+        canvas.drawCircle(gaugeCenter, 1.5, Paint()..color = color..style = PaintingStyle.fill);
         break;
 
       case ValveType.thermometer:
-        // Термометр в гильзе
+        // Термометр в гильзе: защитная гильза + стеклянная шкала
         canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.2), strokePaint);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(0, -halfH * 2.2), width: halfH * 0.7, height: halfH * 2.0),
-            Radius.circular(halfH * 0.35),
-          ),
-          fillPaint,
-        );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(0, -halfH * 2.2), width: halfH * 0.7, height: halfH * 2.0),
-            Radius.circular(halfH * 0.35),
-          ),
-          strokePaint,
-        );
+        final thermRect = Rect.fromCenter(center: Offset(0, -halfH * 2.3), width: halfH * 0.7, height: halfH * 2.2);
+        canvas.drawRRect(RRect.fromRectAndRadius(thermRect, Radius.circular(halfH * 0.35)), fillPaint);
+        canvas.drawRRect(RRect.fromRectAndRadius(thermRect, Radius.circular(halfH * 0.35)), strokePaint);
+        // Капиллярная трубка
+        canvas.drawLine(Offset(0, -halfH * 1.4), Offset(0, -halfH * 3.0), hatchPaint);
         break;
 
       case ValveType.airVent:
-        // Автоматический воздухоотводчик: цилиндр + стрелка вверх
+        // Автоматический воздухоотводчик: цилиндрический поплавковый корпус + сбросной клапан
         canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.0), strokePaint);
-        canvas.drawRect(
-          Rect.fromCenter(center: Offset(0, -halfH * 1.8), width: halfH * 1.0, height: halfH * 1.5),
-          fillPaint,
-        );
-        canvas.drawRect(
-          Rect.fromCenter(center: Offset(0, -halfH * 1.8), width: halfH * 1.0, height: halfH * 1.5),
-          strokePaint,
-        );
-        // Стрелка выпуска воздуха
-        canvas.drawLine(Offset(0, -halfH * 2.6), Offset(0, -halfH * 3.4), strokePaint);
-        canvas.drawLine(Offset(-3, -halfH * 3.0), Offset(0, -halfH * 3.4), strokePaint);
-        canvas.drawLine(Offset(3, -halfH * 3.0), Offset(0, -halfH * 3.4), strokePaint);
+        final ventRect = Rect.fromCenter(center: Offset(0, -halfH * 1.85), width: halfH * 1.05, height: halfH * 1.55);
+        canvas.drawRect(ventRect, fillPaint);
+        canvas.drawRect(ventRect, strokePaint);
+        // Стрелка выхода воздуха вверх
+        canvas.drawLine(Offset(0, -halfH * 2.65), Offset(0, -halfH * 3.45), strokePaint);
+        canvas.drawLine(Offset(-2.5, -halfH * 3.1), Offset(0, -halfH * 3.45), strokePaint);
+        canvas.drawLine(Offset(2.5, -halfH * 3.1), Offset(0, -halfH * 3.45), strokePaint);
         break;
 
       case ValveType.drainValve:
-        // Спускник: кран вниз со сливной трубкой
+        // Спускник: кран со сливным патрубком вниз
         _drawTwoTriangles(canvas, halfL * 0.7, halfH * 0.7, fillPaint, strokePaint);
         canvas.drawLine(Offset.zero, Offset(0, halfH * 1.8), strokePaint);
-        canvas.drawLine(Offset(0, halfH * 1.8), Offset(halfL * 0.5, halfH * 2.2), strokePaint);
+        canvas.drawLine(Offset(0, halfH * 1.8), Offset(halfL * 0.5, halfH * 2.3), strokePaint);
         break;
     }
 
@@ -184,8 +198,9 @@ class ValveSymbolPainter {
     double halfL,
     double halfH,
     Paint fillPaint,
-    Paint strokePaint,
-  ) {
+    Paint strokePaint, {
+    Paint? hatchPaint,
+  }) {
     final path = Path()
       ..moveTo(-halfL, -halfH)
       ..lineTo(0, 0)
@@ -197,6 +212,22 @@ class ValveSymbolPainter {
       ..close();
 
     canvas.drawPath(path, fillPaint);
+
+    // Тонкая внутренняя чертежная штриховка под 45 градусов (ГОСТ)
+    if (hatchPaint != null) {
+      canvas.save();
+      canvas.clipPath(path);
+      for (double x = -halfL * 1.5; x <= halfL * 1.5; x += 3.5) {
+        canvas.drawLine(Offset(x, -halfH * 1.5), Offset(x + halfH * 2.5, halfH * 1.5), hatchPaint);
+      }
+      canvas.restore();
+    }
+
     canvas.drawPath(path, strokePaint);
+
+    // Торцевые фланцевые засечки по ГОСТ на стыках с трубой
+    final tickH = halfH * 1.25;
+    canvas.drawLine(Offset(-halfL, -tickH), Offset(-halfL, tickH), strokePaint);
+    canvas.drawLine(Offset(halfL, -tickH), Offset(halfL, tickH), strokePaint);
   }
 }

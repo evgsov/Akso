@@ -19,6 +19,9 @@ class FittingCatalog {
   /// Идентификатор фланца по умолчанию
   String defaultFlangeId = 'flange_weld_neck_11';
 
+  /// Идентификатор заглушки (днища) по умолчанию
+  String defaultCapId = 'cap_elliptic_gost';
+
   /// Режим фланцевого подключения по умолчанию (к оборудованию или межтрубное)
   FlangeConnectionType defaultFlangeConnectionType = FlangeConnectionType.toEquipment;
 
@@ -200,6 +203,18 @@ class FittingCatalog {
       fittingType: FittingType.cap,
       standard: 'АТК 24.218.01-90',
       fixedLengthMm: 25.0,
+      weldType: WeldType.c17,
+      defaultMaterial: 'Сталь 20',
+    ));
+
+    // --- Днища и заглушки ---
+    _register(const FittingDefinition(
+      id: 'cap_elliptic_gost',
+      name: 'Днище эллиптическое отбортованное ГОСТ 6533',
+      archetype: FittingArchetype.cap,
+      fittingType: FittingType.cap,
+      standard: 'ГОСТ 6533-78',
+      fixedLengthMm: 35.0,
       weldType: WeldType.c17,
       defaultMaterial: 'Сталь 20',
     ));

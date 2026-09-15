@@ -9,9 +9,11 @@ class SupportPainter {
   static void paint(
     Canvas canvas,
     AxonometryProjector projector,
-    PipingNetwork network,
-  ) {
-    if (network.supports.isEmpty) return;
+    PipingNetwork network, {
+    bool isVolumeMode = false,
+    String? selectedSupportId,
+  }) {
+    if (network.supports.isEmpty || isVolumeMode) return;
 
     for (final support in network.supports.values) {
       final seg = network.segments[support.segmentId];
@@ -38,6 +40,18 @@ class SupportPainter {
       // Предпочитаем ориентацию вниз (по гравитации), либо вправо при вертикальной трубе
       if (n.dy < -0.01 || (n.dy.abs() <= 0.01 && n.dx < 0)) {
         n = -n;
+      }
+
+      if (support.id == selectedSupportId) {
+        final highlightPaint = Paint()
+          ..color = Colors.cyanAccent.withValues(alpha: 0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.0;
+        final glowPaint = Paint()
+          ..color = Colors.cyanAccent.withValues(alpha: 0.25)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(center, 18.0, glowPaint);
+        canvas.drawCircle(center, 18.0, highlightPaint);
       }
 
       final strokePaint = Paint()
