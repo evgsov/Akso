@@ -13,6 +13,7 @@ import 'dxf_export_dialog.dart';
 import 'elevation_panel.dart';
 import 'fitting_catalog_dialog.dart';
 import 'fitting_properties_sheet.dart';
+import '../../../../domain/models/equipment.dart';
 import 'equipment_properties_sheet.dart';
 import 'materials_specification_dialog.dart';
 import 'pipe_assortment_dialog.dart';
@@ -1295,6 +1296,8 @@ class DesktopCadLayout extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+              _MultiSelectPipeControls(controller: controller),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -1516,48 +1519,12 @@ class DesktopCadLayout extends StatelessWidget {
                 controller: controller,
                 segmentId: controller.selectedSegmentId!,
               )
-            else if (isEquipment) ...[
-              Text('ID: ${controller.selectedEquipmentId}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              const SizedBox(height: 4),
-              Text(
-                controller.network.equipments[controller.selectedEquipmentId!]?.name ?? 'Оборудование',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
-                  icon: const Icon(Icons.tune, size: 16),
-                  label: const Text('Свойства оборудования', style: TextStyle(fontSize: 12)),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => EquipmentPropertiesSheet(
-                        network: controller.network,
-                        equipmentId: controller.selectedEquipmentId!,
-                        onModified: controller.refresh,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: BorderSide(color: Colors.red.shade300),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text('Удалить оборудование (Del)', style: TextStyle(fontSize: 11)),
-                  onPressed: controller.deleteSelected,
-                ),
-              ),
-            ] else if (controller.selectedNodeId != null) ...[
+            else if (isEquipment)
+              _DesktopEquipmentInspector(
+                controller: controller,
+                equipmentId: controller.selectedEquipmentId!,
+              )
+            else if (controller.selectedNodeId != null) ...[
               () {
                 final nodeId = controller.selectedNodeId!;
                 final node = controller.network.nodes[nodeId];
@@ -1569,11 +1536,12 @@ class DesktopCadLayout extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Узел ID: $nodeId', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Отметка: ${node?.elevationString ?? "0.000 м"}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 6),
+                    _DesktopNodeElevationEditor(
+                      controller: controller,
+                      nodeId: nodeId,
                     ),
+                    const SizedBox(height: 6),
                     Text('Подключено труб: ${connected.length}', style: const TextStyle(fontSize: 11)),
                     const SizedBox(height: 10),
 
@@ -2054,6 +2022,7 @@ class _DesktopSegmentInspector extends StatefulWidget {
 
 class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
   late TextEditingController _lengthController;
+  late TextEditingController _elevationController;
   late TextEditingController _nameController;
   late TextEditingController _serialController;
   final _materials = const ['Сталь 20', '09Г2С', '12Х18Н10Т', '10ХСНД', '15Х5М', '12Х1МФ'];
@@ -2063,7 +2032,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
     super.initState();
     final seg = widget.controller.network.segments[widget.segmentId];
     final len = widget.controller.selectedSegmentLength ?? 1000.0;
+    final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+    final elevM = (startNode?.z ?? 0.0) / 1000.0;
     _lengthController = TextEditingController(text: '${len.round()}');
+    _elevationController = TextEditingController(text: elevM.toStringAsFixed(3));
     _nameController = TextEditingController(text: seg?.name ?? '');
     _serialController = TextEditingController(text: seg?.serialNumber ?? '');
   }
@@ -2074,7 +2046,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
     if (oldWidget.segmentId != widget.segmentId) {
       final seg = widget.controller.network.segments[widget.segmentId];
       final len = widget.controller.selectedSegmentLength ?? 1000.0;
+      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+      final elevM = (startNode?.z ?? 0.0) / 1000.0;
       _lengthController.text = '${len.round()}';
+      _elevationController.text = elevM.toStringAsFixed(3);
       _nameController.text = seg?.name ?? '';
       _serialController.text = seg?.serialNumber ?? '';
     }
@@ -2083,9 +2058,19 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
   @override
   void dispose() {
     _lengthController.dispose();
+    _elevationController.dispose();
     _nameController.dispose();
     _serialController.dispose();
     super.dispose();
+  }
+
+  void _applyElevation() {
+    final text = _elevationController.text.trim().replaceAll('+', '').replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null) {
+      widget.controller.changeSelectedSegmentElevation(val);
+      _elevationController.text = val.toStringAsFixed(3);
+    }
   }
 
   void _applyLength() {
@@ -2166,21 +2151,52 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
         Row(
           children: [
             Container(
-              width: 10,
-              height: 10,
+              width: 12,
+              height: 12,
               decoration: BoxDecoration(
                 color: sys != null ? Color(sys.colorValue) : Colors.blue,
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                sys != null ? '${sys.code} (${sys.name})' : 'Трубопровод',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                overflow: TextOverflow.ellipsis,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: widget.controller.network.systems.containsKey(seg.systemId) ? seg.systemId : null,
+                  isDense: true,
+                  isExpanded: true,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                  items: widget.controller.network.systems.values.map((s) {
+                    return DropdownMenuItem<String>(
+                      value: s.id,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Color(s.colorValue),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text('${s.code} (${s.name})', style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newSysId) {
+                    if (newSysId != null) {
+                      widget.controller.changeSelectedSegmentSystem(newSysId);
+                    }
+                  },
+                ),
               ),
             ),
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -2366,6 +2382,69 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
               onPressed: () => _showAddWallThicknessDialog(context, seg.dn),
             ),
           ],
+        ),
+        const SizedBox(height: 10),
+
+        // Высотная отметка Z (м)
+        Builder(
+          builder: (context) {
+            final startNode = widget.controller.network.nodes[seg.startNodeId];
+            final endNode = widget.controller.network.nodes[seg.endNodeId];
+            final isSloped = startNode != null && endNode != null && (startNode.z - endNode.z).abs() > 0.5;
+            final curElevM = (startNode?.z ?? 0.0) / 1000.0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Отметка оси (Z):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(
+                      isSloped
+                          ? 'Z₁=${(startNode.z / 1000.0).toStringAsFixed(3)} / Z₂=${(endNode.z / 1000.0).toStringAsFixed(3)} м'
+                          : '${curElevM >= 0 ? "+" : ""}${curElevM.toStringAsFixed(3)} м',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: TextField(
+                          controller: _elevationController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                          style: const TextStyle(fontSize: 12),
+                          decoration: const InputDecoration(
+                            suffixText: 'м',
+                            hintText: '+2.800',
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (_) => _applyElevation(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    SizedBox(
+                      height: 36,
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: _applyElevation,
+                        child: const Icon(Icons.check, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 10),
 
@@ -2829,16 +2908,21 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
   late TextEditingController _nameController;
   late TextEditingController _serialController;
   late TextEditingController _lengthController;
+  late TextEditingController _elevationController;
 
   @override
   void initState() {
     super.initState();
     final spool = widget.controller.network.spools[widget.spoolId];
+    final seg = spool != null ? widget.controller.network.segments[spool.segmentId] : null;
+    final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+    final elevM = (startNode?.z ?? 0.0) / 1000.0;
     _nameController = TextEditingController(text: spool?.name ?? '');
     _serialController = TextEditingController(text: spool?.serialNumber ?? '');
     _lengthController = TextEditingController(
       text: spool != null ? spool.cutLengthMm.round().toString() : '',
     );
+    _elevationController = TextEditingController(text: elevM.toStringAsFixed(3));
   }
 
   @override
@@ -2846,9 +2930,13 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spoolId != widget.spoolId) {
       final spool = widget.controller.network.spools[widget.spoolId];
+      final seg = spool != null ? widget.controller.network.segments[spool.segmentId] : null;
+      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+      final elevM = (startNode?.z ?? 0.0) / 1000.0;
       _nameController.text = spool?.name ?? '';
       _serialController.text = spool?.serialNumber ?? '';
       _lengthController.text = spool != null ? spool.cutLengthMm.round().toString() : '';
+      _elevationController.text = elevM.toStringAsFixed(3);
     }
   }
 
@@ -2857,7 +2945,17 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
     _nameController.dispose();
     _serialController.dispose();
     _lengthController.dispose();
+    _elevationController.dispose();
     super.dispose();
+  }
+
+  void _applyElevation() {
+    final text = _elevationController.text.trim().replaceAll('+', '').replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null) {
+      widget.controller.changeSelectedSpoolElevation(val);
+      _elevationController.text = val.toStringAsFixed(3);
+    }
   }
 
   void _applyName() {
@@ -2916,6 +3014,111 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
               child: Text('Ду${spool.dn}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo.shade700)),
             ),
           ],
+        ),
+        if (seg != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Text('Система:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: widget.controller.network.systems.containsKey(seg.systemId) ? seg.systemId : null,
+                    isDense: true,
+                    isExpanded: true,
+                    style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                    items: widget.controller.network.systems.values.map((s) {
+                      return DropdownMenuItem<String>(
+                        value: s.id,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Color(s.colorValue),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text('${s.code} (${s.name})', style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newSysId) {
+                      if (newSysId != null) {
+                        widget.controller.changeSelectedSpoolSystem(newSysId);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 8),
+
+        // Высотная отметка Z (м)
+        Builder(
+          builder: (context) {
+            final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+            final curElevM = (startNode?.z ?? 0.0) / 1000.0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Отметка оси (Z):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(
+                      '${curElevM >= 0 ? "+" : ""}${curElevM.toStringAsFixed(3)} м',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 34,
+                        child: TextField(
+                          controller: _elevationController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                          style: const TextStyle(fontSize: 12),
+                          decoration: const InputDecoration(
+                            suffixText: 'м',
+                            hintText: '+2.800',
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (_) => _applyElevation(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    SizedBox(
+                      height: 34,
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: _applyElevation,
+                        child: const Icon(Icons.check, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 8),
 
@@ -3026,4 +3229,399 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
     );
   }
 }
+
+class _DesktopNodeElevationEditor extends StatefulWidget {
+  final PipingInputController controller;
+  final String nodeId;
+
+  const _DesktopNodeElevationEditor({
+    required this.controller,
+    required this.nodeId,
+  });
+
+  @override
+  State<_DesktopNodeElevationEditor> createState() => _DesktopNodeElevationEditorState();
+}
+
+class _DesktopNodeElevationEditorState extends State<_DesktopNodeElevationEditor> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final node = widget.controller.network.nodes[widget.nodeId];
+    final elevM = (node?.z ?? 0.0) / 1000.0;
+    _ctrl = TextEditingController(text: elevM.toStringAsFixed(3));
+  }
+
+  @override
+  void didUpdateWidget(covariant _DesktopNodeElevationEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.nodeId != widget.nodeId) {
+      final node = widget.controller.network.nodes[widget.nodeId];
+      final elevM = (node?.z ?? 0.0) / 1000.0;
+      _ctrl.text = elevM.toStringAsFixed(3);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final text = _ctrl.text.trim().replaceAll('+', '').replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null) {
+      widget.controller.changeSelectedNodeElevation(val);
+      _ctrl.text = val.toStringAsFixed(3);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final node = widget.controller.network.nodes[widget.nodeId];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Отметка (Z):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              node?.elevationString ?? "0.000 м",
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 32,
+                child: TextField(
+                  controller: _ctrl,
+                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    suffixText: 'м',
+                    hintText: '+2.800',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _apply(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              height: 32,
+              child: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: _apply,
+                child: const Icon(Icons.check, size: 16),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopEquipmentInspector extends StatefulWidget {
+  final PipingInputController controller;
+  final String equipmentId;
+
+  const _DesktopEquipmentInspector({
+    required this.controller,
+    required this.equipmentId,
+  });
+
+  @override
+  State<_DesktopEquipmentInspector> createState() => _DesktopEquipmentInspectorState();
+}
+
+class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> {
+  late TextEditingController _elevationCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final eq = widget.controller.network.equipments[widget.equipmentId];
+    final elevM = (eq?.z ?? 0.0) / 1000.0;
+    _elevationCtrl = TextEditingController(text: elevM.toStringAsFixed(3));
+  }
+
+  @override
+  void didUpdateWidget(covariant _DesktopEquipmentInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.equipmentId != widget.equipmentId) {
+      final eq = widget.controller.network.equipments[widget.equipmentId];
+      final elevM = (eq?.z ?? 0.0) / 1000.0;
+      _elevationCtrl.text = elevM.toStringAsFixed(3);
+    }
+  }
+
+  @override
+  void dispose() {
+    _elevationCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyElevation() {
+    final text = _elevationCtrl.text.trim().replaceAll('+', '').replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null) {
+      widget.controller.changeSelectedEquipmentElevation(val);
+      _elevationCtrl.text = val.toStringAsFixed(3);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final eq = widget.controller.network.equipments[widget.equipmentId];
+    if (eq == null) {
+      return const Text('Оборудование не найдено', style: TextStyle(fontSize: 11, color: Colors.grey));
+    }
+    final elevM = eq.z / 1000.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('ID: ${eq.id}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Text(
+          eq.name.isNotEmpty ? eq.name : eq.type.displayName,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+
+        // Высотная отметка Z (м)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Отметка основания (Z):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              '${elevM >= 0 ? "+" : ""}${elevM.toStringAsFixed(3)} м',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 34,
+                child: TextField(
+                  controller: _elevationCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    suffixText: 'м',
+                    hintText: '+0.000',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _applyElevation(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              height: 34,
+              child: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: _applyElevation,
+                child: const Icon(Icons.check, size: 16),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+            icon: const Icon(Icons.tune, size: 16),
+            label: const Text('Свойства оборудования', style: TextStyle(fontSize: 12)),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => EquipmentPropertiesSheet(
+                  network: widget.controller.network,
+                  equipmentId: eq.id,
+                  onModified: () {
+                    final updated = widget.controller.network.equipments[eq.id];
+                    if (updated != null) {
+                      _elevationCtrl.text = (updated.z / 1000.0).toStringAsFixed(3);
+                    }
+                    widget.controller.refresh();
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: BorderSide(color: Colors.red.shade300),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Удалить оборудование (Del)', style: TextStyle(fontSize: 11)),
+            onPressed: widget.controller.deleteSelected,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MultiSelectPipeControls extends StatefulWidget {
+  final PipingInputController controller;
+
+  const _MultiSelectPipeControls({required this.controller});
+
+  @override
+  State<_MultiSelectPipeControls> createState() => _MultiSelectPipeControlsState();
+}
+
+class _MultiSelectPipeControlsState extends State<_MultiSelectPipeControls> {
+  final TextEditingController _shiftCtrl = TextEditingController(text: '+0.500');
+
+  @override
+  void dispose() {
+    _shiftCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyShift() {
+    final text = _shiftCtrl.text.trim().replaceAll('+', '').replaceAll(',', '.');
+    final val = double.tryParse(text);
+    if (val != null && val != 0.0) {
+      widget.controller.shiftSelectedSegmentsElevation(val);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final segCount = widget.controller.selectedSegmentIds.length;
+    if (segCount == 0) return const SizedBox.shrink();
+
+    final systems = widget.controller.network.systems.values.toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 14),
+        const Text(
+          'Массовые действия с трубами:',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+        ),
+        const SizedBox(height: 6),
+        // Смена системы для всех труб
+        Row(
+          children: [
+            const Text('Система:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  hint: const Text('Сменить систему...', style: TextStyle(fontSize: 11)),
+                  isDense: true,
+                  isExpanded: true,
+                  items: systems.map((s) {
+                    return DropdownMenuItem<String>(
+                      value: s.id,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Color(s.colorValue),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text('${s.code} (${s.name})', style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newSysId) {
+                    if (newSysId != null) {
+                      widget.controller.changeSelectedSegmentSystem(newSysId);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Массовый сдвиг отметки Z (± м)
+        Row(
+          children: [
+            const Text('Сдвиг Z:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SizedBox(
+                height: 30,
+                child: TextField(
+                  controller: _shiftCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                  style: const TextStyle(fontSize: 11),
+                  decoration: const InputDecoration(
+                    hintText: '±0.500',
+                    suffixText: 'м',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _applyShift(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              height: 30,
+              child: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: _applyShift,
+                child: const Text('Сдвинуть', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 

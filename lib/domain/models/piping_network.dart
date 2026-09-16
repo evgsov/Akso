@@ -302,6 +302,95 @@ class PipingNetwork {
     recalculateSpools();
   }
 
+  /// Изменение системы для сегмента трубы
+  void changeSegmentSystem(String segmentId, String newSystemId) {
+    final seg = segments[segmentId];
+    if (seg == null) return;
+    segments[segmentId] = seg.copyWith(systemId: newSystemId);
+    recalculateSpools();
+  }
+
+  /// Массовое изменение системы для группы сегментов
+  void changeSegmentsSystem(Iterable<String> segmentIds, String newSystemId) {
+    bool changed = false;
+    for (final id in segmentIds) {
+      final seg = segments[id];
+      if (seg != null && seg.systemId != newSystemId) {
+        segments[id] = seg.copyWith(systemId: newSystemId);
+        changed = true;
+      }
+    }
+    if (changed) {
+      recalculateSpools();
+    }
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для сегмента трубы
+  void changeSegmentElevation(String segmentId, double newZMeters) {
+    final seg = segments[segmentId];
+    if (seg == null) return;
+    final start = nodes[seg.startNodeId];
+    if (start == null) return;
+    final newZMm = newZMeters * 1000.0;
+    final deltaZ = newZMm - start.z;
+    if (deltaZ.abs() < 0.1) return;
+    shiftSegment(segmentId, 0.0, 0.0, deltaZ);
+  }
+
+  /// Массовый сдвиг высотной отметки (дельта Z в метрах) для группы сегментов
+  void shiftSegmentsElevation(Iterable<String> segmentIds, double deltaZMeters) {
+    final deltaZMm = deltaZMeters * 1000.0;
+    if (deltaZMm.abs() < 0.1) return;
+
+    final affectedNodeIds = <String>{};
+    for (final sId in segmentIds) {
+      final seg = segments[sId];
+      if (seg != null) {
+        affectedNodeIds.add(seg.startNodeId);
+        affectedNodeIds.add(seg.endNodeId);
+      }
+    }
+
+    for (final nId in affectedNodeIds) {
+      final n = nodes[nId];
+      if (n != null) {
+        nodes[nId] = n.copyWith(z: n.z + deltaZMm);
+      }
+    }
+
+    for (final nId in affectedNodeIds) {
+      FittingDetector.autoDetectFittingsForNode(this, nId);
+    }
+    recalculateSpools();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для конкретного узла
+  void setNodeElevation(String nodeId, double newZMeters) {
+    final n = nodes[nodeId];
+    if (n == null) return;
+    final newZMm = newZMeters * 1000.0;
+    if ((n.z - newZMm).abs() < 0.1) return;
+
+    nodes[nodeId] = n.copyWith(z: newZMm);
+    FittingDetector.autoDetectFittingsForNode(this, nodeId);
+    final conn = getConnectedSegments(nodeId);
+    for (final seg in conn) {
+      FittingDetector.autoDetectFittingsForNode(this, seg.startNodeId);
+      FittingDetector.autoDetectFittingsForNode(this, seg.endNodeId);
+    }
+    recalculateSpools();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для оборудования
+  void changeEquipmentElevation(String eqId, double newZMeters) {
+    final eq = equipments[eqId];
+    if (eq == null) return;
+    final newZMm = newZMeters * 1000.0;
+    final deltaZ = newZMm - eq.z;
+    if (deltaZ.abs() < 0.1) return;
+    moveEquipment(eqId, 0.0, 0.0, deltaZ);
+  }
+
   /// 4. Параметрическое изменение длины сегмента
   /// Конечному узлу задается смещение вдоль вектора трубы, и вся последующая ветка сети сдвигается
   void changeSegmentLength(String segmentId, double newLengthMm) {

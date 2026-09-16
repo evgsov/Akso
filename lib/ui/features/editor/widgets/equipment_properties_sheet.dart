@@ -22,6 +22,7 @@ class EquipmentPropertiesSheet extends StatefulWidget {
 class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _serialCtrl;
+  late TextEditingController _elevationCtrl;
   late TextEditingController _widthCtrl;
   late TextEditingController _lengthCtrl;
   late TextEditingController _heightCtrl;
@@ -33,6 +34,8 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
     final eq = widget.network.equipments[widget.equipmentId];
     _nameCtrl = TextEditingController(text: eq?.name ?? '');
     _serialCtrl = TextEditingController(text: eq?.serialNumber ?? '');
+    final elevM = ((eq?.z ?? 0.0) / 1000.0);
+    _elevationCtrl = TextEditingController(text: elevM.toStringAsFixed(3));
     _widthCtrl = TextEditingController(text: eq?.width.toString() ?? '1000.0');
     _lengthCtrl = TextEditingController(text: eq?.length.toString() ?? '1000.0');
     _heightCtrl = TextEditingController(text: eq?.height.toString() ?? '1000.0');
@@ -43,6 +46,7 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _serialCtrl.dispose();
+    _elevationCtrl.dispose();
     _widthCtrl.dispose();
     _lengthCtrl.dispose();
     _heightCtrl.dispose();
@@ -52,12 +56,18 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
   void _applyChanges() {
     final eq = widget.network.equipments[widget.equipmentId];
     if (eq == null) return;
-    
-    final w = double.tryParse(_widthCtrl.text) ?? eq.width;
-    final l = double.tryParse(_lengthCtrl.text) ?? eq.length;
-    final h = double.tryParse(_heightCtrl.text) ?? eq.height;
 
-    final updated = eq.copyWith(
+    final elevM = double.tryParse(_elevationCtrl.text.replaceAll('+', '').replaceAll(',', '.'));
+    if (elevM != null) {
+      widget.network.changeEquipmentElevation(widget.equipmentId, elevM);
+    }
+    
+    final updatedEq = widget.network.equipments[widget.equipmentId] ?? eq;
+    final w = double.tryParse(_widthCtrl.text) ?? updatedEq.width;
+    final l = double.tryParse(_lengthCtrl.text) ?? updatedEq.length;
+    final h = double.tryParse(_heightCtrl.text) ?? updatedEq.height;
+
+    final updated = updatedEq.copyWith(
       name: _nameCtrl.text,
       serialNumber: _serialCtrl.text.trim().isEmpty ? null : _serialCtrl.text.trim(),
       clearSerialNumber: _serialCtrl.text.trim().isEmpty,
@@ -102,6 +112,19 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
             decoration: const InputDecoration(
               labelText: 'Заводской номер',
               hintText: 'напр. № 10492, ЗАВ-02',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _elevationCtrl,
+            keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,+-]'))],
+            decoration: const InputDecoration(
+              labelText: 'Высотная отметка основания (Z), м',
+              hintText: '+0.000',
+              suffixText: 'м',
               border: OutlineInputBorder(),
               isDense: true,
             ),

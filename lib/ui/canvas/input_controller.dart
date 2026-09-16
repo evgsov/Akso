@@ -629,9 +629,10 @@ class PipingInputController extends ChangeNotifier {
     } else {
       _canDragElement = false;
       _longPressTimer = Timer(const Duration(milliseconds: 200), () {
-        if (!hasListeners) return;
         _canDragElement = true;
-        notifyListeners();
+        if (hasListeners) {
+          notifyListeners();
+        }
       });
     }
     currentCursorScreenPos = screenPos;
@@ -2875,6 +2876,74 @@ class PipingInputController extends ChangeNotifier {
       serialNumber: serialNumber,
       clearSerialNumber: serialNumber == null || serialNumber.trim().isEmpty,
     );
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение системы для выбранного сегмента или группы выбранных сегментов
+  void changeSelectedSegmentSystem(String newSystemId) {
+    final ids = selectedSegmentIds.isNotEmpty
+        ? selectedSegmentIds
+        : (selectedSegmentId != null ? [selectedSegmentId!] : <String>[]);
+    if (ids.isEmpty) return;
+
+    network.changeSegmentsSystem(ids, newSystemId);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для выбранного сегмента
+  void changeSelectedSegmentElevation(double newZMeters) {
+    if (selectedSegmentId == null) return;
+    network.changeSegmentElevation(selectedSegmentId!, newZMeters);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Сдвиг высотной отметки (дельта Z в метрах) для группы выбранных сегментов
+  void shiftSelectedSegmentsElevation(double deltaZMeters) {
+    final ids = selectedSegmentIds.isNotEmpty
+        ? selectedSegmentIds
+        : (selectedSegmentId != null ? [selectedSegmentId!] : <String>[]);
+    if (ids.isEmpty || deltaZMeters.abs() < 0.0001) return;
+
+    network.shiftSegmentsElevation(ids, deltaZMeters);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение системы для выбранной катушки
+  void changeSelectedSpoolSystem(String newSystemId) {
+    if (selectedSpoolId == null) return;
+    final spool = network.spools[selectedSpoolId!];
+    if (spool == null) return;
+    network.changeSegmentSystem(spool.segmentId, newSystemId);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для выбранной катушки
+  void changeSelectedSpoolElevation(double newZMeters) {
+    if (selectedSpoolId == null) return;
+    final spool = network.spools[selectedSpoolId!];
+    if (spool == null) return;
+    network.changeSegmentElevation(spool.segmentId, newZMeters);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для выбранного узла
+  void changeSelectedNodeElevation(double newZMeters) {
+    if (selectedNodeId == null) return;
+    network.setNodeElevation(selectedNodeId!, newZMeters);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение высотной отметки (Z в метрах) для выбранного оборудования
+  void changeSelectedEquipmentElevation(double newZMeters) {
+    if (selectedEquipmentId == null) return;
+    network.changeEquipmentElevation(selectedEquipmentId!, newZMeters);
     history.recordState(network);
     notifyListeners();
   }

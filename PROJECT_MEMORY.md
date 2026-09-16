@@ -1090,6 +1090,35 @@
     - `dart analyze lib test` — 0 предупреждений и ошибок.
     - База знаний `graphify` обновлена.
 
+- **Редактирование высотных отметок (Z) и выбор технологических систем (Phase 31):**
+  - **Контекст и задачи:**
+    1. Добавить возможность интерактивного изменения высотной отметки (Z в метрах, формат СПДС `+2.800 м`) для отдельных труб (сегментов и катушек), групп труб, пространственных узлов сети и технологического оборудования.
+    2. Добавить возможность выбора и смены технологической системы (`systemId`: В1, Т3, К1 и т.д.) как для одиночных труб, так и пакетно в 1 клик для группы выделенных труб.
+  - **Реализация в доменной модели (`lib/domain/models/piping_network.dart`):**
+    - `changeSegmentSystem(String segmentId, String newSystemId)`: переназначение системы для сегмента с пересчетом катушек.
+    - `changeSegmentsSystem(Iterable<String> segmentIds, String newSystemId)`: массовое изменение системы для группы сегментов.
+    - `changeSegmentElevation(String segmentId, double newZMeters)`: перенос сегмента на целевую высотную отметку в метрах (вычисляет $\Delta Z$ и сдвигает узлы через `shiftSegment`, сохраняя герметичность подключенных вертикальных стояков).
+    - `shiftSegmentsElevation(Iterable<String> segmentIds, double deltaZMeters)`: массовый сдвиг группы сегментов по высоте на $\pm \Delta Z$.
+    - `setNodeElevation(String nodeId, double newZMeters)`: прямое задание абсолютной высотной отметки для узла сети с автодетекцией фитингов.
+    - `changeEquipmentElevation(String eqId, double newZMeters)`: перемещение аппарата/оборудования на новую отметку вместе со всеми штуцерами и узлами подключения.
+  - **Реализация в контроллере (`lib/ui/canvas/input_controller.dart`):**
+    - `changeSelectedSegmentSystem(String newSystemId)`: смена системы для одиночного или группового выбора труб с записью снимка в Undo/Redo историю.
+    - `changeSelectedSegmentElevation(double newZMeters)`: смена отметки одиночной трубы.
+    - `shiftSelectedSegmentsElevation(double deltaZMeters)`: пакетный сдвиг высоты для группы выделенных труб.
+    - `changeSelectedSpoolSystem(String newSystemId)` и `changeSelectedSpoolElevation(double newZMeters)`: управление системой и отметкой катушек.
+    - `changeSelectedNodeElevation(double newZMeters)`: изменение отметки выбранного узла.
+    - `changeSelectedEquipmentElevation(double newZMeters)`: изменение отметки выбранного оборудования.
+  - **Реализация в UI (`desktop_cad_layout.dart` и `equipment_properties_sheet.dart`):**
+    - `_DesktopSegmentInspector`: заменен статический заголовок на интерактивный `DropdownButton` с цветными индикаторами систем; добавлена строка ввода отметки оси трубы (Z в метрах, кнопка «Применить» и сабмит по Enter).
+    - `_DesktopSpoolInspector`: добавлены выбор системы и редактирование отметки Z.
+    - `_MultiSelectPipeControls`: блок массовых действий с трубами при множественном выборе (быстрая смена системы в 1 клик для всех выбранных труб, поле сдвига $\pm \Delta Z$).
+    - `_DesktopNodeElevationEditor`: редактор высотной отметки узла в карточке свойств узла.
+    - `_DesktopEquipmentInspector` и `EquipmentPropertiesSheet`: отображение и редактирование высотной отметки основания оборудования.
+  - **Верификация:**
+    - Разработан набор unit-тестов `test/elevation_and_system_editing_test.dart` (8 тестов, 100% pass).
+    - Все 349 тестов проекта успешно пройдены (`flutter test` — All tests passed).
+    - `dart analyze lib test` — 0 ошибок и предупреждений (No issues found).
+
 
 
 

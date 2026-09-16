@@ -21,7 +21,7 @@ void main() {
       controller.setTool(CanvasTool.select);
     });
 
-    test('1.2: Node selection does not drag immediately (Drag threshold 6px)', () {
+    test('1.2: Node selection does not drag immediately (Drag threshold 6px)', () async {
       final n1 = Node3D(id: 'node_1', x: 0, y: 0, z: 0);
       network.nodes[n1.id] = n1;
 
@@ -37,8 +37,11 @@ void main() {
       expect(controller.isDraggingNode, isFalse);
       expect(network.nodes['node_1']!.x, equals(0.0));
 
-      // Движение более 6px активирует перетаскивание
-      controller.handlePointerMove(p1 + const Offset(10, 0));
+      // Ожидаем завершения 200ms таймера удержания для активации Drag режима
+      await Future.delayed(const Duration(milliseconds: 220));
+
+      // Движение более 12px активирует перетаскивание
+      controller.handlePointerMove(p1 + const Offset(15, 0));
       expect(controller.isDraggingNode, isTrue);
 
       controller.handlePointerUp();
