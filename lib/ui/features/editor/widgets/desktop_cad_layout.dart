@@ -1076,12 +1076,13 @@ class DesktopCadLayout extends StatelessWidget {
   Widget _buildPropertyInspector(BuildContext context) {
     final isDimension = controller.selectedDimensionId != null;
     final isAxis = !isDimension && controller.selectedAxisId != null;
-    final isMultiSelect = controller.selectedNodeIds.length > 1 || controller.selectedSegmentIds.length > 1;
+    final isMultiSelect = controller.selectedNodeIds.length > 1 || controller.selectedSegmentIds.length > 1 || controller.selectedSpoolIds.length > 1;
     final isValve = !isDimension && !isAxis && !isMultiSelect && controller.selectedValveId != null;
     final isSupport = !isDimension && !isAxis && !isMultiSelect && !isValve && controller.selectedSupportId != null;
     final isWeld = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && controller.selectedWeldId != null;
-    final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedSegmentId != null;
-    final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedEquipmentId != null;
+    final isSpool = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedSpoolId != null;
+    final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedSegmentId != null;
+    final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedEquipmentId != null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
@@ -1105,6 +1106,10 @@ class DesktopCadLayout extends StatelessWidget {
     } else if (isWeld) {
       title = 'Сварной стык';
       icon = Icons.join_inner;
+    } else if (isSpool) {
+      final spool = controller.network.spools[controller.selectedSpoolId!];
+      title = 'Катушка ${spool?.number ?? ""}';
+      icon = Icons.straighten;
     } else if (isSegment) {
       title = 'Свойства трубы';
       icon = Icons.linear_scale;
@@ -1143,6 +1148,7 @@ class DesktopCadLayout extends StatelessWidget {
                   onPressed: () {
                     controller.selectedNodeId = null;
                     controller.selectedSegmentId = null;
+                    controller.selectedSpoolId = null;
                     controller.selectedEquipmentId = null;
                     controller.selectedDimensionId = null;
                     controller.selectedAxisId = null;
@@ -1151,6 +1157,7 @@ class DesktopCadLayout extends StatelessWidget {
                     controller.selectedWeldId = null;
                     controller.selectedNodeIds.clear();
                     controller.selectedSegmentIds.clear();
+                    controller.selectedSpoolIds.clear();
                     controller.refresh();
                   },
                 ),
@@ -1499,7 +1506,12 @@ class DesktopCadLayout extends StatelessWidget {
                   ],
                 );
               }(),
-            ] else if (isSegment)
+            ] else if (isSpool)
+              _DesktopSpoolInspector(
+                controller: controller,
+                spoolId: controller.selectedSpoolId!,
+              )
+            else if (isSegment)
               _DesktopSegmentInspector(
                 controller: controller,
                 segmentId: controller.selectedSegmentId!,
@@ -2799,3 +2811,219 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     );
   }
 }
+
+class _DesktopSpoolInspector extends StatefulWidget {
+  final PipingInputController controller;
+  final String spoolId;
+
+  const _DesktopSpoolInspector({
+    required this.controller,
+    required this.spoolId,
+  });
+
+  @override
+  State<_DesktopSpoolInspector> createState() => _DesktopSpoolInspectorState();
+}
+
+class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
+  late TextEditingController _nameController;
+  late TextEditingController _serialController;
+  late TextEditingController _lengthController;
+
+  @override
+  void initState() {
+    super.initState();
+    final spool = widget.controller.network.spools[widget.spoolId];
+    _nameController = TextEditingController(text: spool?.name ?? '');
+    _serialController = TextEditingController(text: spool?.serialNumber ?? '');
+    _lengthController = TextEditingController(
+      text: spool != null ? spool.cutLengthMm.round().toString() : '',
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _DesktopSpoolInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spoolId != widget.spoolId) {
+      final spool = widget.controller.network.spools[widget.spoolId];
+      _nameController.text = spool?.name ?? '';
+      _serialController.text = spool?.serialNumber ?? '';
+      _lengthController.text = spool != null ? spool.cutLengthMm.round().toString() : '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _serialController.dispose();
+    _lengthController.dispose();
+    super.dispose();
+  }
+
+  void _applyName() {
+    final spool = widget.controller.network.spools[widget.spoolId];
+    if (spool == null) return;
+    final text = _nameController.text.trim();
+    if (text != (spool.name ?? '')) {
+      widget.controller.setSelectedSpoolMetadata(name: text.isEmpty ? null : text);
+    }
+  }
+
+  void _applySerialNumber() {
+    final spool = widget.controller.network.spools[widget.spoolId];
+    if (spool == null) return;
+    final text = _serialController.text.trim();
+    if (text != (spool.serialNumber ?? '')) {
+      widget.controller.setSelectedSpoolMetadata(serialNumber: text.isEmpty ? null : text);
+    }
+  }
+
+  void _applyLength() {
+    final spool = widget.controller.network.spools[widget.spoolId];
+    if (spool == null) return;
+    final val = double.tryParse(_lengthController.text.replaceAll(' ', ''));
+    if (val != null && val > 0 && (val - spool.cutLengthMm).abs() > 0.5) {
+      widget.controller.changeSelectedSpoolLength(val);
+      final updatedSpool = widget.controller.network.spools[widget.spoolId];
+      if (updatedSpool != null) {
+        _lengthController.text = updatedSpool.cutLengthMm.round().toString();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spool = widget.controller.network.spools[widget.spoolId];
+    if (spool == null) {
+      return const Text('Катушка не найдена', style: TextStyle(fontSize: 11, color: Colors.grey));
+    }
+    final seg = widget.controller.network.segments[spool.segmentId];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Марка: ${spool.number}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('Ду${spool.dn}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo.shade700)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Чистая длина реза (мм)
+        const Text('Длина реза заготовки (мм):', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _lengthController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(),
+                  suffixText: 'мм',
+                ),
+                onSubmitted: (_) => _applyLength(),
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton.filledTonal(
+              icon: const Icon(Icons.check, size: 16),
+              tooltip: 'Применить длину',
+              onPressed: _applyLength,
+              style: IconButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Наименование / Маркировка
+        const Text('Наименование / Позиция:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Focus(
+          onFocusChange: (has) { if (!has) _applyName(); },
+          child: TextField(
+            controller: _nameController,
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: OutlineInputBorder(),
+              hintText: 'например: Участок В1-1',
+            ),
+            onSubmitted: (_) => _applyName(),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Заводской номер / Партия
+        const Text('Заводской номер / Номер плавки:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Focus(
+          onFocusChange: (has) { if (!has) _applySerialNumber(); },
+          child: TextField(
+            controller: _serialController,
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: OutlineInputBorder(),
+              hintText: 'например: ПЛ-4509 / Зав. 12',
+            ),
+            onSubmitted: (_) => _applySerialNumber(),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Материал и толщина стенки
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Стенка S:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text('${spool.wallThickness} мм', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Материал:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(seg?.material ?? spool.material, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Удалить катушку (сегмент)
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: BorderSide(color: Colors.red.shade300),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Удалить катушку (Del)', style: TextStyle(fontSize: 11)),
+            onPressed: widget.controller.deleteSelected,
+          ),
+        ),
+      ],
+    );
+  }
+}
+

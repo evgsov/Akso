@@ -2691,6 +2691,28 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Получение выбранной катушки
+  PipeSpool? get selectedSpool {
+    if (selectedSpoolId == null) return null;
+    return network.spools[selectedSpoolId!];
+  }
+
+  /// Изменение длины выбранной катушки трубы
+  void changeSelectedSpoolLength(double newLengthMm) {
+    if (selectedSpoolId == null || newLengthMm <= 0.0) return;
+    network.changeSpoolLength(selectedSpoolId!, newLengthMm);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Обновление пользовательских метаданных выбранной катушки
+  void setSelectedSpoolMetadata({String? name, String? serialNumber}) {
+    if (selectedSpoolId == null) return;
+    network.setSpoolMetadata(selectedSpoolId!, name: name, serialNumber: serialNumber);
+    history.recordState(network);
+    notifyListeners();
+  }
+
   /// Проверка, соединяет ли выбранный сегмент два отвода
   bool get isSelectedSegmentElbowToElbow {
     if (selectedSegmentId == null) return false;

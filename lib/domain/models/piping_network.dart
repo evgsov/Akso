@@ -328,6 +328,90 @@ class PipingNetwork {
     recalculateSpools();
   }
 
+  /// Установка пользовательских метаданных катушки (маркировка и заводской номер)
+  void setSpoolMetadata(String spoolId, {String? name, String? serialNumber}) {
+    final spool = spools[spoolId];
+    if (spool == null) return;
+    spools[spoolId] = spool.copyWith(
+      name: name,
+      serialNumber: serialNumber,
+    );
+  }
+
+  /// Параметрическое изменение длины катушки трубы
+  /// Удлиняет или укорачивает катушку, каскадно сдвигая downstream элементы
+  void changeSpoolLength(String spoolId, double newLengthMm) {
+    if (newLengthMm <= 0.0) return;
+    final spool = spools[spoolId];
+    if (spool == null) return;
+
+    final seg = segments[spool.segmentId];
+    if (seg == null) return;
+
+    final start = nodes[seg.startNodeId];
+    final end = nodes[seg.endNodeId];
+    if (start == null || end == null) return;
+
+    final curSegLen = start.distanceTo(end);
+    if (curSegLen < 0.001) return;
+
+    final curCutLen = spool.cutLengthMm;
+    final deltaL = newLengthMm - curCutLen;
+    if (deltaL.abs() < 0.001) return;
+
+    final newSegLen = curSegLen + deltaL;
+    if (newSegLen < 1.0) return;
+
+    // Вектор направления оси сегмента от start к end
+    final dirX = (end.x - start.x) / curSegLen;
+    final dirY = (end.y - start.y) / curSegLen;
+    final dirZ = (end.z - start.z) / curSegLen;
+
+    final deltaX = dirX * deltaL;
+    final deltaY = dirY * deltaL;
+    final deltaZ = dirZ * deltaL;
+
+    // Определяем позицию центра текущей катушки вдоль оси сегмента
+    final spoolStart = spool.startPoint ?? start;
+    final spoolEnd = spool.endPoint ?? end;
+    final spoolMidDist = ((spoolStart.distanceTo(start)) + (spoolEnd.distanceTo(start))) / 2.0;
+
+    // Сдвигаем арматуру на сегменте, расположенную ПОСЛЕ этой катушки
+    for (final vEntry in valves.entries) {
+      final v = vEntry.value;
+      if (v.segmentId == seg.id) {
+        final curDist = v.ratio * curSegLen;
+        if (curDist > spoolMidDist) {
+          final newDist = (curDist + deltaL).clamp(0.0, newSegLen);
+          valves[vEntry.key] = v.copyWith(ratio: newDist / newSegLen);
+        } else {
+          valves[vEntry.key] = v.copyWith(ratio: curDist / newSegLen);
+        }
+      }
+    }
+
+    // Сдвигаем сварные стыки на сегменте, расположенные ПОСЛЕ этой катушки
+    for (final wEntry in weldJoints.entries) {
+      final w = wEntry.value;
+      if (w.segmentId == seg.id) {
+        final curDist = w.ratio * curSegLen;
+        if (curDist > spoolMidDist) {
+          final newDist = (curDist + deltaL).clamp(0.0, newSegLen);
+          weldJoints[wEntry.key] = w.copyWith(ratio: newDist / newSegLen);
+        } else {
+          weldJoints[wEntry.key] = w.copyWith(ratio: curDist / newSegLen);
+        }
+      }
+    }
+
+    // Сдвигаем узел end и всю последующую сеть за ним
+    _cascadeShift(seg.endNodeId, deltaX, deltaY, deltaZ, {seg.startNodeId});
+
+    FittingDetector.autoDetectFittingsForNode(this, seg.startNodeId);
+    FittingDetector.autoDetectFittingsForNode(this, seg.endNodeId);
+    recalculateSpools();
+  }
+
   /// Точная строительная длина тангенса отвода T = R * tan(alpha / 2) в мм
   double getElbowTangentMm(String nodeId) {
     final fit = fittings[nodeId];
