@@ -1,3 +1,5 @@
+import 'node_3d.dart';
+
 /// Катушка (заготовка прямолинейного участка трубы между швами/фитингами)
 class PipeSpool {
   final String id;
@@ -24,6 +26,18 @@ class PipeSpool {
   /// ID конечного сварного шва или фитинга
   final String? endWeldId;
 
+  /// Точная 3D точка начала катушки (после вычета фитингов/арматуры/швов)
+  final Node3D? startPoint;
+
+  /// Точная 3D точка конца катушки
+  final Node3D? endPoint;
+
+  /// Маркировка / название катушки (например, "Линия Т1-1 / Катушка 1")
+  final String? name;
+
+  /// Заводской номер / номер плавки/партии
+  final String? serialNumber;
+
   const PipeSpool({
     required this.id,
     required this.segmentId,
@@ -34,6 +48,10 @@ class PipeSpool {
     this.material = 'Сталь 20 ГОСТ 10704',
     this.startWeldId,
     this.endWeldId,
+    this.startPoint,
+    this.endPoint,
+    this.name,
+    this.serialNumber,
   });
 
   PipeSpool copyWith({
@@ -46,6 +64,12 @@ class PipeSpool {
     String? material,
     String? startWeldId,
     String? endWeldId,
+    Node3D? startPoint,
+    Node3D? endPoint,
+    String? name,
+    bool clearName = false,
+    String? serialNumber,
+    bool clearSerialNumber = false,
   }) {
     return PipeSpool(
       id: id ?? this.id,
@@ -57,6 +81,10 @@ class PipeSpool {
       material: material ?? this.material,
       startWeldId: startWeldId ?? this.startWeldId,
       endWeldId: endWeldId ?? this.endWeldId,
+      startPoint: startPoint ?? this.startPoint,
+      endPoint: endPoint ?? this.endPoint,
+      name: clearName ? null : (name ?? this.name),
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
 
@@ -70,6 +98,10 @@ class PipeSpool {
         'material': material,
         if (startWeldId != null) 'startWeldId': startWeldId,
         if (endWeldId != null) 'endWeldId': endWeldId,
+        if (startPoint != null) 'startPoint': startPoint!.toJson(),
+        if (endPoint != null) 'endPoint': endPoint!.toJson(),
+        if (name != null) 'name': name,
+        if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
   factory PipeSpool.fromJson(Map<String, dynamic> json) => PipeSpool(
@@ -82,5 +114,13 @@ class PipeSpool {
         material: json['material'] as String? ?? 'Сталь 20 ГОСТ 10704',
         startWeldId: json['startWeldId'] as String?,
         endWeldId: json['endWeldId'] as String?,
+        startPoint: json['startPoint'] != null
+            ? Node3D.fromJson(json['startPoint'] as Map<String, dynamic>)
+            : null,
+        endPoint: json['endPoint'] != null
+            ? Node3D.fromJson(json['endPoint'] as Map<String, dynamic>)
+            : null,
+        name: json['name'] as String?,
+        serialNumber: json['serialNumber'] as String?,
       );
 }

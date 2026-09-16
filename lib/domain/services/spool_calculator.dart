@@ -2,12 +2,17 @@ import 'dart:math' as math;
 import '../models/piping_network.dart';
 import '../models/pipe_spool.dart';
 import '../models/pipe_segment.dart';
+import '../models/node_3d.dart';
 import '../enums/fitting_type.dart';
 import '../enums/valve_type.dart';
 
 class SpoolCalculator {
   static void recalculateSpools(PipingNetwork network) {
     network.autoDetectAllFittings();
+    final previousSpoolData = <String, (String?, String?)>{};
+    for (final sp in network.spools.values) {
+      previousSpoolData[sp.id] = (sp.name, sp.serialNumber);
+    }
     network.spools.clear();
     int spoolCounter = 1;
 
@@ -131,10 +136,34 @@ class SpoolCalculator {
             .toList()
           ..sort((a, b) => a.ratio.compareTo(b.ratio));
 
+        if (network.isElbowToElbowSegment(seg.id)) {
+          final targetLen = network.getElbowToElbowTargetLength(seg.id) ?? (startDeduction + endDeduction);
+          if (totalLen <= targetLen + 1.0) {
+            // Стык отвод-отвод встык: между отводами физической трубы нет!
+            continue;
+          }
+        }
+
         if (segWelds.isEmpty && segValves.isEmpty) {
           final cutLen = math.max(0.0, totalLen - startDeduction - endDeduction);
           if (cutLen > 1.0) {
             final spoolId = 'spool_${seg.id}_1';
+            final uX = totalLen > 0 ? (end.x - start.x) / totalLen : 0.0;
+            final uY = totalLen > 0 ? (end.y - start.y) / totalLen : 0.0;
+            final uZ = totalLen > 0 ? (end.z - start.z) / totalLen : 0.0;
+            final ptStart = Node3D(
+              id: '',
+              x: start.x + uX * startDeduction,
+              y: start.y + uY * startDeduction,
+              z: start.z + uZ * startDeduction,
+            );
+            final ptEnd = Node3D(
+              id: '',
+              x: start.x + uX * (totalLen - endDeduction),
+              y: start.y + uY * (totalLen - endDeduction),
+              z: start.z + uZ * (totalLen - endDeduction),
+            );
+            final prev = previousSpoolData[spoolId];
             network.spools[spoolId] = PipeSpool(
               id: spoolId,
               segmentId: seg.id,
@@ -143,6 +172,10 @@ class SpoolCalculator {
               dn: seg.dn,
               wallThickness: seg.wallThicknessMm,
               material: seg.material,
+              startPoint: ptStart,
+              endPoint: ptEnd,
+              name: prev?.$1,
+              serialNumber: prev?.$2,
             );
             spoolCounter++;
           }
@@ -156,6 +189,7 @@ class SpoolCalculator {
             segWelds: segWelds,
             segValves: segValves,
             spoolCounter: spoolCounter,
+            previousSpoolData: previousSpoolData,
           );
         }
       } else {
@@ -164,6 +198,7 @@ class SpoolCalculator {
           network: network,
           chain: chain,
           spoolCounter: spoolCounter,
+          previousSpoolData: previousSpoolData,
         );
       }
     }
@@ -204,6 +239,7 @@ class SpoolCalculator {
     required List<dynamic> segWelds,
     required List<dynamic> segValves,
     required int spoolCounter,
+    required Map<String, (String?, String?)> previousSpoolData,
   }) {
     final points = <double>[0.0];
     for (final w in segWelds) {
@@ -224,10 +260,15 @@ class SpoolCalculator {
       }
     }
 
+    final start = network.nodes[seg.startNodeId]!;
+    final end = network.nodes[seg.endNodeId]!;
+    final uX = totalLen > 0 ? (end.x - start.x) / totalLen : 0.0;
+    final uY = totalLen > 0 ? (end.y - start.y) / totalLen : 0.0;
+    final uZ = totalLen > 0 ? (end.z - start.z) / totalLen : 0.0;
+
     for (int i = 0; i < uniquePoints.length - 1; i++) {
       final p1 = uniquePoints[i];
       final p2 = uniquePoints[i + 1];
-      final rawSegmentLen = (p2 - p1) * totalLen;
 
       bool insideValve = false;
       for (final v in segValves) {
@@ -239,13 +280,27 @@ class SpoolCalculator {
       }
       if (insideValve) continue;
 
-      double deduction = 0.0;
-      if (i == 0) deduction += startDeduction;
-      if (i == uniquePoints.length - 2) deduction += endDeduction;
+      double dStart = p1 * totalLen;
+      double dEnd = p2 * totalLen;
+      if (i == 0) dStart += startDeduction;
+      if (i == uniquePoints.length - 2) dEnd -= endDeduction;
 
-      final cutLen = math.max(0.0, rawSegmentLen - deduction);
+      final cutLen = math.max(0.0, dEnd - dStart);
       if (cutLen > 1.0) {
         final spoolId = 'spool_${seg.id}_${i + 1}';
+        final ptStart = Node3D(
+          id: '',
+          x: start.x + uX * dStart,
+          y: start.y + uY * dStart,
+          z: start.z + uZ * dStart,
+        );
+        final ptEnd = Node3D(
+          id: '',
+          x: start.x + uX * dEnd,
+          y: start.y + uY * dEnd,
+          z: start.z + uZ * dEnd,
+        );
+        final prev = previousSpoolData[spoolId];
         network.spools[spoolId] = PipeSpool(
           id: spoolId,
           segmentId: seg.id,
@@ -254,6 +309,10 @@ class SpoolCalculator {
           dn: seg.dn,
           wallThickness: seg.wallThicknessMm,
           material: seg.material,
+          startPoint: ptStart,
+          endPoint: ptEnd,
+          name: prev?.$1,
+          serialNumber: prev?.$2,
         );
         spoolCounter++;
       }
@@ -265,6 +324,7 @@ class SpoolCalculator {
     required PipingNetwork network,
     required List<PipeSegment> chain,
     required int spoolCounter,
+    required Map<String, (String?, String?)> previousSpoolData,
   }) {
     // Определяем ориентацию первого сегмента (какой узел внешний, какой соединяется со вторым)
     final s1 = chain[0];
@@ -357,12 +417,12 @@ class SpoolCalculator {
       }
       if (insideValve) continue;
 
-      double deduction = 0.0;
-      if (i == 0) deduction += startDeduction;
-      if (i == uniqueDistances.length - 2) deduction += endDeduction;
+      double dStart = d1;
+      double dEnd = d2;
+      if (i == 0) dStart += startDeduction;
+      if (i == uniqueDistances.length - 2) dEnd -= endDeduction;
 
-      final rawLen = d2 - d1;
-      final cutLen = math.max(0.0, rawLen - deduction);
+      final cutLen = math.max(0.0, dEnd - dStart);
 
       if (cutLen > 1.0) {
         // Находим сегмент, которому принадлежит середина катушки
@@ -376,7 +436,11 @@ class SpoolCalculator {
           }
         }
 
+        final ptStart = _pointAlongChain(network, chain, segLengths, segReversed, dStart);
+        final ptEnd = _pointAlongChain(network, chain, segLengths, segReversed, dEnd);
+
         final spoolId = 'spool_${repSeg.id}_${i + 1}';
+        final prev = previousSpoolData[spoolId];
         network.spools[spoolId] = PipeSpool(
           id: spoolId,
           segmentId: repSeg.id,
@@ -385,11 +449,49 @@ class SpoolCalculator {
           dn: repSeg.dn,
           wallThickness: repSeg.wallThicknessMm,
           material: repSeg.material,
+          startPoint: ptStart,
+          endPoint: ptEnd,
+          name: prev?.$1,
+          serialNumber: prev?.$2,
         );
         spoolCounter++;
       }
     }
 
     return spoolCounter;
+  }
+
+  static Node3D _pointAlongChain(
+    PipingNetwork network,
+    List<PipeSegment> chain,
+    List<double> segLengths,
+    List<bool> segReversed,
+    double targetDist,
+  ) {
+    double acc = 0.0;
+    for (int i = 0; i < chain.length; i++) {
+      final seg = chain[i];
+      final len = segLengths[i];
+      final isRev = segReversed[i];
+      if (targetDist <= acc + len || i == chain.length - 1) {
+        final localD = (targetDist - acc).clamp(0.0, len);
+        final startNode = network.nodes[isRev ? seg.endNodeId : seg.startNodeId]!;
+        final endNode = network.nodes[isRev ? seg.startNodeId : seg.endNodeId]!;
+        final uX = len > 0 ? (endNode.x - startNode.x) / len : 0.0;
+        final uY = len > 0 ? (endNode.y - startNode.y) / len : 0.0;
+        final uZ = len > 0 ? (endNode.z - startNode.z) / len : 0.0;
+        return Node3D(
+          id: '',
+          x: startNode.x + uX * localD,
+          y: startNode.y + uY * localD,
+          z: startNode.z + uZ * localD,
+        );
+      }
+      acc += len;
+    }
+    final lastSeg = chain.last;
+    final isRev = segReversed.last;
+    final lastNode = network.nodes[isRev ? lastSeg.startNodeId : lastSeg.endNodeId]!;
+    return lastNode;
   }
 }
