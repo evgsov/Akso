@@ -23,6 +23,9 @@ class PipePainter {
     bool showCallouts, [
     bool isVolumeMode = false,
     Set<String>? selectedSegmentIds,
+    bool isCenterlineMode = false,
+    String? selectedSpoolId,
+    Set<String>? selectedSpoolIds,
   ]) {
     if (isVolumeMode) {
       // Честная 3D твердотельная модель с полигональными цилиндрами, Z-сортировкой и направленным освещением
@@ -36,6 +39,7 @@ class PipePainter {
 
       // Отрисовка бейджей выбранных труб и аннотаций
       for (final seg in network.segments.values) {
+        if (network.isElbowToElbowSegment(seg.id)) continue;
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
@@ -61,26 +65,270 @@ class PipePainter {
           SmartCallout.drawDiameterCallout(canvas, midPoint: mid, text: seg.shortCallout, color: color);
         }
       }
+
+      if (isCenterlineMode) {
+        _drawCenterlineLayer(
+          canvas,
+          network,
+          projector,
+          screenPoints,
+          selectedSegmentId,
+          selectedSegmentIds,
+        );
+      }
       return;
     }
 
-    // 2D СПДС / ГОСТ режим: сортировка сегментов по глубине (Painter's algorithm)
-    final sortedSegments = network.segments.values.toList()
-      ..sort((a, b) {
-        final startA = network.nodes[a.startNodeId];
-        final endA = network.nodes[a.endNodeId];
-        final depthA = (startA != null && endA != null)
-            ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
-            : 0.0;
-        final startB = network.nodes[b.startNodeId];
-        final endB = network.nodes[b.endNodeId];
-        final depthB = (startB != null && endB != null)
-            ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
-            : 0.0;
-        return depthB.compareTo(depthA);
-      });
+    // 2D СПДС / ГОСТ режим
+    if (network.spools.isNotEmpty) {
+      // Сортировка катушек по глубине (Painter's algorithm)
+      final sortedSpools = network.spools.values.toList()
+        ..sort((a, b) {
+          final startA = a.startPoint ?? network.nodes[network.segments[a.segmentId]?.startNodeId ?? ''];
+          final endA = a.endPoint ?? network.nodes[network.segments[a.segmentId]?.endNodeId ?? ''];
+          final depthA = (startA != null && endA != null)
+              ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
+              : 0.0;
+          final startB = b.startPoint ?? network.nodes[network.segments[b.segmentId]?.startNodeId ?? ''];
+          final endB = b.endPoint ?? network.nodes[network.segments[b.segmentId]?.endNodeId ?? ''];
+          final depthB = (startB != null && endB != null)
+              ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
+              : 0.0;
+          return depthB.compareTo(depthA);
+        });
 
-    for (final seg in sortedSegments) {
+      for (final spool in sortedSpools) {
+        final seg = network.segments[spool.segmentId];
+        if (seg == null) continue;
+        if (network.isElbowToElbowSegment(seg.id)) continue;
+
+        final start = spool.startPoint ?? network.nodes[seg.startNodeId];
+        final end = spool.endPoint ?? network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final drawP1 = projector.project(start);
+        final drawP2 = projector.project(end);
+
+        final isSpoolSelected = (selectedSpoolId != null && spool.id == selectedSpoolId) ||
+            (selectedSpoolIds != null && selectedSpoolIds.contains(spool.id));
+        final isSegmentSelected = (selectedSegmentId != null && seg.id == selectedSegmentId) ||
+            (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
+        final isSelected = isSpoolSelected || isSegmentSelected;
+
+        final sys = network.systems[seg.systemId];
+        final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+
+        final strokeWidth = calcStrokeWidth(spool.dn);
+
+        // Свечение/выделение, если катушка или сегмент выбраны
+        if (isSelected) {
+          final highlightPaint = Paint()
+            ..color = Colors.amber.withValues(alpha: 0.45)
+            ..strokeWidth = strokeWidth + 8.0
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(drawP1, drawP2, highlightPaint);
+
+          // Индикатор длины реза катушки и диаметра
+          final mid = Offset((drawP1.dx + drawP2.dx) / 2, (drawP1.dy + drawP2.dy) / 2);
+          final label = isSpoolSelected
+              ? '${spool.number}: L = ${spool.cutLengthMm.round()} мм | Ду${spool.dn}'
+              : null;
+          drawSelectedDimensionBadge(canvas, mid, spool.cutLengthMm, seg, label);
+        }
+
+        // Линия катушки трубы
+        final pipePaint = Paint()
+          ..color = color
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
+
+        canvas.drawLine(drawP1, drawP2, pipePaint);
+
+        // В 3D-орбите добавляем объемный блик по центру трубы
+        if (projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
+          final sheenPaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.35)
+            ..strokeWidth = strokeWidth * 0.35
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(drawP1, drawP2, sheenPaint);
+        }
+      }
+
+      // Выноски уклона и диаметра для сегментов (пропуская стыки отвод-отвод)
+      for (final seg in network.segments.values) {
+        if (network.isElbowToElbowSegment(seg.id)) continue;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final p1 = screenPoints[start.id] ?? projector.project(start);
+        final p2 = screenPoints[end.id] ?? projector.project(end);
+        final sys = network.systems[seg.systemId];
+        final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+
+        if (seg.slope > 0.0001 && showCallouts) {
+          SmartCallout.drawSlopeCallout(
+            canvas,
+            p1: p1,
+            p2: p2,
+            slope: seg.slope,
+          );
+        }
+
+        if (showCallouts) {
+          final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+          SmartCallout.drawDiameterCallout(
+            canvas,
+            midPoint: mid,
+            text: seg.shortCallout,
+            color: color,
+          );
+        }
+      }
+    } else {
+      // Fallback на прямолинейные сегменты (до расчета катушек)
+      final sortedSegments = network.segments.values.toList()
+        ..sort((a, b) {
+          final startA = network.nodes[a.startNodeId];
+          final endA = network.nodes[a.endNodeId];
+          final depthA = (startA != null && endA != null)
+              ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
+              : 0.0;
+          final startB = network.nodes[b.startNodeId];
+          final endB = network.nodes[b.endNodeId];
+          final depthB = (startB != null && endB != null)
+              ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
+              : 0.0;
+          return depthB.compareTo(depthA);
+        });
+
+      for (final seg in sortedSegments) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final p1 = screenPoints[start.id] ?? projector.project(start);
+        final p2 = screenPoints[end.id] ?? projector.project(end);
+
+        final isSelected = seg.id == selectedSegmentId ||
+            (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
+        final sys = network.systems[seg.systemId];
+        final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+
+        final strokeWidth = calcStrokeWidth(seg.dn);
+
+        // Отступы на концах труб, если в узлах установлены отводы / тройники / фитинги
+        final drawP1 = calcPipeTrimmedPoint(
+          network: network,
+          nodeId: seg.startNodeId,
+          otherNodeId: seg.endNodeId,
+          nodeScreen: p1,
+          otherScreen: p2,
+          seg: seg,
+        );
+        final drawP2 = calcPipeTrimmedPoint(
+          network: network,
+          nodeId: seg.endNodeId,
+          otherNodeId: seg.startNodeId,
+          nodeScreen: p2,
+          otherScreen: p1,
+          seg: seg,
+        );
+
+        final subsegments = calcPipeDrawableSubsegments(
+          drawP1: drawP1,
+          drawP2: drawP2,
+          startNode: start,
+          endNode: end,
+          seg: seg,
+          network: network,
+          projector: projector,
+        );
+
+        // Свечение/выделение, если сегмент выбран
+        if (isSelected) {
+          final highlightPaint = Paint()
+            ..color = Colors.amber.withValues(alpha: 0.45)
+            ..strokeWidth = strokeWidth + 8.0
+            ..strokeCap = StrokeCap.round;
+          for (final (subStart, subEnd) in subsegments) {
+            canvas.drawLine(subStart, subEnd, highlightPaint);
+          }
+
+          final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+          final lenMm = start.distanceTo(end);
+          drawSelectedDimensionBadge(canvas, mid, lenMm, seg);
+        }
+
+        // Линия трубы
+        final pipePaint = Paint()
+          ..color = color
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
+
+        for (final (subStart, subEnd) in subsegments) {
+          canvas.drawLine(subStart, subEnd, pipePaint);
+        }
+
+        if (projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
+          final sheenPaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.35)
+            ..strokeWidth = strokeWidth * 0.35
+            ..strokeCap = StrokeCap.round;
+          for (final (subStart, subEnd) in subsegments) {
+            canvas.drawLine(subStart, subEnd, sheenPaint);
+          }
+        }
+
+        if (seg.slope > 0.0001 && showCallouts) {
+          SmartCallout.drawSlopeCallout(
+            canvas,
+            p1: p1,
+            p2: p2,
+            slope: seg.slope,
+          );
+        }
+
+        if (showCallouts) {
+          final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+          SmartCallout.drawDiameterCallout(
+            canvas,
+            midPoint: mid,
+            text: seg.shortCallout,
+            color: color,
+          );
+        }
+      }
+    }
+
+    // Отрисовка осевой трассы (штрихпунктир ГОСТ 2.303 тип Г)
+    if (isCenterlineMode) {
+      _drawCenterlineLayer(
+        canvas,
+        network,
+        projector,
+        screenPoints,
+        selectedSegmentId,
+        selectedSegmentIds,
+      );
+    }
+  }
+
+  /// Отрисовка слоя пространственной осевой трассы
+  static void _drawCenterlineLayer(
+    Canvas canvas,
+    PipingNetwork network,
+    AxonometryProjector projector,
+    Map<String, Offset> screenPoints,
+    String? selectedSegmentId,
+    Set<String>? selectedSegmentIds,
+  ) {
+    final centerlinePaint = Paint()
+      ..color = const Color(0xFF00E5FF)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+
+    for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
@@ -88,128 +336,60 @@ class PipePainter {
       final p1 = screenPoints[start.id] ?? projector.project(start);
       final p2 = screenPoints[end.id] ?? projector.project(end);
 
-      final isSelected = seg.id == selectedSegmentId ||
+      final isSegSelected = seg.id == selectedSegmentId ||
           (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
-      final sys = network.systems[seg.systemId];
-      final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
 
-      // Толщина линии зависит от условного прохода DN
-      double strokeWidth = calcStrokeWidth(seg.dn);
-      if (isVolumeMode) {
-        final dim = network.pipeCatalog.getDimension(seg.dn);
-        final outerMm = dim != null ? dim.outerDiameterMm : seg.dn.toDouble();
-        strokeWidth = outerMm * projector.scale;
-        // Ограничиваем минимальную толщину для читаемости
-        if (strokeWidth < 2.0) strokeWidth = 2.0;
-      }
-
-      // Отступы на концах труб, если в узлах установлены отводы / тройники / фитинги
-      final drawP1 = calcPipeTrimmedPoint(
-        network: network,
-        nodeId: seg.startNodeId,
-        otherNodeId: seg.endNodeId,
-        nodeScreen: p1,
-        otherScreen: p2,
-        seg: seg,
-      );
-      final drawP2 = calcPipeTrimmedPoint(
-        network: network,
-        nodeId: seg.endNodeId,
-        otherNodeId: seg.startNodeId,
-        nodeScreen: p2,
-        otherScreen: p1,
-        seg: seg,
-      );
-
-      final subsegments = calcPipeDrawableSubsegments(
-        drawP1: drawP1,
-        drawP2: drawP2,
-        startNode: start,
-        endNode: end,
-        seg: seg,
-        network: network,
-        projector: projector,
-      );
-
-      // Свечение/выделение, если сегмент выбран
-      if (isSelected) {
-        final highlightPaint = Paint()
-          ..color = Colors.amber.withValues(alpha: 0.45)
-          ..strokeWidth = strokeWidth + 8.0
+      if (isSegSelected) {
+        final hl = Paint()
+          ..color = Colors.amber.withValues(alpha: 0.55)
+          ..strokeWidth = 6.0
           ..strokeCap = StrokeCap.round;
-        for (final (subStart, subEnd) in subsegments) {
-          canvas.drawLine(subStart, subEnd, highlightPaint);
-        }
+        canvas.drawLine(p1, p2, hl);
 
-        // Индикатор длины и диаметра выбранной трубы
         final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
         final lenMm = start.distanceTo(end);
-        drawSelectedDimensionBadge(canvas, mid, lenMm, seg);
-      }
-
-      // Линия трубы
-      final pipePaint = Paint()
-        ..color = color
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
-        
-      if (isVolumeMode && strokeWidth > 3.0) {
-        final dx = drawP2.dx - drawP1.dx;
-        final dy = drawP2.dy - drawP1.dy;
-        final len = math.sqrt(dx * dx + dy * dy);
-        if (len > 0.1) {
-          final nx = -dy / len;
-          final ny = dx / len;
-          final hw = strokeWidth / 2.0;
-          
-          final lightColor = Color.lerp(color, Colors.white, 0.45)!;
-          final darkColor = Color.lerp(color, Colors.black, 0.35)!;
-          
-          pipePaint.shader = LinearGradient(
-            colors: [darkColor, lightColor, darkColor],
-            stops: const [0.0, 0.4, 1.0],
-          ).createShader(Rect.fromPoints(
-            Offset(drawP1.dx + nx * hw, drawP1.dy + ny * hw),
-            Offset(drawP1.dx - nx * hw, drawP1.dy - ny * hw),
-          ));
-        }
-      }
-
-      for (final (subStart, subEnd) in subsegments) {
-        canvas.drawLine(subStart, subEnd, pipePaint);
-      }
-
-      // В 3D-орбите добавляем объемный блик по центру трубы (только в каркасном режиме)
-      if (!isVolumeMode && projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
-        final sheenPaint = Paint()
-          ..color = Colors.white.withValues(alpha: 0.35)
-          ..strokeWidth = strokeWidth * 0.35
-          ..strokeCap = StrokeCap.round;
-        for (final (subStart, subEnd) in subsegments) {
-          canvas.drawLine(subStart, subEnd, sheenPaint);
-        }
-      }
-
-      // Уклон трубы
-      if (seg.slope > 0.0001 && showCallouts) {
-        SmartCallout.drawSlopeCallout(
+        drawSelectedDimensionBadge(
           canvas,
-          p1: p1,
-          p2: p2,
-          slope: seg.slope,
+          mid,
+          lenMm,
+          seg,
+          'Ось: L = ${lenMm.round()} мм | ${seg.formattedSize}',
         );
       }
 
-      // Выноска диаметра трубы
-      if (showCallouts) {
-        final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-        SmartCallout.drawDiameterCallout(
-          canvas,
-          midPoint: mid,
-          text: seg.shortCallout,
-          color: color,
-        );
-      }
+      drawDashDotLine(canvas, p1, p2, centerlinePaint);
+
+      // Вершины узлов трассы
+      final vertexPaint = Paint()
+        ..color = isSegSelected ? Colors.amber : const Color(0xFF00E5FF)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(p1, 2.5, vertexPaint);
+      canvas.drawCircle(p2, 2.5, vertexPaint);
+    }
+  }
+
+  /// Отрисовка штрихпунктирной линии по ГОСТ 2.303 (тип Г - штрих-пунктирная тонкая)
+  static void drawDashDotLine(
+    Canvas canvas,
+    Offset p1,
+    Offset p2,
+    Paint paint, {
+    double dashLen = 14.0,
+    double gapLen = 4.0,
+    double dotLen = 2.0,
+  }) {
+    final dist = (p2 - p1).distance;
+    if (dist <= 0) return;
+    final unit = (p2 - p1) / dist;
+    double current = 0.0;
+    while (current < dist) {
+      final dEnd = math.min(current + dashLen, dist);
+      canvas.drawLine(p1 + unit * current, p1 + unit * dEnd, paint);
+      current = dEnd + gapLen;
+      if (current >= dist) break;
+      final dotEnd = math.min(current + dotLen, dist);
+      canvas.drawLine(p1 + unit * current, p1 + unit * dotEnd, paint);
+      current = dotEnd + gapLen;
     }
   }
 
@@ -471,8 +651,8 @@ class PipePainter {
     return conn[branchIdx].id == segmentId;
   }
 
-  static void drawSelectedDimensionBadge(Canvas canvas, Offset pos, double lengthMm, PipeSegment seg) {
-    final text = 'L = ${lengthMm.round()} мм | ${seg.formattedSize}';
+  static void drawSelectedDimensionBadge(Canvas canvas, Offset pos, double lengthMm, PipeSegment seg, [String? customText]) {
+    final text = customText ?? 'L = ${lengthMm.round()} мм | ${seg.formattedSize}';
     final textSpan = TextSpan(
       text: text,
       style: const TextStyle(

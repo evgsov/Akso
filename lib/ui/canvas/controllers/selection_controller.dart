@@ -12,10 +12,12 @@ class SelectionController {
   final Set<String> selectedEquipmentIds = {};
   final Set<String> selectedAxisIds = {};
   final Set<String> selectedDimensionIds = {};
+  final Set<String> selectedSpoolIds = {};
   String? selectedCalloutId;
 
   String? selectedNodeId;
   String? selectedSegmentId;
+  String? selectedSpoolId;
   String? selectedEquipmentId;
   String? selectedAxisId;
   String? selectedDimensionId;
@@ -33,11 +35,13 @@ class SelectionController {
   bool get hasSelection =>
       selectedNodeIds.isNotEmpty ||
       selectedSegmentIds.isNotEmpty ||
+      selectedSpoolIds.isNotEmpty ||
       selectedEquipmentIds.isNotEmpty ||
       selectedAxisIds.isNotEmpty ||
       selectedDimensionIds.isNotEmpty ||
       selectedNodeId != null ||
       selectedSegmentId != null ||
+      selectedSpoolId != null ||
       selectedEquipmentId != null ||
       selectedAxisId != null ||
       selectedDimensionId != null ||
@@ -49,12 +53,14 @@ class SelectionController {
   void clearSelection() {
     selectedNodeIds.clear();
     selectedSegmentIds.clear();
+    selectedSpoolIds.clear();
     selectedEquipmentIds.clear();
     selectedAxisIds.clear();
     selectedDimensionIds.clear();
     selectedCalloutId = null;
     selectedNodeId = null;
     selectedSegmentId = null;
+    selectedSpoolId = null;
     selectedEquipmentId = null;
     selectedAxisId = null;
     selectedDimensionId = null;

@@ -444,6 +444,22 @@ class DesktopCadLayout extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          // Переключатель осевой трассы
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF334155),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.timeline, size: 16),
+              tooltip: controller.isCenterlineMode
+                  ? 'Осевая трасса (ВКЛ) - клик для скрытия'
+                  : 'Осевая трасса (ВЫКЛ) - клик для отображения',
+              color: controller.isCenterlineMode ? Colors.cyanAccent : Colors.white60,
+              onPressed: controller.toggleCenterlineMode,
+            ),
+          ),
         ],
         ),
       ),

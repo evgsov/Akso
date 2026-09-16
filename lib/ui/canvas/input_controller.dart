@@ -81,10 +81,22 @@ class PipingInputController extends ChangeNotifier {
   bool isSaving = false;
   bool isLoading = false;
   bool isVolumeMode = false;
+  bool isCenterlineMode = false;
 
   void setVolumeMode(bool value) {
     if (isVolumeMode == value) return;
     isVolumeMode = value;
+    notifyListeners();
+  }
+
+  void toggleCenterlineMode() {
+    isCenterlineMode = !isCenterlineMode;
+    notifyListeners();
+  }
+
+  void setCenterlineMode(bool value) {
+    if (isCenterlineMode == value) return;
+    isCenterlineMode = value;
     notifyListeners();
   }
 
@@ -127,6 +139,9 @@ class PipingInputController extends ChangeNotifier {
   String? get selectedSegmentId => selectionController.selectedSegmentId;
   set selectedSegmentId(String? id) => selectionController.selectedSegmentId = id;
 
+  String? get selectedSpoolId => selectionController.selectedSpoolId;
+  set selectedSpoolId(String? id) => selectionController.selectedSpoolId = id;
+
   String? get selectedEquipmentId => selectionController.selectedEquipmentId;
   set selectedEquipmentId(String? id) => selectionController.selectedEquipmentId = id;
 
@@ -153,9 +168,17 @@ class PipingInputController extends ChangeNotifier {
   // Мультиселекция и рамочный выбор
   Set<String> get selectedNodeIds => selectionController.selectedNodeIds;
   Set<String> get selectedSegmentIds => selectionController.selectedSegmentIds;
+  Set<String> get selectedSpoolIds => selectionController.selectedSpoolIds;
   Set<String> get selectedEquipmentIds => selectionController.selectedEquipmentIds;
   Set<String> get selectedAxisIds => selectionController.selectedAxisIds;
   Set<String> get selectedDimensionIds => selectionController.selectedDimensionIds;
+
+  void selectSpool(String? spoolId) {
+    selectionController.clearSelection();
+    selectionController.selectedSpoolId = spoolId;
+    if (spoolId != null) selectionController.selectedSpoolIds.add(spoolId);
+    notifyListeners();
+  }
 
   Rect? get selectionBoxRect => selectionController.selectionBoxRect;
   set selectionBoxRect(Rect? val) => selectionController.selectionBoxRect = val;

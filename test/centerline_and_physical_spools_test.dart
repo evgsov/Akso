@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/node_3d.dart';
@@ -6,9 +5,7 @@ import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/pipe_spool.dart';
 import 'package:akso/domain/models/piping_system.dart';
 import 'package:akso/domain/models/weld_joint.dart';
-import 'package:akso/domain/enums/fitting_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
-import 'package:akso/domain/services/fitting_detector.dart';
 
 void main() {
   group('Task 1: PipeSpool Domain Model and Physical Spool Generation Tests', () {

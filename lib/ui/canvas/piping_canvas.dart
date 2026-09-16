@@ -53,6 +53,9 @@ class PipingCanvasPainter extends CustomPainter {
   final bool showCallouts;
   final bool showGrid;
   final bool isVolumeMode;
+  final bool isCenterlineMode;
+  final String? selectedSpoolId;
+  final Set<String>? selectedSpoolIds;
   final double currentElevationZ;
   final String? selectedDimensionId;
   final String? selectedAxisId;
@@ -101,6 +104,9 @@ class PipingCanvasPainter extends CustomPainter {
     this.showCallouts = true,
     this.showGrid = true,
     this.isVolumeMode = false,
+    this.isCenterlineMode = false,
+    this.selectedSpoolId,
+    this.selectedSpoolIds,
     this.currentElevationZ = 0.0,
   });
 
@@ -144,6 +150,9 @@ class PipingCanvasPainter extends CustomPainter {
       showCallouts,
       isVolumeMode,
       selectedSegmentIds,
+      isCenterlineMode,
+      selectedSpoolId,
+      selectedSpoolIds,
     );
 
     // 4. Отрисовка арматуры

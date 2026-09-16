@@ -358,6 +358,18 @@ class EditorTopBar extends StatelessWidget {
                     ),
                     onPressed: () => controller.setTool(CanvasTool.insertEquipment),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.timeline, size: 18),
+                    tooltip: controller.isCenterlineMode ? 'Осевая трасса (ВКЛ)' : 'Осевая трасса (ВЫКЛ)',
+                    color: controller.isCenterlineMode ? Colors.indigo.shade700 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.isCenterlineMode ? Colors.indigo.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: controller.toggleCenterlineMode,
+                  ),
                 ],
               ),
             ),
