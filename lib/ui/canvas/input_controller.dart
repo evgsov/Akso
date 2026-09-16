@@ -16,6 +16,7 @@ import '../../domain/models/network_history_manager.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_dimension.dart';
 import '../../domain/models/pipe_segment.dart';
+import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
@@ -832,11 +833,13 @@ class PipingInputController extends ChangeNotifier {
           selectedCalloutId = hitCalloutId;
           selectedNodeId = null;
           selectedSegmentId = null;
+          selectedSpoolId = null;
           selectedEquipmentId = null;
           selectedDimensionId = null;
           selectedAxisId = null;
           selectedNodeIds.clear();
           selectedSegmentIds.clear();
+          selectedSpoolIds.clear();
           selectedEquipmentIds.clear();
           selectedAxisIds.clear();
           selectedDimensionIds.clear();
@@ -858,12 +861,14 @@ class PipingInputController extends ChangeNotifier {
           selectedWeldId = null;
           selectedNodeId = null;
           selectedSegmentId = null;
+          selectedSpoolId = null;
           selectedEquipmentId = null;
           selectedDimensionId = null;
           selectedAxisId = null;
           selectedCalloutId = null;
           selectedNodeIds.clear();
           selectedSegmentIds.clear();
+          selectedSpoolIds.clear();
           selectedEquipmentIds.clear();
           selectedAxisIds.clear();
           selectedDimensionIds.clear();
@@ -881,12 +886,14 @@ class PipingInputController extends ChangeNotifier {
           selectedSupportId = null;
           selectedNodeId = null;
           selectedSegmentId = null;
+          selectedSpoolId = null;
           selectedEquipmentId = null;
           selectedDimensionId = null;
           selectedAxisId = null;
           selectedCalloutId = null;
           selectedNodeIds.clear();
           selectedSegmentIds.clear();
+          selectedSpoolIds.clear();
           selectedEquipmentIds.clear();
           selectedAxisIds.clear();
           selectedDimensionIds.clear();
@@ -904,12 +911,14 @@ class PipingInputController extends ChangeNotifier {
           selectedWeldId = null;
           selectedNodeId = null;
           selectedSegmentId = null;
+          selectedSpoolId = null;
           selectedEquipmentId = null;
           selectedDimensionId = null;
           selectedAxisId = null;
           selectedCalloutId = null;
           selectedNodeIds.clear();
           selectedSegmentIds.clear();
+          selectedSpoolIds.clear();
           selectedEquipmentIds.clear();
           selectedAxisIds.clear();
           selectedDimensionIds.clear();
@@ -964,9 +973,11 @@ class PipingInputController extends ChangeNotifier {
 
           selectedNodeId = hitNodeId;
           selectedAxisId = null;
+          selectedSpoolId = null;
           if (!selectedNodeIds.contains(hitNodeId)) {
             selectedNodeIds.clear();
             selectedSegmentIds.clear();
+            selectedSpoolIds.clear();
             selectedEquipmentIds.clear();
             selectedAxisIds.clear();
             selectedDimensionIds.clear();
@@ -977,7 +988,61 @@ class PipingInputController extends ChangeNotifier {
           isDraggingNode = false;
           notifyListeners();
           break;
-        } else if (hitSegId != null) {
+        }
+
+        final hitSpool = !isCenterlineMode ? _findSpoolAtScreenPos(screenPos) : null;
+        if (hitSpool != null) {
+          final spoolId = hitSpool.id;
+          final segId = hitSpool.segmentId;
+          if (isShift) {
+            selectedSpoolIds.remove(spoolId);
+            if (selectedSpoolId == spoolId) {
+              selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+            }
+            notifyListeners();
+            break;
+          }
+          if (isCtrl) {
+            if (selectedSpoolIds.contains(spoolId)) {
+              selectedSpoolIds.remove(spoolId);
+              if (selectedSpoolId == spoolId) {
+                selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+              }
+            } else {
+              selectedSpoolIds.add(spoolId);
+              selectedSpoolId = spoolId;
+            }
+            notifyListeners();
+            break;
+          }
+
+          selectedSpoolId = spoolId;
+          selectedSegmentId = segId;
+          selectedAxisId = null;
+          if (!selectedSpoolIds.contains(spoolId)) {
+            selectedNodeIds.clear();
+            selectedSegmentIds.clear();
+            selectedSpoolIds.clear();
+            selectedEquipmentIds.clear();
+            selectedAxisIds.clear();
+            selectedDimensionIds.clear();
+            selectedSpoolIds.add(spoolId);
+            selectedSegmentIds.add(segId);
+          }
+          _potentialDragSegmentId = segId;
+          _dragSegmentStartScreenPos = screenPos;
+          _dragSegmentStartWorldPos = projector.unproject(screenPos, currentElevationZ);
+          isDraggingSegment = false;
+          final seg = network.segments[segId];
+          if (seg != null) {
+            _initialSegmentStartNode = network.nodes[seg.startNodeId];
+            _initialSegmentEndNode = network.nodes[seg.endNodeId];
+          }
+          notifyListeners();
+          break;
+        } else if (hitSegId != null && (isCenterlineMode || network.spools.isEmpty)) {
+          selectedSpoolId = null;
+          selectedSpoolIds.clear();
           if (isShift) {
             selectedSegmentIds.remove(hitSegId);
             if (selectedSegmentId == hitSegId) {
@@ -1005,6 +1070,7 @@ class PipingInputController extends ChangeNotifier {
           if (!selectedSegmentIds.contains(hitSegId)) {
             selectedNodeIds.clear();
             selectedSegmentIds.clear();
+            selectedSpoolIds.clear();
             selectedEquipmentIds.clear();
             selectedAxisIds.clear();
             selectedDimensionIds.clear();
@@ -2326,6 +2392,30 @@ class PipingInputController extends ChangeNotifier {
       final dist = _distanceToLineSegment(screenPos, p1, p2);
       if (dist < 14.0) {
         return seg.id;
+      }
+    }
+    return null;
+  }
+
+  /// Поиск физической катушки под курсором в радиусе 14 пикселей
+  PipeSpool? _findSpoolAtScreenPos(Offset screenPos) {
+    if (network.spools.isEmpty) return null;
+
+    for (final spool in network.spools.values) {
+      final seg = network.segments[spool.segmentId];
+      if (seg == null) continue;
+      if (network.isElbowToElbowSegment(seg.id)) continue;
+
+      final start = spool.startPoint ?? network.nodes[seg.startNodeId];
+      final end = spool.endPoint ?? network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final p1 = projector.project(start);
+      final p2 = projector.project(end);
+
+      final dist = _distanceToLineSegment(screenPos, p1, p2);
+      if (dist < 14.0) {
+        return spool;
       }
     }
     return null;
