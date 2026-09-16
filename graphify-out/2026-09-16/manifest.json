@@ -162,9 +162,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/fitting.dart": {
-    "mtime": 1789474746.9993038,
-    "seen": 1789481647.789799,
-    "ast_hash": "5f070cb411c73f2881458cc8c089dcc9",
+    "mtime": 1789535558.9868987,
+    "seen": 1789535899.4131255,
+    "ast_hash": "51ce0afce3cdf438ae444ec48b3daf63",
     "semantic_hash": ""
   },
   "lib/domain/models/fitting_catalog.dart": {
@@ -186,9 +186,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/pipe_segment.dart": {
-    "mtime": 1789117557.4376755,
-    "seen": 1789469442.6828039,
-    "ast_hash": "44014d4b59e94ce4fd8c308357430ef5",
+    "mtime": 1789535520.651546,
+    "seen": 1789535899.4131439,
+    "ast_hash": "f8203dc954c7685cbaea04a875b607cb",
     "semantic_hash": ""
   },
   "lib/domain/models/pipe_spool.dart": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789533913.293938,
-    "seen": 1789534084.6953912,
-    "ast_hash": "95ac57b0166effae5c5696bb9dd4e9f0",
+    "mtime": 1789535584.5920815,
+    "seen": 1789535899.413148,
+    "ast_hash": "b2771793092f461e706e89e56a995513",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/valve.dart": {
-    "mtime": 1789477017.1055477,
-    "seen": 1789481647.7898152,
-    "ast_hash": "e41ac57fca25dbddb2aa92971ec77896",
+    "mtime": 1789535529.4333005,
+    "seen": 1789535899.4131515,
+    "ast_hash": "e556f5ba3774a959e6663f188e0d3203",
     "semantic_hash": ""
   },
   "lib/domain/models/weld_joint.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789533787.490841,
-    "seen": 1789534084.6954067,
-    "ast_hash": "91d1401e563002c6d888a2efdfc4cb49",
+    "mtime": 1789535596.9974842,
+    "seen": 1789535899.4131641,
+    "ast_hash": "7d54c7268b154e22a2939de6447423be",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -282,9 +282,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/fitting_properties_sheet.dart": {
-    "mtime": 1789476439.9585397,
-    "seen": 1789481647.7898538,
-    "ast_hash": "7d3872846cffb8bf24c00fc6f6ea3158",
+    "mtime": 1789535735.4456177,
+    "seen": 1789535899.4132032,
+    "ast_hash": "5cf0be80d1edaa2b3c3bcd58d82210af",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/materials_specification_dialog.dart": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789533839.868079,
-    "seen": 1789534084.6954277,
-    "ast_hash": "cf5562cb3129787b992a95539505b19b",
+    "mtime": 1789535707.4961684,
+    "seen": 1789535899.4131968,
+    "ast_hash": "bc6e98f7f5a977fe5b08e6fb3204527b",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1248,9 +1248,9 @@
     "semantic_hash": ""
   },
   "test/fitting_elements_interaction_test.dart": {
-    "mtime": 1789468742.9424372,
-    "seen": 1789469442.6828873,
-    "ast_hash": "bef87458dabb6b32a4d1413fea62eb7b",
+    "mtime": 1789535858.7762904,
+    "seen": 1789535899.4132695,
+    "ast_hash": "a13ce7fb5e19f97155cec222ac075182",
     "semantic_hash": ""
   },
   "test/fittings_and_elevation_test.dart": {
@@ -1368,9 +1368,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/equipment.dart": {
-    "mtime": 1789355749.645367,
-    "seen": 1789469442.682795,
-    "ast_hash": "391756dadd8c0b645e7092da3a7ac6c3",
+    "mtime": 1789535537.645684,
+    "seen": 1789535899.4131236,
+    "ast_hash": "176c1397637238def5a3d569fee69264",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/equipment_painter.dart": {
@@ -1410,9 +1410,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/callout_manager_panel.dart": {
-    "mtime": 1789471527.3369946,
-    "seen": 1789472040.41788,
-    "ast_hash": "5d0e5a478a57f51081d875315d06def6",
+    "mtime": 1789535747.3185115,
+    "seen": 1789535899.4131942,
+    "ast_hash": "f8783208f7e01f0f56156c51455cd752",
     "semantic_hash": ""
   },
   "test/callout_test.dart": {
@@ -1434,9 +1434,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/equipment_properties_sheet.dart": {
-    "mtime": 1789355749.654906,
-    "seen": 1789469442.682841,
-    "ast_hash": "890c8e11c57f37ea80f76daaca6dddd3",
+    "mtime": 1789535717.4313724,
+    "seen": 1789535899.4132004,
+    "ast_hash": "62f505dac3cdebcf06bf45ca8c094f0f",
     "semantic_hash": ""
   },
   "test/verify_autocad_dxf_test.dart": {
@@ -1638,9 +1638,39 @@
     "semantic_hash": ""
   },
   "test/rigid_elbows_and_butt_joint_test.dart": {
-    "mtime": 1789533986.7596169,
-    "seen": 1789534084.695505,
-    "ast_hash": "c7ebfeb230a3a8c4f11714abd1864655",
+    "mtime": 1789535785.1340642,
+    "seen": 1789535899.4132905,
+    "ast_hash": "f97ec9f529e350cf0e310ce61b91c20d",
+    "semantic_hash": ""
+  },
+  "test/element_serial_and_name_test.dart": {
+    "mtime": 1789535502.1027799,
+    "seen": 1789535899.4132626,
+    "ast_hash": "f0c036363b630437bd66b47c638a3cd9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prompt-master/README.md": {
+    "mtime": 1787556640.0,
+    "seen": 1789535899.4133675,
+    "ast_hash": "1fec166385fce57cd32751bdf13d5789",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prompt-master/SKILL.md": {
+    "mtime": 1787556640.0,
+    "seen": 1789535899.4133685,
+    "ast_hash": "dc5e797ac39abc3637337e6eec5b573f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prompt-master/references/patterns.md": {
+    "mtime": 1787556640.0,
+    "seen": 1789535899.41337,
+    "ast_hash": "2d4aa47b6e8c8b177c01c08278e742f0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prompt-master/references/templates.md": {
+    "mtime": 1787556640.0,
+    "seen": 1789535899.4133708,
+    "ast_hash": "da2ae7a940054759bacd0c0738313eac",
     "semantic_hash": ""
   }
 }

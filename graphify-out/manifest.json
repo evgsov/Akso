@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789530850.0387266,
-    "seen": 1789531117.7958498,
-    "ast_hash": "27a3e008dfcd7197197c5b2a783dd029",
+    "mtime": 1789540925.2612195,
+    "seen": 1789541148.8100255,
+    "ast_hash": "045ec1f79d4ae9d21927f71a2cdb11b5",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -192,15 +192,15 @@
     "semantic_hash": ""
   },
   "lib/domain/models/pipe_spool.dart": {
-    "mtime": 1789099097.1390102,
-    "seen": 1789469442.6828048,
-    "ast_hash": "650c4c4a74ecc3580647f1ee78274fc2",
+    "mtime": 1789539194.7880604,
+    "seen": 1789541148.8100545,
+    "ast_hash": "e6863b3ecc648c4c0fb598580dd915d1",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789535584.5920815,
-    "seen": 1789535899.413148,
-    "ast_hash": "b2771793092f461e706e89e56a995513",
+    "mtime": 1789541033.4399264,
+    "seen": 1789541148.8100576,
+    "ast_hash": "ceb2874ba3cbe07100cd0fc2a3df99bd",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789535596.9974842,
-    "seen": 1789535899.4131641,
-    "ast_hash": "7d54c7268b154e22a2939de6447423be",
+    "mtime": 1789540406.8339953,
+    "seen": 1789541148.8100724,
+    "ast_hash": "6e52535fd01fc78116ca56609cdad82f",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
-    "mtime": 1789464488.3736165,
-    "seen": 1789469442.6828315,
-    "ast_hash": "1571fd9800ce707b280f3f1383338272",
+    "mtime": 1789539738.248706,
+    "seen": 1789541148.8100867,
+    "ast_hash": "aeacc24a8c30d31a4a8cb1dbf7f12953",
     "semantic_hash": ""
   },
   "lib/ui/canvas/smart_callout.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789464488.376213,
-    "seen": 1789469442.6828344,
-    "ast_hash": "8335cd8955794fdf1277989a033d6b3c",
+    "mtime": 1789539744.1938753,
+    "seen": 1789541148.81009,
+    "ast_hash": "7b9a1569c352690a467421a4c406f332",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789533793.4030845,
-    "seen": 1789534084.6954403,
-    "ast_hash": "94b0684b88b6463903931ac428e7d21e",
+    "mtime": 1789539752.7187903,
+    "seen": 1789541148.8101058,
+    "ast_hash": "5a934ebbc569c0281907a1e53e6fb6ab",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789534059.4099834,
-    "seen": 1789534084.6956108,
-    "ast_hash": "cda02e877739c29025abe3380f0ef476",
+    "mtime": 1789541136.5150182,
+    "seen": 1789541148.8102849,
+    "ast_hash": "80f14d579b24f21f629a8025c725767b",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789535707.4961684,
-    "seen": 1789535899.4131968,
-    "ast_hash": "bc6e98f7f5a977fe5b08e6fb3204527b",
+    "mtime": 1789540460.7616127,
+    "seen": 1789541148.8100939,
+    "ast_hash": "35e9f132c3195e162290e0ba453dea3a",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1272,9 +1272,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/spool_calculator.dart": {
-    "mtime": 1789533152.4543512,
-    "seen": 1789534084.6954,
-    "ast_hash": "1867dff567c5dbdd8f25be27c531c80c",
+    "mtime": 1789539337.690077,
+    "seen": 1789541148.8100662,
+    "ast_hash": "130c3e1a33b2ee74c5c9ee8afb2375ce",
     "semantic_hash": ""
   },
   "lib/data/repositories/project_repository.dart": {
@@ -1320,9 +1320,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/pipe_painter.dart": {
-    "mtime": 1789533429.3968606,
-    "seen": 1789534084.6954157,
-    "ast_hash": "393b8e1eb1322d599e63fff0cebf0e2f",
+    "mtime": 1789539797.7879214,
+    "seen": 1789541148.8100817,
+    "ast_hash": "bd7eaa939d150a59396b30495b7a523e",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/valve_painter.dart": {
@@ -1422,9 +1422,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/callout_painter.dart": {
-    "mtime": 1789464488.368765,
-    "seen": 1789469442.6828225,
-    "ast_hash": "8e2e722a705ea576ce7274df826d6ea3",
+    "mtime": 1789540821.2696278,
+    "seen": 1789541148.8100753,
+    "ast_hash": "b2eccd61cc49e7f4fdc26e709acb9214",
     "semantic_hash": ""
   },
   "test/callout_canvas_test.dart": {
@@ -1542,9 +1542,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/controllers/selection_controller.dart": {
-    "mtime": 1789464488.3656144,
-    "seen": 1789469442.6828177,
-    "ast_hash": "e97414b2749ae30f6aec2954fa4cd248",
+    "mtime": 1789539669.5646229,
+    "seen": 1789541148.81007,
+    "ast_hash": "2936dd40d40647ae67fefff3bc428ddb",
     "semantic_hash": ""
   },
   "lib/ui/canvas/controllers/tracing_controller.dart": {
@@ -1671,6 +1671,48 @@
     "mtime": 1787556640.0,
     "seen": 1789535899.4133708,
     "ast_hash": "da2ae7a940054759bacd0c0738313eac",
+    "semantic_hash": ""
+  },
+  "test/cascading_spool_length_test.dart": {
+    "mtime": 1789540318.4246292,
+    "seen": 1789541148.8101335,
+    "ast_hash": "80a074e482446329ec46c3d9c51ffb45",
+    "semantic_hash": ""
+  },
+  "test/centerline_and_physical_spools_test.dart": {
+    "mtime": 1789539858.1440947,
+    "seen": 1789541148.8101344,
+    "ast_hash": "385c56413327b425519a14920366ec13",
+    "semantic_hash": ""
+  },
+  "test/centerline_rendering_test.dart": {
+    "mtime": 1789539861.0564096,
+    "seen": 1789541148.8101358,
+    "ast_hash": "6a0237bd2784e39156eb646212017222",
+    "semantic_hash": ""
+  },
+  "test/spool_callout_and_dxf_test.dart": {
+    "mtime": 1789540999.1257746,
+    "seen": 1789541148.8101773,
+    "ast_hash": "58ac58a41a19db091356a67d9866a7e4",
+    "semantic_hash": ""
+  },
+  "test/spool_selection_and_hit_test.dart": {
+    "mtime": 1789540020.3396528,
+    "seen": 1789541148.8101783,
+    "ast_hash": "298484c8da5a6e872714cb3bf92e4f63",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-16-centerline-and-physical-spools.md": {
+    "mtime": 1789538741.3860788,
+    "seen": 1789541148.8102894,
+    "ast_hash": "9e31744d9bbd4d29e7d5710d35c37676",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-16-centerline-and-physical-spools-architecture-design.md": {
+    "mtime": 1789538672.3228998,
+    "seen": 1789541148.810293,
+    "ast_hash": "2986c14a71a805bad60a78f9b4a4ddf4",
     "semantic_hash": ""
   }
 }
