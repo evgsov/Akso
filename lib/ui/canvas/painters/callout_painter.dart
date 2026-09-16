@@ -78,8 +78,36 @@ class CalloutPainter {
         return network.nodes[callout.targetId];
 
       case CalloutTargetType.segment:
+        // 1. Проверяем, не привязана ли выноска напрямую к физической катушке
+        final spool = network.spools[callout.targetId];
+        if (spool != null && spool.startPoint != null && spool.endPoint != null) {
+          return Node3D(
+            id: 'anchor_${callout.id}',
+            x: (spool.startPoint!.x + spool.endPoint!.x) / 2.0,
+            y: (spool.startPoint!.y + spool.endPoint!.y) / 2.0,
+            z: (spool.startPoint!.z + spool.endPoint!.z) / 2.0,
+          );
+        }
+
         final seg = network.segments[callout.targetId];
         if (seg == null) return null;
+
+        // 2. Если выноска привязана к сегменту, у которого ровно одна катушка —
+        // привязываем стрелку к геометрической середине физической трубы катушки
+        final segSpools = network.spools.values.where((s) => s.segmentId == seg.id).toList();
+        if (segSpools.length == 1 &&
+            segSpools.first.startPoint != null &&
+            segSpools.first.endPoint != null) {
+          final s = segSpools.first;
+          return Node3D(
+            id: 'anchor_${callout.id}',
+            x: (s.startPoint!.x + s.endPoint!.x) / 2.0,
+            y: (s.startPoint!.y + s.endPoint!.y) / 2.0,
+            z: (s.startPoint!.z + s.endPoint!.z) / 2.0,
+          );
+        }
+
+        // 3. Иначе привязываем к середине осевой линии сегмента
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) return null;

@@ -56,29 +56,71 @@ class DxfWriter {
 
     buffer.writeln('  0\nSECTION\n  2\nENTITIES');
 
-    // 1. Отрезки труб в 3D
+    // 0. Осевая трасса в 3D (Centerline skeleton)
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
+      _write3dLine(
+        buffer,
+        layer: 'АКСО_ОСИ_ТРАССЫ',
+        x1: start.x,
+        y1: start.y,
+        z1: start.z,
+        x2: end.x,
+        y2: end.y,
+        z2: end.z,
+      );
+    }
 
-      final sys = network.systems[seg.systemId];
-      final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
-
-      final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
-      final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
-      for (final (pA, pB) in subIntervals) {
+    // 1. Физические катушки или отрезки труб в 3D
+    if (network.spools.isNotEmpty) {
+      for (final spool in network.spools.values) {
+        if (spool.startPoint == null || spool.endPoint == null) continue;
+        final seg = network.segments[spool.segmentId];
+        final sys = seg != null ? network.systems[seg.systemId] : null;
+        final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
         _write3dLine(
           buffer,
           layer: layerName,
-          x1: pA.x,
-          y1: pA.y,
-          z1: pA.z,
-          x2: pB.x,
-          y2: pB.y,
-          z2: pB.z,
+          x1: spool.startPoint!.x,
+          y1: spool.startPoint!.y,
+          z1: spool.startPoint!.z,
+          x2: spool.endPoint!.x,
+          y2: spool.endPoint!.y,
+          z2: spool.endPoint!.z,
         );
       }
+    } else {
+      for (final seg in network.segments.values) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final sys = network.systems[seg.systemId];
+        final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
+
+        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+        final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
+        for (final (pA, pB) in subIntervals) {
+          _write3dLine(
+            buffer,
+            layer: layerName,
+            x1: pA.x,
+            y1: pA.y,
+            z1: pA.z,
+            x2: pB.x,
+            y2: pB.y,
+            z2: pB.z,
+          );
+        }
+      }
+    }
+
+    for (final seg in network.segments.values) {
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
 
       // Диаметр трубы как текст в 3D
       final midX = (start.x + end.x) / 2;
@@ -392,27 +434,54 @@ class DxfWriter {
 
     buffer.writeln('  0\nSECTION\n  2\nENTITIES');
 
-    // 1. Отрезки труб в проекции ГОСТ
+    // 0. Осевая трасса в 2D проекции ГОСТ (Centerline skeleton)
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
-
       final p1 = _projectTo2d(projector, start);
       final p2 = _projectTo2d(projector, end);
+      _write2dLine(buffer, layer: 'АКСО_ОСИ_ТРАССЫ', x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
+    }
 
-      final sys = network.systems[seg.systemId];
-      final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
-
-      final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
-      final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
-      for (final (pA, pB) in subIntervals) {
-        final nodeA = Node3D(id: '', x: pA.x, y: pA.y, z: pA.z);
-        final nodeB = Node3D(id: '', x: pB.x, y: pB.y, z: pB.z);
-        final p1Sub = _projectTo2d(projector, nodeA);
-        final p2Sub = _projectTo2d(projector, nodeB);
-        _write2dLine(buffer, layer: layerName, x1: p1Sub.dx, y1: p1Sub.dy, x2: p2Sub.dx, y2: p2Sub.dy);
+    // 1. Физические катушки или отрезки труб в проекции ГОСТ
+    if (network.spools.isNotEmpty) {
+      for (final spool in network.spools.values) {
+        if (spool.startPoint == null || spool.endPoint == null) continue;
+        final seg = network.segments[spool.segmentId];
+        final sys = seg != null ? network.systems[seg.systemId] : null;
+        final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
+        final p1 = _projectTo2d(projector, spool.startPoint!);
+        final p2 = _projectTo2d(projector, spool.endPoint!);
+        _write2dLine(buffer, layer: layerName, x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
       }
+    } else {
+      for (final seg in network.segments.values) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final sys = network.systems[seg.systemId];
+        final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
+
+        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+        final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
+        for (final (pA, pB) in subIntervals) {
+          final nodeA = Node3D(id: '', x: pA.x, y: pA.y, z: pA.z);
+          final nodeB = Node3D(id: '', x: pB.x, y: pB.y, z: pB.z);
+          final p1Sub = _projectTo2d(projector, nodeA);
+          final p2Sub = _projectTo2d(projector, nodeB);
+          _write2dLine(buffer, layer: layerName, x1: p1Sub.dx, y1: p1Sub.dy, x2: p2Sub.dx, y2: p2Sub.dy);
+        }
+      }
+    }
+
+    for (final seg in network.segments.values) {
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+      final p1 = _projectTo2d(projector, start);
+      final p2 = _projectTo2d(projector, end);
 
       // Выноска диаметра (горизонтальный текст над трубой)
       final midX = (p1.dx + p2.dx) / 2;
@@ -847,6 +916,7 @@ class DxfWriter {
       const _LayerDef('АКСО_ФЛАНЦЫ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ВРЕЗКИ', 1),
       const _LayerDef('АКСО_ОСИ', 8, 'DASHDOT'),
+      const _LayerDef('АКСО_ОСИ_ТРАССЫ', 4, 'DASHDOT'),
       const _LayerDef('АКСО_ОСИ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ВСПОМОГАТЕЛЬНЫЕ', 4, 'DASHDOT'),
       const _LayerDef('АКСО_РАЗМЕРЫ', 3),

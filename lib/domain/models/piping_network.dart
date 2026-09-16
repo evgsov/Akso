@@ -1317,39 +1317,70 @@ class PipingNetwork {
     var text = template;
     switch (targetType) {
       case CalloutTargetType.segment:
-        final seg = segments[targetId];
-        if (seg == null) return 'Труба (удалена)';
+        PipeSegment? seg = segments[targetId];
+        PipeSpool? spool = spools[targetId];
+        if (spool != null) {
+          seg = segments[spool.segmentId] ?? seg;
+        } else if (seg != null) {
+          final segSpools = spools.values.where((s) => s.segmentId == targetId).toList();
+          if (segSpools.length == 1) {
+            spool = segSpools.first;
+          }
+        }
+        if (seg == null && spool == null) return 'Труба (удалена)';
 
-        final dStr = seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
-            ? seg.outerDiameterMm.toStringAsFixed(0)
-            : seg.outerDiameterMm.toStringAsFixed(1);
-        final sStr = seg.wallThicknessMm.truncateToDouble() == seg.wallThicknessMm
-            ? seg.wallThicknessMm.toStringAsFixed(0)
-            : seg.wallThicknessMm.toStringAsFixed(1);
-        final sysCode = systems[seg.systemId]?.code ?? seg.systemId;
+        final dn = spool?.dn ?? seg?.dn ?? 0;
+        final od = seg != null ? seg.outerDiameterMm : (dn.toDouble());
+        final wall = spool?.wallThickness ?? seg?.wallThicknessMm ?? 0.0;
+        final mat = (spool != null && spool.material.isNotEmpty)
+            ? spool.material
+            : (seg?.material ?? 'Ст20');
+        final sysCode = (seg != null && systems[seg.systemId] != null) ? (systems[seg.systemId]?.code ?? seg.systemId) : '';
+
+        final dStr = od.truncateToDouble() == od ? od.toStringAsFixed(0) : od.toStringAsFixed(1);
+        final sStr = wall.truncateToDouble() == wall ? wall.toStringAsFixed(0) : wall.toStringAsFixed(1);
+
+        final nameStr = (spool?.name != null && spool!.name!.isNotEmpty)
+            ? spool.name!
+            : (seg?.name ?? '');
+        final serialStr = (spool?.serialNumber != null && spool!.serialNumber!.isNotEmpty)
+            ? spool.serialNumber!
+            : (seg?.serialNumber ?? '');
+        final idStr = spool?.id ?? seg?.id ?? targetId;
 
         text = text
-            .replaceAll('{DN}', '${seg.dn}')
+            .replaceAll('{DN}', '$dn')
             .replaceAll('{WALL}', sStr)
             .replaceAll('{S}', sStr)
             .replaceAll('{D_OUT}', dStr)
             .replaceAll('{OD}', dStr)
             .replaceAll('{OUTER_DIAMETER}', dStr)
-            .replaceAll('{MATERIAL}', seg.material)
+            .replaceAll('{MATERIAL}', mat)
             .replaceAll('{SYSTEM}', sysCode)
-            .replaceAll('{NAME}', seg.name ?? '')
-            .replaceAll('{TAG}', seg.name ?? '')
-            .replaceAll('{SERIAL}', seg.serialNumber ?? '')
-            .replaceAll('{SERIAL_NUMBER}', seg.serialNumber ?? '')
-            .replaceAll('{BATCH}', seg.serialNumber ?? '')
-            .replaceAll('{ID}', seg.id);
+            .replaceAll('{NAME}', nameStr)
+            .replaceAll('{TAG}', nameStr)
+            .replaceAll('{SERIAL}', serialStr)
+            .replaceAll('{SERIAL_NUMBER}', serialStr)
+            .replaceAll('{BATCH}', serialStr)
+            .replaceAll('{SPOOL}', spool?.name ?? spool?.id ?? '')
+            .replaceAll('{ID}', idStr);
 
-        if (text.contains('{LENGTH}') || text.contains('{L}')) {
+        final int len;
+        if (spool != null) {
+          len = spool.cutLengthMm.round();
+        } else if (seg != null) {
           final start = nodes[seg.startNodeId];
           final end = nodes[seg.endNodeId];
-          final len = (start != null && end != null) ? start.distanceTo(end).round() : 0;
-          text = text.replaceAll('{LENGTH}', '$len').replaceAll('{L}', '$len');
+          len = (start != null && end != null) ? start.distanceTo(end).round() : 0;
+        } else {
+          len = 0;
         }
+
+        text = text
+            .replaceAll('{LENGTH}', '$len')
+            .replaceAll('{L}', '$len')
+            .replaceAll('{L_CUT}', '$len')
+            .replaceAll('{CUT_LENGTH}', '$len');
         break;
 
       case CalloutTargetType.valve:
