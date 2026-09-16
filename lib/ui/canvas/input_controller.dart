@@ -237,6 +237,9 @@ class PipingInputController extends ChangeNotifier {
   Offset? _dragCalloutStartScreenPos;
   double _dragCalloutInitialOffsetX = 0.0;
   double _dragCalloutInitialOffsetY = 0.0;
+  Timer? _longPressTimer;
+  bool _canDragElement = false;
+  bool enableDragDelay = true;
 
   // Grip Mode: активный перенос узла кликом мыши (AutoCAD Grip Editing)
   String? activeGripNodeId;
@@ -293,6 +296,7 @@ class PipingInputController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _longPressTimer?.cancel();
     _recoveryTimer?.cancel();
     super.dispose();
   }
@@ -345,6 +349,9 @@ class PipingInputController extends ChangeNotifier {
 
   /// Отмена текущей операции (по клавише Esc, ПКМ или кнопке на экране)
   void cancelCurrentOperation({bool keepTool = false}) {
+    _longPressTimer?.cancel();
+    _canDragElement = false;
+    clearSelection();
     traceStartNode = null;
     axisStartNode = null;
     currentCursorScreenPos = null;
@@ -616,6 +623,17 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка нажатия на холст
   void handlePointerDown(Offset screenPos, {bool isShift = false, bool isCtrl = false}) {
+    _longPressTimer?.cancel();
+    if (!enableDragDelay) {
+      _canDragElement = true;
+    } else {
+      _canDragElement = false;
+      _longPressTimer = Timer(const Duration(milliseconds: 200), () {
+        if (!hasListeners) return;
+        _canDragElement = true;
+        notifyListeners();
+      });
+    }
     currentCursorScreenPos = screenPos;
 
     // Обновляем привязку
@@ -990,7 +1008,10 @@ class PipingInputController extends ChangeNotifier {
           break;
         }
 
-        final hitSpool = !isCenterlineMode ? _findSpoolAtScreenPos(screenPos) : null;
+        PipeSpool? hitSpool = !isCenterlineMode ? _findSpoolAtScreenPos(screenPos) : null;
+        if (hitSpool == null && !isCenterlineMode && hitSegId != null) {
+          hitSpool = network.spools.values.where((s) => s.segmentId == hitSegId).firstOrNull;
+        }
         if (hitSpool != null) {
           final spoolId = hitSpool.id;
           final segId = hitSpool.segmentId;
@@ -1040,7 +1061,7 @@ class PipingInputController extends ChangeNotifier {
           }
           notifyListeners();
           break;
-        } else if (hitSegId != null && (isCenterlineMode || network.spools.isEmpty)) {
+        } else if (hitSegId != null && (isCenterlineMode || !network.isButtJoint(hitSegId))) {
           selectedSpoolId = null;
           selectedSpoolIds.clear();
           if (isShift) {
@@ -1534,45 +1555,83 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
-    // Проверка порога перетаскивания для узлов (порог 6 px)
+    // Проверка порога перетаскивания для узлов (порог 12 px и удержание 200мс)
     if (_potentialDragNodeId != null && !isDraggingNode && _dragNodeStartScreenPos != null) {
-      if ((screenPos - _dragNodeStartScreenPos!).distance > 6.0) {
-        isDraggingNode = true;
+      if ((screenPos - _dragNodeStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragNodeId = null;
+          _dragNodeStartScreenPos = null;
+        } else {
+          isDraggingNode = true;
+        }
       }
     }
 
-    // Проверка порога перетаскивания для сегментов (порог 6 px)
+    // Проверка порога перетаскивания для сегментов (порог 12 px и удержание 200мс)
     if (_potentialDragSegmentId != null && !isDraggingSegment && _dragSegmentStartScreenPos != null) {
-      if ((screenPos - _dragSegmentStartScreenPos!).distance > 6.0) {
-        isDraggingSegment = true;
+      if ((screenPos - _dragSegmentStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragSegmentId = null;
+          _dragSegmentStartScreenPos = null;
+          _dragSegmentStartWorldPos = null;
+        } else {
+          isDraggingSegment = true;
+        }
       }
     }
 
-    // Проверка порога перетаскивания для оборудования (порог 6 px)
+    // Проверка порога перетаскивания для оборудования (порог 12 px и удержание 200мс)
     if (_potentialDragEquipmentId != null && !isDraggingEquipment && _dragEquipmentStartScreenPos != null) {
-      if ((screenPos - _dragEquipmentStartScreenPos!).distance > 6.0) {
-        isDraggingEquipment = true;
+      if ((screenPos - _dragEquipmentStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragEquipmentId = null;
+          _dragEquipmentStartScreenPos = null;
+          _dragEquipmentStartPos = null;
+        } else {
+          isDraggingEquipment = true;
+        }
       }
     }
 
-    // Проверка порога перетаскивания для арматуры (порог 6 px)
+    // Проверка порога перетаскивания для арматуры (порог 12 px и удержание 200мс)
     if (_potentialDragValveId != null && !isDraggingValve && _dragValveStartScreenPos != null) {
-      if ((screenPos - _dragValveStartScreenPos!).distance > 6.0) {
-        isDraggingValve = true;
+      if ((screenPos - _dragValveStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragValveId = null;
+          _dragValveStartScreenPos = null;
+        } else {
+          isDraggingValve = true;
+        }
       }
     }
 
-    // Проверка порога перетаскивания для опор (порог 6 px)
+    // Проверка порога перетаскивания для опор (порог 12 px и удержание 200мс)
     if (_potentialDragSupportId != null && !isDraggingSupport && _dragSupportStartScreenPos != null) {
-      if ((screenPos - _dragSupportStartScreenPos!).distance > 6.0) {
-        isDraggingSupport = true;
+      if ((screenPos - _dragSupportStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragSupportId = null;
+          _dragSupportStartScreenPos = null;
+        } else {
+          isDraggingSupport = true;
+        }
       }
     }
 
-    // Проверка порога перетаскивания для сварных стыков (порог 6 px)
+    // Проверка порога перетаскивания для сварных стыков (порог 12 px и удержание 200мс)
     if (_potentialDragWeldId != null && !isDraggingWeld && _dragWeldStartScreenPos != null) {
-      if ((screenPos - _dragWeldStartScreenPos!).distance > 6.0) {
-        isDraggingWeld = true;
+      if ((screenPos - _dragWeldStartScreenPos!).distance > 12.0) {
+        if (!_canDragElement) {
+          _longPressTimer?.cancel();
+          _potentialDragWeldId = null;
+          _dragWeldStartScreenPos = null;
+        } else {
+          isDraggingWeld = true;
+        }
       }
     }
 
@@ -1758,6 +1817,8 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка отпускания стилуса / пальца / кнопки мыши
   void handlePointerUp() {
+    _longPressTimer?.cancel();
+    _canDragElement = false;
     if (activeGripAxisId != null || activeGripNodeId != null) {
       // В режиме Grip Edit отпускание кнопки мыши не фиксирует элемент (фиксация по следующему клику ЛКМ)
       return;

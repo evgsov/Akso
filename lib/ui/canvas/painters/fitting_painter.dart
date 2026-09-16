@@ -322,25 +322,25 @@ class FittingPainter {
     final connected = network.getConnectedSegments(fit.nodeId);
     if (connected.length < 3) return;
 
-    final segRun1 = connected[0];
-
-    final sys = network.systems[segRun1.systemId];
-    final color = sys != null ? Color(sys.colorValue) : Colors.black87;
-
     final ptN = projector.project(node);
-
-    final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
+    final isSelected = fit.nodeId == selectedNodeId;
+    
+    // Determine main run color for the center dot and callout
+    final segRun1 = connected[0];
+    final mainSys = network.systems[segRun1.systemId];
+    final mainColor = mainSys != null ? Color(mainSys.colorValue) : Colors.black87;
 
     if (isVolumeMode) {
       if (showCallouts) {
-        final name = fit.dnSecondary != null && fit.dnSecondary != fit.dn
-            ? 'Тройник ${fit.dn}х${fit.dnSecondary}'
-            : 'Тройник Ду${fit.dn}';
+        final name = fit.name ??
+            (fit.dnSecondary != null && fit.dnSecondary != fit.dn
+                ? 'Тройник ${fit.dn}х${fit.dnSecondary}'
+                : 'Тройник Ду${fit.dn}');
         final tp = TextPainter(
           text: TextSpan(
             text: name,
             style: TextStyle(
-              color: color,
+              color: mainColor,
               fontSize: 9.0,
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
@@ -354,21 +354,80 @@ class FittingPainter {
       return;
     }
 
-    final teePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawCircle(ptN, math.max(7.0, strokeWidth * 0.9), teePaint);
+    final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
 
+    for (int i = 0; i < 3; i++) {
+      final seg = connected[i];
+      final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+      final otherNode = network.nodes[otherId];
+      if (otherNode == null) continue;
+
+      final isBranch = seg.id == branchSeg?.id;
+      final armLenMm = isBranch
+          ? fit.effectiveBranchLengthMm
+          : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+              ? fit.buildingLengthMm! / 2.0
+              : fit.dn * 1.0);
+
+      final vx = otherNode.x - node.x;
+      final vy = otherNode.y - node.y;
+      final vz = otherNode.z - node.z;
+      final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+      final uX = dist3d > 0 ? vx / dist3d : 0.0;
+      final uY = dist3d > 0 ? vy / dist3d : 0.0;
+      final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+      final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+      final pArmScreen = projector.projectCoordinates(
+        node.x + uX * effectiveArm,
+        node.y + uY * effectiveArm,
+        node.z + uZ * effectiveArm,
+      );
+
+      final sys = network.systems[seg.systemId];
+      final armColor = sys != null ? Color(sys.colorValue) : Colors.black87;
+      final armStrokeWidth = _calcWidth(seg.dn, network, projector, isVolumeMode);
+
+      // 1. Подсветка золотистым ореолом при выделении
+      if (isSelected) {
+        final glowPaint = Paint()
+          ..color = Colors.amber.withValues(alpha: 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = armStrokeWidth + 6.0
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(ptN, pArmScreen, glowPaint);
+      }
+
+      // 2. Отрисовка патрубка тройника
+      final teePaint = Paint()
+        ..color = isSelected ? Colors.amber : armColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = armStrokeWidth
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(ptN, pArmScreen, teePaint);
+
+      // 3. Монтажная засечка сварного стыка
+      _drawWeldTickAt(canvas, pArmScreen, ptN, armStrokeWidth);
+    }
+
+    // 4. Узловой маркер центра тройника
+    final mainStrokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
+    final centerPaint = Paint()
+      ..color = isSelected ? Colors.amber : mainColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(ptN, math.max(3.0, mainStrokeWidth * 0.35), centerPaint);
+
+    // 5. Выноска с наименованием/диаметрами тройника
     if (showCallouts) {
-      final name = fit.dnSecondary != null && fit.dnSecondary != fit.dn
-          ? 'Тройник х'
-          : 'Тройник Ду';
+      final name = fit.name ??
+          (fit.dnSecondary != null && fit.dnSecondary != fit.dn
+              ? 'Тройник ${fit.dn}х${fit.dnSecondary}'
+              : 'Тройник Ду${fit.dn}');
       final tp = TextPainter(
         text: TextSpan(
           text: name,
           style: TextStyle(
-            color: color,
+            color: isSelected ? Colors.amber.shade900 : mainColor,
             fontSize: 9.0,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',

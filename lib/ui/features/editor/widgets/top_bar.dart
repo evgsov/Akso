@@ -358,17 +358,33 @@ class EditorTopBar extends StatelessWidget {
                     ),
                     onPressed: () => controller.setTool(CanvasTool.insertEquipment),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.timeline, size: 18),
-                    tooltip: controller.isCenterlineMode ? 'Осевая трасса (ВКЛ)' : 'Осевая трасса (ВЫКЛ)',
-                    color: controller.isCenterlineMode ? Colors.indigo.shade700 : Colors.grey.shade600,
-                    style: IconButton.styleFrom(
-                      backgroundColor: controller.isCenterlineMode ? Colors.indigo.shade50 : Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                  FilterChip(
+                    showCheckmark: false,
+                    selected: controller.isCenterlineMode,
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    backgroundColor: Colors.transparent,
+                    selectedColor: Colors.indigo.shade50,
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timeline, 
+                          size: 18, 
+                          color: controller.isCenterlineMode ? Colors.indigo.shade700 : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Осевая трасса', 
+                          style: TextStyle(
+                            fontSize: 13, 
+                            color: controller.isCenterlineMode ? Colors.indigo.shade900 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: controller.toggleCenterlineMode,
+                    tooltip: controller.isCenterlineMode ? 'Осевая трасса (ВКЛ)' : 'Осевая трасса (ВЫКЛ)',
+                    onSelected: (_) => controller.toggleCenterlineMode(),
                   ),
                 ],
               ),

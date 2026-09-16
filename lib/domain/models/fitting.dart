@@ -110,6 +110,17 @@ class Fitting {
     }
   }
 
+  /// Эффективная высота/вылет патрубка ответвления H (мм) для тройника
+  double get effectiveBranchLengthMm {
+    if (branchLengthMm != null && branchLengthMm! > 0) {
+      return branchLengthMm!;
+    }
+    if (buildingLengthMm != null && buildingLengthMm! > 0) {
+      return buildingLengthMm! / 2.0;
+    }
+    return dn * 1.0;
+  }
+
   /// Расчетное количество сварных стыков
   int get effectiveWeldCount {
     if (customWeldCount != null) return customWeldCount!;

@@ -352,6 +352,57 @@ class DxfWriter {
           z: node.z + 80.0,
           height: 45.0,
         );
+      } else if (fit.fittingType == FittingType.tee) {
+        if (connectedSegs.length >= 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connectedSegs);
+          for (int i = 0; i < 3; i++) {
+            final seg = connectedSegs[i];
+            final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+            final otherNode = network.nodes[otherId];
+            if (otherNode == null) continue;
+
+            final isBranch = seg.id == branchSeg?.id;
+            final armLenMm = isBranch
+                ? fit.effectiveBranchLengthMm
+                : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                    ? fit.buildingLengthMm! / 2.0
+                    : fit.dn * 1.0);
+
+            final vx = otherNode.x - node.x;
+            final vy = otherNode.y - node.y;
+            final vz = otherNode.z - node.z;
+            final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+            final uX = dist3d > 0 ? vx / dist3d : 0.0;
+            final uY = dist3d > 0 ? vy / dist3d : 0.0;
+            final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+            final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+            _write3dLine(
+              buffer,
+              layer: 'АКСО_ТРОЙНИКИ',
+              x1: node.x,
+              y1: node.y,
+              z1: node.z,
+              x2: node.x + uX * effectiveArm,
+              y2: node.y + uY * effectiveArm,
+              z2: node.z + uZ * effectiveArm,
+            );
+          }
+        }
+        _writePoint(buffer, layer: 'АКСО_ТРОЙНИКИ', x: node.x, y: node.y, z: node.z);
+        final label = fit.name ??
+            (fit.dnSecondary != null && fit.dnSecondary != fit.dn
+                ? 'Тройник Ду${fit.dn}х${fit.dnSecondary}'
+                : 'Тройник Ду${fit.dn}');
+        _writeText(
+          buffer,
+          layer: 'АКСО_ТРОЙНИКИ_ТЕКСТ',
+          text: label,
+          x: node.x,
+          y: node.y,
+          z: node.z + 80.0,
+          height: 45.0,
+        );
       }
     }
 
@@ -665,6 +716,63 @@ class DxfWriter {
           z: 0.0,
           height: 35.0,
         );
+      } else if (fit.fittingType == FittingType.tee) {
+        final connectedSegs = network.getConnectedSegments(fit.nodeId);
+        if (connectedSegs.length >= 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connectedSegs);
+          for (int i = 0; i < 3; i++) {
+            final seg = connectedSegs[i];
+            final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+            final otherNode = network.nodes[otherId];
+            if (otherNode == null) continue;
+
+            final isBranch = seg.id == branchSeg?.id;
+            final armLenMm = isBranch
+                ? fit.effectiveBranchLengthMm
+                : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                    ? fit.buildingLengthMm! / 2.0
+                    : fit.dn * 1.0);
+
+            final vx = otherNode.x - node.x;
+            final vy = otherNode.y - node.y;
+            final vz = otherNode.z - node.z;
+            final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+            final uX = dist3d > 0 ? vx / dist3d : 0.0;
+            final uY = dist3d > 0 ? vy / dist3d : 0.0;
+            final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+            final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+            final ptArm3d = Node3D(
+              id: '',
+              x: node.x + uX * effectiveArm,
+              y: node.y + uY * effectiveArm,
+              z: node.z + uZ * effectiveArm,
+            );
+            final pArm2d = _projectTo2d(projector, ptArm3d);
+            _write2dLine(
+              buffer,
+              layer: 'АКСО_ТРОЙНИКИ',
+              x1: center.dx,
+              y1: center.dy,
+              x2: pArm2d.dx,
+              y2: pArm2d.dy,
+            );
+          }
+        }
+        _writeCircle(buffer, layer: 'АКСО_ТРОЙНИКИ', cx: center.dx, cy: center.dy, radius: 10.0);
+        final label = fit.name ??
+            (fit.dnSecondary != null && fit.dnSecondary != fit.dn
+                ? 'Тройник Ду${fit.dn}х${fit.dnSecondary}'
+                : 'Тройник Ду${fit.dn}');
+        _writeText(
+          buffer,
+          layer: 'АКСО_ТРОЙНИКИ_ТЕКСТ',
+          text: label,
+          x: center.dx + 15.0,
+          y: center.dy + 15.0,
+          z: 0.0,
+          height: 35.0,
+        );
       }
     }
 
@@ -914,6 +1022,8 @@ class DxfWriter {
       const _LayerDef('АКСО_ПЕРЕХОДЫ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ФЛАНЦЫ', 6),
       const _LayerDef('АКСО_ФЛАНЦЫ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ТРОЙНИКИ', 5),
+      const _LayerDef('АКСО_ТРОЙНИКИ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ВРЕЗКИ', 1),
       const _LayerDef('АКСО_ОСИ', 8, 'DASHDOT'),
       const _LayerDef('АКСО_ОСИ_ТРАССЫ', 4, 'DASHDOT'),

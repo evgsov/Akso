@@ -20,6 +20,7 @@ void main() {
     setUp(() {
       network = PipingNetwork();
       controller = PipingInputController(network: network);
+      controller.enableDragDelay = false;
       network.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
       network.nodes['n2'] = const Node3D(id: 'n2', x: 1000, y: 0, z: 0);
       seg = const PipeSegment(id: 's1', startNodeId: 'n1', endNodeId: 'n2', systemId: 'sys_1', dn: 50);

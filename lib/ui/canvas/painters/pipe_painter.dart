@@ -39,7 +39,7 @@ class PipePainter {
 
       // Отрисовка бейджей выбранных труб и аннотаций
       for (final seg in network.segments.values) {
-        if (network.isElbowToElbowSegment(seg.id)) continue;
+        if (network.isButtJoint(seg.id)) continue;
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
@@ -100,7 +100,7 @@ class PipePainter {
       for (final spool in sortedSpools) {
         final seg = network.segments[spool.segmentId];
         if (seg == null) continue;
-        if (network.isElbowToElbowSegment(seg.id)) continue;
+        if (network.isButtJoint(seg.id)) continue;
 
         final start = spool.startPoint ?? network.nodes[seg.startNodeId];
         final end = spool.endPoint ?? network.nodes[seg.endNodeId];
@@ -156,7 +156,7 @@ class PipePainter {
 
       // Выноски уклона и диаметра для сегментов (пропуская стыки отвод-отвод)
       for (final seg in network.segments.values) {
-        if (network.isElbowToElbowSegment(seg.id)) continue;
+        if (network.isButtJoint(seg.id)) continue;
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
@@ -566,13 +566,16 @@ class PipePainter {
       }
     } else if (fit.fittingType == FittingType.tee) {
       if (fit.cutsMainPipe) {
-        // Тройник врезан в разрыв трубы (ГОСТ 17376) — все 3 патрубка имеют длину
-        final arm3d = fit.dn * 1.0;
-        final frac3d = dist3d > 0 ? (arm3d / dist3d) : 0.0;
-        final physicalPx = screenDist * frac3d;
-        const minScreenTee = 14.0;
-        const maxFrac = 0.38;
-        trimPx = math.min(screenDist * maxFrac, math.max(physicalPx, minScreenTee));
+        // Тройник врезан в разрыв трубы (ГОСТ 17376)
+        final isBranch = isTeeBranchSegment(network, nodeId, seg.id);
+        final armLenMm = isBranch
+            ? fit.effectiveBranchLengthMm
+            : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                ? fit.buildingLengthMm! / 2.0
+                : fit.dn * 1.0);
+        final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+        final frac3d = dist3d > 0 ? (effectiveArm / dist3d) : 0.0;
+        trimPx = screenDist * frac3d;
       } else {
         // Прямая врезка без разрезания магистрали: обрезается только сегмент ответвления
         final isBranch = isTeeBranchSegment(network, nodeId, seg.id);

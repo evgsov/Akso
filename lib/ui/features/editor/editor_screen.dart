@@ -22,6 +22,8 @@ class _EditorScreenState extends State<EditorScreen> {
   double _baseScale = 1.0;
   bool _isMiddleClick = false;
   DateTime? _lastMiddleClickTime;
+  DateTime? _lastPrimaryClickTime;
+  Offset? _lastPrimaryClickPos;
   bool _isRightClick = false;
   bool _isRightDrag = false;
   Offset? _rightDownPos;
@@ -287,6 +289,22 @@ class _EditorScreenState extends State<EditorScreen> {
                 _isRightDrag = false;
                 _rightDownPos = event.localPosition;
                 controller.prepareOrbit();
+              } else if (event.buttons & kPrimaryMouseButton != 0) {
+                final now = DateTime.now();
+                if (_lastPrimaryClickTime != null &&
+                    now.difference(_lastPrimaryClickTime!).inMilliseconds < 350 &&
+                    _lastPrimaryClickPos != null &&
+                    (event.localPosition - _lastPrimaryClickPos!).distance < 10.0) {
+                  controller.zoomToFit();
+                  _lastPrimaryClickTime = null;
+                  _lastPrimaryClickPos = null;
+                } else {
+                  _lastPrimaryClickTime = now;
+                  _lastPrimaryClickPos = event.localPosition;
+                  final isShift = HardwareKeyboard.instance.isShiftPressed;
+                  final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+                  controller.handlePointerDown(event.localPosition, isShift: isShift, isCtrl: isCtrl);
+                }
               }
             },
             onPointerMove: (event) {
@@ -300,6 +318,9 @@ class _EditorScreenState extends State<EditorScreen> {
                 }
                 controller.orbit(event.delta);
                 return;
+              }
+              if (event.buttons & kPrimaryMouseButton != 0) {
+                controller.handlePointerMove(event.localPosition, delta: event.delta);
               }
             },
             onPointerUp: (event) {
@@ -323,6 +344,9 @@ class _EditorScreenState extends State<EditorScreen> {
                   _justFinishedMiddleClick = false;
                 });
               }
+              if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick && !_justFinishedRightClick) {
+                controller.handlePointerUp();
+              }
             },
             onPointerHover: (event) {
               controller.handlePointerMove(event.localPosition);
@@ -340,8 +364,10 @@ class _EditorScreenState extends State<EditorScreen> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onScaleStart: (details) {
-                _lastFocalPoint = details.localFocalPoint;
-                _baseScale = 1.0;
+                if (details.pointerCount > 1) {
+                  _lastFocalPoint = details.localFocalPoint;
+                  _baseScale = 1.0;
+                }
               },
               onScaleUpdate: (details) {
                 if (_isMiddleClick || _isRightClick || _justFinishedMiddleClick || _justFinishedRightClick) return;
@@ -360,41 +386,11 @@ class _EditorScreenState extends State<EditorScreen> {
                     controller.pan(delta);
                   }
                   _lastFocalPoint = details.localFocalPoint;
-                } else if (details.pointerCount == 1) {
-                  // Одиночный указатель (ЛКМ / стилус / палец)
-                  final delta = _lastFocalPoint != null
-                      ? details.localFocalPoint - _lastFocalPoint!
-                      : Offset.zero;
-                  _lastFocalPoint = details.localFocalPoint;
-                  controller.handlePointerMove(details.localFocalPoint, delta: delta);
                 }
               },
               onScaleEnd: (details) {
                 _lastFocalPoint = null;
                 _baseScale = 1.0;
-                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick && !_justFinishedRightClick) {
-                  controller.handlePointerUp();
-                }
-              },
-              onTapDown: (details) {
-                if (!_isMiddleClick && !_isRightClick && !_justFinishedMiddleClick && !_justFinishedRightClick) {
-                  final isShift = HardwareKeyboard.instance.isShiftPressed;
-                  final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
-                  controller.handlePointerDown(details.localPosition, isShift: isShift, isCtrl: isCtrl);
-                }
-              },
-              onDoubleTap: () {
-                // Двойное касание по холсту: вписать всё в экран
-                controller.zoomToFit();
-              },
-              onSecondaryTapDown: (details) {
-                controller.cancelCurrentOperation();
-              },
-              onSecondaryTapUp: (details) {
-                controller.cancelCurrentOperation();
-              },
-              onSecondaryTap: () {
-                controller.cancelCurrentOperation();
               },
               child: CustomPaint(
                 size: Size.infinite,

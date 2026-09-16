@@ -121,10 +121,19 @@ class SpoolCalculator {
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
-
         final totalLen = start.distanceTo(end);
-        final startDeduction = _getFittingDeduction(network, seg.startNodeId, isDirectBranch: _isDirectBranchRun(network, seg.startNodeId, seg.id));
-        final endDeduction = _getFittingDeduction(network, seg.endNodeId, isDirectBranch: _isDirectBranchRun(network, seg.endNodeId, seg.id));
+        final startDeduction = _getFittingDeduction(
+          network,
+          seg.startNodeId,
+          segmentId: seg.id,
+          isDirectBranch: _isDirectBranchRun(network, seg.startNodeId, seg.id),
+        );
+        final endDeduction = _getFittingDeduction(
+          network,
+          seg.endNodeId,
+          segmentId: seg.id,
+          isDirectBranch: _isDirectBranchRun(network, seg.endNodeId, seg.id),
+        );
 
         final segWelds = network.weldJoints.values
             .where((w) => w.segmentId == seg.id)
@@ -213,11 +222,51 @@ class SpoolCalculator {
     return branch?.id != segId;
   }
 
-  static double _getFittingDeduction(PipingNetwork network, String nodeId, {bool isDirectBranch = false}) {
+  static double _getFittingDeduction(
+    PipingNetwork network,
+    String nodeId, {
+    bool isDirectBranch = false,
+    String? segmentId,
+  }) {
     if (isDirectBranch) return 0.0;
     final fit = network.fittings[nodeId];
     if (fit == null) return 0.0;
-    if (fit.fittingType == FittingType.directBranch) return 0.0;
+
+    if (fit.fittingType == FittingType.directBranch) {
+      if (segmentId != null) {
+        final conn = network.getConnectedSegments(nodeId);
+        final branch = network.identifyBranchSegment(nodeId, conn);
+        if (branch?.id == segmentId) {
+          // Сегмент ответвления: вычет равен наружному радиусу магистрали D_нар / 2
+          final runSeg = conn.firstWhere(
+            (s) => s.id != segmentId,
+            orElse: () => network.segments[segmentId]!,
+          );
+          final dim = network.pipeCatalog.getDimension(runSeg.dn);
+          final outerMm = dim?.outerDiameterMm ?? (runSeg.dn.toDouble());
+          return outerMm / 2.0;
+        }
+      }
+      return 0.0; // Магистральная труба не режется и не укорачивается
+    }
+
+    if (fit.fittingType == FittingType.tee) {
+      if (segmentId != null) {
+        final conn = network.getConnectedSegments(nodeId);
+        final branch = network.identifyBranchSegment(nodeId, conn);
+        if (branch?.id == segmentId) {
+          return fit.effectiveBranchLengthMm;
+        } else {
+          return (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0)
+              ? fit.buildingLengthMm! / 2.0
+              : fit.dn * 1.0;
+        }
+      }
+      return (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0)
+          ? fit.buildingLengthMm! / 2.0
+          : fit.dn * 1.0;
+    }
+
     if (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0) {
       return fit.buildingLengthMm! / 2.0;
     }
@@ -352,8 +401,8 @@ class SpoolCalculator {
     if (totalChainLen <= 0.1) return spoolCounter;
 
     final outerEndNodeId = curExpectedStart;
-    final startDeduction = _getFittingDeduction(network, outerStartNodeId);
-    final endDeduction = _getFittingDeduction(network, outerEndNodeId);
+    final startDeduction = _getFittingDeduction(network, outerStartNodeId, segmentId: chain.first.id);
+    final endDeduction = _getFittingDeduction(network, outerEndNodeId, segmentId: chain.last.id);
 
     // Собираем все точки реза (сварные швы и арматуру) вдоль всей цепочки
     final cutDistances = <double>[0.0];
