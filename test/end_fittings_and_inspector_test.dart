@@ -54,7 +54,7 @@ void main() {
       expect(cap, isNotNull);
       expect(cap!.fittingType, equals(FittingType.cap));
       expect(cap.dn, equals(100));
-      expect(network.weldJoints.length, equals(1));
+      expect(network.weldJoints.length, equals(0));
     });
 
     test('CanvasTool.insertFlange attaches terminal flange when clicking open end node', () {
@@ -69,7 +69,7 @@ void main() {
       expect(flange!.fittingType, equals(FittingType.flange));
       expect(flange.dn, equals(100));
       expect(flange.isFlangePair, isFalse);
-      expect(network.weldJoints.length, equals(1));
+      expect(network.weldJoints.length, equals(0));
     });
 
     testWidgets('DesktopCadLayout inspector displays install buttons on end node and installs cap', (tester) async {

@@ -139,6 +139,9 @@ class Equipment {
   final double height;
   final List<Nozzle> nozzles;
 
+  /// Заводской номер оборудования (аппарата, насоса, емкости)
+  final String? serialNumber;
+
   const Equipment({
     required this.id,
     required this.name,
@@ -150,6 +153,7 @@ class Equipment {
     required this.length,
     required this.height,
     this.nozzles = const [],
+    this.serialNumber,
   });
 
   Equipment copyWith({
@@ -163,6 +167,8 @@ class Equipment {
     double? length,
     double? height,
     List<Nozzle>? nozzles,
+    String? serialNumber,
+    bool clearSerialNumber = false,
   }) {
     return Equipment(
       id: id ?? this.id,
@@ -175,6 +181,7 @@ class Equipment {
       length: length ?? this.length,
       height: height ?? this.height,
       nozzles: nozzles ?? this.nozzles,
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
 
@@ -189,6 +196,7 @@ class Equipment {
         'length': length,
         'height': height,
         'nozzles': nozzles.map((n) => n.toJson()).toList(),
+        if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
   factory Equipment.fromJson(Map<String, dynamic> json) => Equipment(
@@ -208,6 +216,7 @@ class Equipment {
                 ?.map((n) => Nozzle.fromJson(n as Map<String, dynamic>))
                 .toList() ??
             const [],
+        serialNumber: json['serialNumber'] as String?,
       );
 
   @override

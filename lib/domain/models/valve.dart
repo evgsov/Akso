@@ -1,8 +1,35 @@
+import 'dart:math' as math;
 import '../enums/valve_type.dart';
 import 'node_3d.dart';
 
 /// Трубопроводная арматура, установленная на участке трубы
 class Valve {
+  /// Стандартная строительная длина L (мм) по типу арматуры и диаметру DN
+  static double defaultLengthFor(ValveType type, int dn) {
+    switch (type) {
+      case ValveType.gateValve:
+        return math.max(140.0, dn * 2.0);
+      case ValveType.butterflyValve:
+        return math.max(45.0, dn * 0.6);
+      case ValveType.ballValve:
+        return math.max(90.0, dn * 1.4);
+      case ValveType.checkValve:
+        return math.max(120.0, dn * 1.6);
+      case ValveType.strainer:
+        return math.max(130.0, dn * 1.8);
+      case ValveType.balancingValve:
+        return math.max(160.0, dn * 2.2);
+      case ValveType.drainValve:
+        return math.max(80.0, dn * 1.2);
+      case ValveType.waterMeter:
+        return math.max(150.0, dn * 2.0);
+      case ValveType.pressureGauge:
+      case ValveType.thermometer:
+      case ValveType.airVent:
+        return math.max(60.0, dn * 0.5);
+    }
+  }
+
   final String id;
   final String segmentId;
 
@@ -30,6 +57,9 @@ class Valve {
   /// Фланцевое исполнение (требует ответных фланцев на трубах) vs под приварку
   final bool isFlanged;
 
+  /// Заводской номер арматуры (индивидуальный номер изделия)
+  final String? serialNumber;
+
   const Valve({
     required this.id,
     required this.segmentId,
@@ -41,6 +71,7 @@ class Valve {
     this.handleAngleDeg = 90.0,
     this.isReversed = false,
     this.isFlanged = false,
+    this.serialNumber,
   });
 
   /// Вычисление 3D координат центра арматуры в пространстве
@@ -62,6 +93,8 @@ class Valve {
     double? handleAngleDeg,
     bool? isReversed,
     bool? isFlanged,
+    String? serialNumber,
+    bool clearSerialNumber = false,
   }) {
     return Valve(
       id: id ?? this.id,
@@ -74,6 +107,7 @@ class Valve {
       handleAngleDeg: handleAngleDeg ?? this.handleAngleDeg,
       isReversed: isReversed ?? this.isReversed,
       isFlanged: isFlanged ?? this.isFlanged,
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
 
@@ -88,6 +122,7 @@ class Valve {
         'handleAngleDeg': handleAngleDeg,
         'isReversed': isReversed,
         'isFlanged': isFlanged,
+        if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
   factory Valve.fromJson(Map<String, dynamic> json) => Valve(
@@ -101,5 +136,6 @@ class Valve {
         handleAngleDeg: (json['handleAngleDeg'] as num?)?.toDouble() ?? 90.0,
         isReversed: json['isReversed'] as bool? ?? false,
         isFlanged: json['isFlanged'] as bool? ?? false,
+        serialNumber: json['serialNumber'] as String?,
       );
 }

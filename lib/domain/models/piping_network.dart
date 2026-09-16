@@ -328,13 +328,101 @@ class PipingNetwork {
     recalculateSpools();
   }
 
-  /// Обновление параметров сегмента трубы (диаметр DN, наружный диаметр, толщина стенки, марка стали)
+  /// Точная строительная длина тангенса отвода T = R * tan(alpha / 2) в мм
+  double getElbowTangentMm(String nodeId) {
+    final fit = fittings[nodeId];
+    if (fit == null) return 0.0;
+    if (fit.fittingType != FittingType.elbow90 && fit.fittingType != FittingType.elbow45) {
+      return 0.0;
+    }
+    final conn = getConnectedSegments(nodeId);
+    if (conn.length != 2) return fit.effectiveRadiusMm;
+    final nCenter = nodes[nodeId];
+    if (nCenter == null) return fit.effectiveRadiusMm;
+
+    final s1 = conn[0];
+    final s2 = conn[1];
+    final n1 = nodes[s1.startNodeId == nodeId ? s1.endNodeId : s1.startNodeId];
+    final n2 = nodes[s2.startNodeId == nodeId ? s2.endNodeId : s2.startNodeId];
+    if (n1 == null || n2 == null) return fit.effectiveRadiusMm;
+
+    final v1x = n1.x - nCenter.x;
+    final v1y = n1.y - nCenter.y;
+    final v1z = n1.z - nCenter.z;
+    final len1 = math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
+
+    final v2x = n2.x - nCenter.x;
+    final v2y = n2.y - nCenter.y;
+    final v2z = n2.z - nCenter.z;
+    final len2 = math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
+
+    if (len1 < 1e-4 || len2 < 1e-4) return fit.effectiveRadiusMm;
+
+    final dot = ((v1x * v2x + v1y * v2y + v1z * v2z) / (len1 * len2)).clamp(-1.0, 1.0);
+    final bendAngleRad = math.pi - math.acos(dot);
+    if (bendAngleRad <= 0.01) return 0.0;
+
+    return fit.effectiveRadiusMm * math.tan(bendAngleRad / 2.0);
+  }
+
+  /// Проверяет, установлен ли в данном узле отвод
+  bool isElbowNode(String nodeId) {
+    final fit = fittings[nodeId];
+    return fit != null && (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45);
+  }
+
+  /// Проверяет, соединяет ли сегмент два смежных отвода
+  bool isElbowToElbowSegment(String segmentId) {
+    final seg = segments[segmentId];
+    if (seg == null) return false;
+    final fit1 = fittings[seg.startNodeId];
+    final fit2 = fittings[seg.endNodeId];
+    if (fit1 == null || fit2 == null) return false;
+
+    const elbowTypes = {FittingType.elbow90, FittingType.elbow45};
+    return elbowTypes.contains(fit1.fittingType) && elbowTypes.contains(fit2.fittingType);
+  }
+
+  /// Возвращает теоретическое расстояние между узлами для сварки двух отводов встык: T1 + T2
+  double? getElbowToElbowTargetLength(String segmentId) {
+    if (!isElbowToElbowSegment(segmentId)) return null;
+    final seg = segments[segmentId]!;
+    final t1 = getElbowTangentMm(seg.startNodeId);
+    final t2 = getElbowTangentMm(seg.endNodeId);
+    return t1 + t2;
+  }
+
+  /// Проверяет, соединены ли два отвода сегмента напрямую встык (L ≈ T1 + T2, L_pipe = 0)
+  bool isButtJoint(String segmentId) {
+    final targetLen = getElbowToElbowTargetLength(segmentId);
+    if (targetLen == null) return false;
+    final seg = segments[segmentId]!;
+    final n1 = nodes[seg.startNodeId];
+    final n2 = nodes[seg.endNodeId];
+    if (n1 == null || n2 == null) return false;
+    final dist = n1.distanceTo(n2);
+    return (dist - targetLen).abs() <= 2.0 || dist <= targetLen + 0.5;
+  }
+
+  /// Мгновенное стягивание двух отводов встык: устанавливает длину сегмента в T1 + T2
+  bool collapseElbowToElbow(String segmentId) {
+    final targetLen = getElbowToElbowTargetLength(segmentId);
+    if (targetLen == null) return false;
+    changeSegmentLength(segmentId, targetLen);
+    return true;
+  }
+
+  /// Обновление параметров сегмента трубы (диаметр DN, наружный диаметр, толщина стенки, марка стали, маркировка, заводской номер/партия)
   void updateSegmentProperties(
     String segmentId, {
     int? dn,
     double? outerDiameterMm,
     double? wallThicknessMm,
     String? material,
+    String? name,
+    String? serialNumber,
+    bool clearName = false,
+    bool clearSerialNumber = false,
   }) {
     final seg = segments[segmentId];
     if (seg == null) return;
@@ -357,6 +445,8 @@ class PipingNetwork {
       outerDiameterMm: resolvedOuterD,
       wallThicknessMm: resolvedWallS,
       material: material ?? seg.material,
+      name: clearName ? null : (name ?? seg.name),
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? seg.serialNumber),
     );
     FittingDetector.autoDetectFittingsForNode(this, seg.startNodeId);
     FittingDetector.autoDetectFittingsForNode(this, seg.endNodeId);
@@ -475,27 +565,6 @@ class PipingNetwork {
     );
     valves[id] = valve;
 
-    // Если арматура под приварку или фланцевая, автоматически добавляем сварные стыки по краям
-    if (valveType != ValveType.pressureGauge &&
-        valveType != ValveType.thermometer &&
-        valveType != ValveType.airVent) {
-      final segLength = seg != null && nodes[seg.startNodeId] != null && nodes[seg.endNodeId] != null
-          ? nodes[seg.startNodeId]!.distanceTo(nodes[seg.endNodeId]!)
-          : 1000.0;
-      final halfValveRatio = (length / 2.0) / math.max(segLength, 1.0);
-
-      addWeldJoint(
-        segmentId: segmentId,
-        ratio: (ratio - halfValveRatio).clamp(0.0, 1.0),
-        weldType: WeldType.c17,
-      );
-      addWeldJoint(
-        segmentId: segmentId,
-        ratio: (ratio + halfValveRatio).clamp(0.0, 1.0),
-        weldType: WeldType.c17,
-      );
-    }
-
     recalculateSpools();
     return valve;
   }
@@ -566,12 +635,10 @@ class PipingNetwork {
       dn: oldSeg.dn,
       dnSecondary: newDn,
       radiusMm: oldSeg.dn * 1.5,
+      buildingLengthMm: math.max(80.0, oldSeg.dn * 1.5),
+      rotationAngleDeg: 0.0,
     );
     fittings[midNode.id] = fitting;
-
-    // Сварные стыки по обе стороны перехода
-    addWeldJoint(segmentId: '${segmentId}_a', ratio: 1.0, weldType: WeldType.c17);
-    addWeldJoint(segmentId: seg2Id, ratio: 0.0, weldType: WeldType.c17);
 
     recalculateSpools();
     return fitting;
@@ -637,17 +704,6 @@ class PipingNetwork {
     );
     fittings[midNode.id] = fit;
 
-    // Расчет количества стыков:
-    // toEquipment / blindFlange / singleFlange: 1 стык (на стороне трубы)
-    // pipeToPipe: 2 стыка (на обоих отрезках)
-    final numWelds = fit.effectiveWeldCount;
-    if (numWelds >= 1) {
-      addWeldJoint(segmentId: '${segmentId}_a', ratio: 1.0, weldType: fit.weldType);
-    }
-    if (numWelds >= 2) {
-      addWeldJoint(segmentId: '${segmentId}_b', ratio: 0.0, weldType: fit.weldType);
-    }
-
     recalculateSpools();
     return fit;
   }
@@ -677,9 +733,6 @@ class PipingNetwork {
       definitionId: def?.id,
     );
     fittings[nodeId] = fit;
-
-    final r = s.startNodeId == nodeId ? 0.0 : 1.0;
-    ensureWeldExists(s.id, r, fit.weldType);
 
     recalculateSpools();
     return fit;
@@ -729,11 +782,6 @@ class PipingNetwork {
     );
     fittings[nodeId] = fit;
 
-    final r = s.startNodeId == nodeId ? 0.0 : 1.0;
-    if (fit.effectiveWeldCount > 0) {
-      ensureWeldExists(s.id, r, fit.weldType);
-    }
-
     recalculateSpools();
     return fit;
   }
@@ -759,79 +807,54 @@ class PipingNetwork {
     recalculateSpools();
   }
 
-  /// Обновление параметров фитинга в узле с пересчетом швов и катушек
+  /// Обновление параметров фитинга в узле с пересчетом катушек
   void updateFitting(String nodeId, Fitting updatedFit) {
     fittings[nodeId] = updatedFit;
-
-    // Синхронизация стыков для фланцев
-    if (updatedFit.fittingType == FittingType.flange) {
-      final conn = getConnectedSegments(nodeId);
-      if (conn.length == 2) {
-        final s1 = conn[0];
-        final s2 = conn[1];
-        final r1 = s1.startNodeId == nodeId ? 0.0 : 1.0;
-        final r2 = s2.startNodeId == nodeId ? 0.0 : 1.0;
-
-        final targetCount = updatedFit.effectiveWeldCount;
-        final existingWelds = weldJoints.values.where((w) {
-          return (w.segmentId == s1.id && (w.ratio - r1).abs() < 0.05) ||
-              (w.segmentId == s2.id && (w.ratio - r2).abs() < 0.05);
-        }).toList();
-
-        if (targetCount == 1) {
-          if (existingWelds.length > 1) {
-            // Удаляем лишний второй стык (сторона оборудования)
-            weldJoints.remove(existingWelds[1].id);
-          } else if (existingWelds.isEmpty) {
-            addWeldJoint(segmentId: s1.id, ratio: r1, weldType: updatedFit.weldType);
-          }
-        } else if (targetCount >= 2) {
-          if (existingWelds.length < 2) {
-            final hasW1 = existingWelds.any((w) => w.segmentId == s1.id);
-            final hasW2 = existingWelds.any((w) => w.segmentId == s2.id);
-            if (!hasW1) addWeldJoint(segmentId: s1.id, ratio: r1, weldType: updatedFit.weldType);
-            if (!hasW2) addWeldJoint(segmentId: s2.id, ratio: r2, weldType: updatedFit.weldType);
-          }
-        } else if (targetCount == 0) {
-          for (final w in existingWelds) {
-            weldJoints.remove(w.id);
-          }
-        }
-      }
-    } else if (updatedFit.fittingType == FittingType.directBranch) {
-      final conn = getConnectedSegments(nodeId);
-      if (conn.length == 3) {
-        final branchSeg = identifyBranchSegment(nodeId, conn);
-        final mainSegs = conn.where((s) => s.id != branchSeg?.id).toList();
-        final weldsToRemove = weldJoints.values.where((w) {
-          return mainSegs.any((s) {
-            final r = s.startNodeId == nodeId ? 0.0 : 1.0;
-            return w.segmentId == s.id && (w.ratio - r).abs() < 0.05;
-          });
-        }).map((w) => w.id).toList();
-        for (final id in weldsToRemove) {
-          weldJoints.remove(id);
-        }
-        if (branchSeg != null) {
-          final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
-          ensureWeldExists(branchSeg.id, r, WeldType.u18);
-        }
-      }
-    } else if (updatedFit.fittingType == FittingType.tee) {
-      final conn = getConnectedSegments(nodeId);
-      for (final s in conn) {
-        final r = s.startNodeId == nodeId ? 0.0 : 1.0;
-        ensureWeldExists(s.id, r, updatedFit.weldType);
-      }
-    }
-
     recalculateSpools();
+  }
+
+  /// Поворот фитинга вокруг оси трубы (на заданный угол в градусах)
+  Fitting? updateFittingRotation(String nodeId, double angleDeg) {
+    final fit = fittings[nodeId];
+    if (fit != null) {
+      final updated = fit.copyWith(rotationAngleDeg: angleDeg);
+      fittings[nodeId] = updated;
+      return updated;
+    }
+    return null;
+  }
+
+  /// Обновление точной строительной длины фитинга (мм) с пересчетом катушек
+  Fitting? updateFittingLength(String nodeId, double lengthMm) {
+    final fit = fittings[nodeId];
+    if (fit != null) {
+      final updated = fit.copyWith(
+        buildingLengthMm: lengthMm,
+        radiusMm: lengthMm / 2.0,
+      );
+      fittings[nodeId] = updated;
+      recalculateSpools();
+      return updated;
+    }
+    return null;
   }
 
   /// Обновление параметров арматуры с пересчетом катушек
   void updateValve(String valveId, Valve updatedValve) {
     valves[valveId] = updatedValve;
     recalculateSpools();
+  }
+
+  /// Обновление точной строительной длины арматуры (мм) с пересчетом катушек
+  Valve? updateValveLength(String valveId, double lengthMm) {
+    final v = valves[valveId];
+    if (v != null) {
+      final updated = v.copyWith(lengthMm: lengthMm);
+      valves[valveId] = updated;
+      recalculateSpools();
+      return updated;
+    }
+    return null;
   }
 
   /// Обновление параметров опоры
@@ -856,29 +879,63 @@ class PipingNetwork {
     return TopologyService.identifyBranchSegment(this, nodeId, connectedSegments);
   }
 
-  /// Синхронизация физических сварных швов для всех фасонных элементов сети (отводов, тройников, врезок, переходов)
-  void syncFittingWeldJoints() {
-    for (final entry in fittings.entries.toList()) {
+  /// Генерация технологических сварных стыков по ГОСТ 16037 для всех элементов сети
+  /// (арматура, переходы, отводы, тройники, врезки, фланцы, заглушки).
+  /// Метод идемпотентен: существующие стыки не дублируются.
+  int generateElementWeldJoints() {
+    int added = 0;
+
+    // 1. Арматура (Valves): 2 стыка С17 по краям строительной длины
+    for (final v in valves.values) {
+      final seg = segments[v.segmentId];
+      if (seg == null) continue;
+      final startNode = nodes[seg.startNodeId];
+      final endNode = nodes[seg.endNodeId];
+      if (startNode == null || endNode == null) continue;
+      final totalLen = seg.calculateLength(startNode, endNode);
+      final halfRatio = (v.lengthMm / 2.0) / (totalLen > 0 ? totalLen : 1.0);
+      final r1 = (v.ratio - halfRatio).clamp(0.0, 1.0);
+      final r2 = (v.ratio + halfRatio).clamp(0.0, 1.0);
+      if (ensureWeldExists(v.segmentId, r1, WeldType.c17) != null) added++;
+      if (ensureWeldExists(v.segmentId, r2, WeldType.c17) != null) added++;
+    }
+
+    // 2. Фасонные элементы (Fittings)
+    for (final entry in fittings.entries) {
       final nodeId = entry.key;
       final fit = entry.value;
       final connected = getConnectedSegments(nodeId);
-      if (connected.isEmpty) continue;
 
       switch (fit.fittingType) {
         case FittingType.elbow90:
         case FittingType.elbow45:
+          for (final seg in connected) {
+            if (isButtJoint(seg.id)) {
+              // Для стыка встык создаем ровно один общий шов на границе сопряжения отводов
+              final t1 = getElbowTangentMm(seg.startNodeId);
+              final t2 = getElbowTangentMm(seg.endNodeId);
+              final totalT = (t1 + t2) > 0 ? (t1 + t2) : 1.0;
+              final r = (t1 / totalT).clamp(0.0, 1.0);
+              if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
+            } else {
+              final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+              if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
+            }
+          }
+          break;
+
         case FittingType.reducerConcentric:
         case FittingType.reducerEccentric:
           for (final seg in connected) {
             final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
-            ensureWeldExists(seg.id, r, fit.weldType);
+            if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
           }
           break;
 
         case FittingType.tee:
           for (final seg in connected) {
             final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
-            ensureWeldExists(seg.id, r, fit.weldType);
+            if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
           }
           break;
 
@@ -886,28 +943,43 @@ class PipingNetwork {
           final branchSeg = identifyBranchSegment(nodeId, connected);
           if (branchSeg != null) {
             final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
-            ensureWeldExists(branchSeg.id, r, WeldType.u18);
+            if (ensureWeldExists(branchSeg.id, r, WeldType.u18) != null) added++;
           }
           break;
 
         case FittingType.cross:
           for (final seg in connected) {
             final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
-            ensureWeldExists(seg.id, r, fit.weldType);
+            if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
           }
           break;
 
         case FittingType.flange:
+          for (final seg in connected) {
+            final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
+            if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
+          }
           break;
 
         case FittingType.cap:
           for (final seg in connected) {
             final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
-            ensureWeldExists(seg.id, r, fit.weldType);
+            if (ensureWeldExists(seg.id, r, fit.weldType) != null) added++;
           }
           break;
       }
     }
+
+    if (added > 0) {
+      recalculateSpools();
+    }
+    return added;
+  }
+
+  /// Синхронизация физических сварных швов для всех фасонных элементов сети
+  /// (вызывает generateElementWeldJoints)
+  void syncFittingWeldJoints() {
+    generateElementWeldJoints();
   }
 
   /// Подключение ответвления к существующей трубе (Revit-like T-branching)
@@ -957,9 +1029,6 @@ class PipingNetwork {
         cutsMainPipe: false, // Магистраль не укорачивается!
       );
       fittings[midNode.id] = fit;
-
-      // 1 угловой шов У18 на ответвлении
-      addWeldJoint(segmentId: branchSegId, ratio: 0.0, weldType: WeldType.u18);
     } else {
       // Стандартный фасонный тройник (ГОСТ 17376)
       final isReducing = bDn != hostSegA.dn;
@@ -977,11 +1046,6 @@ class PipingNetwork {
         cutsMainPipe: true,
       );
       fittings[midNode.id] = fit;
-
-      // 3 стыковых шва С17
-      addWeldJoint(segmentId: hostSegA.id, ratio: 1.0, weldType: WeldType.c17);
-      addWeldJoint(segmentId: '${hostSegmentId}_b', ratio: 0.0, weldType: WeldType.c17);
-      addWeldJoint(segmentId: branchSegId, ratio: 0.0, weldType: WeldType.c17);
     }
 
     recalculateSpools();
@@ -1189,6 +1253,11 @@ class PipingNetwork {
             .replaceAll('{OUTER_DIAMETER}', dStr)
             .replaceAll('{MATERIAL}', seg.material)
             .replaceAll('{SYSTEM}', sysCode)
+            .replaceAll('{NAME}', seg.name ?? '')
+            .replaceAll('{TAG}', seg.name ?? '')
+            .replaceAll('{SERIAL}', seg.serialNumber ?? '')
+            .replaceAll('{SERIAL_NUMBER}', seg.serialNumber ?? '')
+            .replaceAll('{BATCH}', seg.serialNumber ?? '')
             .replaceAll('{ID}', seg.id);
 
         if (text.contains('{LENGTH}') || text.contains('{L}')) {
@@ -1209,6 +1278,10 @@ class PipingNetwork {
 
         text = text
             .replaceAll('{NAME}', v.name)
+            .replaceAll('{TAG}', v.name)
+            .replaceAll('{SERIAL}', v.serialNumber ?? '')
+            .replaceAll('{SERIAL_NUMBER}', v.serialNumber ?? '')
+            .replaceAll('{BATCH}', v.serialNumber ?? '')
             .replaceAll('{DN}', '${v.dn}')
             .replaceAll('{TYPE}', v.valveType.displayName)
             .replaceAll('{LENGTH}', '${v.lengthMm.round()}')
@@ -1232,6 +1305,10 @@ class PipingNetwork {
 
         text = text
             .replaceAll('{NAME}', fit.name ?? fit.fittingType.displayName)
+            .replaceAll('{TAG}', fit.name ?? fit.fittingType.displayName)
+            .replaceAll('{SERIAL}', fit.serialNumber ?? '')
+            .replaceAll('{SERIAL_NUMBER}', fit.serialNumber ?? '')
+            .replaceAll('{BATCH}', fit.serialNumber ?? '')
             .replaceAll('{TYPE}', fit.fittingType.displayName)
             .replaceAll('{STANDARD}', standard)
             .replaceAll('{MATERIAL}', material)
@@ -1284,6 +1361,10 @@ class PipingNetwork {
 
         text = text
             .replaceAll('{NAME}', eq.name)
+            .replaceAll('{TAG}', eq.name)
+            .replaceAll('{SERIAL}', eq.serialNumber ?? '')
+            .replaceAll('{SERIAL_NUMBER}', eq.serialNumber ?? '')
+            .replaceAll('{BATCH}', eq.serialNumber ?? '')
             .replaceAll('{TYPE}', eq.type.displayName)
             .replaceAll('{ID}', eq.id);
         break;
@@ -1389,14 +1470,15 @@ class PipingNetwork {
   }
 
   /// Автогенерация недостающих выносок для сегментов, арматуры и сварных стыков
-  /// с предотвращением наложения (Collision Avoidance) смещений текста
+  /// с предотвращением наложения (Collision Avoidance) смещений текста.
+  /// При передаче [targetTypes] генерируются выноски только для указанных типов.
   int generateMissingCallouts({
+    Set<CalloutTargetType>? targetTypes,
     double offsetX = 50.0,
     double offsetY = -50.0,
     double textHeight = 12.0,
     double margin = 8.0,
   }) {
-    syncFittingWeldJoints();
     int addedCount = 0;
     final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
     final step = textHeight + margin;
@@ -1424,88 +1506,117 @@ class PipingNetwork {
       return curY;
     }
 
-    for (final seg in segments.values) {
-      if (!existingTargetIds.contains(seg.id)) {
-        final id = 'callout_${_uuid.v4()}';
-        final resolvedY = resolveNonCollidingOffsetY(seg.id, offsetY);
-        callouts[id] = Callout(
-          id: id,
-          targetId: seg.id,
-          targetType: CalloutTargetType.segment,
-          screenOffsetX: offsetX,
-          screenOffsetY: resolvedY,
-          textHeight: textHeight,
-        );
-        existingTargetIds.add(seg.id);
-        addedCount++;
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.segment)) {
+      for (final seg in segments.values) {
+        if (!existingTargetIds.contains(seg.id)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(seg.id, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: seg.id,
+            targetType: CalloutTargetType.segment,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(seg.id);
+          addedCount++;
+        }
       }
     }
 
-    for (final valve in valves.values) {
-      if (!existingTargetIds.contains(valve.id)) {
-        final id = 'callout_${_uuid.v4()}';
-        final resolvedY = resolveNonCollidingOffsetY(valve.segmentId, offsetY);
-        callouts[id] = Callout(
-          id: id,
-          targetId: valve.id,
-          targetType: CalloutTargetType.valve,
-          screenOffsetX: offsetX,
-          screenOffsetY: resolvedY,
-          textHeight: textHeight,
-        );
-        existingTargetIds.add(valve.id);
-        addedCount++;
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.valve)) {
+      for (final valve in valves.values) {
+        if (!existingTargetIds.contains(valve.id)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(valve.segmentId, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: valve.id,
+            targetType: CalloutTargetType.valve,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(valve.id);
+          addedCount++;
+        }
       }
     }
 
-    for (final weld in weldJoints.values) {
-      if (!existingTargetIds.contains(weld.id)) {
-        final id = 'callout_${_uuid.v4()}';
-        final resolvedY = resolveNonCollidingOffsetY(weld.segmentId, offsetY);
-        callouts[id] = Callout(
-          id: id,
-          targetId: weld.id,
-          targetType: CalloutTargetType.weld,
-          screenOffsetX: offsetX,
-          screenOffsetY: resolvedY,
-          textHeight: textHeight,
-        );
-        existingTargetIds.add(weld.id);
-        addedCount++;
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.weld)) {
+      for (final weld in weldJoints.values) {
+        if (!existingTargetIds.contains(weld.id)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(weld.segmentId, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: weld.id,
+            targetType: CalloutTargetType.weld,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(weld.id);
+          addedCount++;
+        }
       }
     }
 
-    for (final fit in fittings.values) {
-      if (!existingTargetIds.contains(fit.id) && !existingTargetIds.contains(fit.nodeId)) {
-        final id = 'callout_${_uuid.v4()}';
-        final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
-        callouts[id] = Callout(
-          id: id,
-          targetId: fit.id,
-          targetType: CalloutTargetType.fitting,
-          screenOffsetX: offsetX,
-          screenOffsetY: resolvedY,
-          textHeight: textHeight,
-        );
-        existingTargetIds.add(fit.id);
-        addedCount++;
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.fitting)) {
+      for (final fit in fittings.values) {
+        if (!existingTargetIds.contains(fit.id) && !existingTargetIds.contains(fit.nodeId)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: fit.id,
+            targetType: CalloutTargetType.fitting,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(fit.id);
+          addedCount++;
+        }
       }
     }
 
-    for (final eq in equipments.values) {
-      if (!existingTargetIds.contains(eq.id)) {
-        final id = 'callout_${_uuid.v4()}';
-        final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
-        callouts[id] = Callout(
-          id: id,
-          targetId: eq.id,
-          targetType: CalloutTargetType.equipment,
-          screenOffsetX: offsetX,
-          screenOffsetY: resolvedY,
-          textHeight: textHeight,
-        );
-        existingTargetIds.add(eq.id);
-        addedCount++;
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.equipment)) {
+      for (final eq in equipments.values) {
+        if (!existingTargetIds.contains(eq.id)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: eq.id,
+            targetType: CalloutTargetType.equipment,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(eq.id);
+          addedCount++;
+        }
+      }
+    }
+
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.support)) {
+      for (final sup in supports.values) {
+        if (!existingTargetIds.contains(sup.id)) {
+          final id = 'callout_${_uuid.v4()}';
+          final resolvedY = resolveNonCollidingOffsetY(sup.segmentId, offsetY);
+          callouts[id] = Callout(
+            id: id,
+            targetId: sup.id,
+            targetType: CalloutTargetType.support,
+            screenOffsetX: offsetX,
+            screenOffsetY: resolvedY,
+            textHeight: textHeight,
+          );
+          existingTargetIds.add(sup.id);
+          addedCount++;
+        }
       }
     }
 

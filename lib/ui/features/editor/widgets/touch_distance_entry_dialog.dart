@@ -88,12 +88,14 @@ enum TouchDirectionPreset {
 class TouchDistanceEntryDialog extends StatefulWidget {
   final void Function(double lengthMm, {double? dirX, double? dirY, double? dirZ}) onCommit;
   final double? initialLength;
+  final double? suggestedButtJointLength;
   final TouchDirectionPreset initialDirection;
 
   const TouchDistanceEntryDialog({
     super.key,
     required this.onCommit,
     this.initialLength,
+    this.suggestedButtJointLength,
     this.initialDirection = TouchDirectionPreset.plusX,
   });
 
@@ -101,6 +103,7 @@ class TouchDistanceEntryDialog extends StatefulWidget {
     BuildContext context, {
     required void Function(double lengthMm, {double? dirX, double? dirY, double? dirZ}) onCommit,
     double? initialLength,
+    double? suggestedButtJointLength,
     TouchDirectionPreset initialDirection = TouchDirectionPreset.plusX,
   }) {
     return showDialog<void>(
@@ -108,6 +111,7 @@ class TouchDistanceEntryDialog extends StatefulWidget {
       builder: (ctx) => TouchDistanceEntryDialog(
         onCommit: onCommit,
         initialLength: initialLength,
+        suggestedButtJointLength: suggestedButtJointLength,
         initialDirection: initialDirection,
       ),
     );
@@ -222,18 +226,37 @@ class _TouchDistanceEntryDialogState extends State<TouchDistanceEntryDialog> {
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: [250, 500, 1000, 1500, 2000, 3000].map((len) {
-                  return ActionChip(
-                    label: Text('$len мм', style: const TextStyle(fontSize: 12)),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () {
-                      setState(() {
-                        _lengthController.text = '$len';
-                        _errorMessage = null;
-                      });
-                    },
-                  );
-                }).toList(),
+                children: [
+                  if (widget.suggestedButtJointLength != null && widget.suggestedButtJointLength! > 0)
+                    ActionChip(
+                      avatar: const Icon(Icons.link, size: 14, color: Colors.indigo),
+                      label: Text(
+                        'Встык (${widget.suggestedButtJointLength!.round()} мм)',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor: Colors.indigo.shade50,
+                      side: BorderSide(color: Colors.indigo.shade200),
+                      onPressed: () {
+                        setState(() {
+                          _lengthController.text = '${widget.suggestedButtJointLength!.round()}';
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
+                  ...[250, 500, 1000, 1500, 2000, 3000].map((len) {
+                    return ActionChip(
+                      label: Text('$len мм', style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        setState(() {
+                          _lengthController.text = '$len';
+                          _errorMessage = null;
+                        });
+                      },
+                    );
+                  }),
+                ],
               ),
               const SizedBox(height: 16),
               const Text(

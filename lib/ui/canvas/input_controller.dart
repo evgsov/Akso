@@ -179,8 +179,16 @@ class PipingInputController extends ChangeNotifier {
   double dimensionOffset = 35.0;
   Offset? currentCursorScreenPos;
 
+  // Фиксация углов 90° (Орто-трассировка и параллельный сдвиг)
+  bool isAngleLocked = true;
+  void toggleAngleLock() {
+    isAngleLocked = !isAngleLocked;
+    notifyListeners();
+  }
+
   // Режим перетаскивания и ручек (Grip Editing)
   bool isDraggingNode = false;
+  bool isDraggingSegment = false;
   bool isDraggingEquipment = false;
   bool isDraggingCallout = false;
   bool isDraggingValve = false;
@@ -188,6 +196,11 @@ class PipingInputController extends ChangeNotifier {
   bool isDraggingWeld = false;
   String? _potentialDragNodeId;
   Offset? _dragNodeStartScreenPos;
+  String? _potentialDragSegmentId;
+  Offset? _dragSegmentStartScreenPos;
+  Node3D? _dragSegmentStartWorldPos;
+  Node3D? _initialSegmentStartNode;
+  Node3D? _initialSegmentEndNode;
   String? _potentialDragEquipmentId;
   Offset? _dragEquipmentStartScreenPos;
   String? _potentialDragValveId;
@@ -333,6 +346,7 @@ class PipingInputController extends ChangeNotifier {
     dimensionEndNodeId = null;
     dimensionOffset = 35.0;
     isDraggingNode = false;
+    isDraggingSegment = false;
     isDraggingEquipment = false;
     isDraggingCallout = false;
     isDraggingValve = false;
@@ -340,6 +354,11 @@ class PipingInputController extends ChangeNotifier {
     isDraggingWeld = false;
     _potentialDragNodeId = null;
     _dragNodeStartScreenPos = null;
+    _potentialDragSegmentId = null;
+    _dragSegmentStartScreenPos = null;
+    _dragSegmentStartWorldPos = null;
+    _initialSegmentStartNode = null;
+    _initialSegmentEndNode = null;
     _potentialDragEquipmentId = null;
     _dragEquipmentStartScreenPos = null;
     _potentialDragValveId = null;
@@ -968,6 +987,15 @@ class PipingInputController extends ChangeNotifier {
             selectedDimensionIds.clear();
             selectedSegmentIds.add(hitSegId);
           }
+          _potentialDragSegmentId = hitSegId;
+          _dragSegmentStartScreenPos = screenPos;
+          _dragSegmentStartWorldPos = projector.unproject(screenPos, currentElevationZ);
+          isDraggingSegment = false;
+          final seg = network.segments[hitSegId];
+          if (seg != null) {
+            _initialSegmentStartNode = network.nodes[seg.startNodeId];
+            _initialSegmentEndNode = network.nodes[seg.endNodeId];
+          }
           notifyListeners();
           break;
         } else if (selectedEquipmentId != null) {
@@ -1424,6 +1452,13 @@ class PipingInputController extends ChangeNotifier {
       }
     }
 
+    // Проверка порога перетаскивания для сегментов (порог 6 px)
+    if (_potentialDragSegmentId != null && !isDraggingSegment && _dragSegmentStartScreenPos != null) {
+      if ((screenPos - _dragSegmentStartScreenPos!).distance > 6.0) {
+        isDraggingSegment = true;
+      }
+    }
+
     // Проверка порога перетаскивания для оборудования (порог 6 px)
     if (_potentialDragEquipmentId != null && !isDraggingEquipment && _dragEquipmentStartScreenPos != null) {
       if ((screenPos - _dragEquipmentStartScreenPos!).distance > 6.0) {
@@ -1457,6 +1492,46 @@ class PipingInputController extends ChangeNotifier {
       isCrossingSelection = screenPos.dx < boxSelectStart!.dx;
       notifyListeners();
       return;
+    }
+
+    if (isDraggingSegment && selectedSegmentId != null && _initialSegmentStartNode != null && _initialSegmentEndNode != null) {
+      final seg = network.segments[selectedSegmentId!];
+      if (seg != null) {
+        final currentWorld = projector.unproject(screenPos, currentElevationZ);
+        final startWorld = _dragSegmentStartWorldPos ?? currentWorld;
+        final rawDx = currentWorld.x - startWorld.x;
+        final rawDy = currentWorld.y - startWorld.y;
+        final rawDz = currentWorld.z - startWorld.z;
+        final s0 = _initialSegmentStartNode!;
+        final e0 = _initialSegmentEndNode!;
+        double shiftX = rawDx;
+        double shiftY = rawDy;
+        double shiftZ = rawDz;
+        if (isAngleLocked) {
+          final vx = e0.x - s0.x;
+          final vy = e0.y - s0.y;
+          final vz = e0.z - s0.z;
+          final segLen = math.sqrt(vx * vx + vy * vy + vz * vz);
+          if (segLen > 0.01) {
+            final ux = vx / segLen;
+            final uy = vy / segLen;
+            final uz = vz / segLen;
+            final dotParallel = rawDx * ux + rawDy * uy + rawDz * uz;
+            shiftX = rawDx - dotParallel * ux;
+            shiftY = rawDy - dotParallel * uy;
+            shiftZ = rawDz - dotParallel * uz;
+          }
+        }
+        if (isSnapEnabled) {
+          shiftX = (shiftX / 10.0).round() * 10.0;
+          shiftY = (shiftY / 10.0).round() * 10.0;
+          shiftZ = (shiftZ / 10.0).round() * 10.0;
+        }
+        network.moveNode(seg.startNodeId, s0.x + shiftX, s0.y + shiftY, s0.z + shiftZ);
+        network.moveNode(seg.endNodeId, e0.x + shiftX, e0.y + shiftY, e0.z + shiftZ);
+        notifyListeners();
+        return;
+      }
     }
 
     if (isDraggingNode && selectedNodeId != null) {
@@ -1572,6 +1647,7 @@ class PipingInputController extends ChangeNotifier {
 
   void _updateSnap(Offset screenPos) {
     if (isSnapEnabled) {
+      final effectiveAngleMode = isAngleLocked ? AngleSnapMode.ortho90 : angleSnapMode;
       currentSnapResult = snapEngine.findSnap(
         screenPos: screenPos,
         network: network,
@@ -1583,7 +1659,7 @@ class PipingInputController extends ChangeNotifier {
             (modifyBasePointWorld != null
                 ? Node3D(id: 'base_point', x: modifyBasePointWorld!.x, y: modifyBasePointWorld!.y, z: modifyBasePointWorld!.z)
                 : null),
-        angleMode: angleSnapMode,
+        angleMode: effectiveAngleMode,
         customAngleStepDegrees: customAngleDegrees,
       );
     } else {
@@ -1748,6 +1824,11 @@ class PipingInputController extends ChangeNotifier {
 
     _potentialDragNodeId = null;
     _dragNodeStartScreenPos = null;
+    _potentialDragSegmentId = null;
+    _dragSegmentStartScreenPos = null;
+    _dragSegmentStartWorldPos = null;
+    _initialSegmentStartNode = null;
+    _initialSegmentEndNode = null;
     _potentialDragEquipmentId = null;
     _dragEquipmentStartScreenPos = null;
     _potentialDragValveId = null;
@@ -1756,6 +1837,15 @@ class PipingInputController extends ChangeNotifier {
     _dragSupportStartScreenPos = null;
     _potentialDragWeldId = null;
     _dragWeldStartScreenPos = null;
+
+    if (isDraggingSegment) {
+      _checkAndMergeOpenNodes();
+      history.recordState(network);
+      isDraggingSegment = false;
+      notifyListeners();
+      return;
+    }
+    isDraggingSegment = false;
 
     if (isDraggingValve) {
       network.recalculateSpools();
@@ -2488,6 +2578,34 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Проверка, соединяет ли выбранный сегмент два отвода
+  bool get isSelectedSegmentElbowToElbow {
+    if (selectedSegmentId == null) return false;
+    return network.isElbowToElbowSegment(selectedSegmentId!);
+  }
+
+  /// Проверка, соединены ли отводы выбранного сегмента встык
+  bool get isSelectedSegmentButtJoint {
+    if (selectedSegmentId == null) return false;
+    return network.isButtJoint(selectedSegmentId!);
+  }
+
+  /// Рекомендуемая длина для стыковки встык (T1 + T2) для выбранного сегмента
+  double? get selectedSegmentButtJointLength {
+    if (selectedSegmentId == null) return null;
+    return network.getElbowToElbowTargetLength(selectedSegmentId!);
+  }
+
+  /// Схлопнуть зазор между отводами выбранного сегмента встык в 1 клик
+  void collapseSelectedSegmentToButtJoint() {
+    if (selectedSegmentId == null) return;
+    final changed = network.collapseElbowToElbow(selectedSegmentId!);
+    if (changed) {
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
   /// Изменение диаметра DN выбранного сегмента трубы
   void changeSelectedSegmentDn(int newDn) {
     if (selectedSegmentId == null || newDn <= 0) return;
@@ -2537,6 +2655,30 @@ class PipingInputController extends ChangeNotifier {
   void changeSelectedSegmentMaterial(String material) {
     if (selectedSegmentId == null) return;
     network.updateSegmentProperties(selectedSegmentId!, material: material);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение пользовательской маркировки/наименования выбранного сегмента трубы
+  void changeSelectedSegmentName(String? name) {
+    if (selectedSegmentId == null) return;
+    network.updateSegmentProperties(
+      selectedSegmentId!,
+      name: name,
+      clearName: name == null || name.trim().isEmpty,
+    );
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Изменение заводского номера / номера партии выбранного сегмента трубы
+  void changeSelectedSegmentSerialNumber(String? serialNumber) {
+    if (selectedSegmentId == null) return;
+    network.updateSegmentProperties(
+      selectedSegmentId!,
+      serialNumber: serialNumber,
+      clearSerialNumber: serialNumber == null || serialNumber.trim().isEmpty,
+    );
     history.recordState(network);
     notifyListeners();
   }
@@ -3170,14 +3312,64 @@ class PipingInputController extends ChangeNotifier {
   // Callouts (Умные выноски)
   // ==========================================
 
-  /// Генерация недостающих выносок для сегментов, арматуры и стыков
-  int generateMissingCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
-    final count = network.generateMissingCallouts(offsetX: offsetX, offsetY: offsetY);
+  /// Генерация технологических сварных стыков по ГОСТ 16037 для всех элементов сети
+  int generateElementWeldJoints() {
+    final count = network.generateElementWeldJoints();
     if (count > 0) {
       history.recordState(network);
       notifyListeners();
     }
     return count;
+  }
+
+  /// Генерация недостающих выносок для сегментов, арматуры и стыков
+  int generateMissingCallouts({
+    Set<CalloutTargetType>? targetTypes,
+    double offsetX = 50.0,
+    double offsetY = -50.0,
+  }) {
+    final count = network.generateMissingCallouts(
+      targetTypes: targetTypes,
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+    if (count > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return count;
+  }
+
+  /// Генерация выносок конкретно для элементов сети (арматура, фитинги, оборудование, опоры)
+  int generateElementCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+    return generateMissingCallouts(
+      targetTypes: const {
+        CalloutTargetType.valve,
+        CalloutTargetType.fitting,
+        CalloutTargetType.equipment,
+        CalloutTargetType.support,
+      },
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+  }
+
+  /// Генерация сварных стыков для элементов сети и создание выносок для них
+  Map<String, int> generateWeldsAndCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+    final weldsAdded = network.generateElementWeldJoints();
+    final calloutsAdded = network.generateMissingCallouts(
+      targetTypes: const {CalloutTargetType.weld},
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+    if (weldsAdded > 0 || calloutsAdded > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return {
+      'welds': weldsAdded,
+      'callouts': calloutsAdded,
+    };
   }
 
   /// Обновление выноски

@@ -106,10 +106,8 @@ void main() {
       expect(flange.pressurePn, equals(25));
       expect(flange.material, equals('12Х18Н10Т'));
 
-      // Должны появиться сварные швы по обе стороны
-      expect(network.weldJoints.length, greaterThanOrEqualTo(2));
-      final weld = network.weldJoints.values.first;
-      expect(weld.steelGrade, equals('12Х18Н10Т'));
+      // Сварные стыки больше не создаются автоматически при вставке фланца
+      expect(network.weldJoints.length, equals(0));
 
       // Катушки укорачиваются на строительную толщину фланцев
       final spoolA = network.spools.values.firstWhere((s) => s.segmentId == 'seg1_a');

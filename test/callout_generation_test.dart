@@ -47,9 +47,12 @@ void main() {
         name: 'Отвод 90° 80х4',
       );
 
+      // До вызова синхронизации/генерации сварных стыков нет (нет авто-стыков при добавлении)
+      expect(network.weldJoints.length, equals(0));
+
       network.syncFittingWeldJoints();
 
-      // Для отвода должно быть создано 2 шва: на seg1 в ratio 1.0 и на seg2 в ratio 0.0
+      // Для отвода должно быть сгенерировано 2 шва: на seg1 в ratio 1.0 и на seg2 в ratio 0.0
       expect(network.weldJoints.length, equals(2));
       final w1 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg1');
       final w2 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg2');
@@ -99,6 +102,9 @@ void main() {
         radiusMm: 150.0,
         name: 'Отвод 90° ГОСТ 17375',
       );
+
+      // Добавляем сварной стык вручную
+      network.addWeldJoint(segmentId: 'seg1', ratio: 0.7);
 
       // Добавляем аппарат
       network.addEquipment(const Equipment(

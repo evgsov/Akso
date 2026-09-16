@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../enums/fitting_type.dart';
 import '../enums/weld_type.dart';
 
@@ -49,6 +50,12 @@ class Fitting {
   /// Пользовательский радиус гиба (мм) для отвода
   final double? customRadiusMm;
 
+  /// Угол пространственного поворота детали вокруг оси трубы в градусах (0..360°)
+  final double rotationAngleDeg;
+
+  /// Заводской номер или номер партии/плавки детали
+  final String? serialNumber;
+
   const Fitting({
     required this.id,
     required this.nodeId,
@@ -69,6 +76,8 @@ class Fitting {
     this.buildingLengthMm,
     this.branchLengthMm,
     this.customRadiusMm,
+    this.rotationAngleDeg = 0.0,
+    this.serialNumber,
   });
 
   /// Отображаемое имя фитинга
@@ -76,6 +85,30 @@ class Fitting {
 
   /// Эффективный радиус гиба с учетом переопределения
   double get effectiveRadiusMm => customRadiusMm ?? radiusMm;
+
+  /// Эффективная строительная длина L (мм) с учетом типа и диаметров
+  double get effectiveBuildingLengthMm {
+    if (buildingLengthMm != null && buildingLengthMm! > 0) {
+      return buildingLengthMm!;
+    }
+    switch (fittingType) {
+      case FittingType.reducerConcentric:
+      case FittingType.reducerEccentric:
+        return math.max(80.0, dn * 1.5);
+      case FittingType.tee:
+        return math.max(100.0, dn * 2.0);
+      case FittingType.cross:
+        return math.max(120.0, dn * 2.2);
+      case FittingType.flange:
+        return isFlangePair ? 32.0 : 16.0;
+      case FittingType.cap:
+        return math.max(40.0, dn * 0.4);
+      case FittingType.elbow90:
+      case FittingType.elbow45:
+      case FittingType.directBranch:
+        return 0.0;
+    }
+  }
 
   /// Расчетное количество сварных стыков
   int get effectiveWeldCount {
@@ -120,6 +153,9 @@ class Fitting {
     double? buildingLengthMm,
     double? branchLengthMm,
     double? customRadiusMm,
+    double? rotationAngleDeg,
+    String? serialNumber,
+    bool clearSerialNumber = false,
   }) {
     return Fitting(
       id: id ?? this.id,
@@ -141,6 +177,8 @@ class Fitting {
       buildingLengthMm: buildingLengthMm ?? this.buildingLengthMm,
       branchLengthMm: branchLengthMm ?? this.branchLengthMm,
       customRadiusMm: customRadiusMm ?? this.customRadiusMm,
+      rotationAngleDeg: rotationAngleDeg ?? this.rotationAngleDeg,
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
 
@@ -164,6 +202,8 @@ class Fitting {
         if (buildingLengthMm != null) 'buildingLengthMm': buildingLengthMm,
         if (branchLengthMm != null) 'branchLengthMm': branchLengthMm,
         if (customRadiusMm != null) 'customRadiusMm': customRadiusMm,
+        if (rotationAngleDeg != 0.0) 'rotationAngleDeg': rotationAngleDeg,
+        if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
   factory Fitting.fromJson(Map<String, dynamic> json) {
@@ -194,6 +234,8 @@ class Fitting {
       buildingLengthMm: (json['buildingLengthMm'] as num?)?.toDouble(),
       branchLengthMm: (json['branchLengthMm'] as num?)?.toDouble(),
       customRadiusMm: (json['customRadiusMm'] as num?)?.toDouble(),
+      rotationAngleDeg: (json['rotationAngleDeg'] as num?)?.toDouble() ?? 0.0,
+      serialNumber: json['serialNumber'] as String?,
     );
   }
 }

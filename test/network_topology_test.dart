@@ -83,9 +83,9 @@ void main() {
       );
 
       expect(valve.valveType, ValveType.gateValve);
-      // Автоматически создано 2 сварных стыка (до и после задвижки)
+      // Сварные стыки не создаются автоматически (добавляются пользователем)
       final segWelds = network.weldJoints.values.where((w) => w.segmentId == 'seg2').toList();
-      expect(segWelds.length, 2);
+      expect(segWelds.length, 0);
 
       // Катушек на участке теперь 2 (до задвижки и после)
       final spools = network.spools.values.where((s) => s.segmentId == 'seg2').toList();
@@ -138,11 +138,11 @@ void main() {
       expect(network.segments['seg2_a']!.calculateLength(network.nodes['n2']!, midNode), closeTo(1200.0, 0.1));
       expect(network.segments['seg2_b']!.calculateLength(midNode, network.nodes['n3']!), closeTo(1800.0, 0.1));
 
-      // Проверяем сварные стыки (появилось 2 стыка С17)
+      // Проверяем сварные стыки (больше не создаются автоматически)
       final weldsA = network.weldJoints.values.where((w) => w.segmentId == 'seg2_a').toList();
       final weldsB = network.weldJoints.values.where((w) => w.segmentId == 'seg2_b').toList();
-      expect(weldsA.length, 1);
-      expect(weldsB.length, 1);
+      expect(weldsA.length, 0);
+      expect(weldsB.length, 0);
     });
 
     test('Генерация ID сущностей использует UUIDv4 вместо миллисекунд', () {

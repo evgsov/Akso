@@ -206,74 +206,171 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     );
   }
 
-  Widget _buildToolbar(BuildContext context) {
-    return Row(
-      children: [
-        FilledButton.icon(
-          onPressed: () {
-            final added = widget.controller.generateMissingCallouts();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  added > 0
-                      ? 'Создано $added новых выносок'
-                      : 'Все объекты уже имеют выноски',
-                ),
-                duration: const Duration(seconds: 2),
+  Widget _buildGenerateAllButton(BuildContext context) {
+    return Tooltip(
+      message: 'Сгенерировать все недостающие выноски проекта',
+      child: FilledButton.icon(
+        onPressed: () {
+          final added = widget.controller.generateMissingCallouts();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                added > 0
+                    ? 'Создано $added новых выносок'
+                    : 'Все объекты уже имеют выноски',
               ),
-            );
-          },
-          icon: const Icon(Icons.auto_awesome, size: 18),
-          label: const Text('Сгенерировать недостающие'),
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.indigo,
-          ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        icon: const Icon(Icons.auto_awesome, size: 18),
+        label: const Text('Сгенерировать недостающие'),
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.indigo,
         ),
-        const SizedBox(width: 16),
-        // Фильтр по типам
-        DropdownButton<CalloutTargetType?>(
-          value: _selectedFilterType,
-          hint: const Text('Все типы'),
-          underline: const SizedBox(),
-          items: [
-            const DropdownMenuItem(
-              value: null,
-              child: Text('Все типы'),
-            ),
-            ...CalloutTargetType.values.map(
-              (type) => DropdownMenuItem(
-                value: type,
-                child: Text(type.displayName),
-              ),
-            ),
-          ],
-          onChanged: (val) {
-            setState(() {
-              _selectedFilterType = val;
-            });
-          },
+      ),
+    );
+  }
+
+  Widget _buildWeldsButton(BuildContext context) {
+    return Tooltip(
+      message: 'Сгенерировать технологические стыки на элементах и выноски для них',
+      child: FilledButton.tonalIcon(
+        onPressed: () {
+          final res = widget.controller.generateWeldsAndCallouts();
+          final welds = res['welds'] ?? 0;
+          final callouts = res['callouts'] ?? 0;
+          String msg;
+          if (welds > 0 && callouts > 0) {
+            msg = 'Сгенерировано стыков: $welds, выносок: $callouts';
+          } else if (callouts > 0) {
+            msg = 'Создано $callouts выносок для стыков';
+          } else if (welds > 0) {
+            msg = 'Сгенерировано $welds сварных стыков';
+          } else {
+            msg = 'Все стыки и их выноски уже созданы';
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+          );
+        },
+        icon: const Icon(Icons.adjust, size: 18),
+        label: const Text('Стыки'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
-        const SizedBox(width: 16),
-        // Поиск
-        Expanded(
-          child: TextField(
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Поиск по тексту или ID объекта...',
-              prefixIcon: const Icon(Icons.search, size: 18),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+
+  Widget _buildElementsButton(BuildContext context) {
+    return Tooltip(
+      message: 'Сгенерировать выноски для арматуры, деталей и оборудования',
+      child: FilledButton.tonalIcon(
+        onPressed: () {
+          final added = widget.controller.generateElementCallouts();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                added > 0
+                    ? 'Создано $added выносок для элементов'
+                    : 'Все элементы уже имеют выноски',
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              duration: const Duration(seconds: 2),
             ),
-            onChanged: (val) {
-              setState(() {
-                _searchQuery = val;
-              });
-            },
+          );
+        },
+        icon: const Icon(Icons.category_outlined, size: 18),
+        label: const Text('Элементы'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    return DropdownButton<CalloutTargetType?>(
+      value: _selectedFilterType,
+      hint: const Text('Все типы'),
+      underline: const SizedBox(),
+      items: [
+        const DropdownMenuItem(
+          value: null,
+          child: Text('Все типы'),
+        ),
+        ...CalloutTargetType.values.map(
+          (type) => DropdownMenuItem(
+            value: type,
+            child: Text(type.displayName),
           ),
         ),
       ],
+      onChanged: (val) {
+        setState(() {
+          _selectedFilterType = val;
+        });
+      },
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Поиск по тексту или ID объекта...',
+        prefixIcon: const Icon(Icons.search, size: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      ),
+      onChanged: (val) {
+        setState(() {
+          _searchQuery = val;
+        });
+      },
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 850;
+        if (isNarrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _buildGenerateAllButton(context),
+                  _buildWeldsButton(context),
+                  _buildElementsButton(context),
+                  _buildFilterDropdown(),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _buildSearchField(),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            _buildGenerateAllButton(context),
+            const SizedBox(width: 8),
+            _buildWeldsButton(context),
+            const SizedBox(width: 8),
+            _buildElementsButton(context),
+            const SizedBox(width: 12),
+            _buildFilterDropdown(),
+            const SizedBox(width: 12),
+            Expanded(child: _buildSearchField()),
+          ],
+        );
+      },
     );
   }
 
@@ -778,6 +875,10 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         .replaceAll('{STAMP}', 'СВ-01')
         .replaceAll('{TYPE}', 'Задвижка')
         .replaceAll('{NAME}', 'Задвижка 30с41нж')
+        .replaceAll('{TAG}', 'Т1-1')
+        .replaceAll('{SERIAL}', '48219')
+        .replaceAll('{SERIAL_NUMBER}', '48219')
+        .replaceAll('{BATCH}', 'ПЛ-530')
         .replaceAll('{LENGTH}', '2400')
         .replaceAll('{L}', '2400')
         .replaceAll('{STEEL}', 'Сталь 20')
@@ -792,6 +893,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           '{WALL}': 'Толщина стенки (напр. 4.0)',
           '{D_OUT}': 'Наружный диаметр (напр. 89)',
           '{MATERIAL}': 'Марка стали (напр. Сталь 20)',
+          '{NAME}': 'Маркировка / наименование (напр. Т1-1)',
+          '{SERIAL}': 'Зав. № / партия (актуально Ду≥500)',
           '{SYSTEM}': 'Код системы (напр. В1)',
           '{LENGTH}': 'Длина трубы (мм)',
           '{ID}': 'Идентификатор трубы',
@@ -799,6 +902,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.valve:
         return {
           '{NAME}': 'Наименование арматуры',
+          '{SERIAL}': 'Заводской номер арматуры',
           '{DN}': 'Диаметр условный',
           '{TYPE}': 'Тип арматуры (задвижка/кран/клапан)',
           '{LENGTH}': 'Строительная длина (мм)',
@@ -816,6 +920,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.fitting:
         return {
           '{NAME}': 'Наименование детали',
+          '{SERIAL}': 'Зав. № / партия детали',
           '{TYPE}': 'Тип фитинга (отвод/тройник/переход)',
           '{STANDARD}': 'Стандарт ГОСТ',
           '{MATERIAL}': 'Материал детали',
@@ -825,6 +930,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.equipment:
         return {
           '{NAME}': 'Наименование оборудования',
+          '{SERIAL}': 'Заводской номер оборудования',
           '{TYPE}': 'Тип (насос/бак/котел)',
           '{ID}': 'Идентификатор',
         };

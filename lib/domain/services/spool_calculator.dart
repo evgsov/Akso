@@ -133,17 +133,19 @@ class SpoolCalculator {
 
         if (segWelds.isEmpty && segValves.isEmpty) {
           final cutLen = math.max(0.0, totalLen - startDeduction - endDeduction);
-          final spoolId = 'spool_${seg.id}_1';
-          network.spools[spoolId] = PipeSpool(
-            id: spoolId,
-            segmentId: seg.id,
-            number: 'К-$spoolCounter',
-            cutLengthMm: cutLen,
-            dn: seg.dn,
-            wallThickness: seg.wallThicknessMm,
-            material: seg.material,
-          );
-          spoolCounter++;
+          if (cutLen > 1.0) {
+            final spoolId = 'spool_${seg.id}_1';
+            network.spools[spoolId] = PipeSpool(
+              id: spoolId,
+              segmentId: seg.id,
+              number: 'К-$spoolCounter',
+              cutLengthMm: cutLen,
+              dn: seg.dn,
+              wallThickness: seg.wallThicknessMm,
+              material: seg.material,
+            );
+            spoolCounter++;
+          }
         } else {
           spoolCounter = _generateSubSpoolsForSingle(
             network: network,
@@ -183,6 +185,12 @@ class SpoolCalculator {
     if (fit.fittingType == FittingType.directBranch) return 0.0;
     if (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0) {
       return fit.buildingLengthMm! / 2.0;
+    }
+    if (fit.fittingType == FittingType.reducerConcentric || fit.fittingType == FittingType.reducerEccentric) {
+      return fit.effectiveBuildingLengthMm / 2.0;
+    }
+    if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
+      return network.getElbowTangentMm(nodeId);
     }
     return fit.effectiveRadiusMm;
   }

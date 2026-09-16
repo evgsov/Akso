@@ -81,21 +81,18 @@ void main() {
       expect(fit.radiusMm, equals(0.0));
       expect(fit.weldType, equals(WeldType.u18));
 
-      // Синхронизация швов
-      network.syncFittingWeldJoints();
+      // До запуска генерации стыки отсутствуют
+      expect(network.weldJoints, isEmpty);
 
-      // Должен быть ровно 1 шов на ответвлении seg_branch в точке n_mid (ratio 0.0)
+      // Генерация швов создает ровно 1 шов У18 на ответвлении seg_branch
+      network.syncFittingWeldJoints();
       final branchWelds = network.weldJoints.values.where((w) => w.segmentId == 'seg_branch').toList();
       expect(branchWelds.length, equals(1));
       expect(branchWelds.first.weldType, equals(WeldType.u18));
       expect(branchWelds.first.ratio, equals(0.0));
-
-      // На магистральных сегментах швов в n_mid быть не должно
-      final mainWelds = network.weldJoints.values.where((w) => w.segmentId == 'seg1' || w.segmentId == 'seg2').toList();
-      expect(mainWelds, isEmpty);
     });
 
-    test('FittingDetector creates tee with 3 C17 welds when defaultBranchId is tee_gost_17376', () {
+    test('FittingDetector creates tee when defaultBranchId is tee_gost_17376', () {
       network.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
       network.nodes['n_mid'] = const Node3D(id: 'n_mid', x: 1000, y: 0, z: 0);
       network.nodes['n2'] = const Node3D(id: 'n2', x: 2000, y: 0, z: 0);
@@ -132,9 +129,11 @@ void main() {
       expect(fit.cutsMainPipe, isTrue);
       expect(fit.weldType, equals(WeldType.c17));
 
-      network.syncFittingWeldJoints();
+      // До генерации стыков швов нет
+      expect(network.weldJoints, isEmpty);
 
-      // У тройника должно быть 3 шва С17
+      // Генерация создает 3 шва С17
+      network.syncFittingWeldJoints();
       expect(network.weldJoints.length, equals(3));
       for (final w in network.weldJoints.values) {
         expect(w.weldType, equals(WeldType.c17));

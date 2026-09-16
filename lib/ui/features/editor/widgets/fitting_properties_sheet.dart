@@ -166,6 +166,40 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
           ),
           const SizedBox(height: 14),
 
+          // 0. Наименование детали
+          TextFormField(
+            initialValue: fit.name ?? '',
+            decoration: const InputDecoration(
+              labelText: 'Наименование детали',
+              hintText: 'напр. Отвод 90-159х4.5, Тройник Т-1',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            onFieldSubmitted: (v) {
+              _update(fit.copyWith(name: v.trim().isEmpty ? null : v.trim()));
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Заводской № / Номер партии
+          TextFormField(
+            initialValue: fit.serialNumber ?? '',
+            decoration: const InputDecoration(
+              labelText: 'Заводской № / Партия детали',
+              hintText: 'напр. ПЛ-8492, № 12',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            onFieldSubmitted: (v) {
+              final text = v.trim();
+              _update(fit.copyWith(
+                serialNumber: text.isEmpty ? null : text,
+                clearSerialNumber: text.isEmpty,
+              ));
+            },
+          ),
+          const SizedBox(height: 12),
+
           // 1. Выбор марки стали
           DropdownButtonFormField<String>(
             initialValue: fit.material,
@@ -414,6 +448,18 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
                 final l = double.tryParse(v);
                 if (l != null) _update(fit.copyWith(buildingLengthMm: l, radiusMm: l / 2.0));
               },
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.rotate_right),
+                label: Text('Поворот вокруг оси: ${fit.rotationAngleDeg.toStringAsFixed(0)}° (+90°)'),
+                onPressed: () {
+                  final newAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
+                  _update(fit.copyWith(rotationAngleDeg: newAngle));
+                },
+              ),
             ),
           ],
 

@@ -23,6 +23,12 @@ class PipeSegment {
   /// Марка стали / материал трубы (например, "Сталь 20", "09Г2С", "12Х18Н10Т", "ППУ-ПЭ")
   final String material;
 
+  /// Пользовательское наименование / маркировка участка трубы (например, "Т1-1")
+  final String? name;
+
+  /// Заводской номер трубы или номер партии/плавки (актуально для тех. трубопроводов и от Ду500)
+  final String? serialNumber;
+
   const PipeSegment({
     required this.id,
     required this.startNodeId,
@@ -33,6 +39,8 @@ class PipeSegment {
     this.wallThicknessMm = 3.5,
     this.slope = 0.0,
     this.material = 'Сталь 20',
+    this.name,
+    this.serialNumber,
   }) : outerDiameterMm = outerDiameterMm ??
             (dn == 15
                 ? 21.3
@@ -136,6 +144,10 @@ class PipeSegment {
     double? wallThicknessMm,
     double? slope,
     String? material,
+    String? name,
+    String? serialNumber,
+    bool clearName = false,
+    bool clearSerialNumber = false,
   }) {
     return PipeSegment(
       id: id ?? this.id,
@@ -148,6 +160,8 @@ class PipeSegment {
       wallThicknessMm: wallThicknessMm ?? this.wallThicknessMm,
       slope: slope ?? this.slope,
       material: material ?? this.material,
+      name: clearName ? null : (name ?? this.name),
+      serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
 
@@ -161,6 +175,8 @@ class PipeSegment {
         'wallThicknessMm': wallThicknessMm,
         'slope': slope,
         'material': material,
+        if (name != null) 'name': name,
+        if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
   factory PipeSegment.fromJson(Map<String, dynamic> json) => PipeSegment(
@@ -173,5 +189,7 @@ class PipeSegment {
         wallThicknessMm: (json['wallThicknessMm'] as num?)?.toDouble() ?? 3.5,
         slope: (json['slope'] as num?)?.toDouble() ?? 0.0,
         material: json['material'] as String? ?? 'Сталь 20',
+        name: json['name'] as String?,
+        serialNumber: json['serialNumber'] as String?,
       );
 }

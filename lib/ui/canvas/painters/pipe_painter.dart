@@ -4,8 +4,10 @@ import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/projection_type.dart';
 import '../../../domain/models/fitting.dart';
+import '../../../domain/models/node_3d.dart';
 import '../../../domain/models/pipe_segment.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/enums/valve_type.dart';
 import '../smart_callout.dart';
 import 'solid_3d_engine.dart';
 
@@ -119,13 +121,25 @@ class PipePainter {
         seg: seg,
       );
 
+      final subsegments = calcPipeDrawableSubsegments(
+        drawP1: drawP1,
+        drawP2: drawP2,
+        startNode: start,
+        endNode: end,
+        seg: seg,
+        network: network,
+        projector: projector,
+      );
+
       // Свечение/выделение, если сегмент выбран
       if (isSelected) {
         final highlightPaint = Paint()
           ..color = Colors.amber.withValues(alpha: 0.45)
           ..strokeWidth = strokeWidth + 8.0
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(drawP1, drawP2, highlightPaint);
+        for (final (subStart, subEnd) in subsegments) {
+          canvas.drawLine(subStart, subEnd, highlightPaint);
+        }
 
         // Индикатор длины и диаметра выбранной трубы
         final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
@@ -161,7 +175,9 @@ class PipePainter {
         }
       }
 
-      canvas.drawLine(drawP1, drawP2, pipePaint);
+      for (final (subStart, subEnd) in subsegments) {
+        canvas.drawLine(subStart, subEnd, pipePaint);
+      }
 
       // В 3D-орбите добавляем объемный блик по центру трубы (только в каркасном режиме)
       if (!isVolumeMode && projector.projectionType == ProjectionType.orbit3d && strokeWidth > 3.0) {
@@ -169,7 +185,9 @@ class PipePainter {
           ..color = Colors.white.withValues(alpha: 0.35)
           ..strokeWidth = strokeWidth * 0.35
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(drawP1, drawP2, sheenPaint);
+        for (final (subStart, subEnd) in subsegments) {
+          canvas.drawLine(subStart, subEnd, sheenPaint);
+        }
       }
 
       // Уклон трубы
@@ -193,6 +211,122 @@ class PipePainter {
         );
       }
     }
+  }
+
+  /// Вычисляет подотрезки трубы между фитингами с вырезанием проходной арматуры
+  static List<(Offset, Offset)> calcPipeDrawableSubsegments({
+    required Offset drawP1,
+    required Offset drawP2,
+    required Node3D startNode,
+    required Node3D endNode,
+    required PipeSegment seg,
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+  }) {
+    final segValves = network.valves.values
+        .where((v) => v.segmentId == seg.id && v.valveType.isInline)
+        .toList();
+    if (segValves.isEmpty) {
+      return [(drawP1, drawP2)];
+    }
+
+    final totalLen = startNode.distanceTo(endNode);
+    if (totalLen < 1e-4) {
+      return [(drawP1, drawP2)];
+    }
+
+    final dx = drawP2.dx - drawP1.dx;
+    final dy = drawP2.dy - drawP1.dy;
+    final dScreenSq = dx * dx + dy * dy;
+    if (dScreenSq < 0.01) {
+      return [(drawP1, drawP2)];
+    }
+
+    // Собираем интервалы вырезания арматуры в 3D (по расстоянию от startNode в мм)
+    final cutIntervals = <(double, double)>[];
+    for (final v in segValves) {
+      final cDist = v.ratio * totalLen;
+      final halfL = math.max(12.0, v.lengthMm / 2.0);
+      final dIn = math.max(0.0, cDist - halfL);
+      final dOut = math.min(totalLen, cDist + halfL);
+      if (dOut > dIn + 0.1) {
+        cutIntervals.add((dIn, dOut));
+      }
+    }
+
+    if (cutIntervals.isEmpty) {
+      return [(drawP1, drawP2)];
+    }
+
+    cutIntervals.sort((a, b) => a.$1.compareTo(b.$1));
+
+    final uX = (endNode.x - startNode.x) / totalLen;
+    final uY = (endNode.y - startNode.y) / totalLen;
+    final uZ = (endNode.z - startNode.z) / totalLen;
+
+    final screenCutIntervals = <(double, double)>[];
+    for (final (dIn, dOut) in cutIntervals) {
+      final nodeIn = Node3D(
+        id: '',
+        x: startNode.x + uX * dIn,
+        y: startNode.y + uY * dIn,
+        z: startNode.z + uZ * dIn,
+      );
+      final nodeOut = Node3D(
+        id: '',
+        x: startNode.x + uX * dOut,
+        y: startNode.y + uY * dOut,
+        z: startNode.z + uZ * dOut,
+      );
+
+      final pIn = projector.project(nodeIn);
+      final pOut = projector.project(nodeOut);
+
+      final tIn = (((pIn.dx - drawP1.dx) * dx + (pIn.dy - drawP1.dy) * dy) / dScreenSq).clamp(0.0, 1.0);
+      final tOut = (((pOut.dx - drawP1.dx) * dx + (pOut.dy - drawP1.dy) * dy) / dScreenSq).clamp(0.0, 1.0);
+
+      final tStart = math.min(tIn, tOut);
+      final tEnd = math.max(tIn, tOut);
+      if (tEnd > tStart + 0.001) {
+        screenCutIntervals.add((tStart, tEnd));
+      }
+    }
+
+    if (screenCutIntervals.isEmpty) {
+      return [(drawP1, drawP2)];
+    }
+
+    final mergedCuts = <(double, double)>[];
+    var currentMerged = screenCutIntervals.first;
+    for (int i = 1; i < screenCutIntervals.length; i++) {
+      final next = screenCutIntervals[i];
+      if (next.$1 <= currentMerged.$2) {
+        currentMerged = (currentMerged.$1, math.max(currentMerged.$2, next.$2));
+      } else {
+        mergedCuts.add(currentMerged);
+        currentMerged = next;
+      }
+    }
+    mergedCuts.add(currentMerged);
+
+    final result = <(Offset, Offset)>[];
+    var tCurr = 0.0;
+
+    for (final (cutStart, cutEnd) in mergedCuts) {
+      if (cutStart > tCurr + 0.002) {
+        final pStart = Offset(drawP1.dx + dx * tCurr, drawP1.dy + dy * tCurr);
+        final pEnd = Offset(drawP1.dx + dx * cutStart, drawP1.dy + dy * cutStart);
+        result.add((pStart, pEnd));
+      }
+      tCurr = math.max(tCurr, cutEnd);
+    }
+
+    if (tCurr < 0.998) {
+      final pStart = Offset(drawP1.dx + dx * tCurr, drawP1.dy + dy * tCurr);
+      result.add((pStart, drawP2));
+    }
+
+    return result.isEmpty ? [(drawP1, drawP2)] : result;
   }
 
   static double calcStrokeWidth(int dn) {
@@ -231,13 +365,25 @@ class PipePainter {
 
     if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
       final t3d = calcElbowTangentLength(network, nodeId, fit);
-      final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
-      final physicalPx = screenDist * frac3d;
-      // Обеспечиваем гарантированную читаемость отвода на экране (минимум 15px),
-      // но не более 42% длины сегмента, чтобы не пересекать середину трубы
-      const minScreenElbow = 15.0;
-      const maxFrac = 0.42;
-      trimPx = math.min(screenDist * maxFrac, math.max(physicalPx, minScreenElbow));
+      if (network.isElbowToElbowSegment(seg.id)) {
+        final targetLen = network.getElbowToElbowTargetLength(seg.id) ?? (t3d * 2.0);
+        final otherT3d = network.getElbowTangentMm(otherNodeId);
+        if (dist3d <= targetLen + 1.0) {
+          // Стык встык: точка обрезки трубы находится строго в точке контакта отводов
+          final sumT = t3d + otherT3d;
+          final ratio = sumT > 0 ? (t3d / sumT).clamp(0.0, 1.0) : 0.5;
+          trimPx = screenDist * ratio;
+        } else {
+          // Сегмент длиннее стыка встык: честное плечо t3d
+          final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
+          trimPx = screenDist * frac3d;
+        }
+      } else {
+        // Обычный отвод: жесткое плечо t3d
+        final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
+        final physicalPx = screenDist * frac3d;
+        trimPx = math.min(screenDist * 0.95, physicalPx);
+      }
     } else if (fit.fittingType == FittingType.tee) {
       if (fit.cutsMainPipe) {
         // Тройник врезан в разрыв трубы (ГОСТ 17376) — все 3 патрубка имеют длину
@@ -263,10 +409,12 @@ class PipePainter {
       }
     } else if (fit.fittingType == FittingType.reducerConcentric ||
         fit.fittingType == FittingType.reducerEccentric) {
-      final arm3d = fit.dn * 0.75;
+      final arm3d = fit.effectiveBuildingLengthMm / 2.0;
       final frac3d = dist3d > 0 ? (arm3d / dist3d) : 0.0;
       final physicalPx = screenDist * frac3d;
-      trimPx = math.max(physicalPx, math.min(12.0, screenDist * 0.35));
+      const minScreen = 12.0;
+      final maxTrim = screenDist * 0.45;
+      trimPx = math.min(maxTrim, math.max(physicalPx, math.min(minScreen, maxTrim)));
     } else if (fit.fittingType == FittingType.flange) {
       trimPx = math.min(8.0, screenDist * 0.25);
     }
@@ -276,36 +424,7 @@ class PipePainter {
   }
 
   static double calcElbowTangentLength(PipingNetwork network, String nodeId, Fitting fit) {
-    final node = network.nodes[nodeId];
-    if (node == null) return 0.0;
-    final conn = network.getConnectedSegments(nodeId);
-    if (conn.length != 2) return 0.0;
-
-    final s1 = conn[0];
-    final s2 = conn[1];
-    final n1 = network.nodes[s1.startNodeId == nodeId ? s1.endNodeId : s1.startNodeId];
-    final n2 = network.nodes[s2.startNodeId == nodeId ? s2.endNodeId : s2.startNodeId];
-    if (n1 == null || n2 == null) return 0.0;
-
-    final v1x = n1.x - node.x;
-    final v1y = n1.y - node.y;
-    final v1z = n1.z - node.z;
-    final len1 = math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
-
-    final v2x = n2.x - node.x;
-    final v2y = n2.y - node.y;
-    final v2z = n2.z - node.z;
-    final len2 = math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
-
-    if (len1 <= 0 || len2 <= 0) return 0.0;
-
-    final dot = ((v1x * v2x + v1y * v2y + v1z * v2z) / (len1 * len2)).clamp(-1.0, 1.0);
-    final bendAngleRad = math.pi - math.acos(dot);
-    if (bendAngleRad <= 0.05) return 0.0;
-
-    final radMm = fit.effectiveRadiusMm;
-    final t = radMm * math.tan(bendAngleRad / 2.0);
-    return t.clamp(0.0, math.min(len1, len2) * 0.45);
+    return network.getElbowTangentMm(nodeId);
   }
 
   static bool isTeeBranchSegment(PipingNetwork network, String nodeId, String segmentId) {

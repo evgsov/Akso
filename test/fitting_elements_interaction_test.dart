@@ -22,7 +22,7 @@ void main() {
       network.recalculateSpools();
     });
 
-    test('Фланец к оборудованию (toEquipment) генерирует ровно 1 сварной стык со стороны трубы', () {
+    test('Фланец к оборудованию (toEquipment) не создает автоматических стыков', () {
       final initialWelds = network.weldJoints.length;
       expect(initialWelds, 0);
 
@@ -38,14 +38,11 @@ void main() {
       expect(flange.effectiveWeldCount, 1);
       expect(flange.isFlangePair, false);
 
-      // Проверяем, что добавлен ровно 1 стык
-      expect(network.weldJoints.length, 1);
-      final weld = network.weldJoints.values.first;
-      expect(weld.segmentId, 'seg1_a');
-      expect(weld.ratio, 1.0);
+      // Проверяем, что стыки не создаются автоматически
+      expect(network.weldJoints.length, 0);
     });
 
-    test('Межтрубное фланцевое соединение (pipeToPipe) генерирует 2 сварных стыка', () {
+    test('Межтрубное фланцевое соединение (pipeToPipe) не создает автоматических стыков', () {
       final flange = network.insertFlange(
         segmentId: 'seg1',
         ratio: 0.5,
@@ -58,15 +55,11 @@ void main() {
       expect(flange.effectiveWeldCount, 2);
       expect(flange.isFlangePair, true);
 
-      // Проверяем, что добавлены 2 стыка: на seg1_a и seg1_b
-      expect(network.weldJoints.length, 2);
-      final weld1 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg1_a');
-      final weld2 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg1_b');
-      expect(weld1.ratio, 1.0);
-      expect(weld2.ratio, 0.0);
+      // Проверяем, что автоматические стыки не добавляются
+      expect(network.weldJoints.length, 0);
     });
 
-    test('Фланцевая заглушка (blindFlange) генерирует 1 сварной стык', () {
+    test('Фланцевая заглушка (blindFlange) не создает автоматических стыков', () {
       final flange = network.insertFlange(
         segmentId: 'seg1',
         ratio: 0.5,
@@ -77,7 +70,7 @@ void main() {
       expect(flange, isNotNull);
       expect(flange!.flangeConnectionType, FlangeConnectionType.blindFlange);
       expect(flange.effectiveWeldCount, 1);
-      expect(network.weldJoints.length, 1);
+      expect(network.weldJoints.length, 0);
     });
 
     test('Ручное переопределение числа стыков через customWeldCount', () {
@@ -91,31 +84,33 @@ void main() {
       expect(flange!.effectiveWeldCount, 3);
     });
 
-    test('Переключение режима фланца через updateFitting синхронизирует стыки', () {
+    test('Переключение режима фланца через updateFitting сохраняет параметры', () {
       final flange = network.insertFlange(
         segmentId: 'seg1',
         ratio: 0.5,
         flangeConnectionType: FlangeConnectionType.pipeToPipe,
       );
-      expect(network.weldJoints.length, 2);
+      expect(network.weldJoints.length, 0);
 
-      // Переключаем в режим к оборудованию (должен остаться 1 шов)
+      // Переключаем в режим к оборудованию
       final updated = flange!.copyWith(
         flangeConnectionType: FlangeConnectionType.toEquipment,
         isFlangePair: false,
       );
       network.updateFitting(flange.nodeId, updated);
 
-      expect(network.weldJoints.length, 1);
+      expect(network.weldJoints.length, 0);
+      expect(network.fittings[flange.nodeId]!.flangeConnectionType, FlangeConnectionType.toEquipment);
 
-      // Возвращаем в межтрубное (снова 2 шва)
+      // Возвращаем в межтрубное
       final updated2 = updated.copyWith(
         flangeConnectionType: FlangeConnectionType.pipeToPipe,
         isFlangePair: true,
       );
       network.updateFitting(flange.nodeId, updated2);
 
-      expect(network.weldJoints.length, 2);
+      expect(network.weldJoints.length, 0);
+      expect(network.fittings[flange.nodeId]!.flangeConnectionType, FlangeConnectionType.pipeToPipe);
     });
 
     test('Отводы и вычеты: изменение радиуса гиба R корректно пересчитывает катушки', () {
@@ -148,7 +143,7 @@ void main() {
       expect(sp1Updated.cutLengthMm, 700.0); // 1000 - 300 = 700 мм
     });
 
-    test('attachCapToNode устанавливает эллиптическое днище и создает 1 монтажный стык', () {
+    test('attachCapToNode устанавливает эллиптическое днище без автогенерации стыка', () {
       expect(network.weldJoints.length, 0);
       expect(network.fittings['n2'], isNull);
 
@@ -157,18 +152,15 @@ void main() {
       expect(cap!.fittingType, FittingType.cap);
       expect(cap.dn, 100);
       expect(network.fittings['n2'], equals(cap));
-      expect(network.weldJoints.length, 1);
-      final weld = network.weldJoints.values.first;
-      expect(weld.segmentId, 'seg1');
-      expect(weld.ratio, 1.0);
+      expect(network.weldJoints.length, 0);
 
-      // Удаление фитинга через removeFitting убирает заглушку и стык
+      // Удаление фитинга через removeFitting убирает заглушку
       network.removeFitting('n2');
       expect(network.fittings['n2'], isNull);
       expect(network.weldJoints.length, 0);
     });
 
-    test('attachEndFlangeToNode устанавливает концевой фланец на открытый конец трубы', () {
+    test('attachEndFlangeToNode устанавливает концевой фланец на открытый конец трубы без автогенерации стыка', () {
       expect(network.weldJoints.length, 0);
       expect(network.fittings['n1'], isNull);
 
@@ -182,10 +174,7 @@ void main() {
       expect(flange.dn, 100);
       expect(flange.isFlangePair, isFalse);
       expect(network.fittings['n1'], equals(flange));
-      expect(network.weldJoints.length, 1);
-      final weld = network.weldJoints.values.first;
-      expect(weld.segmentId, 'seg1');
-      expect(weld.ratio, 0.0);
+      expect(network.weldJoints.length, 0);
     });
   });
 
@@ -252,7 +241,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Фланец Ду100'), findsOneWidget);
+      expect(find.textContaining('Фланец Ду100'), findsWidgets);
       expect(find.text('К оборудованию\n(1 стык)'), findsOneWidget);
       expect(find.text('Межтрубное\n(2 стыка)'), findsOneWidget);
       expect(find.text('Выбрать из коллекции'), findsOneWidget);
@@ -262,10 +251,10 @@ void main() {
       await tester.tap(find.text('Межтрубное\n(2 стыка)'));
       await tester.pumpAndSettle();
 
-      // Проверяем, что режим обновился и количество стыков стало 2
+      // Проверяем, что режим обновился
       final updated = network.fittings[flange.nodeId]!;
       expect(updated.flangeConnectionType, FlangeConnectionType.pipeToPipe);
-      expect(network.weldJoints.length, 2);
+      expect(network.weldJoints.length, 0);
     });
 
     testWidgets('FittingCatalogDialog открывается, переключает вкладки и отображает правила', (tester) async {

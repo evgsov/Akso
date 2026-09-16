@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import '../../core/math/vector_3d.dart';
 import '../enums/fitting_type.dart';
+import '../enums/valve_type.dart';
 import '../models/fitting.dart';
 import '../models/node_3d.dart';
 import '../models/pipe_support.dart';
@@ -416,15 +417,19 @@ class Element3dGeometry {
     double? d2,
   }) {
     final lines = <WireframeSegment3D>[];
-    final basis = PipeBasis3D.fromEndpoints(inNode, outNode);
+    final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
+    final basis = PipeBasis3D.fromEndpoints(inNode, outNode, rotationAngleRad: angleRad);
 
     final center = Vector3D.fromNode(node);
     final r1 = math.max(10.0, ((d1 ?? fitting.dn.toDouble()) / 2.0));
     final r2 = math.max(8.0, ((d2 ?? fitting.dnSecondary?.toDouble() ?? fitting.dn.toDouble()) / 2.0));
 
-    final length = 80.0;
-    final cIn = center - basis.t * (length / 2.0);
-    final cOut = center + basis.t * (length / 2.0);
+    final distIn = node.distanceTo(inNode);
+    final distOut = node.distanceTo(outNode);
+    final maxAllowedHalfL = math.min(distIn, distOut) * 0.45;
+    final halfL = (fitting.effectiveBuildingLengthMm / 2.0).clamp(10.0, math.max(10.0, maxAllowedHalfL)).toDouble();
+    final cIn = center - basis.t * halfL;
+    final cOut = center + basis.t * halfL;
 
     const int segments = 12;
     final inPts = <Vector3D>[];
@@ -510,6 +515,500 @@ class Element3dGeometry {
     }
 
     return lines;
+  }
+
+  /// Генерация 3D-векторного обозначения перехода диаметров (треугольник вдоль оси трубы)
+  /// Вершина треугольника указывает в сторону заужения (меньшего диаметра).
+  /// Основание треугольника находится на стороне большего диаметра.
+  static List<WireframeSegment3D> generateReducerWireframe(
+    Fitting fitting,
+    Node3D node,
+    Node3D inNode,
+    Node3D outNode, {
+    double? d1,
+    double? d2,
+    String layer = layerReducers,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
+    final basis = PipeBasis3D.fromEndpoints(inNode, outNode, rotationAngleRad: angleRad);
+
+    final center = Vector3D.fromNode(node);
+    final len = fitting.effectiveBuildingLengthMm;
+    final distIn = node.distanceTo(inNode);
+    final distOut = node.distanceTo(outNode);
+    final maxAllowedHalfL = math.min(distIn, distOut) * 0.45;
+    final halfL = (len / 2.0).clamp(10.0, math.max(10.0, maxAllowedHalfL)).toDouble();
+
+    final cIn = center - basis.t * halfL;
+    final cOut = center + basis.t * halfL;
+
+    final dnIn = d1 ?? fitting.dn.toDouble();
+    final dnOut = d2 ?? (fitting.dnSecondary?.toDouble() ?? fitting.dn.toDouble());
+
+    // Определяем, с какой стороны основание (больший диаметр), а с какой вершина (меньший)
+    final bool inIsBigger = dnIn >= dnOut;
+    final cBase = inIsBigger ? cIn : cOut;
+    final cApex = inIsBigger ? cOut : cIn;
+    final maxDn = math.max(dnIn, dnOut);
+    final minDn = math.min(dnIn, dnOut);
+
+    // Полуширина основания треугольника
+    final w = math.max(16.0, maxDn * 0.45);
+    final isEccentric = fitting.fittingType == FittingType.reducerEccentric;
+
+    // Используем поперечный вектор basis.v как основной в плоскости сети при угле 0°,
+    // чтобы треугольник лежал в горизонтальной плоскости (XY) и был идеально виден в плане и аксонометрии.
+    // При вращении («Поворот +90°») basis.v поворачивается в вертикальную плоскость Z.
+    final transverse = basis.v;
+
+    if (!isEccentric) {
+      // Концентрический переход: равнобедренный треугольник со схождением на оси трубы
+      final pB1 = cBase + transverse * w;
+      final pB2 = cBase - transverse * w;
+      final pApex = cApex;
+
+      // Основание
+      lines.add(WireframeSegment3D(pB1.x, pB1.y, pB1.z, pB2.x, pB2.y, pB2.z, layer: layer));
+      // Две боковые образующие
+      lines.add(WireframeSegment3D(pB1.x, pB1.y, pB1.z, pApex.x, pApex.y, pApex.z, layer: layer));
+      lines.add(WireframeSegment3D(pB2.x, pB2.y, pB2.z, pApex.x, pApex.y, pApex.z, layer: layer));
+      // Поперечная засечка на вершине (торец меньшей трубы)
+      final tipW = math.max(6.0, minDn * 0.25);
+      lines.add(WireframeSegment3D(
+        (pApex + transverse * tipW).x, (pApex + transverse * tipW).y, (pApex + transverse * tipW).z,
+        (pApex - transverse * tipW).x, (pApex - transverse * tipW).y, (pApex - transverse * tipW).z,
+        layer: layer,
+      ));
+    } else {
+      // Эксцентрический переход: одна сторона прямая (по образующей), вторая наклонная
+      // Смещение задается вектором transverse (который вращается на fitting.rotationAngleDeg)
+      final pFlatBase = cBase - transverse * (w * 0.35);
+      final pFlatApex = cApex - transverse * (w * 0.35);
+      final pSlopeBase = cBase + transverse * (w * 1.65);
+
+      // Основание
+      lines.add(WireframeSegment3D(pFlatBase.x, pFlatBase.y, pFlatBase.z, pSlopeBase.x, pSlopeBase.y, pSlopeBase.z, layer: layer));
+      // Прямая образующая
+      lines.add(WireframeSegment3D(pFlatBase.x, pFlatBase.y, pFlatBase.z, pFlatApex.x, pFlatApex.y, pFlatApex.z, layer: layer));
+      // Наклонная образующая
+      lines.add(WireframeSegment3D(pSlopeBase.x, pSlopeBase.y, pSlopeBase.z, pFlatApex.x, pFlatApex.y, pFlatApex.z, layer: layer));
+      // Поперечная засечка на вершине
+      final tipW = math.max(6.0, minDn * 0.25);
+      lines.add(WireframeSegment3D(
+        pFlatApex.x, pFlatApex.y, pFlatApex.z,
+        (pFlatApex + transverse * tipW).x, (pFlatApex + transverse * tipW).y, (pFlatApex + transverse * tipW).z,
+        layer: layer,
+      ));
+    }
+
+    return lines;
+  }
+
+  /// Генерация 3D-векторного обозначения арматуры (встречные треугольники «песочные часы»)
+  static List<WireframeSegment3D> generateValveWireframe(
+    Valve valve,
+    Node3D start,
+    Node3D end, {
+    double? pipeOuterDiameter,
+    String layer = layerValves,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final angleRad = valve.handleAngleDeg * math.pi / 180.0;
+    final basis = PipeBasis3D.fromEndpoints(start, end, rotationAngleRad: angleRad);
+
+    final vStart = Vector3D.fromNode(start);
+    final vEnd = Vector3D.fromNode(end);
+    final center = vStart + (vEnd - vStart) * valve.ratio;
+
+    final halfL = math.max(12.0, valve.lengthMm / 2.0);
+    final cIn = center - basis.t * halfL;
+    final cOut = center + basis.t * halfL;
+
+    final w = math.max(10.0, ((pipeOuterDiameter ?? valve.dn.toDouble()) / 2.0));
+
+    // Входной треугольник: основание cIn +/- basis.u * w, вершина в center
+    final pIn1 = cIn + basis.u * w;
+    final pIn2 = cIn - basis.u * w;
+    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
+    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, center.x, center.y, center.z, layer: layer));
+    lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, center.x, center.y, center.z, layer: layer));
+
+    // Выходной треугольник: основание cOut +/- basis.u * w, вершина в center
+    final pOut1 = cOut + basis.u * w;
+    final pOut2 = cOut - basis.u * w;
+    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
+    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, center.x, center.y, center.z, layer: layer));
+    lines.add(WireframeSegment3D(pOut2.x, pOut2.y, pOut2.z, center.x, center.y, center.z, layer: layer));
+
+    // Шток (шпиндель)
+    final stemH = w * 1.55;
+    final hwCenter = center + basis.u * stemH;
+    lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+
+    // Маховик / рукоятка в зависимости от типа арматуры
+    switch (valve.valveType) {
+      case ValveType.gateValve:
+        // Маховик (перекрестие спиц)
+        final hwR = w * 0.8;
+        lines.add(WireframeSegment3D(
+          (hwCenter - basis.t * hwR).x, (hwCenter - basis.t * hwR).y, (hwCenter - basis.t * hwR).z,
+          (hwCenter + basis.t * hwR).x, (hwCenter + basis.t * hwR).y, (hwCenter + basis.t * hwR).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (hwCenter - basis.v * hwR).x, (hwCenter - basis.v * hwR).y, (hwCenter - basis.v * hwR).z,
+          (hwCenter + basis.v * hwR).x, (hwCenter + basis.v * hwR).y, (hwCenter + basis.v * hwR).z,
+          layer: layer,
+        ));
+        break;
+
+      case ValveType.ballValve:
+        // Рукоятка-рычаг вдоль трубы
+        final leverLen = w * 1.4;
+        lines.add(WireframeSegment3D(
+          hwCenter.x, hwCenter.y, hwCenter.z,
+          (hwCenter + basis.t * leverLen).x, (hwCenter + basis.t * leverLen).y, (hwCenter + basis.t * leverLen).z,
+          layer: layer,
+        ));
+        break;
+
+      case ValveType.butterflyValve:
+        // Диск по центру и рукоятка
+        lines.add(WireframeSegment3D(
+          (center - basis.u * w).x, (center - basis.u * w).y, (center - basis.u * w).z,
+          (center + basis.u * w).x, (center + basis.u * w).y, (center + basis.u * w).z,
+          layer: layer,
+        ));
+        final leverEnd = hwCenter + (basis.t * 0.8 + basis.u * 0.3) * w;
+        lines.add(WireframeSegment3D(hwCenter.x, hwCenter.y, hwCenter.z, leverEnd.x, leverEnd.y, leverEnd.z, layer: layer));
+        break;
+
+      case ValveType.checkValve:
+        // Наклонное седло клапана
+        lines.add(WireframeSegment3D(
+          (center - basis.t * (halfL * 0.3) - basis.u * (w * 0.75)).x, (center - basis.t * (halfL * 0.3) - basis.u * (w * 0.75)).y, (center - basis.t * (halfL * 0.3) - basis.u * (w * 0.75)).z,
+          (center + basis.t * (halfL * 0.3) + basis.u * (w * 0.75)).x, (center + basis.t * (halfL * 0.3) + basis.u * (w * 0.75)).y, (center + basis.t * (halfL * 0.3) + basis.u * (w * 0.75)).z,
+          layer: layer,
+        ));
+        // Стрелка направления
+        final dir = valve.isReversed ? -basis.t : basis.t;
+        final arrowTip = center + dir * (halfL * 0.7);
+        final arrowBase = center - dir * (halfL * 0.2);
+        lines.add(WireframeSegment3D(arrowBase.x, arrowBase.y, arrowBase.z, arrowTip.x, arrowTip.y, arrowTip.z, layer: layer));
+        lines.add(WireframeSegment3D(
+          arrowTip.x, arrowTip.y, arrowTip.z,
+          (arrowTip - dir * (w * 0.35) + basis.u * (w * 0.25)).x, (arrowTip - dir * (w * 0.35) + basis.u * (w * 0.25)).y, (arrowTip - dir * (w * 0.35) + basis.u * (w * 0.25)).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          arrowTip.x, arrowTip.y, arrowTip.z,
+          (arrowTip - dir * (w * 0.35) - basis.u * (w * 0.25)).x, (arrowTip - dir * (w * 0.35) - basis.u * (w * 0.25)).y, (arrowTip - dir * (w * 0.35) - basis.u * (w * 0.25)).z,
+          layer: layer,
+        ));
+        break;
+
+      case ValveType.strainer:
+        // Фильтр-грязевик: наклонная колба под 45 градусов вниз
+        final flaskDir = (-basis.t * 0.707 - basis.u * 0.707).normalized();
+        final flaskEnd = center + flaskDir * (w * 1.8);
+        lines.add(WireframeSegment3D(center.x, center.y, center.z, flaskEnd.x, flaskEnd.y, flaskEnd.z, layer: layer));
+        // Крышка отстойника
+        final capDir = flaskDir.cross(basis.v).normalized();
+        final cap1 = flaskEnd + capDir * (w * 0.4);
+        final cap2 = flaskEnd - capDir * (w * 0.4);
+        lines.add(WireframeSegment3D(cap1.x, cap1.y, cap1.z, cap2.x, cap2.y, cap2.z, layer: layer));
+        break;
+
+      case ValveType.balancingValve:
+        // Балансировочный клапан: шток с настроечной головкой
+        final mimW = w * 1.2;
+        lines.add(WireframeSegment3D(
+          (hwCenter - basis.t * mimW).x, (hwCenter - basis.t * mimW).y, (hwCenter - basis.t * mimW).z,
+          (hwCenter + basis.t * mimW).x, (hwCenter + basis.t * mimW).y, (hwCenter + basis.t * mimW).z,
+          layer: layer,
+        ));
+        final mimTop = hwCenter + basis.u * (w * 0.5);
+        lines.add(WireframeSegment3D((hwCenter - basis.t * mimW).x, (hwCenter - basis.t * mimW).y, (hwCenter - basis.t * mimW).z, mimTop.x, mimTop.y, mimTop.z, layer: layer));
+        lines.add(WireframeSegment3D((hwCenter + basis.t * mimW).x, (hwCenter + basis.t * mimW).y, (hwCenter + basis.t * mimW).z, mimTop.x, mimTop.y, mimTop.z, layer: layer));
+        break;
+
+      case ValveType.drainValve:
+        // Спускной / дренажный кран: короткий патрубок вниз
+        final drainEnd = center - basis.u * (w * 1.5);
+        lines.add(WireframeSegment3D(center.x, center.y, center.z, drainEnd.x, drainEnd.y, drainEnd.z, layer: layer));
+        break;
+
+      case ValveType.waterMeter:
+        // Водосчетчик: счетная коробка
+        final boxW = w * 0.6;
+        final boxTop = hwCenter + basis.u * (w * 0.5);
+        lines.add(WireframeSegment3D(
+          (hwCenter - basis.t * boxW).x, (hwCenter - basis.t * boxW).y, (hwCenter - basis.t * boxW).z,
+          (hwCenter + basis.t * boxW).x, (hwCenter + basis.t * boxW).y, (hwCenter + basis.t * boxW).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (boxTop - basis.t * boxW).x, (boxTop - basis.t * boxW).y, (boxTop - basis.t * boxW).z,
+          (boxTop + basis.t * boxW).x, (boxTop + basis.t * boxW).y, (boxTop + basis.t * boxW).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D((hwCenter - basis.t * boxW).x, (hwCenter - basis.t * boxW).y, (hwCenter - basis.t * boxW).z, (boxTop - basis.t * boxW).x, (boxTop - basis.t * boxW).y, (boxTop - basis.t * boxW).z, layer: layer));
+        lines.add(WireframeSegment3D((hwCenter + basis.t * boxW).x, (hwCenter + basis.t * boxW).y, (hwCenter + basis.t * boxW).z, (boxTop + basis.t * boxW).x, (boxTop + basis.t * boxW).y, (boxTop + basis.t * boxW).z, layer: layer));
+        break;
+
+      case ValveType.pressureGauge:
+      case ValveType.thermometer:
+      case ValveType.airVent:
+        // Прибор КИПиА: круг/циферблат на штоке
+        final gaugeR = w * 0.9;
+        const pts = 8;
+        for (int i = 0; i < pts; i++) {
+          final a1 = (i * 2 * math.pi) / pts;
+          final a2 = ((i + 1) * 2 * math.pi) / pts;
+          final pA = hwCenter + basis.t * (math.cos(a1) * gaugeR) + basis.u * (math.sin(a1) * gaugeR);
+          final pB = hwCenter + basis.t * (math.cos(a2) * gaugeR) + basis.u * (math.sin(a2) * gaugeR);
+          lines.add(WireframeSegment3D(pA.x, pA.y, pA.z, pB.x, pB.y, pB.z, layer: layer));
+        }
+        break;
+    }
+
+    // Если арматура фланцевая — засечки фланцев на торцах
+    if (valve.isFlanged) {
+      final flW = w * 1.25;
+      lines.add(WireframeSegment3D(
+        (cIn + basis.v * flW).x, (cIn + basis.v * flW).y, (cIn + basis.v * flW).z,
+        (cIn - basis.v * flW).x, (cIn - basis.v * flW).y, (cIn - basis.v * flW).z,
+        layer: layer,
+      ));
+      lines.add(WireframeSegment3D(
+        (cOut + basis.v * flW).x, (cOut + basis.v * flW).y, (cOut + basis.v * flW).z,
+        (cOut - basis.v * flW).x, (cOut - basis.v * flW).y, (cOut - basis.v * flW).z,
+        layer: layer,
+      ));
+    }
+
+    return lines;
+  }
+
+  /// Генерация 3D-векторного обозначения заглушки (купольная дуга на торце трубы)
+  static List<WireframeSegment3D> generateCapWireframe(
+    Fitting fitting,
+    Node3D node,
+    Node3D pipeNode, {
+    double? pipeOuterDiameter,
+    String layer = layerCaps,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
+    final basis = PipeBasis3D.fromEndpoints(pipeNode, node, rotationAngleRad: angleRad);
+
+    final center = Vector3D.fromNode(node);
+    final r = math.max(10.0, ((pipeOuterDiameter ?? fitting.dn.toDouble()) / 2.0));
+
+    // Базовый поперечный отрезок торца трубы
+    final pB1 = center + basis.u * r;
+    final pB2 = center - basis.u * r;
+    lines.add(WireframeSegment3D(pB1.x, pB1.y, pB1.z, pB2.x, pB2.y, pB2.z, layer: layer));
+
+    // Полукруглая дуга купола (8 сегментов)
+    const int numSegs = 8;
+    Vector3D prevPt = pB1;
+    for (int i = 1; i <= numSegs; i++) {
+      final angle = (math.pi / 2.0) - (math.pi * i / numSegs);
+      final pt = center + basis.u * (r * math.sin(angle)) + basis.t * (r * 0.8 * math.cos(angle));
+      lines.add(WireframeSegment3D(prevPt.x, prevPt.y, prevPt.z, pt.x, pt.y, pt.z, layer: layer));
+      prevPt = pt;
+    }
+
+    return lines;
+  }
+
+  /// Генерация 3D-векторного обозначения фланца (поперечный штрих или пара штрихов)
+  static List<WireframeSegment3D> generateFlangeWireframe(
+    Fitting fitting,
+    Node3D node,
+    Node3D otherNode, {
+    double? pipeOuterDiameter,
+    String layer = layerFlanges,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
+    final basis = PipeBasis3D.fromEndpoints(node, otherNode, rotationAngleRad: angleRad);
+
+    final center = Vector3D.fromNode(node);
+    final r = math.max(12.0, ((pipeOuterDiameter ?? fitting.dn.toDouble()) / 2.0));
+    final flW = r * 1.35;
+
+    // Первый диск/риска
+    final p1 = center + basis.u * flW;
+    final p2 = center - basis.u * flW;
+    lines.add(WireframeSegment3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, layer: layer));
+
+    if (fitting.isFlangePair) {
+      // Второй фланец на расстоянии 14 мм
+      final gap = 14.0;
+      final c2 = center + basis.t * gap;
+      final p3 = c2 + basis.u * flW;
+      final p4 = c2 - basis.u * flW;
+      lines.add(WireframeSegment3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, layer: layer));
+      // Межфланцевая прокладка (соединительные черточки)
+      lines.add(WireframeSegment3D((center + basis.u * (flW * 0.6)).x, (center + basis.u * (flW * 0.6)).y, (center + basis.u * (flW * 0.6)).z, (c2 + basis.u * (flW * 0.6)).x, (c2 + basis.u * (flW * 0.6)).y, (c2 + basis.u * (flW * 0.6)).z, layer: layer));
+      lines.add(WireframeSegment3D((center - basis.u * (flW * 0.6)).x, (center - basis.u * (flW * 0.6)).y, (center - basis.u * (flW * 0.6)).z, (c2 - basis.u * (flW * 0.6)).x, (c2 - basis.u * (flW * 0.6)).y, (c2 - basis.u * (flW * 0.6)).z, layer: layer));
+    }
+
+    return lines;
+  }
+
+  /// Генерация 3D-векторной дуги отвода между точками тангенсов в плоскости гиба
+  static List<WireframeSegment3D> generateElbowWireframe(
+    Fitting fitting,
+    Node3D node,
+    Node3D n1,
+    Node3D n2, {
+    double? pipeOuterDiameter,
+    String layer = '0',
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final vNode = Vector3D.fromNode(node);
+    final v1 = Vector3D.fromNode(n1);
+    final v2 = Vector3D.fromNode(n2);
+
+    final d1 = (v1 - vNode);
+    final d2 = (v2 - vNode);
+    final len1 = d1.length;
+    final len2 = d2.length;
+    if (len1 < 1e-4 || len2 < 1e-4) return lines;
+
+    final u1 = d1.normalized();
+    final u2 = d2.normalized();
+
+    final dot = (u1.dot(u2)).clamp(-1.0, 1.0);
+    final bendAngleRad = math.pi - math.acos(dot);
+    if (bendAngleRad < 0.05) return lines;
+
+    final radMm = fitting.effectiveRadiusMm;
+    final t = (radMm * math.tan(bendAngleRad / 2.0)).clamp(0.0, math.min(len1, len2) * 0.45);
+
+    final t1 = vNode + u1 * t;
+    final t2 = vNode + u2 * t;
+
+    // Дуга аппроксимируется 8 сегментами Безье
+    const int segs = 8;
+    Vector3D prevPt = t1;
+    for (int i = 1; i <= segs; i++) {
+      final s = i / segs;
+      final pt = t1 * ((1 - s) * (1 - s)) + vNode * (2 * (1 - s) * s) + t2 * (s * s);
+      lines.add(WireframeSegment3D(prevPt.x, prevPt.y, prevPt.z, pt.x, pt.y, pt.z, layer: layer));
+      prevPt = pt;
+    }
+
+    return lines;
+  }
+
+  /// Генерация 3D-векторного обозначения тройника (засечки стыков на концах ответвлений)
+  static List<WireframeSegment3D> generateTeeWireframe(
+    Fitting fitting,
+    Node3D node,
+    List<Node3D> connectedNodes, {
+    String layer = '0',
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final vNode = Vector3D.fromNode(node);
+    final w = math.max(10.0, fitting.dn * 0.4);
+
+    for (final other in connectedNodes) {
+      final dir = (Vector3D.fromNode(other) - vNode).normalized();
+      final ref = dir.z.abs() < 0.9 ? const Vector3D(0, 0, 1) : const Vector3D(0, 1, 0);
+      final normal = dir.cross(ref).normalized();
+      final tickPos = vNode + dir * (math.max(20.0, fitting.effectiveRadiusMm * 0.7));
+      lines.add(WireframeSegment3D(
+        (tickPos + normal * w).x, (tickPos + normal * w).y, (tickPos + normal * w).z,
+        (tickPos - normal * w).x, (tickPos - normal * w).y, (tickPos - normal * w).z,
+        layer: layer,
+      ));
+    }
+
+    return lines;
+  }
+
+  /// Вычисляет подотрезки трубы в 3D (мм) с вырезанными интервалами под проходную арматуру
+  static List<(Vector3D, Vector3D)> calcPipeDrawableIntervals3d(
+    Node3D start,
+    Node3D end,
+    List<Valve> valves, {
+    double trimStartMm = 0.0,
+    double trimEndMm = 0.0,
+  }) {
+    final vStart = Vector3D.fromNode(start);
+    final vEnd = Vector3D.fromNode(end);
+    final axis = vEnd - vStart;
+    final totalLen = axis.length;
+    if (totalLen < 1e-4) {
+      return [(vStart, vEnd)];
+    }
+
+    final dir = axis / totalLen;
+
+    final dMin = trimStartMm.clamp(0.0, totalLen * 0.45);
+    final dMax = (totalLen - trimEndMm).clamp(dMin, totalLen);
+    if (dMax <= dMin + 1e-3) {
+      return [];
+    }
+
+    final inlineValves = valves.where((v) => v.valveType.isInline).toList();
+    if (inlineValves.isEmpty) {
+      return [(vStart + dir * dMin, vStart + dir * dMax)];
+    }
+
+    // Собираем интервалы вырезания
+    final cutIntervals = <(double, double)>[];
+    for (final v in inlineValves) {
+      final cDist = v.ratio * totalLen;
+      final halfL = math.max(12.0, v.lengthMm / 2.0);
+      final vIn = (cDist - halfL).clamp(dMin, dMax);
+      final vOut = (cDist + halfL).clamp(dMin, dMax);
+      if (vOut > vIn + 0.1) {
+        cutIntervals.add((vIn, vOut));
+      }
+    }
+
+    if (cutIntervals.isEmpty) {
+      return [(vStart + dir * dMin, vStart + dir * dMax)];
+    }
+
+    cutIntervals.sort((a, b) => a.$1.compareTo(b.$1));
+
+    // Слияние перекрывающихся интервалов
+    final mergedCuts = <(double, double)>[];
+    var currentMerged = cutIntervals.first;
+    for (int i = 1; i < cutIntervals.length; i++) {
+      final next = cutIntervals[i];
+      if (next.$1 <= currentMerged.$2) {
+        currentMerged = (currentMerged.$1, math.max(currentMerged.$2, next.$2));
+      } else {
+        mergedCuts.add(currentMerged);
+        currentMerged = next;
+      }
+    }
+    mergedCuts.add(currentMerged);
+
+    // Формируем результирующие подотрезки
+    final result = <(Vector3D, Vector3D)>[];
+    var dCurr = dMin;
+
+    for (final (cutStart, cutEnd) in mergedCuts) {
+      if (cutStart > dCurr + 0.5) {
+        result.add((vStart + dir * dCurr, vStart + dir * cutStart));
+      }
+      dCurr = math.max(dCurr, cutEnd);
+    }
+
+    if (dCurr < dMax - 0.5) {
+      result.add((vStart + dir * dCurr, vStart + dir * dMax));
+    }
+
+    return result.isEmpty ? [(vStart + dir * dMin, vStart + dir * dMax)] : result;
   }
 
   /// Сборка всей 3D каркасной геометрии элементов сети (арматура, стыки, опоры, фитинги)

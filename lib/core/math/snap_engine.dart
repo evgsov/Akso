@@ -428,8 +428,21 @@ class SnapEngine {
         double rawAngleDeg = math.atan2(dy, dx) * 180.0 / math.pi;
         if (rawAngleDeg < 0) rawAngleDeg += 360.0; // [0, 360)
 
-        // Проверяем нормальные углы под 90° к прилегающим трубам начального узла
+        // Проверяем магнитное притяжение к длине стыка встык отводов (T1 + T2)
+        double? buttJointDistance;
         final connectedSegs = network.getConnectedSegments(traceStartNode.id);
+        if (connectedSegs.isNotEmpty) {
+          final lastSeg = connectedSegs.last;
+          final t1 = network.getElbowTangentMm(traceStartNode.id);
+          final effT1 = t1 > 0 ? t1 : (lastSeg.dn * 1.5);
+          final effT2 = lastSeg.dn * 1.5;
+          final targetMm = effT1 + effT2;
+          if ((dist - targetMm).abs() <= 25.0) {
+            buttJointDistance = targetMm;
+          }
+        }
+
+        // Проверяем нормальные углы под 90° к прилегающим трубам начального узла
         for (final seg in connectedSegs) {
           final otherNode = network.nodes[seg.startNodeId == traceStartNode.id ? seg.endNodeId : seg.startNodeId];
           if (otherNode == null) continue;
@@ -447,8 +460,9 @@ class SnapEngine {
               final cyclicDiff = math.min(diff, 360.0 - diff);
               if (cyclicDiff <= angleSnapToleranceDegrees) {
                 final rad = normAngle * math.pi / 180.0;
-                final snappedX = traceStartNode.x + dist * math.cos(rad);
-                final snappedY = traceStartNode.y + dist * math.sin(rad);
+                final effectiveDist = buttJointDistance ?? dist;
+                final snappedX = traceStartNode.x + effectiveDist * math.cos(rad);
+                final snappedY = traceStartNode.y + effectiveDist * math.sin(rad);
                 final snappedWorld = Node3D(
                   id: '',
                   x: (snappedX / 10.0).round() * 10.0,
@@ -457,13 +471,17 @@ class SnapEngine {
                 );
                 final snappedScreen = projector.project(snappedWorld);
 
+                final snapLabel = buttJointDistance != null
+                    ? '🧲 Стык встык (${buttJointDistance.round()} мм) | ∠90° (Перпендикуляр)'
+                    : 'L: ${dist.round()} мм | ∠90° к трубе (Перпендикуляр)';
+
                 return SnapResult(
                   type: SnapType.polarAngle,
                   screenPoint: snappedScreen,
                   worldPoint: snappedWorld,
                   snappedAngleDegrees: normAngle,
-                  distanceLengthMm: dist,
-                  label: 'L: ${dist.round()} мм | ∠90° к трубе (Перпендикуляр)',
+                  distanceLengthMm: effectiveDist,
+                  label: snapLabel,
                 );
               }
             }
@@ -485,8 +503,9 @@ class SnapEngine {
 
         if (bestAngle != null) {
           final rad = bestAngle * math.pi / 180.0;
-          final snappedX = traceStartNode.x + dist * math.cos(rad);
-          final snappedY = traceStartNode.y + dist * math.sin(rad);
+          final effectiveDist = buttJointDistance ?? dist;
+          final snappedX = traceStartNode.x + effectiveDist * math.cos(rad);
+          final snappedY = traceStartNode.y + effectiveDist * math.sin(rad);
           final snappedWorld = Node3D(
             id: '',
             x: (snappedX / 10.0).round() * 10.0,
@@ -495,13 +514,17 @@ class SnapEngine {
           );
           final snappedScreen = projector.project(snappedWorld);
 
+          final snapLabel = buttJointDistance != null
+              ? '🧲 Стык встык (${buttJointDistance.round()} мм) | ∠${bestAngle.round()}°'
+              : 'L: ${dist.round()} мм | ∠${bestAngle.round()}°';
+
           return SnapResult(
             type: SnapType.polarAngle,
             screenPoint: snappedScreen,
             worldPoint: snappedWorld,
             snappedAngleDegrees: bestAngle,
-            distanceLengthMm: dist,
-            label: 'L: ${dist.round()} мм | ∠${bestAngle.round()}°',
+            distanceLengthMm: effectiveDist,
+            label: snapLabel,
           );
         }
       }

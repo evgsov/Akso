@@ -12,12 +12,14 @@ class FittingDetector {
   }
 
   static void autoDetectFittingsForNode(PipingNetwork network, String nodeId) {
-    // Если фитинг уже вручную настроен (прямая врезка, фланец, заглушка), сохраняем его
+    // Если фитинг уже вручную настроен (прямая врезка, фланец, заглушка, переход), сохраняем его
     final existingFit = network.fittings[nodeId];
     if (existingFit != null &&
         (existingFit.fittingType == FittingType.directBranch ||
             existingFit.fittingType == FittingType.flange ||
-            existingFit.fittingType == FittingType.cap)) {
+            existingFit.fittingType == FittingType.cap ||
+            existingFit.fittingType == FittingType.reducerConcentric ||
+            existingFit.fittingType == FittingType.reducerEccentric)) {
       return;
     }
 
@@ -121,6 +123,21 @@ class FittingDetector {
           }
         } else if (s1.dn != s2.dn) {
           // Прямой переход диаметров
+          if (existingFit != null &&
+              (existingFit.fittingType == FittingType.reducerConcentric ||
+               existingFit.fittingType == FittingType.reducerEccentric)) {
+            // Сохраняем пользовательские настройки перехода (тип, длину L, угол вращения)
+            if (existingFit.dn != s1.dn || existingFit.dnSecondary != s2.dn) {
+              network.fittings[nodeId] = existingFit.copyWith(
+                dn: s1.dn,
+                dnSecondary: s2.dn,
+                name: existingFit.fittingType == FittingType.reducerEccentric
+                    ? 'Переход Э ${s1.dn}х${s2.dn}'
+                    : 'Переход ${s1.dn}х${s2.dn}',
+              );
+            }
+            return;
+          }
           network.fittings[nodeId] = Fitting(
             id: 'fit_$nodeId',
             nodeId: nodeId,
@@ -132,6 +149,8 @@ class FittingDetector {
             dn: s1.dn,
             dnSecondary: s2.dn,
             radiusMm: s1.dn * 1.5,
+            buildingLengthMm: math.max(80.0, s1.dn * 1.5),
+            rotationAngleDeg: 0.0,
           );
         } else {
           // Прямая неразрывная труба без изменения диаметра
@@ -172,12 +191,6 @@ class FittingDetector {
           radiusMm: 0.0,
           cutsMainPipe: false,
         );
-
-        final branchSeg = network.identifyBranchSegment(nodeId, connected);
-        if (branchSeg != null) {
-          final r = branchSeg.startNodeId == nodeId ? 0.0 : 1.0;
-          network.ensureWeldExists(branchSeg.id, r, WeldType.u18);
-        }
       } else {
         network.fittings[nodeId] = Fitting(
           id: 'fit_$nodeId',
@@ -193,11 +206,6 @@ class FittingDetector {
           radiusMm: mainDn * 1.0,
           cutsMainPipe: true,
         );
-
-        for (final seg in connected) {
-          final r = seg.startNodeId == nodeId ? 0.0 : 1.0;
-          network.ensureWeldExists(seg.id, r, def?.weldType ?? WeldType.c17);
-        }
       }
     } else if (connected.length >= 4) {
       final s = connected[0];

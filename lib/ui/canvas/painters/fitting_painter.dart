@@ -6,6 +6,7 @@ import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/models/fitting.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
 
 class FittingPainter {
@@ -33,25 +34,47 @@ class FittingPainter {
         final s1 = connected[0];
         final s2 = connected[1];
         final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-        final pOther = projector.project(other1);
-        final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
+        final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
         if (!isVolumeMode) {
-          _drawReducerSymbol(
-            canvas,
-            projector: projector,
-            network: network,
-            isVolumeMode: isVolumeMode,
-            center: center,
-            angle: angle,
-            dn1: s1.dn,
-            dn2: s2.dn,
-            isEccentric: fit.fittingType == FittingType.reducerEccentric,
-            color: color,
+          final wireSegments = Element3dGeometry.generateReducerWireframe(
+            fit,
+            node,
+            other1,
+            other2,
+            d1: s1.outerDiameterMm,
+            d2: s2.outerDiameterMm,
           );
+
+          final isSelected = fit.nodeId == selectedNodeId;
+          final strokePaint = Paint()
+            ..color = isSelected ? Colors.amber : color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 6.0
+              ..strokeCap = StrokeCap.round;
+            for (final wire in wireSegments) {
+              final p1 = projector.project(wire.startNode);
+              final p2 = projector.project(wire.endNode);
+              canvas.drawLine(p1, p2, glowPaint);
+            }
+          }
+
+          for (final wire in wireSegments) {
+            final p1 = projector.project(wire.startNode);
+            final p2 = projector.project(wire.endNode);
+            canvas.drawLine(p1, p2, strokePaint);
+          }
         }
 
         if (showCallouts) {
@@ -219,26 +242,32 @@ class FittingPainter {
       return;
     }
 
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.square;
-
-    canvas.drawLine(ptN, pOut1, paint);
-    canvas.drawLine(ptN, pOut2, paint);
-
-    final curvePaint = Paint()
-      ..color = Colors.blueGrey.shade300
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
     final path = Path()
       ..moveTo(pOut1.dx, pOut1.dy)
       ..quadraticBezierTo(ptN.dx, ptN.dy, pOut2.dx, pOut2.dy);
-    canvas.drawPath(path, curvePaint);
 
-    _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
-    _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
+    final isSelected = fit.nodeId == selectedNodeId;
+    if (isSelected) {
+      final glowPaint = Paint()
+        ..color = Colors.amber.withValues(alpha: 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth + 6.0
+        ..strokeCap = StrokeCap.round;
+      canvas.drawPath(path, glowPaint);
+    }
+
+    final elbowPaint = Paint()
+      ..color = isSelected ? Colors.amber : color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawPath(path, elbowPaint);
+
+    final drawTick1 = !network.isButtJoint(s1.id) || fit.nodeId.compareTo(other1.id) <= 0;
+    final drawTick2 = !network.isButtJoint(s2.id) || fit.nodeId.compareTo(other2.id) <= 0;
+    if (drawTick1) _drawWeldTickAt(canvas, pOut1, ptN, strokeWidth);
+    if (drawTick2) _drawWeldTickAt(canvas, pOut2, ptN, strokeWidth);
 
     if (showCallouts) {
       final tp = TextPainter(
@@ -350,109 +379,6 @@ class FittingPainter {
       )..layout();
       tp.paint(canvas, ptN + const Offset(12, -14));
     }
-  }
-  static void _drawReducerSymbol(
-    Canvas canvas, {
-    required AxonometryProjector projector,
-    required PipingNetwork network,
-    required bool isVolumeMode,
-    required Offset center,
-    required double angle,
-    required int dn1,
-    required int dn2,
-    required bool isEccentric,
-    required Color color,
-  }) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-
-    final w1 = _calcWidth(dn1, network, projector, isVolumeMode);
-    final w2 = _calcWidth(dn2, network, projector, isVolumeMode);
-    final len = isVolumeMode ? math.max(w1, w2) * 1.5 : 14.0;
-    final halfLen = len / 2.0;
-
-    final path = Path();
-    if (isEccentric) {
-      // Нижняя образующая прямая (Flat on Bottom): Y = max(w1, w2) / 2
-      final flatBottomY = math.max(w1, w2) / 2;
-      path.moveTo(-halfLen, flatBottomY - w1);
-      path.lineTo(halfLen, flatBottomY - w2);
-      path.lineTo(halfLen, flatBottomY);
-      path.lineTo(-halfLen, flatBottomY);
-      path.close();
-    } else {
-      path.moveTo(-halfLen, -w1 / 2);
-      path.lineTo(halfLen, -w2 / 2);
-      path.lineTo(halfLen, w2 / 2);
-      path.lineTo(-halfLen, w1 / 2);
-      path.close();
-    }
-
-    if (isVolumeMode) {
-      final fillPaint = Paint()
-        ..style = PaintingStyle.fill
-        ..shader = ui.Gradient.linear(
-          Offset(0, -math.max(w1, w2) / 2),
-          Offset(0, math.max(w1, w2) / 2),
-          [
-            color.withValues(alpha: 0.65),
-            Colors.white.withValues(alpha: 0.85),
-            color,
-            color.withValues(alpha: 0.5),
-          ],
-          [0.0, 0.35, 0.7, 1.0],
-        );
-      canvas.drawPath(path, fillPaint);
-
-      final border = Paint()
-        ..color = Colors.black87
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
-      canvas.drawPath(path, border);
-    } else {
-      // 2D СПДС / ГОСТ: фоновая подложка для изоляции от фона и трубы
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill,
-      );
-
-      // Векторные образующие конуса
-      final strokePaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.square
-        ..strokeJoin = StrokeJoin.miter;
-      canvas.drawPath(path, strokePaint);
-
-      // Торцевые засечки стыков (поперечные черточки на входе и выходе)
-      final tickPaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4;
-
-      if (isEccentric) {
-        final flatBottomY = math.max(w1, w2) / 2;
-        canvas.drawLine(Offset(-halfLen, flatBottomY - w1 - 1.5), Offset(-halfLen, flatBottomY + 1.5), tickPaint);
-        canvas.drawLine(Offset(halfLen, flatBottomY - w2 - 1.5), Offset(halfLen, flatBottomY + 1.5), tickPaint);
-      } else {
-        canvas.drawLine(Offset(-halfLen, -w1 / 2 - 1.5), Offset(-halfLen, w1 / 2 + 1.5), tickPaint);
-        canvas.drawLine(Offset(halfLen, -w2 / 2 - 1.5), Offset(halfLen, w2 / 2 + 1.5), tickPaint);
-      }
-
-      // Тонкая осевая линия по ГОСТ
-      final centerPaint = Paint()
-        ..color = color.withValues(alpha: 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8;
-      final axisY = isEccentric ? (math.max(w1, w2) / 2 - (w1 + w2) / 4) : 0.0;
-      canvas.drawLine(Offset(-halfLen - 3.0, axisY), Offset(halfLen + 3.0, axisY), centerPaint);
-    }
-
-    canvas.restore();
   }
 
   static void _drawFlangeSymbol(

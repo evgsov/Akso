@@ -65,16 +65,20 @@ class DxfWriter {
       final sys = network.systems[seg.systemId];
       final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
 
-      _write3dLine(
-        buffer,
-        layer: layerName,
-        x1: start.x,
-        y1: start.y,
-        z1: start.z,
-        x2: end.x,
-        y2: end.y,
-        z2: end.z,
-      );
+      final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+      final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
+      for (final (pA, pB) in subIntervals) {
+        _write3dLine(
+          buffer,
+          layer: layerName,
+          x1: pA.x,
+          y1: pA.y,
+          z1: pA.z,
+          x2: pB.x,
+          y2: pB.y,
+          z2: pB.z,
+        );
+      }
 
       // Диаметр трубы как текст в 3D
       final midX = (start.x + end.x) / 2;
@@ -400,7 +404,15 @@ class DxfWriter {
       final sys = network.systems[seg.systemId];
       final layerName = sys != null ? 'АКСО_${sys.code}' : 'АКСО_ТРУБЫ';
 
-      _write2dLine(buffer, layer: layerName, x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
+      final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+      final subIntervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
+      for (final (pA, pB) in subIntervals) {
+        final nodeA = Node3D(id: '', x: pA.x, y: pA.y, z: pA.z);
+        final nodeB = Node3D(id: '', x: pB.x, y: pB.y, z: pB.z);
+        final p1Sub = _projectTo2d(projector, nodeA);
+        final p2Sub = _projectTo2d(projector, nodeB);
+        _write2dLine(buffer, layer: layerName, x1: p1Sub.dx, y1: p1Sub.dy, x2: p2Sub.dx, y2: p2Sub.dy);
+      }
 
       // Выноска диаметра (горизонтальный текст над трубой)
       final midX = (p1.dx + p2.dx) / 2;

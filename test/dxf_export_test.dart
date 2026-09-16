@@ -73,6 +73,7 @@ void main() {
     });
 
     test('Сварочный журнал и ведомость катушек генерируются корректно', () {
+      network.addWeldJoint(segmentId: 'seg1', ratio: 0.5);
       final weldCsv = DxfWriter.generateWeldJournalCsv(network);
       expect(weldCsv.contains('№ шва;Сегмент;Диаметр DN;Марка стали;Сварочные материалы;Тип шва;Клеймо сварщика'), isTrue);
       expect(weldCsv.contains('ГОСТ 16037-С17'), isTrue);

@@ -268,7 +268,7 @@ void main() {
       // Verify inspector card is visible
       expect(find.text('Арматура'), findsOneWidget);
       expect(find.text('Ду 50'), findsOneWidget);
-      expect(find.text('150 мм'), findsOneWidget);
+      expect(find.text('150'), findsOneWidget);
       expect(find.text('Поворот +90°'), findsOneWidget);
 
       // Tap rotate button

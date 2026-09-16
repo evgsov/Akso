@@ -8,6 +8,7 @@ import '../../../domain/models/pipe_support.dart';
 import '../../../domain/models/piping_network.dart';
 export '../../../core/math/vector_3d.dart';
 import '../../../core/math/vector_3d.dart';
+import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
 
 /// 3D полигон твердотельного тела с нормалью и цветом
@@ -68,24 +69,31 @@ class Solid3dEngine {
       final axis = vEnd - vStart;
       final segLen = axis.length;
       if (segLen < 1e-4) continue;
-      final dir = axis / segLen;
 
       final trimStart = _calcNodeTrimLength(network, seg.startNodeId, seg).clamp(0.0, segLen * 0.45);
       final trimEnd = _calcNodeTrimLength(network, seg.endNodeId, seg).clamp(0.0, segLen * 0.45);
 
-      if (segLen > trimStart + trimEnd + 1e-3) {
-        final pStart = vStart + dir * trimStart;
-        final pEnd = vEnd - dir * trimEnd;
+      final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+      final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(
+        start,
+        end,
+        segValves,
+        trimStartMm: trimStart,
+        trimEndMm: trimEnd,
+      );
 
-        _buildCylinderMesh(
-          polygons: polygons,
-          projector: projector,
-          start: pStart,
-          end: pEnd,
-          radius: outerRadius,
-          color: baseColor,
-          facets: cylinderFacets,
-        );
+      for (final (pStart, pEnd) in intervals) {
+        if ((pEnd - pStart).length > 1.0) {
+          _buildCylinderMesh(
+            polygons: polygons,
+            projector: projector,
+            start: pStart,
+            end: pEnd,
+            radius: outerRadius,
+            color: baseColor,
+            facets: cylinderFacets,
+          );
+        }
       }
     }
 

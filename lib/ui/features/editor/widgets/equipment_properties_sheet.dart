@@ -21,6 +21,7 @@ class EquipmentPropertiesSheet extends StatefulWidget {
 
 class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
   late TextEditingController _nameCtrl;
+  late TextEditingController _serialCtrl;
   late TextEditingController _widthCtrl;
   late TextEditingController _lengthCtrl;
   late TextEditingController _heightCtrl;
@@ -31,6 +32,7 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
     super.initState();
     final eq = widget.network.equipments[widget.equipmentId];
     _nameCtrl = TextEditingController(text: eq?.name ?? '');
+    _serialCtrl = TextEditingController(text: eq?.serialNumber ?? '');
     _widthCtrl = TextEditingController(text: eq?.width.toString() ?? '1000.0');
     _lengthCtrl = TextEditingController(text: eq?.length.toString() ?? '1000.0');
     _heightCtrl = TextEditingController(text: eq?.height.toString() ?? '1000.0');
@@ -40,6 +42,7 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _serialCtrl.dispose();
     _widthCtrl.dispose();
     _lengthCtrl.dispose();
     _heightCtrl.dispose();
@@ -56,6 +59,8 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
 
     final updated = eq.copyWith(
       name: _nameCtrl.text,
+      serialNumber: _serialCtrl.text.trim().isEmpty ? null : _serialCtrl.text.trim(),
+      clearSerialNumber: _serialCtrl.text.trim().isEmpty,
       type: _type,
       width: w,
       length: l,
@@ -86,6 +91,17 @@ class _EquipmentPropertiesSheetState extends State<EquipmentPropertiesSheet> {
             controller: _nameCtrl,
             decoration: const InputDecoration(
               labelText: 'Название аппарата',
+              hintText: 'напр. Насос Н-1, Емкость Е-1',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _serialCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Заводской номер',
+              hintText: 'напр. № 10492, ЗАВ-02',
               border: OutlineInputBorder(),
               isDense: true,
             ),
