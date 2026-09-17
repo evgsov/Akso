@@ -793,6 +793,34 @@ class PipingInputController extends ChangeNotifier {
         } else if (traceStartNode != null) {
           // Завершаем сегмент в новой точке или на трубе
           _finishTraceSegment(screenPos);
+        } else if (currentSnapResult != null &&
+            currentSnapResult!.type == SnapType.equipmentFace &&
+            currentSnapResult!.snappedEquipmentId != null &&
+            network.equipments.containsKey(currentSnapResult!.snappedEquipmentId)) {
+          history.recordState(network);
+          final eqId = currentSnapResult!.snappedEquipmentId!;
+          final w = currentSnapResult!.worldPoint;
+          final nozzleNode = network.attachNozzleAtWorldPoint(
+            eqId,
+            w,
+            dn: activeDn,
+            face: currentSnapResult!.snappedEquipmentFace,
+          );
+          traceStartNode = nozzleNode;
+          selectedNodeId = nozzleNode.id;
+        } else if (_findEquipmentAtScreenPos(screenPos) != null &&
+            network.equipments.containsKey(_findEquipmentAtScreenPos(screenPos))) {
+          final hitEqId = _findEquipmentAtScreenPos(screenPos)!;
+          history.recordState(network);
+          final eq = network.equipments[hitEqId]!;
+          final worldPt = projector.unproject(screenPos, eq.z + eq.height);
+          final nozzleNode = network.attachNozzleAtWorldPoint(
+            hitEqId,
+            worldPt,
+            dn: activeDn,
+          );
+          traceStartNode = nozzleNode;
+          selectedNodeId = nozzleNode.id;
         } else if (hitSegId != null) {
           history.recordState(network);
           // Начало ответвления от существующей трубы: делим сегмент в точке касания
@@ -1348,22 +1376,10 @@ class PipingInputController extends ChangeNotifier {
             : _snapToGrid(snapWorld);
 
         final eqId = 'eq_${_uuid.v4()}';
-        final nozzleId = 'noz_${_uuid.v4()}';
-        final nozzle = Nozzle(
-          id: nozzleId,
-          equipmentId: eqId,
-          name: 'Ш-1',
-          localX: 0,
-          localY: 0,
-          localZ: 2000,
-          dirX: 0,
-          dirY: 0,
-          dirZ: 1,
-          dn: 50,
-        );
+        final eqCount = network.equipments.length + 1;
         final eq = Equipment(
           id: eqId,
-          name: 'Емкость Е-1',
+          name: 'Емкость Е-$eqCount',
           type: EquipmentType.box,
           x: snapped.x,
           y: snapped.y,
@@ -1371,13 +1387,14 @@ class PipingInputController extends ChangeNotifier {
           width: 1000,
           length: 1000,
           height: 2000,
-          nozzles: [nozzle],
+          rotationAngleDeg: 0.0,
+          nozzles: const [],
         );
 
         history.recordState(network);
         network.addEquipment(eq);
         selectedEquipmentId = eq.id;
-        selectedNodeId = nozzleId;
+        selectedNodeId = null;
         break;
 
       case CanvasTool.insertValve:
@@ -2129,6 +2146,18 @@ class PipingInputController extends ChangeNotifier {
           currentSnapResult!.snappedNodeId != null &&
           currentSnapResult!.snappedNodeId != traceStartNode!.id) {
         targetNodeId = currentSnapResult!.snappedNodeId!;
+      } else if (currentSnapResult!.type == SnapType.equipmentFace &&
+          currentSnapResult!.snappedEquipmentId != null &&
+          network.equipments.containsKey(currentSnapResult!.snappedEquipmentId)) {
+        final eqId = currentSnapResult!.snappedEquipmentId!;
+        final w = currentSnapResult!.worldPoint;
+        final nozzleNode = network.attachNozzleAtWorldPoint(
+          eqId,
+          w,
+          dn: activeDn,
+          face: currentSnapResult!.snappedEquipmentFace,
+        );
+        targetNodeId = nozzleNode.id;
       } else if ((currentSnapResult!.type == SnapType.segmentAxis ||
                   currentSnapResult!.type == SnapType.midpoint ||
                   currentSnapResult!.type == SnapType.perpendicular) &&
@@ -2185,9 +2214,19 @@ class PipingInputController extends ChangeNotifier {
       final snapped = _snapToGrid(Node3D(id: '', x: endX, y: endY, z: currentElevationZ));
       final hitExistingNodeId = _findNodeAtScreenPos(endScreenPos);
       final hitExistingSegId = _findSegmentAtScreenPos(endScreenPos);
+      final hitExistingEqId = _findEquipmentAtScreenPos(endScreenPos);
 
       if (hitExistingNodeId != null && hitExistingNodeId != traceStartNode!.id) {
         targetNodeId = hitExistingNodeId;
+      } else if (hitExistingEqId != null && network.equipments.containsKey(hitExistingEqId)) {
+        final eq = network.equipments[hitExistingEqId]!;
+        final w = projector.unproject(endScreenPos, eq.z + eq.height);
+        final nozzleNode = network.attachNozzleAtWorldPoint(
+          hitExistingEqId,
+          w,
+          dn: activeDn,
+        );
+        targetNodeId = nozzleNode.id;
       } else if (hitExistingSegId != null) {
         final ratio = _calcSegmentRatio(hitExistingSegId, endScreenPos);
         final midNode = network.splitSegmentAtRatio(hitExistingSegId, ratio);
@@ -2714,22 +2753,36 @@ class PipingInputController extends ChangeNotifier {
   /// Поиск оборудования под курсором
   String? _findEquipmentAtScreenPos(Offset screenPos) {
     for (final eq in network.equipments.values) {
-      final x1 = eq.x - eq.width / 2;
-      final x2 = eq.x + eq.width / 2;
-      final y1 = eq.y - eq.length / 2;
-      final y2 = eq.y + eq.length / 2;
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      Offset rot(double lx, double ly) {
+        return Offset(
+          eq.x + lx * cosA - ly * sinA,
+          eq.y + lx * sinA + ly * cosA,
+        );
+      }
+
+      final halfW = eq.width / 2.0;
+      final halfL = eq.length / 2.0;
+      final c1 = rot(-halfW, -halfL);
+      final c2 = rot(halfW, -halfL);
+      final c3 = rot(halfW, halfL);
+      final c4 = rot(-halfW, halfL);
+
       final z1 = eq.z;
       final z2 = eq.z + eq.height;
 
       final pts = [
-        projector.projectCoordinates(x1, y1, z1),
-        projector.projectCoordinates(x2, y1, z1),
-        projector.projectCoordinates(x2, y2, z1),
-        projector.projectCoordinates(x1, y2, z1),
-        projector.projectCoordinates(x1, y1, z2),
-        projector.projectCoordinates(x2, y1, z2),
-        projector.projectCoordinates(x2, y2, z2),
-        projector.projectCoordinates(x1, y2, z2),
+        projector.projectCoordinates(c1.dx, c1.dy, z1),
+        projector.projectCoordinates(c2.dx, c2.dy, z1),
+        projector.projectCoordinates(c3.dx, c3.dy, z1),
+        projector.projectCoordinates(c4.dx, c4.dy, z1),
+        projector.projectCoordinates(c1.dx, c1.dy, z2),
+        projector.projectCoordinates(c2.dx, c2.dy, z2),
+        projector.projectCoordinates(c3.dx, c3.dy, z2),
+        projector.projectCoordinates(c4.dx, c4.dy, z2),
       ];
 
       double minX = pts[0].dx;
@@ -3289,14 +3342,15 @@ class PipingInputController extends ChangeNotifier {
       selectedSupportId = null;
       selectedWeldId = null;
       network.autoDetectAllFittings();
+      network.cleanupUnusedEquipmentNozzles();
       network.recalculateSpools();
       notifyListeners();
       return;
     }
 
     final selectedNode = selectedNodeId != null ? network.nodes[selectedNodeId] : null;
-    final eqToDelete = selectedEquipmentId ?? selectedNode?.equipmentId;
-    if (eqToDelete != null && (selectedSegmentId == null || selectedEquipmentId != null || selectedNode?.equipmentId != null)) {
+    final eqToDelete = selectedEquipmentId ?? (selectedSegmentId == null ? selectedNode?.equipmentId : null);
+    if (eqToDelete != null && (selectedSegmentId == null || selectedEquipmentId != null)) {
       network.removeEquipment(eqToDelete);
       network.callouts.removeWhere((_, c) => c.targetId == eqToDelete);
       selectedEquipmentId = null;
@@ -3311,6 +3365,7 @@ class PipingInputController extends ChangeNotifier {
       final nodeId = selectedNodeId!;
       history.recordState(network);
       network.dissolveNode(nodeId);
+      network.cleanupUnusedEquipmentNozzles();
 
       selectedNodeIds.remove(nodeId);
       selectedNodeId = null;
@@ -3334,6 +3389,7 @@ class PipingInputController extends ChangeNotifier {
       if (endNodeId != null && network.getConnectedSegments(endNodeId).isEmpty) {
         network.fittings.remove(endNodeId);
       }
+      network.cleanupUnusedEquipmentNozzles();
 
       selectedSegmentIds.remove(segId);
       selectedSegmentId = null;

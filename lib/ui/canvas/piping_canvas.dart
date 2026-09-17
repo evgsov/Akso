@@ -703,6 +703,19 @@ class PipingCanvasPainter extends CustomPainter {
       canvas.drawCircle(pt, 12.0, Paint()..color = axisColor.withValues(alpha: 0.15)..style = PaintingStyle.fill);
 
       _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, axisColor);
+    } else if (snapResult!.type == SnapType.equipmentFace) {
+      // Маркер грани оборудования: круг с перекрестием и ореолом (бирюзовый/cyan)
+      const eqSnapColor = Color(0xFF00BCD4);
+      final eqPaint = Paint()
+        ..color = eqSnapColor
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(pt, 9.0, eqPaint);
+      canvas.drawLine(pt - const Offset(6, 0), pt + const Offset(6, 0), eqPaint);
+      canvas.drawLine(pt - const Offset(0, 6), pt + const Offset(0, 6), eqPaint);
+      canvas.drawCircle(pt, 14.0, Paint()..color = eqSnapColor.withValues(alpha: 0.2)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(16, -14), snapResult!.label, eqSnapColor);
     } else if (snapResult!.type == SnapType.polarAngle) {
       // Направляющий луч от начала трассировки
       final startNode = activeTraceStart ?? activeAxisStart;

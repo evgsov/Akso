@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 import 'axonometry_projector.dart';
@@ -14,6 +15,7 @@ enum SnapType {
   segmentAxis,
   gridAxis,
   polarAngle,
+  equipmentFace,
 }
 
 enum AngleSnapMode {
@@ -31,6 +33,8 @@ class SnapResult {
   final String label;
   final String? snappedNodeId;
   final String? snappedSegmentId;
+  final String? snappedEquipmentId;
+  final EquipmentFace? snappedEquipmentFace;
   final double? snappedAngleDegrees;
   final double? distanceLengthMm;
 
@@ -41,6 +45,8 @@ class SnapResult {
     this.label = '',
     this.snappedNodeId,
     this.snappedSegmentId,
+    this.snappedEquipmentId,
+    this.snappedEquipmentFace,
     this.snappedAngleDegrees,
     this.distanceLengthMm,
   });
@@ -253,6 +259,101 @@ class SnapEngine {
           snappedSegmentId: axis.id,
           label: label,
         );
+      }
+    }
+
+    // Проверка центров граней оборудования (Equipment Face Centers)
+    for (final eq in network.equipments.values) {
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      Node3D localToWorld(double lx, double ly, double lz) {
+        final wx = eq.x + lx * cosA - ly * sinA;
+        final wy = eq.y + lx * sinA + ly * cosA;
+        final wz = eq.z + lz;
+        return Node3D(id: '', x: wx, y: wy, z: wz);
+      }
+
+      final facePoints = <MapEntry<EquipmentFace, Node3D>>[];
+
+      if (eq.type == EquipmentType.box) {
+        facePoints.add(MapEntry(EquipmentFace.top, localToWorld(0, 0, eq.height)));
+        facePoints.add(MapEntry(EquipmentFace.bottom, localToWorld(0, 0, 0)));
+        facePoints.add(MapEntry(EquipmentFace.right, localToWorld(eq.width / 2.0, 0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.left, localToWorld(-eq.width / 2.0, 0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.front, localToWorld(0, eq.length / 2.0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.back, localToWorld(0, -eq.length / 2.0, eq.height / 2.0)));
+      } else if (eq.type == EquipmentType.cylinderVertical) {
+        final r = eq.width / 2.0;
+        facePoints.add(MapEntry(EquipmentFace.top, localToWorld(0, 0, eq.height)));
+        facePoints.add(MapEntry(EquipmentFace.bottom, localToWorld(0, 0, 0)));
+        facePoints.add(MapEntry(EquipmentFace.cylindrical, localToWorld(r, 0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.cylindrical, localToWorld(-r, 0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.cylindrical, localToWorld(0, r, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.cylindrical, localToWorld(0, -r, eq.height / 2.0)));
+      } else {
+        // cylinderHorizontal
+        final r = eq.width / 2.0;
+        final halfL = eq.length / 2.0;
+        facePoints.add(MapEntry(EquipmentFace.front, localToWorld(0, halfL, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.back, localToWorld(0, -halfL, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.top, localToWorld(0, 0, eq.height)));
+        facePoints.add(MapEntry(EquipmentFace.bottom, localToWorld(0, 0, 0)));
+        facePoints.add(MapEntry(EquipmentFace.right, localToWorld(r, 0, eq.height / 2.0)));
+        facePoints.add(MapEntry(EquipmentFace.left, localToWorld(-r, 0, eq.height / 2.0)));
+      }
+
+      for (final entry in facePoints) {
+        final face = entry.key;
+        final ptWorld = entry.value;
+
+        if (traceStartNode != null) {
+          final distStart = math.sqrt(
+            math.pow(ptWorld.x - traceStartNode.x, 2) +
+                math.pow(ptWorld.y - traceStartNode.y, 2) +
+                math.pow(ptWorld.z - traceStartNode.z, 2),
+          );
+          if (distStart < 10.0) continue;
+        }
+
+        final proj = projector.project(ptWorld);
+        final dist = (proj - screenPos).distance;
+        if (dist <= minFeatureDist) {
+          minFeatureDist = dist;
+          String faceName;
+          switch (face) {
+            case EquipmentFace.top:
+              faceName = 'Верх';
+              break;
+            case EquipmentFace.bottom:
+              faceName = 'Дно';
+              break;
+            case EquipmentFace.right:
+              faceName = 'Право';
+              break;
+            case EquipmentFace.left:
+              faceName = 'Лево';
+              break;
+            case EquipmentFace.front:
+              faceName = 'Перед';
+              break;
+            case EquipmentFace.back:
+              faceName = 'Зад';
+              break;
+            case EquipmentFace.cylindrical:
+              faceName = 'Стенка';
+              break;
+          }
+          bestFeatureSnap = SnapResult(
+            type: SnapType.equipmentFace,
+            screenPoint: proj,
+            worldPoint: ptWorld,
+            snappedEquipmentId: eq.id,
+            snappedEquipmentFace: face,
+            label: 'Грань ${eq.name} [$faceName]',
+          );
+        }
       }
     }
 

@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:akso/core/math/axonometry_projector.dart';
+import 'package:akso/core/math/snap_engine.dart';
 import 'package:akso/domain/models/equipment.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
+import 'package:akso/ui/canvas/input_controller.dart';
 
 void main() {
   group('Equipment and Nozzle Data Model Tests', () {
@@ -237,6 +240,152 @@ void main() {
       final currentEq = network.equipments['eq1']!;
       expect(currentEq.nozzles.length, equals(1));
       expect(currentEq.nozzles.first.id, equals(noz1.id));
+    });
+  });
+
+  group('SnapEngine and InputController Equipment Snapping & Tracing Tests', () {
+    late PipingNetwork network;
+    late AxonometryProjector projector;
+    late SnapEngine snapEngine;
+
+    setUp(() {
+      network = PipingNetwork();
+      projector = AxonometryProjector(scale: 1.0, panOffset: Offset.zero);
+      snapEngine = const SnapEngine();
+    });
+
+    test('SnapEngine detects equipment face center and returns SnapType.equipmentFace', () {
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 1000,
+        height: 2000,
+        nozzles: [],
+      );
+      network.addEquipment(eq);
+
+      // Верхний центр: (1000, 1000, 2000)
+      final topCenterWorld = Node3D(id: '', x: 1000, y: 1000, z: 2000);
+      final topCenterScreen = projector.project(topCenterWorld);
+
+      final snap = snapEngine.findSnap(
+        screenPos: topCenterScreen + const Offset(2.0, 2.0),
+        network: network,
+        projector: projector,
+        currentElevationZ: 0.0,
+      );
+
+      expect(snap.type, equals(SnapType.equipmentFace));
+      expect(snap.snappedEquipmentId, equals('eq1'));
+      expect(snap.snappedEquipmentFace, equals(EquipmentFace.top));
+      expect(snap.worldPoint.z, closeTo(2000.0, 0.1));
+    });
+
+    test('InputController insertEquipment creates clean equipment with no nozzles', () {
+      final controller = PipingInputController(
+        network: network,
+        projector: projector,
+      );
+      controller.currentTool = CanvasTool.insertEquipment;
+      controller.isSnapEnabled = false;
+
+      controller.handlePointerDown(const Offset(100, 100));
+
+      expect(controller.network.equipments.isNotEmpty, isTrue);
+      final eq = controller.network.equipments.values.first;
+      expect(eq.nozzles, isEmpty);
+      expect(controller.selectedNodeId, isNull);
+      expect(controller.selectedEquipmentId, equals(eq.id));
+    });
+
+    test('Tracing pipe finishing at equipment face attaches nozzle and connects segment', () {
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 1000,
+        height: 2000,
+        nozzles: [],
+      );
+      network.addEquipment(eq);
+
+      // Стартовая точка трубы
+      final start = Node3D(id: 'start_node', x: 1000, y: 1000, z: 4000);
+      network.nodes[start.id] = start;
+
+      final controller = PipingInputController(
+        network: network,
+        projector: projector,
+      );
+      controller.currentTool = CanvasTool.trace;
+      controller.traceStartNode = start;
+
+      // Завершаем трассировку на верхней грани оборудования
+      final topCenterScreen = projector.project(Node3D(id: '', x: 1000, y: 1000, z: 2000));
+      controller.handlePointerMove(topCenterScreen);
+      controller.handlePointerDown(topCenterScreen);
+
+      expect(controller.network.segments.length, equals(1));
+      final seg = controller.network.segments.values.first;
+      expect(seg.startNodeId, equals('start_node'));
+
+      final updatedEq = controller.network.equipments['eq1']!;
+      expect(updatedEq.nozzles.length, equals(1));
+      expect(seg.endNodeId, equals(updatedEq.nozzles.first.id));
+
+      // Теперь удаляем трубу через deleteSelected: штуцер должен зачиститься!
+      controller.selectedSegmentId = seg.id;
+      controller.deleteSelected();
+
+      expect(controller.network.segments.isEmpty, isTrue);
+      expect(controller.network.equipments['eq1']!.nozzles.isEmpty, isTrue);
+    });
+
+    test('Tracing pipe starting at equipment face creates nozzle and draws outwards', () {
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 1000,
+        height: 2000,
+        nozzles: [],
+      );
+      network.addEquipment(eq);
+
+      final controller = PipingInputController(
+        network: network,
+        projector: projector,
+      );
+      controller.currentTool = CanvasTool.trace;
+
+      // Кликаем по верхней грани для начала трассировки
+      final topCenterScreen = projector.project(Node3D(id: '', x: 1000, y: 1000, z: 2000));
+      controller.handlePointerMove(topCenterScreen);
+      controller.handlePointerDown(topCenterScreen);
+
+      expect(controller.traceStartNode, isNotNull);
+      final nozzleNodeId = controller.traceStartNode!.id;
+      expect(controller.network.equipments['eq1']!.nozzles.length, equals(1));
+      expect(controller.network.equipments['eq1']!.nozzles.first.id, equals(nozzleNodeId));
+
+      // Кликаем в воздухе, завершая сегмент
+      final endScreen = projector.project(Node3D(id: '', x: 1000, y: 1000, z: 3500));
+      controller.handlePointerMove(endScreen);
+      controller.handlePointerDown(endScreen);
+
+      expect(controller.network.segments.length, equals(1));
+      final seg = controller.network.segments.values.first;
+      expect(seg.startNodeId, equals(nozzleNodeId));
     });
   });
 }
