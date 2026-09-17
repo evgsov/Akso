@@ -53,6 +53,9 @@ class Fitting {
   /// Угол пространственного поворота детали вокруг оси трубы в градусах (0..360°)
   final double rotationAngleDeg;
 
+  /// Разворот привалочной плоскости (зеркала) фланца на 180° вдоль оси трубы
+  final bool isFlipped;
+
   /// Заводской номер или номер партии/плавки детали
   final String? serialNumber;
 
@@ -77,6 +80,7 @@ class Fitting {
     this.branchLengthMm,
     this.customRadiusMm,
     this.rotationAngleDeg = 0.0,
+    this.isFlipped = false,
     this.serialNumber,
   });
 
@@ -165,6 +169,7 @@ class Fitting {
     double? branchLengthMm,
     double? customRadiusMm,
     double? rotationAngleDeg,
+    bool? isFlipped,
     String? serialNumber,
     bool clearSerialNumber = false,
   }) {
@@ -189,6 +194,7 @@ class Fitting {
       branchLengthMm: branchLengthMm ?? this.branchLengthMm,
       customRadiusMm: customRadiusMm ?? this.customRadiusMm,
       rotationAngleDeg: rotationAngleDeg ?? this.rotationAngleDeg,
+      isFlipped: isFlipped ?? this.isFlipped,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
@@ -214,6 +220,7 @@ class Fitting {
         if (branchLengthMm != null) 'branchLengthMm': branchLengthMm,
         if (customRadiusMm != null) 'customRadiusMm': customRadiusMm,
         if (rotationAngleDeg != 0.0) 'rotationAngleDeg': rotationAngleDeg,
+        if (isFlipped) 'isFlipped': true,
         if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
@@ -246,6 +253,7 @@ class Fitting {
       branchLengthMm: (json['branchLengthMm'] as num?)?.toDouble(),
       customRadiusMm: (json['customRadiusMm'] as num?)?.toDouble(),
       rotationAngleDeg: (json['rotationAngleDeg'] as num?)?.toDouble() ?? 0.0,
+      isFlipped: json['isFlipped'] as bool? ?? false,
       serialNumber: json['serialNumber'] as String?,
     );
   }

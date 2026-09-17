@@ -1018,7 +1018,33 @@ class DxfWriter {
       );
     }
 
-    // 4. Сварные соединения (сводка стыков по типам швов)
+    // 4. Ответные фланцы и прокладки для фланцевой арматуры
+    final counterFlangeMap = <String, int>{};
+    int totalGaskets = 0;
+    for (final v in network.valves.values) {
+      if (v.isFlanged && v.includeCounterFlanges) {
+        final seg = network.segments[v.segmentId];
+        final isTerminalAtStart = seg != null && network.getConnectedSegments(seg.startNodeId).length <= 1 && v.ratio <= 0.35;
+        final isTerminalAtEnd = seg != null && network.getConnectedSegments(seg.endNodeId).length <= 1 && v.ratio >= 0.65;
+        final count = (isTerminalAtStart || isTerminalAtEnd) ? 1 : 2;
+        final key = 'Фланец ответный Ду${v.dn} Ру${v.flangePressurePn}|${v.counterFlangeType}';
+        counterFlangeMap[key] = (counterFlangeMap[key] ?? 0) + count;
+        totalGaskets += count;
+      }
+    }
+    for (final entry in counterFlangeMap.entries) {
+      final parts = entry.key.split('|');
+      buffer.writeln(
+        '${itemNum++};${parts[0]};—;${parts[1]};Сталь 20;${entry.value};шт.;Комплект арматуры',
+      );
+    }
+    if (totalGaskets > 0) {
+      buffer.writeln(
+        '${itemNum++};Прокладка межфланцевая ПОН-Б;—;ГОСТ 15180-86;Паронит ПОН-Б;$totalGaskets;шт.;Комплект арматуры',
+      );
+    }
+
+    // 5. Сварные соединения (сводка стыков по типам швов)
     final weldSummary = <String, int>{};
     for (final w in network.weldJoints.values) {
       final key = '${w.weldType.gostCode} (${w.steelGrade})';

@@ -34,8 +34,9 @@ class FittingPainter {
         final center = projector.project(node);
         final s1 = connected[0];
         final s2 = connected[1];
-        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-        final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+        final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+        if (other1 == null || other2 == null) continue;
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
@@ -104,7 +105,8 @@ class FittingPainter {
 
         final center = projector.project(node);
         final s1 = connected[0];
-        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+        if (other1 == null) continue;
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
@@ -202,7 +204,8 @@ class FittingPainter {
 
         final center = projector.project(node);
         final s1 = connected[0];
-        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+        if (other1 == null) continue;
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
@@ -301,8 +304,9 @@ class FittingPainter {
     final s1 = connected[0];
     final s2 = connected[1];
 
-    final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-    final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
+    final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+    final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+    if (other1 == null || other2 == null) return;
 
     final ptN = projector.project(node);
     final ptO1 = projector.project(other1);

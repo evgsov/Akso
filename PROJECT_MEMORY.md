@@ -1322,7 +1322,60 @@
       - Массовое обновление `bulkUpdateWeldJoints` с `tickSizeMm` и `clearTickSize`.
       - Проверка геометрии `generateWeld3d`: строго в плоскости $X, Y$ ($\Delta Z = 0$) перпендикулярно осям $Y$ ($\Delta x = L, \Delta z = 0$), $Z$ ($\Delta y = L, \Delta z = 0$) и $X$ ($\Delta y = L, \Delta z = 0$), длина $L = D_{\text{нар}}$ по умолчанию и $L = \text{tickSizeMm}$ при кастомизации.
       - Проверка ортогональности нормали засечки к вектору трубы на экране (скалярное произведение $\vec{v} \cdot \vec{n} = 0$).
-    - Все тесты проекта пройдены успешно (`flutter test` — All tests passed).
-    - Статический анализ `dart analyze lib test` — 0 ошибок и предупреждений (No issues found).
-    - Проверена работа DTD и Hot Reload в работающем приложении.
+- **Выделение элементов по телу, монтаж арматуры на торец, нативные фланцы арматуры и разворот фланцев на 180° (Phase 37):**
+  - **Постановка задачи:**
+    1. **Выделение элементов по их телу (Body Hit-Testing):** возможность выделять фасонные элементы (отводы, тройники, переходы, фланцы, заглушки, крестовины) и арматуру кликом по их физическому геометрическому телу на холсте, а не только по центральной точке узла `Node3D`, с приоритетом над трубой под ними.
+    2. **Монтаж элементов на открытый торец трубопровода:** возможность устанавливать задвижки/краны на свободный конец трубы (степень узла = 1) с отступом на полудлину $L/2$ и формированием ровно одного монтажного сварного стыка С17 со стороны трубы (без шва на открытом конце).
+    3. **Нативная фланцевая арматура и настройки фланцев:** при `valve.isFlanged == true` автоматическая отрисовка полноценных фланцевых пар с ответными воротниками и прокладками, настройки давления (Ру10, Ру16, Ру25, Ру40), тумблер включения/выключения ответных фланцев, выбор исполнения (воротниковые тип 11 / плоские тип 01) и учет ответных фланцев и прокладок ПОН-Б в MTO CSV.
+    4. **Разворот одиночных фланцев на 180° (`isFlipped`):** добавление свойства `isFlipped` для инверсии направления привалочной плоскости и воротника одиночного фланца вдоль оси трубы с кнопкой в `FittingPropertiesSheet`.
+  - **Реализация:**
+    - `lib/domain/models/valve.dart`:
+      - Добавлены поля `flangePressurePn` (дефолт 16), `includeCounterFlanges` (дефолт true), `counterFlangeType` (дефолт 'ГОСТ 33259-2015 тип 11').
+      - Обновлены `copyWith`, `toJson`, `fromJson`.
+    - `lib/domain/models/fitting.dart`:
+      - Добавлено поле `isFlipped` (дефолт false).
+      - Обновлены `copyWith`, `toJson`, `fromJson`.
+    - `lib/domain/models/piping_network.dart`:
+      - `addValve`: снято ограничение `clamp(0.05, 0.95)`, поддержан флаг `isTerminal` и параметры фланцев.
+      - Добавлен метод `attachEndValveToNode` для монтажа арматуры на концевые узлы (степень 1).
+      - `generateElementWeldJoints`: для концевой задвижки генерируется 1 стык С17 со стороны трубы; при `includeCounterFlanges == false` стыки не генерируются.
+      - `validateAndCleanWeldJoints`: швы концевой арматуры сохраняются на границе с трубой, лишние швы на открытом конце зачищаются.
+    - `lib/domain/services/element_3d_geometry.dart`:
+      - `generateValve3d` и `generateValveWireframe`: отрисовка фланцевых пар с ответными воротниками при `isFlanged` и `includeCounterFlanges`.
+      - `generateFlangeWireframe` и `generateCapWireframe`: инверсия вектора базиса `basis.t` при `fitting.isFlipped == true`.
+    - `lib/ui/canvas/input_controller.dart`:
+      - Реализованы методы `_findFittingAtScreenPos` (дискретизация дуги Безье для отводов, плечи для тройников и крестовин, wireframe для переходов, фланцев и заглушек) и `_findValveAtScreenPos` (проверка по каркасным сегментам тела, штока и маховика).
+      - При клике на холсте в режиме `CanvasTool.select` проверка тела фитинга и арматуры выполняется с приоритетом перед сегментом трубы под ними.
+      - В `CanvasTool.insertValve` поддержан клик по концевому узлу со степенью 1 через вызов `attachEndValveToNode`.
+    - `lib/ui/features/editor/widgets/desktop_cad_layout.dart`:
+      - В инспекторе арматуры добавлен блок параметров фланцев: давление Ру (Pn), тумблер «Ответные фланцы», тип ответных фланцев.
+      - При выделении концевого узла добавлена кнопка «Установить арматуру на торец».
+    - `lib/ui/features/editor/widgets/fitting_properties_sheet.dart`:
+      - Добавлена кнопка разворота на 180° (`isFlipped`) для одиночных фланцев.
+    - `lib/data/dxf/dxf_writer.dart`:
+      - В `generateMtoCsv` включен расчет ответных фланцев Ру и межфланцевых прокладок ПОН-Б для фланцевой арматуры.
+- **Устранение ошибки при трассировке отвода (`_TypeError: Null check operator used on a null value`) и укрепление null-safety (Phase 38):**
+  - **Постановка проблемы:**
+    - При интерактивной трассировке трубопровода с поворотом под отвод возникало исключение:
+      `_TypeError (Null check operator used on a null value)` на строке `network.nodes[s1.startNodeId == nodeId ? s1.endNodeId : s1.startNodeId]!`.
+    - Причина: при рисовании сегментов, разбиении сегментов (`splitSegmentAtRatio`) или промежуточных перерисовках холста до фиксации узлов в `network.nodes`, некоторые смежные узлы могли временно отсутствовать в словаре узлов сети. Использование оператора принудительного разыменования `!` приводило к сбою рантайма.
+  - **Реализация:**
+    - `lib/domain/services/fitting_detector.dart`:
+      - В `autoDetectFittingsForNode` безопасные null-проверки для центрального узла `nCenter` и смежных узлов `n1`, `n2` с ранним возвратом `return;` вместо небезопасного `!`.
+    - `lib/ui/canvas/painters/fitting_painter.dart`:
+      - Заменены force unwrap `!` на безопасные проверки `other1 != null && other2 != null` в `_drawReducer`, `_drawFlange`, `_drawCap` и `_drawElbowSymbol`.
+    - `lib/ui/canvas/painters/solid_3d_engine.dart`:
+      - В методах построения 3D мешей фитингов (`_buildTorusElbowMesh`, `_buildReducerMesh`, `_buildFlangeMesh`, `_buildCapMesh`) добавлены проверки на `null` для смежных узлов.
+    - `lib/ui/canvas/input_controller.dart`:
+      - В методах деления сегмента при привязке (строки ~805 и ~2135) и разрешении узла инструмента размеров (~743) устранены операторы `!`, добавлена безопасная проверка на существование концевых узлов сегмента в `network.nodes`.
+    - `lib/domain/services/spool_calculator.dart`:
+      - В расчете одиночных катушек `_generateSubSpoolsForSingle`, цепочек `_generateSubSpoolsForChain` и интерполяции `_interpolateAlongChain` заменены все небезопасные `network.nodes[...]!` на null-safe проверки.
+  - **Верификация:**
+    - В `test/body_hit_test_and_flanged_valves_test.dart` добавлены тесты на null-safety:
+      - Проверка `FittingDetector.autoDetectFittingsForNode` при обращении к несуществующим в сети узлам (завершается корректно без исключения).
+      - Проверка `SpoolCalculator.recalculateSpools` при наличии сегментов с отсутствующими узлами (завершается корректно без исключения).
+    - Полный прогон `flutter test` — 393 теста успешно пройдены (All tests passed).
+    - Статический анализ `dart analyze lib test` — 0 замечаний (No issues found).
+
+
 

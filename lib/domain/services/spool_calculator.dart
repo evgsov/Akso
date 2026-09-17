@@ -347,8 +347,11 @@ class SpoolCalculator {
       }
     }
 
-    final start = network.nodes[seg.startNodeId]!;
-    final end = network.nodes[seg.endNodeId]!;
+    final start = network.nodes[seg.startNodeId];
+    final end = network.nodes[seg.endNodeId];
+    if (start == null || end == null) {
+      return spoolCounter;
+    }
     final uX = totalLen > 0 ? (end.x - start.x) / totalLen : 0.0;
     final uY = totalLen > 0 ? (end.y - start.y) / totalLen : 0.0;
     final uZ = totalLen > 0 ? (end.z - start.z) / totalLen : 0.0;
@@ -440,8 +443,11 @@ class SpoolCalculator {
     for (final seg in chain) {
       final isRev = (seg.startNodeId != curExpectedStart);
       segReversed.add(isRev);
-      final nStart = network.nodes[seg.startNodeId]!;
-      final nEnd = network.nodes[seg.endNodeId]!;
+      final nStart = network.nodes[seg.startNodeId];
+      final nEnd = network.nodes[seg.endNodeId];
+      if (nStart == null || nEnd == null) {
+        return spoolCounter;
+      }
       segLengths.add(nStart.distanceTo(nEnd));
       curExpectedStart = isRev ? seg.startNodeId : seg.endNodeId;
     }
@@ -573,8 +579,11 @@ class SpoolCalculator {
       final isRev = segReversed[i];
       if (targetDist <= acc + len || i == chain.length - 1) {
         final localD = (targetDist - acc).clamp(0.0, len);
-        final startNode = network.nodes[isRev ? seg.endNodeId : seg.startNodeId]!;
-        final endNode = network.nodes[isRev ? seg.startNodeId : seg.endNodeId]!;
+        final startNode = network.nodes[isRev ? seg.endNodeId : seg.startNodeId];
+        final endNode = network.nodes[isRev ? seg.startNodeId : seg.endNodeId];
+        if (startNode == null || endNode == null) {
+          return startNode ?? endNode ?? Node3D(id: '', x: 0, y: 0, z: 0);
+        }
         final uX = len > 0 ? (endNode.x - startNode.x) / len : 0.0;
         final uY = len > 0 ? (endNode.y - startNode.y) / len : 0.0;
         final uZ = len > 0 ? (endNode.z - startNode.z) / len : 0.0;
@@ -589,7 +598,7 @@ class SpoolCalculator {
     }
     final lastSeg = chain.last;
     final isRev = segReversed.last;
-    final lastNode = network.nodes[isRev ? lastSeg.startNodeId : lastSeg.endNodeId]!;
-    return lastNode;
+    final lastNode = network.nodes[isRev ? lastSeg.startNodeId : lastSeg.endNodeId];
+    return lastNode ?? Node3D(id: '', x: 0, y: 0, z: 0);
   }
 }

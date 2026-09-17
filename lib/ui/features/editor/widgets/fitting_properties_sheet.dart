@@ -326,16 +326,30 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
               },
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.rotate_right),
-                label: Text('Поворот вокруг оси: ${fit.rotationAngleDeg.toStringAsFixed(0)}° (+90°)'),
-                onPressed: () {
-                  final newAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
-                  _update(fit.copyWith(rotationAngleDeg: newAngle));
-                },
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.rotate_right),
+                    label: Text('Поворот вокруг оси: ${fit.rotationAngleDeg.toStringAsFixed(0)}°', style: const TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      final newAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
+                      _update(fit.copyWith(rotationAngleDeg: newAngle));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: Icon(fit.isFlipped ? Icons.flip_to_back : Icons.flip_to_front),
+                    label: Text(fit.isFlipped ? 'Развернут (180°)' : 'Развернуть на 180°', style: const TextStyle(fontSize: 11)),
+                    style: fit.isFlipped ? OutlinedButton.styleFrom(foregroundColor: Colors.indigo) : null,
+                    onPressed: () {
+                      _update(fit.copyWith(isFlipped: !fit.isFlipped));
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
 

@@ -1903,6 +1903,24 @@ class DesktopCadLayout extends StatelessWidget {
                           },
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                          icon: const Icon(Icons.settings_input_component, size: 16),
+                          label: const Text('Установить арматуру на торец', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            controller.history.recordState(controller.network);
+                            controller.network.attachEndValveToNode(
+                              nodeId,
+                              valveType: controller.selectedValveType,
+                            );
+                            controller.network.generateElementWeldJoints();
+                            controller.refresh();
+                          },
+                        ),
+                      ),
                       const SizedBox(height: 10),
                     ],
 
@@ -2983,11 +3001,107 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                   valve.id,
                   valve.copyWith(isFlanged: val),
                 );
+                widget.controller.network.generateElementWeldJoints();
                 widget.controller.refresh();
               },
             ),
           ],
         ),
+
+        if (valve.isFlanged) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Параметры фланцев:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<int>(
+                  isExpanded: true,
+                  initialValue: valve.flangePressurePn,
+                  decoration: const InputDecoration(
+                    labelText: 'Давление Ру (Pn)',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 10, child: Text('Ру10 (1.0 МПа)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 16, child: Text('Ру16 (1.6 МПа)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 25, child: Text('Ру25 (2.5 МПа)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 40, child: Text('Ру40 (4.0 МПа)', style: TextStyle(fontSize: 11))),
+                  ],
+                  onChanged: (pn) {
+                    if (pn == null) return;
+                    widget.controller.history.recordState(widget.controller.network);
+                    widget.controller.network.updateValve(
+                      valve.id,
+                      valve.copyWith(flangePressurePn: pn),
+                    );
+                    widget.controller.refresh();
+                  },
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Ответные фланцы:', style: TextStyle(fontSize: 11)),
+                    Switch(
+                      value: valve.includeCounterFlanges,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: (val) {
+                        widget.controller.history.recordState(widget.controller.network);
+                        widget.controller.network.updateValve(
+                          valve.id,
+                          valve.copyWith(includeCounterFlanges: val),
+                        );
+                        widget.controller.network.generateElementWeldJoints();
+                        widget.controller.refresh();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: valve.counterFlangeType,
+                  decoration: const InputDecoration(
+                    labelText: 'Тип ответных фланцев',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ГОСТ 33259-2015 тип 11',
+                      child: Text('Воротниковые (тип 11)', style: TextStyle(fontSize: 11)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ГОСТ 33259-2015 тип 01',
+                      child: Text('Плоские приварные (тип 01)', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                  onChanged: (type) {
+                    if (type == null) return;
+                    widget.controller.history.recordState(widget.controller.network);
+                    widget.controller.network.updateValve(
+                      valve.id,
+                      valve.copyWith(counterFlangeType: type),
+                    );
+                    widget.controller.refresh();
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
 
         // Инвертировать
         Row(

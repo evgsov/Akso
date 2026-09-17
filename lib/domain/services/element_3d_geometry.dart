@@ -208,6 +208,21 @@ class Element3dGeometry {
           (cOut + off2).x, (cOut + off2).y, (cOut + off2).z,
           layer: layerValves,
         ));
+
+        if (valve.includeCounterFlanges) {
+          final cInC = cIn - basis.t * 8.0;
+          final cOutC = cOut + basis.t * 8.0;
+          lines.add(WireframeSegment3D(
+            (cInC + off1).x, (cInC + off1).y, (cInC + off1).z,
+            (cInC + off2).x, (cInC + off2).y, (cInC + off2).z,
+            layer: layerValves,
+          ));
+          lines.add(WireframeSegment3D(
+            (cOutC + off1).x, (cOutC + off1).y, (cOutC + off1).z,
+            (cOutC + off2).x, (cOutC + off2).y, (cOutC + off2).z,
+            layer: layerValves,
+          ));
+        }
       }
     }
 
@@ -855,6 +870,59 @@ class Element3dGeometry {
         (cOut - basis.v * flW).x, (cOut - basis.v * flW).y, (cOut - basis.v * flW).z,
         layer: layer,
       ));
+
+      if (valve.includeCounterFlanges) {
+        final gap = math.max(6.0, w * 0.25);
+        final neckLen = math.min(10.0, w * 0.35);
+
+        // Входной ответный фланец и воротник приварки к трубе
+        final cInC = cIn - basis.t * gap;
+        lines.add(WireframeSegment3D(
+          (cInC + basis.v * flW).x, (cInC + basis.v * flW).y, (cInC + basis.v * flW).z,
+          (cInC - basis.v * flW).x, (cInC - basis.v * flW).y, (cInC - basis.v * flW).z,
+          layer: layer,
+        ));
+        final pNeckIn = cInC - basis.t * neckLen;
+        lines.add(WireframeSegment3D(
+          (pNeckIn + basis.v * w).x, (pNeckIn + basis.v * w).y, (pNeckIn + basis.v * w).z,
+          (pNeckIn - basis.v * w).x, (pNeckIn - basis.v * w).y, (pNeckIn - basis.v * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cInC + basis.v * flW).x, (cInC + basis.v * flW).y, (cInC + basis.v * flW).z,
+          (pNeckIn + basis.v * w).x, (pNeckIn + basis.v * w).y, (pNeckIn + basis.v * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cInC - basis.v * flW).x, (cInC - basis.v * flW).y, (cInC - basis.v * flW).z,
+          (pNeckIn - basis.v * w).x, (pNeckIn - basis.v * w).y, (pNeckIn - basis.v * w).z,
+          layer: layer,
+        ));
+
+        // Выходной ответный фланец и воротник приварки к трубе
+        final cOutC = cOut + basis.t * gap;
+        lines.add(WireframeSegment3D(
+          (cOutC + basis.v * flW).x, (cOutC + basis.v * flW).y, (cOutC + basis.v * flW).z,
+          (cOutC - basis.v * flW).x, (cOutC - basis.v * flW).y, (cOutC - basis.v * flW).z,
+          layer: layer,
+        ));
+        final pNeckOut = cOutC + basis.t * neckLen;
+        lines.add(WireframeSegment3D(
+          (pNeckOut + basis.v * w).x, (pNeckOut + basis.v * w).y, (pNeckOut + basis.v * w).z,
+          (pNeckOut - basis.v * w).x, (pNeckOut - basis.v * w).y, (pNeckOut - basis.v * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cOutC + basis.v * flW).x, (cOutC + basis.v * flW).y, (cOutC + basis.v * flW).z,
+          (pNeckOut + basis.v * w).x, (pNeckOut + basis.v * w).y, (pNeckOut + basis.v * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cOutC - basis.v * flW).x, (cOutC - basis.v * flW).y, (cOutC - basis.v * flW).z,
+          (pNeckOut - basis.v * w).x, (pNeckOut - basis.v * w).y, (pNeckOut - basis.v * w).z,
+          layer: layer,
+        ));
+      }
     }
 
     return lines;
@@ -870,7 +938,14 @@ class Element3dGeometry {
   }) {
     final lines = <WireframeSegment3D>[];
     final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
-    final basis = PipeBasis3D.fromEndpoints(pipeNode, node, rotationAngleRad: angleRad);
+    var basis = PipeBasis3D.fromEndpoints(pipeNode, node, rotationAngleRad: angleRad);
+    if (fitting.isFlipped) {
+      basis = PipeBasis3D(
+        t: basis.t * -1.0,
+        u: basis.u,
+        v: basis.v * -1.0,
+      );
+    }
 
     final center = Vector3D.fromNode(node);
     final r = math.max(10.0, ((pipeOuterDiameter ?? fitting.dn.toDouble()) / 2.0));
@@ -937,7 +1012,14 @@ class Element3dGeometry {
   }) {
     final lines = <WireframeSegment3D>[];
     final angleRad = fitting.rotationAngleDeg * math.pi / 180.0;
-    final basis = PipeBasis3D.fromEndpoints(otherNode, node, rotationAngleRad: angleRad);
+    var basis = PipeBasis3D.fromEndpoints(otherNode, node, rotationAngleRad: angleRad);
+    if (fitting.isFlipped) {
+      basis = PipeBasis3D(
+        t: basis.t * -1.0,
+        u: basis.u,
+        v: basis.v * -1.0,
+      );
+    }
 
     final center = Vector3D.fromNode(node);
     final r = math.max(12.0, ((pipeOuterDiameter ?? fitting.dn.toDouble()) / 2.0));

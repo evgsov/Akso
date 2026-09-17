@@ -57,6 +57,15 @@ class Valve {
   /// Фланцевое исполнение (требует ответных фланцев на трубах) vs под приварку
   final bool isFlanged;
 
+  /// Номинальное давление Ру (Pn) для фланцев (10, 16, 25, 40)
+  final int flangePressurePn;
+
+  /// Включать ли ответные приварные фланцы на трубах (true) или только арматура с прокладками (false)
+  final bool includeCounterFlanges;
+
+  /// Исполнение ответных фланцев (тип 11 воротниковый, тип 01 плоский)
+  final String counterFlangeType;
+
   /// Заводской номер арматуры (индивидуальный номер изделия)
   final String? serialNumber;
 
@@ -71,6 +80,9 @@ class Valve {
     this.handleAngleDeg = 90.0,
     this.isReversed = false,
     this.isFlanged = false,
+    this.flangePressurePn = 16,
+    this.includeCounterFlanges = true,
+    this.counterFlangeType = 'ГОСТ 33259-2015 тип 11',
     this.serialNumber,
   });
 
@@ -93,6 +105,9 @@ class Valve {
     double? handleAngleDeg,
     bool? isReversed,
     bool? isFlanged,
+    int? flangePressurePn,
+    bool? includeCounterFlanges,
+    String? counterFlangeType,
     String? serialNumber,
     bool clearSerialNumber = false,
   }) {
@@ -107,6 +122,9 @@ class Valve {
       handleAngleDeg: handleAngleDeg ?? this.handleAngleDeg,
       isReversed: isReversed ?? this.isReversed,
       isFlanged: isFlanged ?? this.isFlanged,
+      flangePressurePn: flangePressurePn ?? this.flangePressurePn,
+      includeCounterFlanges: includeCounterFlanges ?? this.includeCounterFlanges,
+      counterFlangeType: counterFlangeType ?? this.counterFlangeType,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
@@ -122,6 +140,9 @@ class Valve {
         'handleAngleDeg': handleAngleDeg,
         'isReversed': isReversed,
         'isFlanged': isFlanged,
+        'flangePressurePn': flangePressurePn,
+        'includeCounterFlanges': includeCounterFlanges,
+        'counterFlangeType': counterFlangeType,
         if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
@@ -136,6 +157,9 @@ class Valve {
         handleAngleDeg: (json['handleAngleDeg'] as num?)?.toDouble() ?? 90.0,
         isReversed: json['isReversed'] as bool? ?? false,
         isFlanged: json['isFlanged'] as bool? ?? false,
+        flangePressurePn: json['flangePressurePn'] as int? ?? 16,
+        includeCounterFlanges: json['includeCounterFlanges'] as bool? ?? true,
+        counterFlangeType: json['counterFlangeType'] as String? ?? 'ГОСТ 33259-2015 тип 11',
         serialNumber: json['serialNumber'] as String?,
       );
 }

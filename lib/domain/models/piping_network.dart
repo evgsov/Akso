@@ -742,6 +742,10 @@ class PipingNetwork {
     int? dn,
     double? customLengthMm,
     bool? isFlanged,
+    int? flangePressurePn,
+    bool? includeCounterFlanges,
+    String? counterFlangeType,
+    bool isTerminal = false,
   }) {
     final seg = segments[segmentId];
     final valveDn = dn ?? seg?.dn ?? 25;
@@ -750,20 +754,73 @@ class PipingNetwork {
     final id = 'valve_${_uuid.v4()}';
     final flanged = isFlanged ?? catalog.defaultValveIsFlanged;
 
+    final effectiveRatio = isTerminal ? ratio.clamp(0.0, 1.0) : ratio.clamp(0.02, 0.98);
+
     final valve = Valve(
       id: id,
       segmentId: segmentId,
-      ratio: ratio.clamp(0.05, 0.95),
+      ratio: effectiveRatio,
       valveType: valveType,
       name: valveName,
       dn: valveDn,
       lengthMm: length,
       isFlanged: flanged,
+      flangePressurePn: flangePressurePn ?? 16,
+      includeCounterFlanges: includeCounterFlanges ?? true,
+      counterFlangeType: counterFlangeType ?? 'ГОСТ 33259-2015 тип 11',
     );
     valves[id] = valve;
 
     recalculateSpools();
     return valve;
+  }
+
+  /// Монтаж арматуры на открытый торец трубы (концевой узел со степенью <= 1)
+  Valve? attachEndValveToNode(
+    String nodeId, {
+    required ValveType valveType,
+    String? name,
+    int? dn,
+    double? customLengthMm,
+    bool? isFlanged,
+    int? flangePressurePn,
+    bool? includeCounterFlanges,
+    String? counterFlangeType,
+  }) {
+    final connected = getConnectedSegments(nodeId);
+    if (connected.length != 1) return null;
+    final seg = connected[0];
+    final startNode = nodes[seg.startNodeId];
+    final endNode = nodes[seg.endNodeId];
+    if (startNode == null || endNode == null) return null;
+
+    final segLength = seg.calculateLength(startNode, endNode);
+    if (segLength <= 0.1) return null;
+
+    final valveDn = dn ?? seg.dn;
+    final length = customLengthMm ?? valveType.defaultLengthMm(valveDn);
+    final halfRatio = (length / 2.0) / segLength;
+
+    // Если узел начальный (startNodeId == nodeId), арматура смещается от 0 внутрь на halfRatio.
+    // Если узел конечный (endNodeId == nodeId), арматура смещается от 1 внутрь на (1.0 - halfRatio).
+    final isAtStart = seg.startNodeId == nodeId;
+    final ratio = isAtStart
+        ? (halfRatio <= 0.5 ? halfRatio : 0.0)
+        : (halfRatio <= 0.5 ? (1.0 - halfRatio) : 1.0);
+
+    return addValve(
+      segmentId: seg.id,
+      ratio: ratio,
+      valveType: valveType,
+      name: name,
+      dn: valveDn,
+      customLengthMm: length,
+      isFlanged: isFlanged,
+      flangePressurePn: flangePressurePn,
+      includeCounterFlanges: includeCounterFlanges,
+      counterFlangeType: counterFlangeType,
+      isTerminal: true,
+    );
   }
 
   /// Установка опоры или подвески на участок трубы
@@ -1117,7 +1174,7 @@ class PipingNetwork {
   int generateElementWeldJoints() {
     int added = 0;
 
-    // 1. Арматура (Valves): 2 стыка С17 по краям строительной длины
+    // 1. Арматура (Valves): 2 стыка С17 по краям строительной длины (или 1 на конце трубы)
     for (final v in valves.values) {
       final seg = segments[v.segmentId];
       if (seg == null) continue;
@@ -1126,11 +1183,28 @@ class PipingNetwork {
       if (startNode == null || endNode == null) continue;
       final totalLen = seg.calculateLength(startNode, endNode);
       if (totalLen <= 0.1) continue;
+
+      // Если арматура фланцевая и ответные фланцы отключены, стыки приварки не формируются
+      if (v.isFlanged && !v.includeCounterFlanges) continue;
+
       final halfRatio = (v.lengthMm / 2.0) / totalLen;
       final r1 = (v.ratio - halfRatio).clamp(0.0, 1.0);
       final r2 = (v.ratio + halfRatio).clamp(0.0, 1.0);
-      if (ensureWeldExists(v.segmentId, r1, WeldType.c17) != null) added++;
-      if (ensureWeldExists(v.segmentId, r2, WeldType.c17) != null) added++;
+
+      final connStart = getConnectedSegments(seg.startNodeId);
+      final connEnd = getConnectedSegments(seg.endNodeId);
+
+      // Концевой монтаж на открытый торец (степень узла <= 1):
+      // со стороны открытого конца шов не создается, только со стороны трубы
+      final isTerminalAtStart = connStart.length <= 1 && (v.ratio - halfRatio) <= 0.05;
+      final isTerminalAtEnd = connEnd.length <= 1 && (v.ratio + halfRatio) >= 0.95;
+
+      if (!isTerminalAtStart && r1 > 0.001) {
+        if (ensureWeldExists(v.segmentId, r1, WeldType.c17) != null) added++;
+      }
+      if (!isTerminalAtEnd && r2 < 0.999) {
+        if (ensureWeldExists(v.segmentId, r2, WeldType.c17) != null) added++;
+      }
     }
 
     // 2. Фасонные элементы (Fittings)
@@ -1341,18 +1415,32 @@ class PipingNetwork {
 
         // 1. Свободный открытый торец трубы (степень <= 1)
         if (conn.length <= 1) {
-          final fit = fittings[targetNodeId];
-          if (fit == null ||
-              (fit.fittingType != FittingType.cap &&
-               fit.fittingType != FittingType.flange)) {
-            toRemove.add(w.id);
-            continue;
-          }
-          if (fit.fittingType == FittingType.flange &&
-              fit.flangeConnectionType == FlangeConnectionType.blindFlange &&
-              (fit.customWeldCount ?? 0) == 0) {
-            toRemove.add(w.id);
-            continue;
+          final hasTerminalValve = valves.values.any((v) =>
+              v.segmentId == seg.id &&
+              (!v.isFlanged || v.includeCounterFlanges) &&
+              (isNearStart ? v.ratio <= 0.4 : v.ratio >= 0.6));
+
+          if (hasTerminalValve) {
+            // Удаляем только шов на самом краю среза трубы (висящий в воздухе),
+            // а внутренний шов приварки арматуры к трубе сохраняем
+            if (w.ratio <= 0.05 || w.ratio >= 0.95) {
+              toRemove.add(w.id);
+              continue;
+            }
+          } else {
+            final fit = fittings[targetNodeId];
+            if (fit == null ||
+                (fit.fittingType != FittingType.cap &&
+                 fit.fittingType != FittingType.flange)) {
+              toRemove.add(w.id);
+              continue;
+            }
+            if (fit.fittingType == FittingType.flange &&
+                fit.flangeConnectionType == FlangeConnectionType.blindFlange &&
+                (fit.customWeldCount ?? 0) == 0) {
+              toRemove.add(w.id);
+              continue;
+            }
           }
         }
 

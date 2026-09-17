@@ -36,9 +36,13 @@ class FittingDetector {
     if (connected.length == 2) {
       final s1 = connected[0];
       final s2 = connected[1];
-      final nCenter = network.nodes[nodeId]!;
-      final n1 = network.nodes[s1.startNodeId == nodeId ? s1.endNodeId : s1.startNodeId]!;
-      final n2 = network.nodes[s2.startNodeId == nodeId ? s2.endNodeId : s2.startNodeId]!;
+      final nCenter = network.nodes[nodeId];
+      final n1 = network.nodes[s1.startNodeId == nodeId ? s1.endNodeId : s1.startNodeId];
+      final n2 = network.nodes[s2.startNodeId == nodeId ? s2.endNodeId : s2.startNodeId];
+
+      if (nCenter == null || n1 == null || n2 == null) {
+        return;
+      }
 
       // Векторы направлений от узла
       final v1x = n1.x - nCenter.x;

@@ -112,8 +112,9 @@ class Solid3dEngine {
         if (connected.length == 2) {
           final s1 = connected[0];
           final s2 = connected[1];
-          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
+          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+          if (other1 == null || other2 == null) continue;
 
           final r1 = (network.pipeCatalog.getDimension(s1.dn)?.outerDiameterMm ?? s1.dn.toDouble()) / 2.0;
           final r2 = (network.pipeCatalog.getDimension(s2.dn)?.outerDiameterMm ?? s2.dn.toDouble()) / 2.0;
@@ -137,8 +138,9 @@ class Solid3dEngine {
         if (connected.length == 2) {
           final s1 = connected[0];
           final s2 = connected[1];
-          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId]!;
+          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+          if (other1 == null || other2 == null) continue;
 
           final dir1 = (Vector3D.fromNode(other1) - Vector3D.fromNode(node)).normalized();
           final dir2 = (Vector3D.fromNode(other2) - Vector3D.fromNode(node)).normalized();
@@ -165,7 +167,8 @@ class Solid3dEngine {
       } else if (fit.fittingType == FittingType.flange) {
         if (connected.isNotEmpty) {
           final s = connected[0];
-          final other = network.nodes[s.startNodeId == fit.nodeId ? s.endNodeId : s.startNodeId]!;
+          final other = network.nodes[s.startNodeId == fit.nodeId ? s.endNodeId : s.startNodeId];
+          if (other == null) continue;
           final dir = (Vector3D.fromNode(node) - Vector3D.fromNode(other)).normalized();
           final r = (network.pipeCatalog.getDimension(fit.dn)?.outerDiameterMm ?? fit.dn.toDouble()) / 2.0;
 
@@ -183,7 +186,8 @@ class Solid3dEngine {
       } else if (fit.fittingType == FittingType.cap) {
         if (connected.isNotEmpty) {
           final s = connected[0];
-          final other = network.nodes[s.startNodeId == fit.nodeId ? s.endNodeId : s.startNodeId]!;
+          final other = network.nodes[s.startNodeId == fit.nodeId ? s.endNodeId : s.startNodeId];
+          if (other == null) continue;
           final dir = (Vector3D.fromNode(node) - Vector3D.fromNode(other)).normalized();
           final r = (network.pipeCatalog.getDimension(s.dn)?.outerDiameterMm ?? s.dn.toDouble()) / 2.0;
 
@@ -252,7 +256,8 @@ class Solid3dEngine {
           final r = (network.pipeCatalog.getDimension(fit.dn)?.outerDiameterMm ?? fit.dn.toDouble()) / 2.0;
           final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
           if (branchSeg != null) {
-            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
+            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId];
+            if (otherBranch == null) continue;
             final dirBranch = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
             final armBranch = fit.effectiveBranchLengthMm;
             final pArm = Vector3D.fromNode(node) + dirBranch * math.min(armBranch, 60.0);

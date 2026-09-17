@@ -20,11 +20,13 @@ import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
+import '../../domain/services/element_3d_geometry.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recovery_repository.dart';
 import 'controllers/selection_controller.dart';
 import 'controllers/tracing_controller.dart';
 import 'painters/callout_painter.dart';
+import 'painters/pipe_painter.dart';
 
 const _uuid = Uuid();
 
@@ -674,9 +676,12 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
-    final hitNodeId = currentSnapResult?.type == SnapType.node
+    var hitNodeId = currentSnapResult?.type == SnapType.node
         ? currentSnapResult!.snappedNodeId
         : _findNodeAtScreenPos(screenPos);
+    if (hitNodeId == null && currentTool == CanvasTool.select) {
+      hitNodeId = _findFittingAtScreenPos(screenPos);
+    }
 
     final hitSegId = ((currentSnapResult?.type == SnapType.segmentAxis ||
                 currentSnapResult?.type == SnapType.midpoint ||
@@ -735,7 +740,7 @@ class PipingInputController extends ChangeNotifier {
       case CanvasTool.dimension:
         final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
             ? currentSnapResult!.worldPoint
-            : (hitNodeId != null ? network.nodes[hitNodeId]! : projector.unproject(screenPos, currentElevationZ));
+            : ((hitNodeId != null ? network.nodes[hitNodeId] : null) ?? projector.unproject(screenPos, currentElevationZ));
         final snappedNodeId = (currentSnapResult?.type == SnapType.node ? currentSnapResult!.snappedNodeId : hitNodeId);
 
         if (dimensionStartNode == null) {
@@ -797,13 +802,17 @@ class PipingInputController extends ChangeNotifier {
               currentSnapResult!.snappedSegmentId == hitSegId &&
               network.segments.containsKey(hitSegId)) {
             final seg = network.segments[hitSegId]!;
-            final s = network.nodes[seg.startNodeId]!;
-            final e = network.nodes[seg.endNodeId]!;
-            final w = currentSnapResult!.worldPoint;
-            final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
-            ratio = segLen > 0.001
-                ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
-                : 0.5;
+            final s = network.nodes[seg.startNodeId];
+            final e = network.nodes[seg.endNodeId];
+            if (s != null && e != null) {
+              final w = currentSnapResult!.worldPoint;
+              final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
+              ratio = segLen > 0.001
+                  ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
+                  : 0.5;
+            } else {
+              ratio = 0.5;
+            }
           } else {
             ratio = _calcSegmentRatio(hitSegId, screenPos);
           }
@@ -1372,6 +1381,18 @@ class PipingInputController extends ChangeNotifier {
         break;
 
       case CanvasTool.insertValve:
+        if (hitNodeId != null) {
+          final conn = network.getConnectedSegments(hitNodeId);
+          if (conn.length == 1) {
+            history.recordState(network);
+            network.attachEndValveToNode(
+              hitNodeId,
+              valveType: selectedValveType,
+            );
+            notifyListeners();
+            break;
+          }
+        }
         if (hitSegId != null) {
           final seg = network.segments[hitSegId];
           if (seg != null) {
@@ -2115,13 +2136,18 @@ class PipingInputController extends ChangeNotifier {
                  network.segments.containsKey(currentSnapResult!.snappedSegmentId)) {
         final segId = currentSnapResult!.snappedSegmentId!;
         final seg = network.segments[segId]!;
-        final s = network.nodes[seg.startNodeId]!;
-        final e = network.nodes[seg.endNodeId]!;
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
         final w = currentSnapResult!.worldPoint;
-        final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
-        final ratio = segLen > 0.001
-            ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
-            : 0.5;
+        final double ratio;
+        if (s != null && e != null) {
+          final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
+          ratio = segLen > 0.001
+              ? (math.sqrt(math.pow(w.x - s.x, 2) + math.pow(w.y - s.y, 2) + math.pow(w.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
+              : 0.5;
+        } else {
+          ratio = 0.5;
+        }
         final midNode = network.splitSegmentAtRatio(segId, ratio);
         targetNodeId = midNode?.id ??
             (() {
@@ -2374,7 +2400,7 @@ class PipingInputController extends ChangeNotifier {
   }
 
 
-  /// Поиск арматуры в радиусе 18 пикселей от курсора
+  /// Поиск арматуры по телу и каркасу в радиусе курсора
   String? _findValveAtScreenPos(Offset screenPos) {
     for (final valve in network.valves.values) {
       final seg = network.segments[valve.segmentId];
@@ -2382,10 +2408,211 @@ class PipingInputController extends ChangeNotifier {
       final s = network.nodes[seg.startNodeId];
       final e = network.nodes[seg.endNodeId];
       if (s == null || e == null) continue;
+
       final worldPos = valve.calculatePosition(s, e);
       final p = projector.project(worldPos);
-      if ((p - screenPos).distance <= 18.0) {
+      if ((p - screenPos).distance <= 20.0) {
         return valve.id;
+      }
+
+      // Проверяем каркасные отрезки корпуса, штока, маховика и фланцев
+      final wireSegments = Element3dGeometry.generateValveWireframe(
+        valve,
+        s,
+        e,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+      for (final wire in wireSegments) {
+        final p1 = projector.project(wire.startNode);
+        final p2 = projector.project(wire.endNode);
+        if (_distanceToLineSegment(screenPos, p1, p2) <= 14.0) {
+          return valve.id;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Поиск фасонного элемента (отвод, тройник, переход, фланец, заглушка) по его геометрическому телу на экране
+  String? _findFittingAtScreenPos(Offset screenPos) {
+    for (final fit in network.fittings.values) {
+      final node = network.nodes[fit.nodeId];
+      if (node == null) continue;
+      final ptN = projector.project(node);
+
+      // Быстрая проверка центра узла
+      if ((ptN - screenPos).distance <= 18.0) {
+        return fit.nodeId;
+      }
+
+      final connected = network.getConnectedSegments(fit.nodeId);
+
+      switch (fit.fittingType) {
+        case FittingType.elbow90:
+        case FittingType.elbow45:
+          if (connected.length == 2) {
+            final s1 = connected[0];
+            final s2 = connected[1];
+            final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+            final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+            if (other1 == null || other2 == null) break;
+
+            final ptO1 = projector.project(other1);
+            final ptO2 = projector.project(other2);
+
+            final pOut1 = PipePainter.calcPipeTrimmedPoint(
+              network: network,
+              nodeId: fit.nodeId,
+              otherNodeId: other1.id,
+              nodeScreen: ptN,
+              otherScreen: ptO1,
+              seg: s1,
+            );
+            final pOut2 = PipePainter.calcPipeTrimmedPoint(
+              network: network,
+              nodeId: fit.nodeId,
+              otherNodeId: other2.id,
+              nodeScreen: ptN,
+              otherScreen: ptO2,
+              seg: s2,
+            );
+
+            // Дискретизация квадратичной кривой Безье отвода (10 отрезков)
+            Offset prev = pOut1;
+            bool hit = false;
+            for (int i = 1; i <= 10; i++) {
+              final t = i / 10.0;
+              final oneMinusT = 1.0 - t;
+              final cur = pOut1 * (oneMinusT * oneMinusT) +
+                  ptN * (2.0 * oneMinusT * t) +
+                  pOut2 * (t * t);
+              if (_distanceToLineSegment(screenPos, prev, cur) <= 15.0) {
+                hit = true;
+                break;
+              }
+              prev = cur;
+            }
+            if (hit) return fit.nodeId;
+          }
+          break;
+
+        case FittingType.tee:
+        case FittingType.cross:
+          if (connected.length >= 3) {
+            final branchSeg = fit.fittingType == FittingType.tee
+                ? network.identifyBranchSegment(fit.nodeId, connected)
+                : null;
+            for (int i = 0; i < connected.length; i++) {
+              final seg = connected[i];
+              final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+              final otherNode = network.nodes[otherId];
+              if (otherNode == null) continue;
+
+              final isBranch = branchSeg != null && seg.id == branchSeg.id;
+              final armLenMm = isBranch
+                  ? fit.effectiveBranchLengthMm
+                  : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                      ? fit.buildingLengthMm! / 2.0
+                      : fit.dn * 1.0);
+
+              final vx = otherNode.x - node.x;
+              final vy = otherNode.y - node.y;
+              final vz = otherNode.z - node.z;
+              final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+              final uX = dist3d > 0 ? vx / dist3d : 0.0;
+              final uY = dist3d > 0 ? vy / dist3d : 0.0;
+              final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+              final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+              final pArmScreen = projector.projectCoordinates(
+                node.x + uX * effectiveArm,
+                node.y + uY * effectiveArm,
+                node.z + uZ * effectiveArm,
+              );
+
+              if (_distanceToLineSegment(screenPos, ptN, pArmScreen) <= 15.0) {
+                return fit.nodeId;
+              }
+            }
+          }
+          break;
+
+        case FittingType.reducerConcentric:
+        case FittingType.reducerEccentric:
+          if (connected.length == 2) {
+            final s1 = connected[0];
+            final s2 = connected[1];
+            final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+            final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+            if (other1 != null && other2 != null) {
+              final wireSegments = Element3dGeometry.generateReducerWireframe(
+                fit,
+                node,
+                other1,
+                other2,
+                d1: s1.outerDiameterMm,
+                d2: s2.outerDiameterMm,
+              );
+              for (final wire in wireSegments) {
+                final p1 = projector.project(wire.startNode);
+                final p2 = projector.project(wire.endNode);
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                  return fit.nodeId;
+                }
+              }
+            }
+          }
+          break;
+
+        case FittingType.flange:
+          if (connected.isNotEmpty) {
+            final s1 = connected[0];
+            final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+            if (other1 != null) {
+              final wireSegments = Element3dGeometry.generateFlangeWireframe(
+                fit,
+                node,
+                other1,
+                pipeOuterDiameter: s1.outerDiameterMm,
+              );
+              for (final wire in wireSegments) {
+                final p1 = projector.project(wire.startNode);
+                final p2 = projector.project(wire.endNode);
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                  return fit.nodeId;
+                }
+              }
+            }
+          }
+          break;
+
+        case FittingType.cap:
+          if (connected.isNotEmpty) {
+            final s1 = connected[0];
+            final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+            if (other1 != null) {
+              final wireSegments = Element3dGeometry.generateCapWireframe(
+                fit,
+                node,
+                other1,
+                pipeOuterDiameter: s1.outerDiameterMm,
+              );
+              for (final wire in wireSegments) {
+                final p1 = projector.project(wire.startNode);
+                final p2 = projector.project(wire.endNode);
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                  return fit.nodeId;
+                }
+              }
+            }
+          }
+          break;
+
+        case FittingType.directBranch:
+          if ((ptN - screenPos).distance <= 20.0) {
+            return fit.nodeId;
+          }
+          break;
       }
     }
     return null;
@@ -2427,6 +2654,7 @@ class PipingInputController extends ChangeNotifier {
 
   /// Публичные методы поиска элементов по экрану для тестов и контроллера
   String? findValveAtScreenPos(Offset screenPos) => _findValveAtScreenPos(screenPos);
+  String? findFittingAtScreenPos(Offset screenPos) => _findFittingAtScreenPos(screenPos);
   String? findWeldAtScreenPos(Offset screenPos) => _findWeldAtScreenPos(screenPos);
   String? findSupportAtScreenPos(Offset screenPos) => _findSupportAtScreenPos(screenPos);
 
