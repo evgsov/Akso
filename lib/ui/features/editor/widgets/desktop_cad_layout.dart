@@ -3704,6 +3704,98 @@ class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> 
         ),
         const SizedBox(height: 10),
 
+        // Поворот оборудования вокруг вертикальной оси Z
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Поворот:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              '${eq.rotationAngleDeg.round()}°',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+            icon: const Icon(Icons.rotate_right, size: 16),
+            label: const Text('Повернуть на 90°', style: TextStyle(fontSize: 12)),
+            onPressed: () {
+              widget.controller.network.rotateEquipment(eq.id, 90.0);
+              widget.controller.refresh();
+              setState(() {});
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        if (eq.nozzles.isNotEmpty) ...[
+          Text('Штуцеры (${eq.nozzles.length}):', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 4),
+          ...eq.nozzles.map((noz) {
+            final faceStr = noz.face != null ? ' (${noz.face!.name})' : '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('${noz.name}$faceStr Ду${noz.dn}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Удалить штуцер',
+                        onPressed: () {
+                          widget.controller.network.removeEquipmentNozzle(eq.id, noz.id);
+                          widget.controller.refresh();
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: Checkbox(
+                          value: noz.includeInMto,
+                          onChanged: (val) {
+                            if (val != null) {
+                              widget.controller.network.setNozzleIncludeInMto(eq.id, noz.id, val);
+                              widget.controller.refresh();
+                              setState(() {});
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Expanded(
+                        child: Text(
+                          'Ответный фланец в МТО',
+                          style: TextStyle(fontSize: 10, color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+        ],
+
         SizedBox(
           width: double.infinity,
           child: FilledButton.tonalIcon(

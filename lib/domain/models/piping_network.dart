@@ -531,6 +531,47 @@ class PipingNetwork {
     recalculateSpools();
   }
 
+  /// Удаление конкретного штуцера оборудования
+  void removeEquipmentNozzle(String eqId, String nozzleId) {
+    final eq = equipments[eqId];
+    if (eq == null) return;
+
+    equipments[eqId] = eq.copyWith(
+      nozzles: eq.nozzles.where((n) => n.id != nozzleId).toList(),
+    );
+
+    final segsToRemove = segments.values
+        .where((s) => s.startNodeId == nozzleId || s.endNodeId == nozzleId)
+        .map((s) => s.id)
+        .toList();
+    for (final sId in segsToRemove) {
+      segments.remove(sId);
+      valves.removeWhere((_, v) => v.segmentId == sId);
+      weldJoints.removeWhere((_, w) => w.segmentId == sId);
+      supports.removeWhere((_, s) => s.segmentId == sId);
+      callouts.removeWhere((_, c) => c.targetId == sId);
+    }
+    fittings.remove(nozzleId);
+    nodes.remove(nozzleId);
+    callouts.removeWhere((_, c) => c.targetId == nozzleId);
+    recalculateSpools();
+  }
+
+  /// Настройка включения ответного фланца штуцера в ведомость МТО
+  void setNozzleIncludeInMto(String eqId, String nozzleId, bool includeInMto) {
+    final eq = equipments[eqId];
+    if (eq == null) return;
+
+    final updatedNozzles = eq.nozzles.map((n) {
+      if (n.id == nozzleId) {
+        return n.copyWith(includeInMto: includeInMto);
+      }
+      return n;
+    }).toList();
+
+    equipments[eqId] = eq.copyWith(nozzles: updatedNozzles);
+  }
+
   /// Добавление нового сегмента трубы в сеть с автоматическим определением фитингов
   void addSegment(PipeSegment segment) {
     segments[segment.id] = segment;

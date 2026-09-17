@@ -243,6 +243,31 @@ void main() {
       expect(currentEq.nozzles.length, equals(1));
       expect(currentEq.nozzles.first.id, equals(noz1.id));
     });
+
+    test('removeEquipmentNozzle and setNozzleIncludeInMto update equipment state', () {
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 1000,
+        height: 2000,
+        nozzles: [],
+      );
+      network.addEquipment(eq);
+
+      final noz = network.attachNozzleAtWorldPoint('eq1', Node3D(id: 't1', x: 1000, y: 1000, z: 2000));
+      expect(network.equipments['eq1']!.nozzles.first.includeInMto, isFalse);
+
+      network.setNozzleIncludeInMto('eq1', noz.id, true);
+      expect(network.equipments['eq1']!.nozzles.first.includeInMto, isTrue);
+
+      network.removeEquipmentNozzle('eq1', noz.id);
+      expect(network.equipments['eq1']!.nozzles.isEmpty, isTrue);
+      expect(network.nodes.containsKey(noz.id), isFalse);
+    });
   });
 
   group('SnapEngine and InputController Equipment Snapping & Tracing Tests', () {
