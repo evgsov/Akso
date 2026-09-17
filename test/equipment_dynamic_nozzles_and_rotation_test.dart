@@ -7,6 +7,7 @@ import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/data/dxf/dxf_writer.dart';
+import 'package:akso/domain/services/element_3d_geometry.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
 import 'package:akso/ui/canvas/painters/equipment_painter.dart';
 
@@ -576,6 +577,80 @@ void main() {
       final mtoWith = DxfWriter.generateMtoCsv(network);
       expect(mtoWith.contains('Штуцер оборудования'), isTrue);
       expect(mtoWith.contains('Фланец ответный Ду80'), isTrue);
+    });
+  });
+
+  group('3D Equipment Nozzle Wireframe Tests', () {
+    test('generateNozzleWireframe builds 3D spud, flange disc and collar for vertical nozzle', () {
+      final lines = Element3dGeometry.generateNozzleWireframe(
+        startX: 1000,
+        startY: 1000,
+        startZ: 2000,
+        dirX: 0,
+        dirY: 0,
+        dirZ: 1,
+        dn: 80,
+        spudLengthMm: 120,
+        includeCounterFlange: false,
+      );
+
+      expect(lines.isNotEmpty, isTrue);
+
+      // Первый сегмент - осевой патрубок от Z=2000 до Z=2120
+      final spud = lines.first;
+      expect(spud.z1, equals(2000.0));
+      expect(spud.z2, equals(2120.0));
+
+      // Для вертикального штуцера диск фланца лежит строго в горизонтальной плоскости Z=2120
+      // Проверяем, что образующие перекрестия лежат на Z=2120
+      final discSegments = lines.where((l) => (l.z1 - 2120.0).abs() < 1e-3 && (l.z2 - 2120.0).abs() < 1e-3).toList();
+      expect(discSegments.length, greaterThanOrEqualTo(10)); // 8 граней обода + 2 перекрестия
+    });
+
+    test('generateNozzleWireframe generates counter-flange and gasket when includeCounterFlange is true', () {
+      final singleLines = Element3dGeometry.generateNozzleWireframe(
+        startX: 1000,
+        startY: 1000,
+        startZ: 2000,
+        dirX: 0,
+        dirY: 0,
+        dirZ: 1,
+        dn: 80,
+        includeCounterFlange: false,
+      );
+
+      final pairLines = Element3dGeometry.generateNozzleWireframe(
+        startX: 1000,
+        startY: 1000,
+        startZ: 2000,
+        dirX: 0,
+        dirY: 0,
+        dirZ: 1,
+        dn: 80,
+        includeCounterFlange: true,
+      );
+
+      // При включении ответного фланца количество сегментов существенно возрастает (второй диск + воротник + прокладка)
+      expect(pairLines.length, greaterThan(singleLines.length + 10));
+    });
+
+    test('generateNozzleWireframe for horizontal nozzle aligns flange disc in YZ plane', () {
+      final lines = Element3dGeometry.generateNozzleWireframe(
+        startX: 1000,
+        startY: 1000,
+        startZ: 500,
+        dirX: 1,
+        dirY: 0,
+        dirZ: 0,
+        dn: 50,
+        spudLengthMm: 120,
+        includeCounterFlange: false,
+      );
+
+      // Торец штуцера на X = 1000 + 120 = 1120
+      // Диск фланца лежит в плоскости X = 1120
+      final discSegments = lines.where((l) => (l.x1 - 1120.0).abs() < 1e-3 && (l.x2 - 1120.0).abs() < 1e-3).toList();
+      expect(discSegments.length, greaterThanOrEqualTo(10));
     });
   });
 }

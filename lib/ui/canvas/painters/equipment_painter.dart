@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/models/equipment.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/services/element_3d_geometry.dart';
 
 /// Отрисовщик технологического оборудования и штуцеров на аксонометрическом холсте
 class EquipmentPainter {
@@ -268,25 +269,30 @@ class EquipmentPainter {
         wz = eq.z + noz.localZ;
       }
 
-      final pBase = projector.projectCoordinates(wx, wy, wz);
-      final spudLenMm = 120.0;
+      const spudLenMm = 120.0;
       final pFlange = projector.projectCoordinates(
         wx + noz.dirX * spudLenMm,
         wy + noz.dirY * spudLenMm,
         wz + noz.dirZ * spudLenMm,
       );
 
-      // Патрубок
-      canvas.drawLine(pBase, pFlange, spudPaint);
+      final wireframe = Element3dGeometry.generateNozzleWireframe(
+        startX: wx,
+        startY: wy,
+        startZ: wz,
+        dirX: noz.dirX,
+        dirY: noz.dirY,
+        dirZ: noz.dirZ,
+        dn: noz.dn,
+        spudLengthMm: spudLenMm,
+        includeCounterFlange: noz.includeInMto,
+      );
 
-      // Привалочная плоскость фланца
-      final spudVec = pFlange - pBase;
-      final spudDist = spudVec.distance;
-      if (spudDist > 1.0) {
-        final perp = Offset(-spudVec.dy, spudVec.dx) / spudDist * 7.0;
-        canvas.drawLine(pFlange - perp, pFlange + perp, flangePaint);
-      } else {
-        canvas.drawCircle(pFlange, 4.0, flangePaint);
+      for (int i = 0; i < wireframe.length; i++) {
+        final seg = wireframe[i];
+        final p1 = projector.projectCoordinates(seg.x1, seg.y1, seg.z1);
+        final p2 = projector.projectCoordinates(seg.x2, seg.y2, seg.z2);
+        canvas.drawLine(p1, p2, i == 0 ? spudPaint : flangePaint);
       }
 
       // Текстовая подпись штуцера

@@ -1946,8 +1946,21 @@ class DxfWriter {
         final fy = wy + noz.dirY * spudLen;
         final fz = wz + noz.dirZ * spudLen;
 
-        // Патрубок
-        _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: wx, y1: wy, z1: wz, x2: fx, y2: fy, z2: fz);
+        final wireframe = Element3dGeometry.generateNozzleWireframe(
+          startX: wx,
+          startY: wy,
+          startZ: wz,
+          dirX: noz.dirX,
+          dirY: noz.dirY,
+          dirZ: noz.dirZ,
+          dn: noz.dn,
+          spudLengthMm: spudLen,
+          includeCounterFlange: noz.includeInMto,
+        );
+
+        for (final seg in wireframe) {
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: seg.x1, y1: seg.y1, z1: seg.z1, x2: seg.x2, y2: seg.y2, z2: seg.z2);
+        }
 
         // Текст штуцера
         final labelText = noz.name.isNotEmpty ? '${noz.name} Ду${noz.dn}' : 'Ду${noz.dn}';
@@ -2097,18 +2110,25 @@ class DxfWriter {
         final fy = wy + noz.dirY * spudLen;
         final fz = wz + noz.dirZ * spudLen;
 
-        final pBase = proj.projectCoordinates(wx, wy, wz);
-        final pFlange = proj.projectCoordinates(fx, fy, fz);
+        final wireframe = Element3dGeometry.generateNozzleWireframe(
+          startX: wx,
+          startY: wy,
+          startZ: wz,
+          dirX: noz.dirX,
+          dirY: noz.dirY,
+          dirZ: noz.dirZ,
+          dn: noz.dn,
+          spudLengthMm: spudLen,
+          includeCounterFlange: noz.includeInMto,
+        );
 
-        // Патрубок
-        _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: pBase.dx, y1: pBase.dy, x2: pFlange.dx, y2: pFlange.dy);
-
-        // Засечка фланца
-        final spudVec = pFlange - pBase;
-        if (spudVec.distance > 1.0) {
-          final perp = Offset(-spudVec.dy, spudVec.dx) / spudVec.distance * 15.0;
-          _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: pFlange.dx - perp.dx, y1: pFlange.dy - perp.dy, x2: pFlange.dx + perp.dx, y2: pFlange.dy + perp.dy);
+        for (final seg in wireframe) {
+          final p1 = proj.projectCoordinates(seg.x1, seg.y1, seg.z1);
+          final p2 = proj.projectCoordinates(seg.x2, seg.y2, seg.z2);
+          _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: p1.dx, y1: p1.dy, x2: p2.dx, y2: p2.dy);
         }
+
+        final pFlange = proj.projectCoordinates(fx, fy, fz);
 
         // Текст штуцера
         final labelText = noz.name.isNotEmpty ? '${noz.name} Ду${noz.dn}' : 'Ду${noz.dn}';

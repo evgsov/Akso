@@ -1089,6 +1089,138 @@ class Element3dGeometry {
     return lines;
   }
 
+  /// Генерация 3D каркасной геометрии штуцера технологического оборудования (Nozzle):
+  /// - Осевой патрубок от точки на грани аппарата к торцу штуцера
+  /// - 3D-диск фланца штуцера (ортогонален направлению патрубка)
+  /// - Конический воротник приварки к аппарату (юбка по ГОСТ 33259 тип 11)
+  /// - При [includeCounterFlange] == true: ответный фланец трубопровода с межфланцевой прокладкой
+  static List<WireframeSegment3D> generateNozzleWireframe({
+    required double startX,
+    required double startY,
+    required double startZ,
+    required double dirX,
+    required double dirY,
+    required double dirZ,
+    required int dn,
+    double spudLengthMm = 120.0,
+    bool includeCounterFlange = false,
+    String layer = layerFlanges,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    final vStart = Vector3D(startX, startY, startZ);
+    var vDir = Vector3D(dirX, dirY, dirZ);
+    if (vDir.length < 1e-6) {
+      vDir = const Vector3D(0, 0, 1);
+    } else {
+      vDir = vDir.normalized();
+    }
+
+    final vEnd = vStart + vDir * spudLengthMm;
+
+    // 1. Осевой патрубок
+    lines.add(WireframeSegment3D(
+      vStart.x, vStart.y, vStart.z,
+      vEnd.x, vEnd.y, vEnd.z,
+      layer: layer,
+    ));
+
+    // Базис вдоль направления штуцера
+    final basis = PipeBasis3D.fromEndpoints(
+      Node3D(id: '', x: vStart.x, y: vStart.y, z: vStart.z),
+      Node3D(id: '', x: vEnd.x, y: vEnd.y, z: vEnd.z),
+    );
+
+    final r = math.max(12.0, dn / 2.0);
+    final flW = r * 1.35;
+
+    // 2. Первый фланец (комплектный фланец штуцера на торце патрубка)
+    // 8-угольный диск фланца
+    const int segments = 8;
+    final fl1Pts = <Vector3D>[];
+    for (int i = 0; i < segments; i++) {
+      final theta = 2.0 * math.pi * i / segments;
+      final offset = basis.u * (flW * math.cos(theta)) + basis.v * (flW * math.sin(theta));
+      fl1Pts.add(vEnd + offset);
+    }
+    for (int i = 0; i < segments; i++) {
+      final next = (i + 1) % segments;
+      lines.add(WireframeSegment3D(
+        fl1Pts[i].x, fl1Pts[i].y, fl1Pts[i].z,
+        fl1Pts[next].x, fl1Pts[next].y, fl1Pts[next].z,
+        layer: layer,
+      ));
+    }
+
+    // Две взаимно перпендикулярные образующие диска фланца (перекрестие по U и V)
+    final pU1 = vEnd + basis.u * flW;
+    final pU2 = vEnd - basis.u * flW;
+    lines.add(WireframeSegment3D(pU1.x, pU1.y, pU1.z, pU2.x, pU2.y, pU2.z, layer: layer));
+
+    final pV1 = vEnd + basis.v * flW;
+    final pV2 = vEnd - basis.v * flW;
+    lines.add(WireframeSegment3D(pV1.x, pV1.y, pV1.z, pV2.x, pV2.y, pV2.z, layer: layer));
+
+    // 3. Воротниковый переход к патрубку (юбка по ГОСТ 33259 тип 11)
+    final pNeck = vEnd - basis.t * math.min(12.0, r * 0.35);
+    final pN1 = pNeck + basis.u * r;
+    final pN2 = pNeck - basis.u * r;
+    lines.add(WireframeSegment3D(pN1.x, pN1.y, pN1.z, pN2.x, pN2.y, pN2.z, layer: layer));
+    lines.add(WireframeSegment3D(pN1.x, pN1.y, pN1.z, pU1.x, pU1.y, pU1.z, layer: layer));
+    lines.add(WireframeSegment3D(pN2.x, pN2.y, pN2.z, pU2.x, pU2.y, pU2.z, layer: layer));
+
+    // 4. Ответный фланец (при включении тумблера «Ответный фланец в МТО»)
+    if (includeCounterFlange) {
+      const gap = 14.0;
+      final c2 = vEnd + basis.t * gap;
+
+      // 8-угольный диск ответного фланца
+      final fl2Pts = <Vector3D>[];
+      for (int i = 0; i < segments; i++) {
+        final theta = 2.0 * math.pi * i / segments;
+        final offset = basis.u * (flW * math.cos(theta)) + basis.v * (flW * math.sin(theta));
+        fl2Pts.add(c2 + offset);
+      }
+      for (int i = 0; i < segments; i++) {
+        final next = (i + 1) % segments;
+        lines.add(WireframeSegment3D(
+          fl2Pts[i].x, fl2Pts[i].y, fl2Pts[i].z,
+          fl2Pts[next].x, fl2Pts[next].y, fl2Pts[next].z,
+          layer: layer,
+        ));
+      }
+
+      final pU3 = c2 + basis.u * flW;
+      final pU4 = c2 - basis.u * flW;
+      lines.add(WireframeSegment3D(pU3.x, pU3.y, pU3.z, pU4.x, pU4.y, pU4.z, layer: layer));
+
+      final pV3 = c2 + basis.v * flW;
+      final pV4 = c2 - basis.v * flW;
+      lines.add(WireframeSegment3D(pV3.x, pV3.y, pV3.z, pV4.x, pV4.y, pV4.z, layer: layer));
+
+      // Воротник ответного фланца наружу к ответной трубе
+      final pNeck2 = c2 + basis.t * math.min(12.0, r * 0.35);
+      final pN3 = pNeck2 + basis.u * r;
+      final pN4 = pNeck2 - basis.u * r;
+      lines.add(WireframeSegment3D(pN3.x, pN3.y, pN3.z, pN4.x, pN4.y, pN4.z, layer: layer));
+      lines.add(WireframeSegment3D(pN3.x, pN3.y, pN3.z, pU3.x, pU3.y, pU3.z, layer: layer));
+      lines.add(WireframeSegment3D(pN4.x, pN4.y, pN4.z, pU4.x, pU4.y, pU4.z, layer: layer));
+
+      // Межфланцевая прокладка (засечки между дисками)
+      lines.add(WireframeSegment3D(
+        (vEnd + basis.u * (flW * 0.6)).x, (vEnd + basis.u * (flW * 0.6)).y, (vEnd + basis.u * (flW * 0.6)).z,
+        (c2 + basis.u * (flW * 0.6)).x, (c2 + basis.u * (flW * 0.6)).y, (c2 + basis.u * (flW * 0.6)).z,
+        layer: layer,
+      ));
+      lines.add(WireframeSegment3D(
+        (vEnd - basis.u * (flW * 0.6)).x, (vEnd - basis.u * (flW * 0.6)).y, (vEnd - basis.u * (flW * 0.6)).z,
+        (c2 - basis.u * (flW * 0.6)).x, (c2 - basis.u * (flW * 0.6)).y, (c2 - basis.u * (flW * 0.6)).z,
+        layer: layer,
+      ));
+    }
+
+    return lines;
+  }
+
   /// Генерация 3D-векторной дуги отвода между точками тангенсов в плоскости гиба
   static List<WireframeSegment3D> generateElbowWireframe(
     Fitting fitting,
