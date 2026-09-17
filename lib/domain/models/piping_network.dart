@@ -45,6 +45,9 @@ class PipingNetwork {
   /// Стиль визуального отображения сварных стыков по умолчанию для всего проекта
   WeldJointStyle defaultWeldStyle;
 
+  /// Размер засечки сварного стыка по умолчанию для всей сети (в мм). null = по диаметру трубы.
+  double? defaultWeldTickSizeMm;
+
   PipingNetwork({
     Map<String, Node3D>? nodes,
     Map<String, PipeSegment>? segments,
@@ -61,6 +64,7 @@ class PipingNetwork {
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
     this.defaultWeldStyle = WeldJointStyle.tick,
+    this.defaultWeldTickSizeMm,
   })  : nodes = nodes ?? {},
         segments = segments ?? {},
         valves = valves ?? {},
@@ -101,6 +105,8 @@ class PipingNetwork {
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
     WeldJointStyle? defaultWeldStyle,
+    double? defaultWeldTickSizeMm,
+    bool clearDefaultWeldTickSizeMm = false,
   }) {
     return PipingNetwork(
       nodes: nodes ?? Map.from(this.nodes),
@@ -118,6 +124,7 @@ class PipingNetwork {
       catalog: catalog ?? this.catalog,
       pipeCatalog: pipeCatalog ?? this.pipeCatalog,
       defaultWeldStyle: defaultWeldStyle ?? this.defaultWeldStyle,
+      defaultWeldTickSizeMm: clearDefaultWeldTickSizeMm ? null : (defaultWeldTickSizeMm ?? this.defaultWeldTickSizeMm),
     );
   }
 
@@ -139,6 +146,7 @@ class PipingNetwork {
       catalog: catalog,
       pipeCatalog: pipeCatalog,
       defaultWeldStyle: defaultWeldStyle,
+      defaultWeldTickSizeMm: defaultWeldTickSizeMm,
     );
   }
 
@@ -702,6 +710,8 @@ class PipingNetwork {
     String? notes,
     WeldJointStyle? style,
     bool clearStyle = false,
+    double? tickSizeMm,
+    bool clearTickSize = false,
   }) {
     for (final id in ids) {
       final w = weldJoints[id];
@@ -716,6 +726,8 @@ class PipingNetwork {
           notes: notes,
           style: style,
           clearStyle: clearStyle,
+          tickSizeMm: tickSizeMm,
+          clearTickSize: clearTickSize,
         );
       }
     }
@@ -1265,6 +1277,7 @@ class PipingNetwork {
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
         'defaultWeldStyle': defaultWeldStyle.name,
+        if (defaultWeldTickSizeMm != null) 'defaultWeldTickSizeMm': defaultWeldTickSizeMm,
       };
 
   /// Восстановление состояния сети из JSON
@@ -1342,6 +1355,9 @@ class PipingNetwork {
     if (json.containsKey('defaultWeldStyle')) {
       defaultWeldStyle = WeldJointStyle.fromString(json['defaultWeldStyle'] as String?);
     }
+    if (json.containsKey('defaultWeldTickSizeMm')) {
+      defaultWeldTickSizeMm = (json['defaultWeldTickSizeMm'] as num?)?.toDouble();
+    }
   }
 
   factory PipingNetwork.fromJson(Map<String, dynamic> json) {
@@ -1408,6 +1424,7 @@ class PipingNetwork {
       defaultWeldStyle: json['defaultWeldStyle'] != null
           ? WeldJointStyle.fromString(json['defaultWeldStyle'] as String?)
           : WeldJointStyle.tick,
+      defaultWeldTickSizeMm: (json['defaultWeldTickSizeMm'] as num?)?.toDouble(),
     );
     return net;
   }

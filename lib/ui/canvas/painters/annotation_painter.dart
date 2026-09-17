@@ -31,15 +31,12 @@ class AnnotationPainter {
         final p1 = projector.project(start);
         final p2 = projector.project(end);
 
-        var pipeVector = p2 - p1;
-        final pipeLen = pipeVector.distance;
-        final pipeDir = pipeLen > 0.001
-            ? pipeVector / pipeLen
-            : const Offset(1, 0);
-
         // Позиция стыка на экране: если это ответвление прямой врезки,
         // стык позиционируется на наружной образующей магистрали (P = node + u * R_маг)
         Offset? directBranchScreenPoint;
+        Vector3D? directBranchContact3d;
+        Vector3D? directBranchMainDir3d;
+
         if (weld.ratio < 0.05) {
           final fit = network.fittings[seg.startNodeId];
           if (fit?.fittingType == FittingType.directBranch) {
@@ -53,7 +50,20 @@ class AnnotationPainter {
               final end3d = Vector3D.fromNode(end);
               final u = (end3d - start3d).normalized();
               final contact3d = start3d + u * rMain;
+              directBranchContact3d = contact3d;
               directBranchScreenPoint = projector.projectCoordinates(contact3d.x, contact3d.y, contact3d.z);
+
+              if (mainSegs.isNotEmpty) {
+                final m0 = mainSegs[0];
+                final nStart = network.nodes[m0.startNodeId];
+                final nEnd = network.nodes[m0.endNodeId];
+                if (nStart != null && nEnd != null) {
+                  final vm = Vector3D.fromNode(nEnd) - Vector3D.fromNode(nStart);
+                  if (vm.length > 1e-4) {
+                    directBranchMainDir3d = vm.normalized();
+                  }
+                }
+              }
             }
           }
         } else if (weld.ratio > 0.95) {
@@ -69,7 +79,20 @@ class AnnotationPainter {
               final end3d = Vector3D.fromNode(end);
               final u = (start3d - end3d).normalized();
               final contact3d = end3d + u * rMain;
+              directBranchContact3d = contact3d;
               directBranchScreenPoint = projector.projectCoordinates(contact3d.x, contact3d.y, contact3d.z);
+
+              if (mainSegs.isNotEmpty) {
+                final m0 = mainSegs[0];
+                final nStart = network.nodes[m0.startNodeId];
+                final nEnd = network.nodes[m0.endNodeId];
+                if (nStart != null && nEnd != null) {
+                  final vm = Vector3D.fromNode(nEnd) - Vector3D.fromNode(nStart);
+                  if (vm.length > 1e-4) {
+                    directBranchMainDir3d = vm.normalized();
+                  }
+                }
+              }
             }
           }
         }
@@ -86,10 +109,53 @@ class AnnotationPainter {
         // Отрисовка символа стыка в выбранном стиле (засечка, 3D-кольцо, кружок, точка)
         switch (style) {
           case WeldJointStyle.tick:
-            // Перпендикулярная засечка по ГОСТу
-            final normal = Offset(-pipeDir.dy, pipeDir.dx);
-            final strokeWidth = math.max(seg.dn * 0.1, 2.0);
-            final halfLen = math.max(strokeWidth * 3.5, 7.0);
+            // Засечка, строго лежащая в плоскости X, Y (под 0° по оси Z)
+            // и ориентированная перпендикулярно оси трубы
+            final effectiveTickSize = weld.getEffectiveTickSize(
+              network.defaultWeldTickSizeMm,
+              seg.outerDiameterMm,
+            );
+            final halfLenMm = effectiveTickSize * 0.5;
+
+            final Vector3D p13d;
+            final Vector3D p23d;
+
+            if (directBranchContact3d != null && directBranchMainDir3d != null) {
+              p13d = directBranchContact3d - directBranchMainDir3d * halfLenMm;
+              p23d = directBranchContact3d + directBranchMainDir3d * halfLenMm;
+            } else {
+              final vStart = Vector3D.fromNode(start);
+              final vEnd = Vector3D.fromNode(end);
+              final center3d = vStart + (vEnd - vStart) * weld.ratio;
+
+              final dx = vEnd.x - vStart.x;
+              final dy = vEnd.y - vStart.y;
+              final lenXy = math.sqrt(dx * dx + dy * dy);
+
+              final Vector3D tickDir;
+              if (lenXy > 1e-4) {
+                // Перпендикуляр к трубе в горизонтальной плоскости X, Y (под 0° по Z)
+                tickDir = Vector3D(-dy / lenXy, dx / lenXy, 0.0);
+              } else {
+                // Стояк вдоль Z: горизонтальная засечка в плоскости X, Y (под 0° по Z)
+                tickDir = const Vector3D(0.0, 1.0, 0.0);
+              }
+
+              p13d = center3d - tickDir * halfLenMm;
+              p23d = center3d + tickDir * halfLenMm;
+            }
+
+            var lp1 = projector.projectCoordinates(p13d.x, p13d.y, p13d.z);
+            var lp2 = projector.projectCoordinates(p23d.x, p23d.y, p23d.z);
+
+            // Минимальный защитный порог видимости при сильном отдалении
+            final screenDist = (lp2 - lp1).distance;
+            if (screenDist < 8.0 && screenDist > 1e-4) {
+              final mid = (lp1 + lp2) * 0.5;
+              final dir = (lp2 - lp1) / screenDist;
+              lp1 = mid - dir * 4.0;
+              lp2 = mid + dir * 4.0;
+            }
 
             if (isSelected) {
               final glowPaint = Paint()
@@ -97,7 +163,7 @@ class AnnotationPainter {
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = 6.0
                 ..strokeCap = StrokeCap.round;
-              canvas.drawLine(weldPos - normal * halfLen, weldPos + normal * halfLen, glowPaint);
+              canvas.drawLine(lp1, lp2, glowPaint);
             }
 
             final tickPaint = Paint()
@@ -105,7 +171,7 @@ class AnnotationPainter {
               ..style = PaintingStyle.stroke
               ..strokeWidth = isSelected ? 2.5 : 1.8
               ..strokeCap = StrokeCap.round;
-            canvas.drawLine(weldPos - normal * halfLen, weldPos + normal * halfLen, tickPaint);
+            canvas.drawLine(lp1, lp2, tickPaint);
             break;
 
           case WeldJointStyle.ring3d:
@@ -116,6 +182,7 @@ class AnnotationPainter {
               end,
               pipeOuterDiameter: seg.outerDiameterMm,
               style: WeldJointStyle.ring3d,
+              tickSizeMm: weld.getEffectiveTickSize(network.defaultWeldTickSizeMm, seg.outerDiameterMm),
             );
 
             if (isSelected) {

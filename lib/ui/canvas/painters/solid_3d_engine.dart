@@ -6,6 +6,8 @@ import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/models/pipe_segment.dart';
 import '../../../domain/models/pipe_support.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/weld_joint.dart';
+import '../../../domain/enums/weld_joint_style.dart';
 export '../../../core/math/vector_3d.dart';
 import '../../../core/math/vector_3d.dart';
 import '../../../domain/services/element_3d_geometry.dart';
@@ -211,22 +213,38 @@ class Solid3dEngine {
           final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
           final mainSegs = connected.where((s) => s.id != branchSeg?.id).toList();
           if (branchSeg != null && mainSegs.isNotEmpty) {
-            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
-            final dirBranch = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
-            final rMain = (network.pipeCatalog.getDimension(mainSegs[0].dn)?.outerDiameterMm ?? mainSegs[0].dn.toDouble()) / 2.0;
-            final rBranch = (network.pipeCatalog.getDimension(branchSeg.dn)?.outerDiameterMm ?? branchSeg.dn.toDouble()) / 2.0;
+            // Находим шов ответвления и проверяем стиль
+            WeldJoint? branchWeld;
+            for (final w in network.weldJoints.values) {
+              if (w.segmentId == branchSeg.id) {
+                final r = branchSeg.startNodeId == fit.nodeId ? 0.0 : 1.0;
+                if ((w.ratio - r).abs() < 0.05) {
+                  branchWeld = w;
+                  break;
+                }
+              }
+            }
+            final effStyle = branchWeld?.getEffectiveStyle(network.defaultWeldStyle) ?? network.defaultWeldStyle;
+            if (effStyle == WeldJointStyle.ring3d) {
+              final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId];
+              if (otherBranch != null) {
+                final dirBranch = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
+                final rMain = (network.pipeCatalog.getDimension(mainSegs[0].dn)?.outerDiameterMm ?? mainSegs[0].dn.toDouble()) / 2.0;
+                final rBranch = (network.pipeCatalog.getDimension(branchSeg.dn)?.outerDiameterMm ?? branchSeg.dn.toDouble()) / 2.0;
 
-            final pJoint = Vector3D.fromNode(node) + dirBranch * rMain;
+                final pJoint = Vector3D.fromNode(node) + dirBranch * rMain;
 
-            // Валик углового шва У18 вокруг врезанного патрубка в месте сопряжения с магистралью
-            _buildWeldRingMesh(
-              polygons: polygons,
-              projector: projector,
-              center: pJoint,
-              axisDir: dirBranch,
-              radius: rBranch,
-              facets: cylinderFacets,
-            );
+                // Валик углового шва У18 вокруг врезанного патрубка (только для стиля ring3d)
+                _buildWeldRingMesh(
+                  polygons: polygons,
+                  projector: projector,
+                  center: pJoint,
+                  axisDir: dirBranch,
+                  radius: rBranch,
+                  facets: cylinderFacets,
+                );
+              }
+            }
           }
         }
       } else if (fit.fittingType == FittingType.tee) {
@@ -280,8 +298,11 @@ class Solid3dEngine {
       );
     }
 
-    // 4. Сборка сварных стыков (WeldJoint) в виде объемных валиков шва
+    // 4. Сборка сварных стыков (WeldJoint) в виде объемных валиков шва (только для стиля ring3d)
     for (final weld in network.weldJoints.values) {
+      if (weld.getEffectiveStyle(network.defaultWeldStyle) != WeldJointStyle.ring3d) {
+        continue;
+      }
       final seg = network.segments[weld.segmentId];
       if (seg == null) continue;
       final start = network.nodes[seg.startNodeId];

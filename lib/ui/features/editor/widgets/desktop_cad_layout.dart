@@ -1396,6 +1396,8 @@ class DesktopCadLayout extends StatelessWidget {
               () {
                 final weld = controller.network.weldJoints[controller.selectedWeldId!];
                 if (weld == null) return const Text('Сварной стык не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
+                final seg = controller.network.segments[weld.segmentId];
+                final pipeOuter = seg?.outerDiameterMm ?? (seg != null ? seg.dn.toDouble() : 50.0);
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1512,6 +1514,102 @@ class DesktopCadLayout extends StatelessWidget {
                               );
                               controller.refresh();
                             },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Размер:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final ctrl = TextEditingController(
+                                text: weld.tickSizeMm != null && weld.tickSizeMm! > 0
+                                    ? weld.tickSizeMm!.toStringAsFixed(0)
+                                    : '',
+                              );
+                              final res = await showDialog<double?>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Размер засечки стыка'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'По умолчанию (диаметр трубы): ${pipeOuter.toStringAsFixed(0)} мм\n'
+                                        'Размер по умолчанию для сети: ${controller.network.defaultWeldTickSizeMm != null ? "${controller.network.defaultWeldTickSizeMm!.toStringAsFixed(0)} мм" : "По диаметру"}\n\n'
+                                        'Оставьте пустым или 0 для автоматического размера по диаметру трубы.',
+                                        style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        controller: ctrl,
+                                        keyboardType: TextInputType.number,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Размер (мм)',
+                                          hintText: 'Авто (по диаметру)',
+                                          border: OutlineInputBorder(),
+                                          isDense: true,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(-1.0),
+                                      child: const Text('Сброс (Авто)'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('Отмена'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        final val = double.tryParse(ctrl.text.trim());
+                                        Navigator.of(ctx).pop(val ?? -1.0);
+                                      },
+                                      child: const Text('Применить'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (res != null) {
+                                controller.history.recordState(controller.network);
+                                controller.network.updateWeldJoint(
+                                  weld.id,
+                                  (w) => w.copyWith(
+                                    tickSizeMm: res > 0 ? res : null,
+                                    clearTickSize: res <= 0,
+                                  ),
+                                );
+                                controller.refresh();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    weld.tickSizeMm != null && weld.tickSizeMm! > 0
+                                        ? '${weld.tickSizeMm!.toStringAsFixed(0)} мм'
+                                        : controller.network.defaultWeldTickSizeMm != null
+                                            ? 'Сеть (${controller.network.defaultWeldTickSizeMm!.toStringAsFixed(0)} мм)'
+                                            : 'Авто (${pipeOuter.toStringAsFixed(0)} мм)',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                  const Icon(Icons.edit, size: 13, color: Colors.grey),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],

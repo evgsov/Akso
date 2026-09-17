@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
+import '../../../core/math/vector_3d.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/weld_joint_style.dart';
 import '../../../domain/models/fitting.dart';
@@ -553,6 +554,8 @@ class FittingPainter {
     required bool showCallouts,
     bool isVolumeMode = false,
   }) {
+    final node = network.nodes[fit.nodeId];
+    if (node == null) return;
     final connected = network.getConnectedSegments(fit.nodeId);
     final branchDn = dnSecondary ?? dn;
 
@@ -561,6 +564,8 @@ class FittingPainter {
     double angleMain = 0.0;
     bool hasBranch = false;
     PipeSegment? branchSeg;
+    Vector3D? pJoint3d;
+    Vector3D? vMain3d;
 
     if (connected.length == 3) {
       branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
@@ -568,24 +573,25 @@ class FittingPainter {
 
       if (branchSeg != null && mainSegs.length == 2) {
         hasBranch = true;
-        final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
-        final otherMain1 = network.nodes[mainSegs[0].startNodeId == fit.nodeId ? mainSegs[0].endNodeId : mainSegs[0].startNodeId]!;
-        final otherMain2 = network.nodes[mainSegs[1].startNodeId == fit.nodeId ? mainSegs[1].endNodeId : mainSegs[1].startNodeId]!;
+        final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId];
+        final otherMain1 = network.nodes[mainSegs[0].startNodeId == fit.nodeId ? mainSegs[0].endNodeId : mainSegs[0].startNodeId];
+        final otherMain2 = network.nodes[mainSegs[1].startNodeId == fit.nodeId ? mainSegs[1].endNodeId : mainSegs[1].startNodeId];
 
-        final pBranch = projector.project(otherBranch);
-        final pMain1 = projector.project(otherMain1);
-        final pMain2 = projector.project(otherMain2);
+        if (otherBranch != null && otherMain1 != null && otherMain2 != null) {
+          final rMainMm = (network.pipeCatalog.getDimension(dn)?.outerDiameterMm ?? dn.toDouble()) * 0.5;
+          final vBranch3d = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
+          vMain3d = (Vector3D.fromNode(otherMain2) - Vector3D.fromNode(otherMain1)).normalized();
 
-        var vm = pMain2 - pMain1;
-        if (vm.distance > 0.001) vMain = vm / vm.distance;
-        angleMain = math.atan2(vMain.dy, vMain.dx);
+          pJoint3d = Vector3D.fromNode(node) + vBranch3d * rMainMm;
+          pJoint = projector.projectCoordinates(pJoint3d.x, pJoint3d.y, pJoint3d.z);
 
-        var vBranch = pBranch - center;
-        if (vBranch.distance > 0.001) vBranch = vBranch / vBranch.distance;
+          final pMain1 = projector.project(otherMain1);
+          final pMain2 = projector.project(otherMain2);
 
-        final wMain = _calcWidth(dn, network, projector, isVolumeMode);
-        final rMainScreen = wMain * 0.5;
-        pJoint = center + vBranch * rMainScreen;
+          var vm = pMain2 - pMain1;
+          if (vm.distance > 0.001) vMain = vm / vm.distance;
+          angleMain = math.atan2(vMain.dy, vMain.dx);
+        }
       }
     }
 
@@ -609,25 +615,49 @@ class FittingPainter {
 
     final effectiveStyle = branchWeld?.getEffectiveStyle(network.defaultWeldStyle) ?? network.defaultWeldStyle;
 
-    if (hasBranch) {
+    if (hasBranch && branchWeld == null) {
       switch (effectiveStyle) {
         case WeldJointStyle.tick:
-          // Засечка, ориентированная вдоль образующей магистрали
-          final halfLen = math.max(wBranch * 0.7, 5.0);
+          // Засечка, ориентированная строго вдоль образующей магистрали в плоскости X, Y
+          final branchOuterMm = network.pipeCatalog.getDimension(branchDn)?.outerDiameterMm ?? branchDn.toDouble();
+          final effectiveTickSizeMm = network.defaultWeldTickSizeMm ?? branchOuterMm;
+          final halfLenMm = effectiveTickSizeMm * 0.5;
+
+          Offset lp1;
+          Offset lp2;
+
+          if (pJoint3d != null && vMain3d != null) {
+            final p13d = pJoint3d - vMain3d * halfLenMm;
+            final p23d = pJoint3d + vMain3d * halfLenMm;
+            lp1 = projector.projectCoordinates(p13d.x, p13d.y, p13d.z);
+            lp2 = projector.projectCoordinates(p23d.x, p23d.y, p23d.z);
+          } else {
+            lp1 = pJoint - vMain * (halfLenMm * projector.scale);
+            lp2 = pJoint + vMain * (halfLenMm * projector.scale);
+          }
+
+          final screenDist = (lp2 - lp1).distance;
+          if (screenDist < 8.0 && screenDist > 1e-4) {
+            final mid = (lp1 + lp2) * 0.5;
+            final dir = (lp2 - lp1) / screenDist;
+            lp1 = mid - dir * 4.0;
+            lp2 = mid + dir * 4.0;
+          }
+
           if (isSelected) {
             final glowPaint = Paint()
               ..color = Colors.amber.withValues(alpha: 0.35)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 6.0
               ..strokeCap = StrokeCap.round;
-            canvas.drawLine(pJoint - vMain * halfLen, pJoint + vMain * halfLen, glowPaint);
+            canvas.drawLine(lp1, lp2, glowPaint);
           }
           final tickPaint = Paint()
             ..color = strokeColor
             ..style = PaintingStyle.stroke
             ..strokeWidth = isSelected ? 2.5 : 1.8
             ..strokeCap = StrokeCap.round;
-          canvas.drawLine(pJoint - vMain * halfLen, pJoint + vMain * halfLen, tickPaint);
+          canvas.drawLine(lp1, lp2, tickPaint);
           break;
 
         case WeldJointStyle.ring3d:

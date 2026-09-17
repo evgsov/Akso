@@ -301,6 +301,73 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
             ),
           ),
 
+          // Размер засечки
+          PopupMenuButton<double?>(
+            tooltip: 'Задать размер засечки',
+            onSelected: (sz) async {
+              if (sz == -999.0) {
+                final ctrl = TextEditingController();
+                final res = await showDialog<double?>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Задать размер засечки для выбранных стыков'),
+                    content: TextField(
+                      controller: ctrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Размер (мм)',
+                        hintText: 'например 60',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Отмена')),
+                      FilledButton(
+                        onPressed: () => Navigator.of(ctx).pop(double.tryParse(ctrl.text.trim())),
+                        child: const Text('Применить'),
+                      ),
+                    ],
+                  ),
+                );
+                if (res != null && res > 0) {
+                  widget.network.bulkUpdateWeldJoints(_selectedWeldIds, tickSizeMm: res);
+                  _commitChange();
+                }
+              } else {
+                widget.network.bulkUpdateWeldJoints(
+                  _selectedWeldIds,
+                  tickSizeMm: sz,
+                  clearTickSize: sz == null,
+                );
+                _commitChange();
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem<double?>(value: null, child: Text('По умолчанию (авто)')),
+              const PopupMenuItem<double?>(value: 40.0, child: Text('40 мм')),
+              const PopupMenuItem<double?>(value: 60.0, child: Text('60 мм')),
+              const PopupMenuItem<double?>(value: 80.0, child: Text('80 мм')),
+              const PopupMenuItem<double?>(value: 100.0, child: Text('100 мм')),
+              const PopupMenuItem<double?>(value: -999.0, child: Text('Свой размер...')),
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.straighten, size: 14),
+                  SizedBox(width: 4),
+                  Text('Размер ▾', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+
           // Снять выделение
           TextButton(
             style: TextButton.styleFrom(
@@ -411,6 +478,91 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                 ),
                               ],
                             ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Размер засечки сети:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () async {
+                                    final ctrl = TextEditingController(
+                                      text: widget.network.defaultWeldTickSizeMm != null
+                                          ? widget.network.defaultWeldTickSizeMm!.toStringAsFixed(0)
+                                          : '',
+                                    );
+                                    final res = await showDialog<double?>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Размер засечки сети по умолчанию'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Задайте базовый размер засечки в мм для всех стыков схемы.\n'
+                                              'Если пусто или 0 — размер рассчитывается по диаметру трубы.',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            TextField(
+                                              controller: ctrl,
+                                              keyboardType: TextInputType.number,
+                                              decoration: const InputDecoration(
+                                                labelText: 'Размер (мм)',
+                                                hintText: 'Авто (по диаметру)',
+                                                border: OutlineInputBorder(),
+                                                isDense: true,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(ctx).pop(-1.0),
+                                            child: const Text('Сброс (Авто)'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(ctx).pop(),
+                                            child: const Text('Отмена'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () {
+                                              final val = double.tryParse(ctrl.text.trim());
+                                              Navigator.of(ctx).pop(val ?? -1.0);
+                                            },
+                                            child: const Text('Применить'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (res != null) {
+                                      widget.network.defaultWeldTickSizeMm = res > 0 ? res : null;
+                                      _commitChange();
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.indigo.shade200),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          widget.network.defaultWeldTickSizeMm != null
+                                              ? '${widget.network.defaultWeldTickSizeMm!.toStringAsFixed(0)} мм'
+                                              : 'По диаметру (авто)',
+                                          style: const TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.edit, size: 12, color: Colors.indigo),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             ElevatedButton.icon(
                               icon: const Icon(Icons.copy, size: 16),
                               label: const Text('Скопировать CSV'),
@@ -448,6 +600,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                         DataColumn(label: Text('№ шва')),
                                         DataColumn(label: Text('Диаметр')),
                                         DataColumn(label: Text('Стиль ✎')),
+                                        DataColumn(label: Text('Размер ✎')),
                                         DataColumn(label: Text('Тип шва ✎')),
                                         DataColumn(label: Text('Марка стали ✎')),
                                         DataColumn(label: Text('Св. материалы ✎')),
@@ -458,6 +611,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                       ],
                                       rows: welds.map((w) {
                                         final seg = widget.network.segments[w.segmentId];
+                                        final pipeOuter = seg?.outerDiameterMm ?? (seg != null ? seg.dn.toDouble() : 50.0);
                                         final isSelected = _selectedWeldIds.contains(w.id);
 
                                         return DataRow(
@@ -503,6 +657,113 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
                                                     Text(w.style?.label ?? 'По умолч.'),
+                                                    const Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+
+                                            // Размер засечки (инлайн Popup)
+                                            DataCell(
+                                              PopupMenuButton<double?>(
+                                                tooltip: 'Изменить размер засечки',
+                                                onSelected: (sz) async {
+                                                  if (sz == -999.0) {
+                                                    final ctrl = TextEditingController(
+                                                      text: w.tickSizeMm != null && w.tickSizeMm! > 0
+                                                          ? w.tickSizeMm!.toStringAsFixed(0)
+                                                          : '',
+                                                    );
+                                                    final res = await showDialog<double?>(
+                                                      context: context,
+                                                      builder: (ctx) => AlertDialog(
+                                                        title: Text('Размер засечки стыка №${w.number}'),
+                                                        content: Column(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              'По умолчанию (диаметр трубы): ${pipeOuter.toStringAsFixed(0)} мм\n'
+                                                              'По умолчанию для сети: ${widget.network.defaultWeldTickSizeMm != null ? "${widget.network.defaultWeldTickSizeMm!.toStringAsFixed(0)} мм" : "По диаметру"}\n\n'
+                                                              'Оставьте пустым или 0 для автоматического размера.',
+                                                              style: const TextStyle(fontSize: 12),
+                                                            ),
+                                                            const SizedBox(height: 12),
+                                                            TextField(
+                                                              controller: ctrl,
+                                                              keyboardType: TextInputType.number,
+                                                              decoration: const InputDecoration(
+                                                                labelText: 'Размер (мм)',
+                                                                hintText: 'Авто (по диаметру)',
+                                                                border: OutlineInputBorder(),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () => Navigator.of(ctx).pop(-1.0),
+                                                            child: const Text('Сброс (Авто)'),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () => Navigator.of(ctx).pop(),
+                                                            child: const Text('Отмена'),
+                                                          ),
+                                                          FilledButton(
+                                                            onPressed: () {
+                                                              final val = double.tryParse(ctrl.text.trim());
+                                                              Navigator.of(ctx).pop(val ?? -1.0);
+                                                            },
+                                                            child: const Text('Применить'),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                    if (res != null) {
+                                                      widget.network.updateWeldJoint(
+                                                        w.id,
+                                                        (old) => old.copyWith(
+                                                          tickSizeMm: res > 0 ? res : null,
+                                                          clearTickSize: res <= 0,
+                                                        ),
+                                                      );
+                                                      _commitChange();
+                                                    }
+                                                  } else {
+                                                    widget.network.updateWeldJoint(
+                                                      w.id,
+                                                      (old) => old.copyWith(
+                                                        tickSizeMm: sz,
+                                                        clearTickSize: sz == null,
+                                                      ),
+                                                    );
+                                                    _commitChange();
+                                                  }
+                                                },
+                                                itemBuilder: (ctx) => [
+                                                  const PopupMenuItem<double?>(value: null, child: Text('По умолчанию (авто)')),
+                                                  const PopupMenuItem<double?>(value: 40.0, child: Text('40 мм')),
+                                                  const PopupMenuItem<double?>(value: 60.0, child: Text('60 мм')),
+                                                  const PopupMenuItem<double?>(value: 80.0, child: Text('80 мм')),
+                                                  const PopupMenuItem<double?>(value: 100.0, child: Text('100 мм')),
+                                                  const PopupMenuItem<double?>(value: -999.0, child: Text('Свой размер...')),
+                                                ],
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      w.tickSizeMm != null && w.tickSizeMm! > 0
+                                                          ? '${w.tickSizeMm!.toStringAsFixed(0)} мм'
+                                                          : widget.network.defaultWeldTickSizeMm != null
+                                                              ? 'Сеть (${widget.network.defaultWeldTickSizeMm!.toStringAsFixed(0)} мм)'
+                                                              : 'Авто (${pipeOuter.toStringAsFixed(0)})',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: w.tickSizeMm != null ? FontWeight.bold : FontWeight.normal,
+                                                        color: w.tickSizeMm != null ? Colors.indigo : Colors.black87,
+                                                      ),
+                                                    ),
                                                     const Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
                                                   ],
                                                 ),

@@ -221,6 +221,7 @@ class Element3dGeometry {
     Node3D end, {
     double? pipeOuterDiameter,
     WeldJointStyle style = WeldJointStyle.ring3d,
+    double? tickSizeMm,
     String layer = layerWelds,
   }) {
     final lines = <WireframeSegment3D>[];
@@ -230,23 +231,34 @@ class Element3dGeometry {
     final vEnd = Vector3D.fromNode(end);
     final center = vStart + (vEnd - vStart) * weld.ratio;
 
-    final r = math.max(10.0, ((pipeOuterDiameter ?? 50.0) / 2.0) + 2.0);
+    // Эффективный диаметр/размер: заданный пользователем размер либо диаметр трубы
+    final effectiveD = (tickSizeMm != null && tickSizeMm > 0)
+        ? tickSizeMm
+        : (pipeOuterDiameter ?? 50.0);
+    final r = math.max(6.0, effectiveD / 2.0);
 
-    if (style == WeldJointStyle.tick) {
-      final halfLen = r * 1.35;
-      lines.add(WireframeSegment3D(
-        center.x - basis.u.x * halfLen, center.y - basis.u.y * halfLen, center.z - basis.u.z * halfLen,
-        center.x + basis.u.x * halfLen, center.y + basis.u.y * halfLen, center.z + basis.u.z * halfLen,
-        layer: layer,
-      ));
-      return lines;
-    }
+    if (style == WeldJointStyle.tick || style == WeldJointStyle.dot) {
+      // Засечка/точка строго лежит в горизонтальной плоскости X, Y (под 0° по оси Z)
+      // и ориентирована перпендикулярно оси трубы
+      Vector3D tickDir;
+      final dx = vEnd.x - vStart.x;
+      final dy = vEnd.y - vStart.y;
+      final lenXy = math.sqrt(dx * dx + dy * dy);
 
-    if (style == WeldJointStyle.dot) {
-      const d = 3.0;
+      if (lenXy > 1e-4) {
+        // Перпендикуляр к трубе на плоскости X, Y (z = 0, строго под 0° к горизонту)
+        tickDir = Vector3D(-dy / lenXy, dx / lenXy, 0.0);
+      } else {
+        // Стояк вдоль оси Z: горизонтальная засечка на плоскости X, Y (под 0° по Z)
+        tickDir = const Vector3D(0.0, 1.0, 0.0);
+      }
+
+      final halfLen = style == WeldJointStyle.tick ? r : 3.0;
+      final p1 = center - tickDir * halfLen;
+      final p2 = center + tickDir * halfLen;
       lines.add(WireframeSegment3D(
-        center.x - basis.u.x * d, center.y - basis.u.y * d, center.z - basis.u.z * d,
-        center.x + basis.u.x * d, center.y + basis.u.y * d, center.z + basis.u.z * d,
+        p1.x, p1.y, p1.z,
+        p2.x, p2.y, p2.z,
         layer: layer,
       ));
       return lines;
@@ -1166,6 +1178,7 @@ class Element3dGeometry {
         e,
         pipeOuterDiameter: seg.outerDiameterMm,
         style: weld.getEffectiveStyle(network.defaultWeldStyle),
+        tickSizeMm: weld.getEffectiveTickSize(network.defaultWeldTickSizeMm, seg.outerDiameterMm),
       ));
     }
 

@@ -38,6 +38,9 @@ class WeldJoint {
   /// Индивидуальный стиль отображения (null = использовать стиль по умолчанию из сети)
   final WeldJointStyle? style;
 
+  /// Индивидуальный размер засечки в мм (null = использовать настройку сети или диаметр трубы)
+  final double? tickSizeMm;
+
   const WeldJoint({
     required this.id,
     required this.segmentId,
@@ -51,10 +54,18 @@ class WeldJoint {
     this.electrodeGrade = 'УОНИ 13/55',
     this.notes = 'Годен',
     this.style,
+    this.tickSizeMm,
   });
 
   /// Вычисление эффективного стиля отображения с учетом настройки по умолчанию
   WeldJointStyle getEffectiveStyle(WeldJointStyle defaultStyle) => style ?? defaultStyle;
+
+  /// Вычисление эффективного размера засечки (мм) с учетом настройки сети и диаметра трубы
+  double getEffectiveTickSize(double? networkDefault, double pipeDiameter) {
+    if (tickSizeMm != null && tickSizeMm! > 0) return tickSizeMm!;
+    if (networkDefault != null && networkDefault > 0) return networkDefault;
+    return pipeDiameter;
+  }
 
   /// Вычисление 3D координат шва в пространстве
   Node3D calculatePosition(Node3D startNode, Node3D endNode) {
@@ -78,6 +89,8 @@ class WeldJoint {
     String? notes,
     WeldJointStyle? style,
     bool clearStyle = false,
+    double? tickSizeMm,
+    bool clearTickSize = false,
   }) {
     return WeldJoint(
       id: id ?? this.id,
@@ -92,6 +105,7 @@ class WeldJoint {
       electrodeGrade: electrodeGrade ?? this.electrodeGrade,
       notes: notes ?? this.notes,
       style: clearStyle ? null : (style ?? this.style),
+      tickSizeMm: clearTickSize ? null : (tickSizeMm ?? this.tickSizeMm),
     );
   }
 
@@ -108,6 +122,7 @@ class WeldJoint {
         'electrodeGrade': electrodeGrade,
         'notes': notes,
         if (style != null) 'style': style!.name,
+        if (tickSizeMm != null) 'tickSizeMm': tickSizeMm,
       };
 
   factory WeldJoint.fromJson(Map<String, dynamic> json) => WeldJoint(
@@ -123,5 +138,6 @@ class WeldJoint {
         electrodeGrade: json['electrodeGrade'] as String? ?? 'УОНИ 13/55',
         notes: json['notes'] as String? ?? 'Годен',
         style: json['style'] != null ? WeldJointStyle.fromString(json['style'] as String?) : null,
+        tickSizeMm: (json['tickSizeMm'] as num?)?.toDouble(),
       );
 }

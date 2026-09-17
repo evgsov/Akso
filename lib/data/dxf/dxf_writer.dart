@@ -151,6 +151,7 @@ class DxfWriter {
         end,
         pipeOuterDiameter: seg.outerDiameterMm,
         style: weld.getEffectiveStyle(network.defaultWeldStyle),
+        tickSizeMm: weld.getEffectiveTickSize(network.defaultWeldTickSizeMm, seg.outerDiameterMm),
       );
       for (final l in weldLines) {
         _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
