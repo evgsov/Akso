@@ -1417,10 +1417,16 @@
       - `_writeEquipment3d`: генерация проволочного каркаса 3D для параллелепипедов и цилиндров, патрубков штуцеров и текста названий.
       - `_writeEquipment2d`: генерация проекции ГОСТ 2D DXF с засечками фланцев.
       - `generateMtoCsv`: автоматический расчет ответных фланцев ГОСТ 33259-2015 и прокладок ПОН-Б для штуцеров с `includeInMto == true`.
+    - `lib/domain/services/element_3d_geometry.dart`:
+      - Реализован метод `generateNozzleWireframe`: построение честного 3D-каркаса штуцера с 8-гранным диском фланца, взаимно перпендикулярными образующими перекрестия $(\vec{u}, \vec{v})$ в плоскости фланца, коническим воротником приварки к аппарату (ГОСТ 33259 тип 11) и ответной фланцевой парой с прокладкой ПОН-Б при `includeCounterFlange == true`.
+    - `lib/ui/canvas/painters/equipment_painter.dart`:
+      - В `_paintNozzles` 2D-экранная засечка заменена на проецирование линий пространственного 3D-каркаса `generateNozzleWireframe`. При вращении 3D-орбиты штуцеры поворачиваются идеально монолитно с аппаратом.
+    - `lib/data/dxf/dxf_writer.dart`:
+      - В `_writeEquipment3d` и `_writeEquipment2d` экспорт штуцеров переведён на `generateNozzleWireframe`, обеспечивая честное геометрическое тело фланца в 3D DXF и точную аксонометрическую проекцию в 2D DXF.
   - **Верификация:**
-    - Создан полный тестовый набор `test/equipment_dynamic_nozzles_and_rotation_test.dart` (16 тестов).
+    - Создан полный тестовый набор `test/equipment_dynamic_nozzles_and_rotation_test.dart` (19 тестов, включая 3 теста на 3D wireframe штуцеров).
     - Обновлен `test/equipment_test.dart` под концепцию чистого оборудования без висячих узлов.
-    - Полный прогон `flutter test` — 409 тестов успешно пройдены (All tests passed).
+    - Полный прогон `flutter test` — 412 тестов успешно пройдены (All tests passed).
     - Статический анализ `dart analyze lib test` — 0 замечаний (No issues found).
 
 
