@@ -8,6 +8,7 @@ import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
 import '../../domain/models/callout.dart';
+import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/services/element_3d_geometry.dart';
@@ -482,6 +483,9 @@ class DxfWriter {
       );
     }
 
+    // 8b. Технологическое оборудование и штуцеры в 3D
+    _writeEquipment3d(buffer, network);
+
     // 9. Умные выноски (Callouts) в 3D
     _writeCalloutEntities3d(buffer, calloutBlocks, calloutType, extVec);
 
@@ -917,6 +921,9 @@ class DxfWriter {
       );
     }
 
+    // 8b. Технологическое оборудование и штуцеры в 2D проекции ГОСТ
+    _writeEquipment2d(buffer, network, projector);
+
     // 9. Умные выноски (Callouts) в 2D проекции (AutoCAD BLOCKS + INSERT + ATTRIB)
     _writeCalloutEntities(buffer, calloutBlocks);
 
@@ -1044,6 +1051,30 @@ class DxfWriter {
       );
     }
 
+    // 4b. Ответные фланцы и прокладки для штуцеров оборудования
+    final eqCounterFlangeMap = <String, int>{};
+    int totalEqGaskets = 0;
+    for (final eq in network.equipments.values) {
+      for (final noz in eq.nozzles) {
+        if (noz.includeInMto) {
+          final key = 'Фланец ответный Ду${noz.dn} Ру16|ГОСТ 33259-2015';
+          eqCounterFlangeMap[key] = (eqCounterFlangeMap[key] ?? 0) + 1;
+          totalEqGaskets += 1;
+        }
+      }
+    }
+    for (final entry in eqCounterFlangeMap.entries) {
+      final parts = entry.key.split('|');
+      buffer.writeln(
+        '${itemNum++};${parts[0]};—;${parts[1]};Сталь 20;${entry.value};шт.;Штуцер оборудования',
+      );
+    }
+    if (totalEqGaskets > 0) {
+      buffer.writeln(
+        '${itemNum++};Прокладка межфланцевая ПОН-Б;—;ГОСТ 15180-86;Паронит ПОН-Б;$totalEqGaskets;шт.;Штуцер оборудования',
+      );
+    }
+
     // 5. Сварные соединения (сводка стыков по типам швов)
     final weldSummary = <String, int>{};
     for (final w in network.weldJoints.values) {
@@ -1133,6 +1164,8 @@ class DxfWriter {
       const _LayerDef('АКСО_3D_ЗАГЛУШКИ', 7),
       const _LayerDef('АКСО_ЗАГЛУШКИ', 7),
       const _LayerDef('АКСО_ЗАГЛУШКИ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ОБОРУДОВАНИЕ', 4),
+      const _LayerDef('АКСО_ОБОРУДОВАНИЕ_ТЕКСТ', 7),
     ];
 
     for (final sys in net.systems.values) {
@@ -1777,6 +1810,318 @@ class DxfWriter {
             '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${ocsText.x.toStringAsFixed(3)}\n 20\n${ocsText.y.toStringAsFixed(3)}\n 30\n${ocsText.z.toStringAsFixed(3)}\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}\n210\n${extVec.nx.toStringAsFixed(6)}\n220\n${extVec.ny.toStringAsFixed(6)}\n230\n${extVec.nz.toStringAsFixed(6)}',
           );
         }
+      }
+    }
+  }
+
+  static void _writeEquipment3d(StringBuffer b, PipingNetwork net) {
+    if (net.equipments.isEmpty) return;
+
+    for (final eq in net.equipments.values) {
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      Offset rot(double lx, double ly) {
+        return Offset(
+          eq.x + lx * cosA - ly * sinA,
+          eq.y + lx * sinA + ly * cosA,
+        );
+      }
+
+      switch (eq.type) {
+        case EquipmentType.box:
+          final halfW = eq.width / 2.0;
+          final halfL = eq.length / 2.0;
+
+          final c0 = rot(-halfW, -halfL);
+          final c1 = rot(halfW, -halfL);
+          final c2 = rot(halfW, halfL);
+          final c3 = rot(-halfW, halfL);
+
+          final z1 = eq.z;
+          final z2 = eq.z + eq.height;
+
+          // Нижняя грань
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c0.dx, y1: c0.dy, z1: z1, x2: c1.dx, y2: c1.dy, z2: z1);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c1.dx, y1: c1.dy, z1: z1, x2: c2.dx, y2: c2.dy, z2: z1);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c2.dx, y1: c2.dy, z1: z1, x2: c3.dx, y2: c3.dy, z2: z1);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c3.dx, y1: c3.dy, z1: z1, x2: c0.dx, y2: c0.dy, z2: z1);
+
+          // Верхняя грань
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c0.dx, y1: c0.dy, z1: z2, x2: c1.dx, y2: c1.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c1.dx, y1: c1.dy, z1: z2, x2: c2.dx, y2: c2.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c2.dx, y1: c2.dy, z1: z2, x2: c3.dx, y2: c3.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c3.dx, y1: c3.dy, z1: z2, x2: c0.dx, y2: c0.dy, z2: z2);
+
+          // Вертикальные ребра
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c0.dx, y1: c0.dy, z1: z1, x2: c0.dx, y2: c0.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c1.dx, y1: c1.dy, z1: z1, x2: c1.dx, y2: c1.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c2.dx, y1: c2.dy, z1: z1, x2: c2.dx, y2: c2.dy, z2: z2);
+          _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: c3.dx, y1: c3.dy, z1: z1, x2: c3.dx, y2: c3.dy, z2: z2);
+          break;
+
+        case EquipmentType.cylinderVertical:
+          final radius = eq.width / 2;
+          const segments = 16;
+          final bottomPts = <Offset>[];
+          final topPts = <Offset>[];
+          for (int i = 0; i < segments; i++) {
+            final angle = (2 * math.pi * i) / segments + rad;
+            final vx = eq.x + radius * math.cos(angle);
+            final vy = eq.y + radius * math.sin(angle);
+            bottomPts.add(Offset(vx, vy));
+            topPts.add(Offset(vx, vy));
+          }
+          final z1 = eq.z;
+          final z2 = eq.z + eq.height;
+          for (int i = 0; i < segments; i++) {
+            final next = (i + 1) % segments;
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: bottomPts[i].dx, y1: bottomPts[i].dy, z1: z1, x2: bottomPts[next].dx, y2: bottomPts[next].dy, z2: z1);
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: topPts[i].dx, y1: topPts[i].dy, z1: z2, x2: topPts[next].dx, y2: topPts[next].dy, z2: z2);
+          }
+          for (int i = 0; i < segments; i += segments ~/ 4) {
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: bottomPts[i].dx, y1: bottomPts[i].dy, z1: z1, x2: topPts[i].dx, y2: topPts[i].dy, z2: z2);
+          }
+          break;
+
+        case EquipmentType.cylinderHorizontal:
+          final radius = eq.height / 2;
+          const segments = 16;
+          final halfL = eq.length / 2;
+          final centerZ = eq.z + radius;
+          final startPts = <({double x, double y, double z})>[];
+          final endPts = <({double x, double y, double z})>[];
+          for (int i = 0; i < segments; i++) {
+            final angle = (2 * math.pi * i) / segments;
+            final lx = radius * math.cos(angle);
+            final vz = centerZ + radius * math.sin(angle);
+
+            final sx = eq.x + lx * cosA - (-halfL) * sinA;
+            final sy = eq.y + lx * sinA + (-halfL) * cosA;
+            startPts.add((x: sx, y: sy, z: vz));
+
+            final ex = eq.x + lx * cosA - halfL * sinA;
+            final ey = eq.y + lx * sinA + halfL * cosA;
+            endPts.add((x: ex, y: ey, z: vz));
+          }
+          for (int i = 0; i < segments; i++) {
+            final next = (i + 1) % segments;
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: startPts[i].x, y1: startPts[i].y, z1: startPts[i].z, x2: startPts[next].x, y2: startPts[next].y, z2: startPts[next].z);
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: endPts[i].x, y1: endPts[i].y, z1: endPts[i].z, x2: endPts[next].x, y2: endPts[next].y, z2: endPts[next].z);
+          }
+          for (int i = 0; i < segments; i += segments ~/ 4) {
+            _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: startPts[i].x, y1: startPts[i].y, z1: startPts[i].z, x2: endPts[i].x, y2: endPts[i].y, z2: endPts[i].z);
+          }
+          break;
+      }
+
+      // Название оборудования в 3D
+      _writeText(
+        b,
+        layer: 'АКСО_ОБОРУДОВАНИЕ_ТЕКСТ',
+        text: eq.name,
+        x: eq.x,
+        y: eq.y,
+        z: eq.z + eq.height + 60.0,
+        height: 60.0,
+        align: 1,
+      );
+
+      // Штуцеры оборудования в 3D
+      for (final noz in eq.nozzles) {
+        final node = net.nodes[noz.id];
+        final double wx, wy, wz;
+        if (node != null) {
+          wx = node.x;
+          wy = node.y;
+          wz = node.z;
+        } else {
+          wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+          wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+          wz = eq.z + noz.localZ;
+        }
+        const spudLen = 120.0;
+        final fx = wx + noz.dirX * spudLen;
+        final fy = wy + noz.dirY * spudLen;
+        final fz = wz + noz.dirZ * spudLen;
+
+        // Патрубок
+        _write3dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: wx, y1: wy, z1: wz, x2: fx, y2: fy, z2: fz);
+
+        // Текст штуцера
+        final labelText = noz.name.isNotEmpty ? '${noz.name} Ду${noz.dn}' : 'Ду${noz.dn}';
+        _writeText(
+          b,
+          layer: 'АКСО_ОБОРУДОВАНИЕ_ТЕКСТ',
+          text: labelText,
+          x: fx,
+          y: fy,
+          z: fz + 40.0,
+          height: 40.0,
+          align: 1,
+        );
+      }
+    }
+  }
+
+  static void _writeEquipment2d(StringBuffer b, PipingNetwork net, AxonometryProjector proj) {
+    if (net.equipments.isEmpty) return;
+
+    for (final eq in net.equipments.values) {
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      Offset rot(double lx, double ly) {
+        return Offset(
+          eq.x + lx * cosA - ly * sinA,
+          eq.y + lx * sinA + ly * cosA,
+        );
+      }
+
+      switch (eq.type) {
+        case EquipmentType.box:
+          final halfW = eq.width / 2.0;
+          final halfL = eq.length / 2.0;
+
+          final c0 = rot(-halfW, -halfL);
+          final c1 = rot(halfW, -halfL);
+          final c2 = rot(halfW, halfL);
+          final c3 = rot(-halfW, halfL);
+
+          final z1 = eq.z;
+          final z2 = eq.z + eq.height;
+
+          final p0 = proj.projectCoordinates(c0.dx, c0.dy, z1);
+          final p1 = proj.projectCoordinates(c1.dx, c1.dy, z1);
+          final p2 = proj.projectCoordinates(c2.dx, c2.dy, z1);
+          final p3 = proj.projectCoordinates(c3.dx, c3.dy, z1);
+
+          final p4 = proj.projectCoordinates(c0.dx, c0.dy, z2);
+          final p5 = proj.projectCoordinates(c1.dx, c1.dy, z2);
+          final p6 = proj.projectCoordinates(c2.dx, c2.dy, z2);
+          final p7 = proj.projectCoordinates(c3.dx, c3.dy, z2);
+
+          final edges = [
+            (p0, p1), (p1, p2), (p2, p3), (p3, p0),
+            (p4, p5), (p5, p6), (p6, p7), (p7, p4),
+            (p0, p4), (p1, p5), (p2, p6), (p3, p7),
+          ];
+          for (final edge in edges) {
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: edge.$1.dx, y1: edge.$1.dy, x2: edge.$2.dx, y2: edge.$2.dy);
+          }
+          break;
+
+        case EquipmentType.cylinderVertical:
+          final radius = eq.width / 2;
+          const segments = 16;
+          final bottomPts = <Offset>[];
+          final topPts = <Offset>[];
+          for (int i = 0; i < segments; i++) {
+            final angle = (2 * math.pi * i) / segments + rad;
+            final vx = eq.x + radius * math.cos(angle);
+            final vy = eq.y + radius * math.sin(angle);
+            bottomPts.add(proj.projectCoordinates(vx, vy, eq.z));
+            topPts.add(proj.projectCoordinates(vx, vy, eq.z + eq.height));
+          }
+          for (int i = 0; i < segments; i++) {
+            final next = (i + 1) % segments;
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: bottomPts[i].dx, y1: bottomPts[i].dy, x2: bottomPts[next].dx, y2: bottomPts[next].dy);
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: topPts[i].dx, y1: topPts[i].dy, x2: topPts[next].dx, y2: topPts[next].dy);
+          }
+          for (int i = 0; i < segments; i += segments ~/ 4) {
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: bottomPts[i].dx, y1: bottomPts[i].dy, x2: topPts[i].dx, y2: topPts[i].dy);
+          }
+          break;
+
+        case EquipmentType.cylinderHorizontal:
+          final radius = eq.height / 2;
+          const segments = 16;
+          final halfL = eq.length / 2;
+          final centerZ = eq.z + radius;
+          final startPts = <Offset>[];
+          final endPts = <Offset>[];
+          for (int i = 0; i < segments; i++) {
+            final angle = (2 * math.pi * i) / segments;
+            final lx = radius * math.cos(angle);
+            final vz = centerZ + radius * math.sin(angle);
+
+            final sx = eq.x + lx * cosA - (-halfL) * sinA;
+            final sy = eq.y + lx * sinA + (-halfL) * cosA;
+            startPts.add(proj.projectCoordinates(sx, sy, vz));
+
+            final ex = eq.x + lx * cosA - halfL * sinA;
+            final ey = eq.y + lx * sinA + halfL * cosA;
+            endPts.add(proj.projectCoordinates(ex, ey, vz));
+          }
+          for (int i = 0; i < segments; i++) {
+            final next = (i + 1) % segments;
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: startPts[i].dx, y1: startPts[i].dy, x2: startPts[next].dx, y2: startPts[next].dy);
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: endPts[i].dx, y1: endPts[i].dy, x2: endPts[next].dx, y2: endPts[next].dy);
+          }
+          for (int i = 0; i < segments; i += segments ~/ 4) {
+            _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: startPts[i].dx, y1: startPts[i].dy, x2: endPts[i].dx, y2: endPts[i].dy);
+          }
+          break;
+      }
+
+      // Название оборудования в 2D
+      final topCenter = proj.projectCoordinates(eq.x, eq.y, eq.z + eq.height);
+      _writeText(
+        b,
+        layer: 'АКСО_ОБОРУДОВАНИЕ_ТЕКСТ',
+        text: eq.name,
+        x: topCenter.dx,
+        y: topCenter.dy + 30.0,
+        z: 0.0,
+        height: 35.0,
+        align: 1,
+      );
+
+      // Штуцеры оборудования в 2D
+      for (final noz in eq.nozzles) {
+        final node = net.nodes[noz.id];
+        final double wx, wy, wz;
+        if (node != null) {
+          wx = node.x;
+          wy = node.y;
+          wz = node.z;
+        } else {
+          wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+          wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+          wz = eq.z + noz.localZ;
+        }
+        const spudLen = 120.0;
+        final fx = wx + noz.dirX * spudLen;
+        final fy = wy + noz.dirY * spudLen;
+        final fz = wz + noz.dirZ * spudLen;
+
+        final pBase = proj.projectCoordinates(wx, wy, wz);
+        final pFlange = proj.projectCoordinates(fx, fy, fz);
+
+        // Патрубок
+        _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: pBase.dx, y1: pBase.dy, x2: pFlange.dx, y2: pFlange.dy);
+
+        // Засечка фланца
+        final spudVec = pFlange - pBase;
+        if (spudVec.distance > 1.0) {
+          final perp = Offset(-spudVec.dy, spudVec.dx) / spudVec.distance * 15.0;
+          _write2dLine(b, layer: 'АКСО_ОБОРУДОВАНИЕ', x1: pFlange.dx - perp.dx, y1: pFlange.dy - perp.dy, x2: pFlange.dx + perp.dx, y2: pFlange.dy + perp.dy);
+        }
+
+        // Текст штуцера
+        final labelText = noz.name.isNotEmpty ? '${noz.name} Ду${noz.dn}' : 'Ду${noz.dn}';
+        _writeText(
+          b,
+          layer: 'АКСО_ОБОРУДОВАНИЕ_ТЕКСТ',
+          text: labelText,
+          x: pFlange.dx + 10.0,
+          y: pFlange.dy + 10.0,
+          z: 0.0,
+          height: 25.0,
+          align: 0,
+        );
       }
     }
   }

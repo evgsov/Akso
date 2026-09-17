@@ -247,13 +247,11 @@ void main() {
       final placedEqId = controller.selectedEquipmentId!;
       final placedEq = controller.network.equipments[placedEqId]!;
       expect(placedEq.name, equals('Емкость Е-1'));
-      expect(placedEq.nozzles.length, equals(1));
-      expect(controller.network.nodes.containsKey(placedEq.nozzles.first.id), isTrue);
+      expect(placedEq.nozzles, isEmpty);
 
       // Deleting selected equipment
       controller.deleteSelected();
       expect(controller.network.equipments.containsKey(placedEqId), isFalse);
-      expect(controller.network.nodes.containsKey(placedEq.nozzles.first.id), isFalse);
       expect(controller.selectedEquipmentId, isNull);
     });
   });

@@ -6,6 +6,7 @@ import 'package:akso/domain/models/equipment.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
+import 'package:akso/data/dxf/dxf_writer.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
 import 'package:akso/ui/canvas/painters/equipment_painter.dart';
 
@@ -492,6 +493,89 @@ void main() {
 
       final picture = recorder.endRecording();
       expect(picture, isNotNull);
+    });
+  });
+
+  group('DXF and MTO Export Tests for Equipment and Nozzles', () {
+    test('DxfWriter exports equipment and nozzles to 3D and 2D DXF on layer АКСО_ОБОРУДОВАНИЕ', () {
+      final network = PipingNetwork();
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 2000,
+        height: 1500,
+        rotationAngleDeg: 90.0,
+        nozzles: [
+          Nozzle(
+            id: 'noz1',
+            equipmentId: 'eq1',
+            name: 'Ш-1',
+            localX: 0,
+            localY: 0,
+            localZ: 1500,
+            dirX: 0,
+            dirY: 0,
+            dirZ: 1,
+            dn: 80,
+          ),
+        ],
+      );
+      network.addEquipment(eq);
+
+      final dxf3d = DxfWriter.generate3dDxf(network);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('АКСО_ОБОРУДОВАНИЕ')), isTrue);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('АКСО_ОБОРУДОВАНИЕ_ТЕКСТ')), isTrue);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('Емкость Е-1')), isTrue);
+      expect(dxf3d.contains(DxfWriter.toAutoCadString('Ш-1 Ду80')), isTrue);
+
+      final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network);
+      expect(dxf2d.contains(DxfWriter.toAutoCadString('АКСО_ОБОРУДОВАНИЕ')), isTrue);
+      expect(dxf2d.contains(DxfWriter.toAutoCadString('Емкость Е-1')), isTrue);
+    });
+
+    test('generateMtoCsv includes equipment counter flange only when includeInMto is true', () {
+      final network = PipingNetwork();
+      const eq = Equipment(
+        id: 'eq1',
+        name: 'Емкость Е-1',
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 2000,
+        height: 1500,
+        nozzles: [
+          Nozzle(
+            id: 'noz1',
+            equipmentId: 'eq1',
+            name: 'Ш-1',
+            localX: 0,
+            localY: 0,
+            localZ: 1500,
+            dirX: 0,
+            dirY: 0,
+            dirZ: 1,
+            dn: 80,
+            includeInMto: false,
+          ),
+        ],
+      );
+      network.addEquipment(eq);
+
+      // 1. По умолчанию комплектный штуцер не попадает в МТО
+      final mtoWithout = DxfWriter.generateMtoCsv(network);
+      expect(mtoWithout.contains('Штуцер оборудования'), isFalse);
+      expect(mtoWithout.contains('Фланец ответный Ду80'), isFalse);
+
+      // 2. При включении тумблера includeInMto ответный фланец попадает в МТО
+      network.setNozzleIncludeInMto('eq1', 'noz1', true);
+      final mtoWith = DxfWriter.generateMtoCsv(network);
+      expect(mtoWith.contains('Штуцер оборудования'), isTrue);
+      expect(mtoWith.contains('Фланец ответный Ду80'), isTrue);
     });
   });
 }
