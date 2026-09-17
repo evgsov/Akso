@@ -1,4 +1,5 @@
 import '../enums/inspection_method.dart';
+import '../enums/weld_joint_style.dart';
 import '../enums/weld_type.dart';
 import 'node_3d.dart';
 
@@ -34,6 +35,9 @@ class WeldJoint {
   /// Примечания / результат контроля ("Годен", толщина, зазор)
   final String notes;
 
+  /// Индивидуальный стиль отображения (null = использовать стиль по умолчанию из сети)
+  final WeldJointStyle? style;
+
   const WeldJoint({
     required this.id,
     required this.segmentId,
@@ -46,7 +50,11 @@ class WeldJoint {
     this.steelGrade = 'Сталь 20',
     this.electrodeGrade = 'УОНИ 13/55',
     this.notes = 'Годен',
+    this.style,
   });
+
+  /// Вычисление эффективного стиля отображения с учетом настройки по умолчанию
+  WeldJointStyle getEffectiveStyle(WeldJointStyle defaultStyle) => style ?? defaultStyle;
 
   /// Вычисление 3D координат шва в пространстве
   Node3D calculatePosition(Node3D startNode, Node3D endNode) {
@@ -68,6 +76,8 @@ class WeldJoint {
     String? steelGrade,
     String? electrodeGrade,
     String? notes,
+    WeldJointStyle? style,
+    bool clearStyle = false,
   }) {
     return WeldJoint(
       id: id ?? this.id,
@@ -81,6 +91,7 @@ class WeldJoint {
       steelGrade: steelGrade ?? this.steelGrade,
       electrodeGrade: electrodeGrade ?? this.electrodeGrade,
       notes: notes ?? this.notes,
+      style: clearStyle ? null : (style ?? this.style),
     );
   }
 
@@ -96,6 +107,7 @@ class WeldJoint {
         'steelGrade': steelGrade,
         'electrodeGrade': electrodeGrade,
         'notes': notes,
+        if (style != null) 'style': style!.name,
       };
 
   factory WeldJoint.fromJson(Map<String, dynamic> json) => WeldJoint(
@@ -110,5 +122,6 @@ class WeldJoint {
         steelGrade: json['steelGrade'] as String? ?? 'Сталь 20',
         electrodeGrade: json['electrodeGrade'] as String? ?? 'УОНИ 13/55',
         notes: json['notes'] as String? ?? 'Годен',
+        style: json['style'] != null ? WeldJointStyle.fromString(json['style'] as String?) : null,
       );
 }

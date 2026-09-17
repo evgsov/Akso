@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../data/dxf/dxf_writer.dart';
 import '../../../../domain/enums/inspection_method.dart';
+import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/piping_network.dart';
 import '../../../canvas/input_controller.dart';
@@ -270,6 +271,36 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
             ),
           ),
 
+          // Стиль шва
+          PopupMenuButton<WeldJointStyle?>(
+            tooltip: 'Задать стиль отображения',
+            onSelected: (st) {
+              widget.network.bulkUpdateWeldJoints(_selectedWeldIds, style: st, clearStyle: st == null);
+              _commitChange();
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem<WeldJointStyle?>(value: null, child: Text('По умолчанию')),
+              ...WeldJointStyle.values.map((st) {
+                return PopupMenuItem<WeldJointStyle?>(value: st, child: Text(st.label));
+              }),
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.style, size: 14),
+                  SizedBox(width: 4),
+                  Text('Стиль ▾', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+
           // Снять выделение
           TextButton(
             style: TextButton.styleFrom(
@@ -335,14 +366,16 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                     Column(
                       children: [
                         if (_selectedWeldIds.isNotEmpty) _buildBatchToolbar(),
-                        Row(
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               'Всего стыков: ${welds.length}',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            if (welds.isNotEmpty) ...[
-                              const SizedBox(width: 16),
+                            if (welds.isNotEmpty)
                               TextButton(
                                 onPressed: () {
                                   setState(() {
@@ -358,8 +391,26 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ),
-                            ],
-                            const Spacer(),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Стиль по умолчанию:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                const SizedBox(width: 6),
+                                DropdownButton<WeldJointStyle>(
+                                  value: widget.network.defaultWeldStyle,
+                                  isDense: true,
+                                  style: const TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold),
+                                  items: WeldJointStyle.values.map((st) {
+                                    return DropdownMenuItem(value: st, child: Text(st.label));
+                                  }).toList(),
+                                  onChanged: (newSt) {
+                                    if (newSt == null) return;
+                                    widget.network.defaultWeldStyle = newSt;
+                                    _commitChange();
+                                  },
+                                ),
+                              ],
+                            ),
                             ElevatedButton.icon(
                               icon: const Icon(Icons.copy, size: 16),
                               label: const Text('Скопировать CSV'),
@@ -396,6 +447,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                       columns: const [
                                         DataColumn(label: Text('№ шва')),
                                         DataColumn(label: Text('Диаметр')),
+                                        DataColumn(label: Text('Стиль ✎')),
                                         DataColumn(label: Text('Тип шва ✎')),
                                         DataColumn(label: Text('Марка стали ✎')),
                                         DataColumn(label: Text('Св. материалы ✎')),
@@ -425,6 +477,37 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
 
                                             // Диаметр
                                             DataCell(Text(seg != null ? 'Ду${seg.dn}' : '—')),
+
+                                            // Стиль отображения (инлайн Popup)
+                                            DataCell(
+                                              PopupMenuButton<WeldJointStyle?>(
+                                                tooltip: 'Изменить стиль стыка',
+                                                initialValue: w.style,
+                                                onSelected: (st) {
+                                                  widget.network.updateWeldJoint(
+                                                    w.id,
+                                                    (old) => old.copyWith(
+                                                      style: st,
+                                                      clearStyle: st == null,
+                                                    ),
+                                                  );
+                                                  _commitChange();
+                                                },
+                                                itemBuilder: (ctx) => [
+                                                  const PopupMenuItem<WeldJointStyle?>(value: null, child: Text('По умолчанию')),
+                                                  ...WeldJointStyle.values.map((st) {
+                                                    return PopupMenuItem<WeldJointStyle?>(value: st, child: Text(st.label));
+                                                  }),
+                                                ],
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(w.style?.label ?? 'По умолч.'),
+                                                    const Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
 
                                             // Тип шва (инлайн Popup)
                                             DataCell(

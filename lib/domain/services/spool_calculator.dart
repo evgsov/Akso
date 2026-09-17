@@ -134,6 +134,18 @@ class SpoolCalculator {
           segmentId: seg.id,
           isDirectBranch: _isDirectBranchRun(network, seg.endNodeId, seg.id),
         );
+        final startVisualDeduction = _getVisualFittingDeduction(
+          network,
+          seg.startNodeId,
+          segmentId: seg.id,
+          isDirectBranch: _isDirectBranchRun(network, seg.startNodeId, seg.id),
+        );
+        final endVisualDeduction = _getVisualFittingDeduction(
+          network,
+          seg.endNodeId,
+          segmentId: seg.id,
+          isDirectBranch: _isDirectBranchRun(network, seg.endNodeId, seg.id),
+        );
 
         final segWelds = network.weldJoints.values
             .where((w) => w.segmentId == seg.id)
@@ -162,15 +174,15 @@ class SpoolCalculator {
             final uZ = totalLen > 0 ? (end.z - start.z) / totalLen : 0.0;
             final ptStart = Node3D(
               id: '',
-              x: start.x + uX * startDeduction,
-              y: start.y + uY * startDeduction,
-              z: start.z + uZ * startDeduction,
+              x: start.x + uX * startVisualDeduction,
+              y: start.y + uY * startVisualDeduction,
+              z: start.z + uZ * startVisualDeduction,
             );
             final ptEnd = Node3D(
               id: '',
-              x: start.x + uX * (totalLen - endDeduction),
-              y: start.y + uY * (totalLen - endDeduction),
-              z: start.z + uZ * (totalLen - endDeduction),
+              x: start.x + uX * (totalLen - endVisualDeduction),
+              y: start.y + uY * (totalLen - endVisualDeduction),
+              z: start.z + uZ * (totalLen - endVisualDeduction),
             );
             final prev = previousSpoolData[spoolId];
             network.spools[spoolId] = PipeSpool(
@@ -195,6 +207,8 @@ class SpoolCalculator {
             totalLen: totalLen,
             startDeduction: startDeduction,
             endDeduction: endDeduction,
+            startVisualDeduction: startVisualDeduction,
+            endVisualDeduction: endVisualDeduction,
             segWelds: segWelds,
             segValves: segValves,
             spoolCounter: spoolCounter,
@@ -237,7 +251,7 @@ class SpoolCalculator {
         final conn = network.getConnectedSegments(nodeId);
         final branch = network.identifyBranchSegment(nodeId, conn);
         if (branch?.id == segmentId) {
-          // Сегмент ответвления: вычет равен наружному радиусу магистрали D_нар / 2
+          // Сегмент ответвления: заготовительный вычет равен наружному радиусу магистрали D_нар / 2
           final runSeg = conn.firstWhere(
             (s) => s.id != segmentId,
             orElse: () => network.segments[segmentId]!,
@@ -270,6 +284,9 @@ class SpoolCalculator {
     if (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0) {
       return fit.buildingLengthMm! / 2.0;
     }
+    if (fit.fittingType == FittingType.cap) {
+      return 0.0; // Заглушка (днище) приваривается к торцу трубы в узле, вычет из длины трубы = 0
+    }
     if (fit.fittingType == FittingType.reducerConcentric || fit.fittingType == FittingType.reducerEccentric) {
       return fit.effectiveBuildingLengthMm / 2.0;
     }
@@ -277,6 +294,25 @@ class SpoolCalculator {
       return network.getElbowTangentMm(nodeId);
     }
     return fit.effectiveRadiusMm;
+  }
+
+  /// Получение вычета для визуального отображения геометрии катушки на чертеже
+  static double _getVisualFittingDeduction(
+    PipingNetwork network,
+    String nodeId, {
+    bool isDirectBranch = false,
+    String? segmentId,
+  }) {
+    if (isDirectBranch) return 0.0;
+    final fit = network.fittings[nodeId];
+    if (fit == null) return 0.0;
+
+    // Прямая врезка: на чертеже труба ответвления визуально чертится строго до оси магистрали (узла) без пустоты
+    if (fit.fittingType == FittingType.directBranch) {
+      return 0.0;
+    }
+
+    return _getFittingDeduction(network, nodeId, isDirectBranch: isDirectBranch, segmentId: segmentId);
   }
 
   static int _generateSubSpoolsForSingle({
@@ -289,6 +325,8 @@ class SpoolCalculator {
     required List<dynamic> segValves,
     required int spoolCounter,
     required Map<String, (String?, String?)> previousSpoolData,
+    double? startVisualDeduction,
+    double? endVisualDeduction,
   }) {
     final points = <double>[0.0];
     for (final w in segWelds) {
@@ -315,6 +353,9 @@ class SpoolCalculator {
     final uY = totalLen > 0 ? (end.y - start.y) / totalLen : 0.0;
     final uZ = totalLen > 0 ? (end.z - start.z) / totalLen : 0.0;
 
+    final sVisD = startVisualDeduction ?? startDeduction;
+    final eVisD = endVisualDeduction ?? endDeduction;
+
     for (int i = 0; i < uniquePoints.length - 1; i++) {
       final p1 = uniquePoints[i];
       final p2 = uniquePoints[i + 1];
@@ -331,23 +372,31 @@ class SpoolCalculator {
 
       double dStart = p1 * totalLen;
       double dEnd = p2 * totalLen;
-      if (i == 0) dStart += startDeduction;
-      if (i == uniquePoints.length - 2) dEnd -= endDeduction;
+      double dStartVisual = p1 * totalLen;
+      double dEndVisual = p2 * totalLen;
+      if (i == 0) {
+        dStart += startDeduction;
+        dStartVisual += sVisD;
+      }
+      if (i == uniquePoints.length - 2) {
+        dEnd -= endDeduction;
+        dEndVisual -= eVisD;
+      }
 
       final cutLen = math.max(0.0, dEnd - dStart);
       if (cutLen > 1.0) {
         final spoolId = 'spool_${seg.id}_${i + 1}';
         final ptStart = Node3D(
           id: '',
-          x: start.x + uX * dStart,
-          y: start.y + uY * dStart,
-          z: start.z + uZ * dStart,
+          x: start.x + uX * dStartVisual,
+          y: start.y + uY * dStartVisual,
+          z: start.z + uZ * dStartVisual,
         );
         final ptEnd = Node3D(
           id: '',
-          x: start.x + uX * dEnd,
-          y: start.y + uY * dEnd,
-          z: start.z + uZ * dEnd,
+          x: start.x + uX * dEndVisual,
+          y: start.y + uY * dEndVisual,
+          z: start.z + uZ * dEndVisual,
         );
         final prev = previousSpoolData[spoolId];
         network.spools[spoolId] = PipeSpool(

@@ -185,6 +185,17 @@ class Solid3dEngine {
           final dir = (Vector3D.fromNode(node) - Vector3D.fromNode(other)).normalized();
           final r = (network.pipeCatalog.getDimension(s.dn)?.outerDiameterMm ?? s.dn.toDouble()) / 2.0;
 
+          // Стыковочное сварное кольцо у основания днища
+          _buildWeldRingMesh(
+            polygons: polygons,
+            projector: projector,
+            center: Vector3D.fromNode(node),
+            axisDir: dir,
+            radius: r,
+            facets: cylinderFacets,
+          );
+
+          // Выпуклый купол эллиптического днища
           _buildCapDomeMesh(
             polygons: polygons,
             projector: projector,
@@ -195,17 +206,47 @@ class Solid3dEngine {
             facets: cylinderFacets,
           );
         }
-      } else if (fit.fittingType == FittingType.tee || fit.fittingType == FittingType.directBranch) {
+      } else if (fit.fittingType == FittingType.directBranch) {
+        if (connected.length == 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
+          final mainSegs = connected.where((s) => s.id != branchSeg?.id).toList();
+          if (branchSeg != null && mainSegs.isNotEmpty) {
+            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
+            final dirBranch = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
+            final rMain = (network.pipeCatalog.getDimension(mainSegs[0].dn)?.outerDiameterMm ?? mainSegs[0].dn.toDouble()) / 2.0;
+            final rBranch = (network.pipeCatalog.getDimension(branchSeg.dn)?.outerDiameterMm ?? branchSeg.dn.toDouble()) / 2.0;
+
+            final pJoint = Vector3D.fromNode(node) + dirBranch * rMain;
+
+            // Валик углового шва У18 вокруг врезанного патрубка в месте сопряжения с магистралью
+            _buildWeldRingMesh(
+              polygons: polygons,
+              projector: projector,
+              center: pJoint,
+              axisDir: dirBranch,
+              radius: rBranch,
+              facets: cylinderFacets,
+            );
+          }
+        }
+      } else if (fit.fittingType == FittingType.tee) {
         if (connected.length >= 3) {
           final r = (network.pipeCatalog.getDimension(fit.dn)?.outerDiameterMm ?? fit.dn.toDouble()) / 2.0;
-          _buildTeeReinforcementMesh(
-            polygons: polygons,
-            projector: projector,
-            node: Vector3D.fromNode(node),
-            radius: r,
-            color: baseColor,
-            facets: cylinderFacets,
-          );
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
+          if (branchSeg != null) {
+            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
+            final dirBranch = (Vector3D.fromNode(otherBranch) - Vector3D.fromNode(node)).normalized();
+            final armBranch = fit.effectiveBranchLengthMm;
+            final pArm = Vector3D.fromNode(node) + dirBranch * math.min(armBranch, 60.0);
+            _buildWeldRingMesh(
+              polygons: polygons,
+              projector: projector,
+              center: pArm,
+              axisDir: dirBranch,
+              radius: r,
+              facets: cylinderFacets,
+            );
+          }
         }
       }
     }
@@ -737,26 +778,6 @@ class Solid3dEngine {
         facets: facets,
       );
     }
-  }
-
-  /// Построение воротника усиления в узле тройника
-  static void _buildTeeReinforcementMesh({
-    required List<Polygon3D> polygons,
-    required AxonometryProjector projector,
-    required Vector3D node,
-    required double radius,
-    required Color color,
-    required int facets,
-  }) {
-    _buildCapDomeMesh(
-      polygons: polygons,
-      projector: projector,
-      center: node,
-      outwardDir: const Vector3D(0, 0, 1),
-      radius: radius * 1.15,
-      color: Color.lerp(color, Colors.black54, 0.2)!,
-      facets: facets,
-    );
   }
 
   /// Построение объемного сварного шва трубы (WeldJoint)

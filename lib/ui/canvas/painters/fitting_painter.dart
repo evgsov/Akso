@@ -1,11 +1,13 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/enums/fitting_type.dart';
+import '../../../domain/enums/weld_joint_style.dart';
 import '../../../domain/models/fitting.dart';
+import '../../../domain/models/pipe_segment.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/weld_joint.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
 
@@ -104,34 +106,92 @@ class FittingPainter {
         final center = projector.project(node);
         final s1 = connected[0];
         final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-        final pOther = projector.project(other1);
-        final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
-        _drawFlangeSymbol(
-          canvas,
-          projector: projector,
-          network: network,
-          isVolumeMode: isVolumeMode,
-          center: center,
-          angle: angle,
-          dn: fit.dn,
-          flangeConnectionType: fit.flangeConnectionType,
-          pressurePn: fit.pressurePn,
-          color: color,
-          showCallouts: showCallouts,
-        );
+        if (!isVolumeMode) {
+          final wireSegments = Element3dGeometry.generateFlangeWireframe(
+            fit,
+            node,
+            other1,
+            pipeOuterDiameter: s1.outerDiameterMm,
+          );
+
+          final isSelected = fit.nodeId == selectedNodeId;
+          final strokePaint = Paint()
+            ..color = isSelected ? Colors.amber : color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 6.0
+              ..strokeCap = StrokeCap.round;
+            for (final wire in wireSegments) {
+              final p1 = projector.project(wire.startNode);
+              final p2 = projector.project(wire.endNode);
+              canvas.drawLine(p1, p2, glowPaint);
+            }
+          }
+
+          for (final wire in wireSegments) {
+            final p1 = projector.project(wire.startNode);
+            final p2 = projector.project(wire.endNode);
+            canvas.drawLine(p1, p2, strokePaint);
+          }
+        }
+
+        if (showCallouts) {
+          final String label;
+          switch (fit.flangeConnectionType) {
+            case FlangeConnectionType.toEquipment:
+              label = 'Фланец к оборуд. Ду${fit.dn} Ру${fit.pressurePn}';
+              break;
+            case FlangeConnectionType.pipeToPipe:
+              label = 'Фланцевая пара Ду${fit.dn} Ру${fit.pressurePn}';
+              break;
+            case FlangeConnectionType.blindFlange:
+              label = 'Заглушка фланцевая Ду${fit.dn} Ру${fit.pressurePn}';
+              break;
+            case FlangeConnectionType.singleFlange:
+              label = 'Фланец Ду${fit.dn} Ру${fit.pressurePn}';
+              break;
+          }
+
+          final isSelected = fit.nodeId == selectedNodeId;
+          final tp = TextPainter(
+            text: TextSpan(
+              text: fit.name ?? label,
+              style: TextStyle(
+                color: isSelected ? Colors.amber.shade900 : color,
+                fontSize: 9.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                backgroundColor: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, center + const Offset(12, -14));
+        }
       } else if (fit.fittingType == FittingType.directBranch) {
         final node = network.nodes[fit.nodeId];
         if (node == null) continue;
         final center = projector.project(node);
         _drawDirectBranchSymbol(
           canvas,
+          network: network,
+          projector: projector,
+          fit: fit,
           center: center,
           dn: fit.dn,
           dnSecondary: fit.dnSecondary,
+          selectedNodeId: selectedNodeId,
           showCallouts: showCallouts,
           isVolumeMode: isVolumeMode,
         );
@@ -144,23 +204,62 @@ class FittingPainter {
         final center = projector.project(node);
         final s1 = connected[0];
         final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId]!;
-        final pOther = projector.project(other1);
-        final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
 
         final sys = network.systems[s1.systemId];
         final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
         if (!isVolumeMode) {
-          _drawCapSymbol(
-            canvas,
-            projector: projector,
-            network: network,
-            isVolumeMode: isVolumeMode,
-            center: center,
-            angle: angle,
-            dn: fit.dn,
-            color: color,
+          final wireSegments = Element3dGeometry.generateCapWireframe(
+            fit,
+            node,
+            other1,
+            pipeOuterDiameter: s1.outerDiameterMm,
           );
+
+          final isSelected = fit.nodeId == selectedNodeId;
+          final strokePaint = Paint()
+            ..color = isSelected ? Colors.amber : color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 6.0
+              ..strokeCap = StrokeCap.round;
+            for (final wire in wireSegments) {
+              final p1 = projector.project(wire.startNode);
+              final p2 = projector.project(wire.endNode);
+              canvas.drawLine(p1, p2, glowPaint);
+            }
+          }
+
+          for (final wire in wireSegments) {
+            final p1 = projector.project(wire.startNode);
+            final p2 = projector.project(wire.endNode);
+            canvas.drawLine(p1, p2, strokePaint);
+          }
+        }
+
+        if (showCallouts) {
+          final isSelected = fit.nodeId == selectedNodeId;
+          final tp = TextPainter(
+            text: TextSpan(
+              text: fit.name ?? 'Заглушка Ду${fit.dn}',
+              style: TextStyle(
+                color: isSelected ? Colors.amber.shade900 : color,
+                fontSize: 9.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                backgroundColor: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, center + const Offset(12, -14));
         }
       }
     }
@@ -440,220 +539,188 @@ class FittingPainter {
     }
   }
 
-  static void _drawFlangeSymbol(
-    Canvas canvas, {
-    required AxonometryProjector projector,
-    required PipingNetwork network,
-    required bool isVolumeMode,
-    required Offset center,
-    required double angle,
-    required int dn,
-    required FlangeConnectionType flangeConnectionType,
-    required int pressurePn,
-    required Color color,
-    required bool showCallouts,
-  }) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
 
-    final halfH = math.max(8.0, _calcWidth(dn, network, projector, isVolumeMode) * 1.6);
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.square;
-
-    if (!isVolumeMode) {
-      switch (flangeConnectionType) {
-        case FlangeConnectionType.pipeToPipe:
-          const gap = 3.0;
-          canvas.drawLine(Offset(-gap, -halfH), Offset(-gap, halfH), paint);
-          canvas.drawLine(Offset(gap, -halfH), Offset(gap, halfH), paint);
-          final gasketPaint = Paint()
-            ..color = Colors.amber.shade800
-            ..style = PaintingStyle.fill;
-          canvas.drawCircle(Offset.zero, 2.0, gasketPaint);
-          break;
-
-        case FlangeConnectionType.toEquipment:
-          canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
-          final gasketPaint = Paint()
-            ..color = Colors.amber.shade800
-            ..style = PaintingStyle.fill;
-          canvas.drawCircle(const Offset(0.5, 0), 2.0, gasketPaint);
-
-          final eqPaint = Paint()
-            ..color = Colors.blueGrey.shade400
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.8;
-          canvas.drawLine(Offset(3.5, -halfH * 1.15), Offset(3.5, halfH * 1.15), eqPaint);
-          canvas.drawRect(Rect.fromLTWH(3.5, -halfH * 0.6, 7.0, halfH * 1.2), eqPaint);
-          break;
-
-        case FlangeConnectionType.blindFlange:
-          canvas.drawLine(Offset(-2.0, -halfH), Offset(-2.0, halfH), paint);
-          final blindPaint = Paint()
-            ..color = Colors.blueGrey.shade700
-            ..style = PaintingStyle.fill;
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(Rect.fromLTWH(1.5, -halfH * 1.05, 4.0, halfH * 2.1), const Radius.circular(1.0)),
-            blindPaint,
-          );
-          break;
-
-        case FlangeConnectionType.singleFlange:
-          canvas.drawLine(Offset(0, -halfH), Offset(0, halfH), paint);
-          break;
-      }
-    }
-
-    if (showCallouts) {
-      final String label;
-      switch (flangeConnectionType) {
-        case FlangeConnectionType.toEquipment:
-          label = 'Ру (к оборуд.)';
-          break;
-        case FlangeConnectionType.pipeToPipe:
-          label = 'Ру (межтрубн.)';
-          break;
-        case FlangeConnectionType.blindFlange:
-          label = 'Заглушка Ру';
-          break;
-        case FlangeConnectionType.singleFlange:
-          label = 'Фланец Ру';
-          break;
-      }
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(
-            color: color,
-            fontSize: 9.0,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
-            backgroundColor: Colors.white.withValues(alpha: 0.85),
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(-tp.width / 2, -halfH - 13));
-    }
-
-    canvas.restore();
-  }
 
   static void _drawDirectBranchSymbol(
     Canvas canvas, {
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+    required Fitting fit,
     required Offset center,
     required int dn,
     int? dnSecondary,
+    String? selectedNodeId,
     required bool showCallouts,
     bool isVolumeMode = false,
   }) {
-    if (!isVolumeMode) {
-      final weldPaint = Paint()
-        ..color = const Color(0xFF455A64)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawCircle(center, 7.0, weldPaint);
+    final connected = network.getConnectedSegments(fit.nodeId);
+    final branchDn = dnSecondary ?? dn;
+
+    Offset pJoint = center;
+    Offset vMain = const Offset(1, 0);
+    double angleMain = 0.0;
+    bool hasBranch = false;
+    PipeSegment? branchSeg;
+
+    if (connected.length == 3) {
+      branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
+      final mainSegs = connected.where((s) => s.id != branchSeg?.id).toList();
+
+      if (branchSeg != null && mainSegs.length == 2) {
+        hasBranch = true;
+        final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId]!;
+        final otherMain1 = network.nodes[mainSegs[0].startNodeId == fit.nodeId ? mainSegs[0].endNodeId : mainSegs[0].startNodeId]!;
+        final otherMain2 = network.nodes[mainSegs[1].startNodeId == fit.nodeId ? mainSegs[1].endNodeId : mainSegs[1].startNodeId]!;
+
+        final pBranch = projector.project(otherBranch);
+        final pMain1 = projector.project(otherMain1);
+        final pMain2 = projector.project(otherMain2);
+
+        var vm = pMain2 - pMain1;
+        if (vm.distance > 0.001) vMain = vm / vm.distance;
+        angleMain = math.atan2(vMain.dy, vMain.dx);
+
+        var vBranch = pBranch - center;
+        if (vBranch.distance > 0.001) vBranch = vBranch / vBranch.distance;
+
+        final wMain = _calcWidth(dn, network, projector, isVolumeMode);
+        final rMainScreen = wMain * 0.5;
+        pJoint = center + vBranch * rMainScreen;
+      }
     }
 
-    if (showCallouts) {
+    final wBranch = _calcWidth(branchDn, network, projector, isVolumeMode);
+    final isSelected = fit.nodeId == selectedNodeId;
+    final strokeColor = isSelected ? Colors.amber : const Color(0xFF37474F);
+
+    // Находим сварной шов ответвления, если он существует
+    WeldJoint? branchWeld;
+    if (branchSeg != null) {
+      for (final w in network.weldJoints.values) {
+        if (w.segmentId == branchSeg.id) {
+          final r = branchSeg.startNodeId == fit.nodeId ? 0.0 : 1.0;
+          if ((w.ratio - r).abs() < 0.05) {
+            branchWeld = w;
+            break;
+          }
+        }
+      }
+    }
+
+    final effectiveStyle = branchWeld?.getEffectiveStyle(network.defaultWeldStyle) ?? network.defaultWeldStyle;
+
+    if (hasBranch) {
+      switch (effectiveStyle) {
+        case WeldJointStyle.tick:
+          // Засечка, ориентированная вдоль образующей магистрали
+          final halfLen = math.max(wBranch * 0.7, 5.0);
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 6.0
+              ..strokeCap = StrokeCap.round;
+            canvas.drawLine(pJoint - vMain * halfLen, pJoint + vMain * halfLen, glowPaint);
+          }
+          final tickPaint = Paint()
+            ..color = strokeColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(pJoint - vMain * halfLen, pJoint + vMain * halfLen, tickPaint);
+          break;
+
+        case WeldJointStyle.ring3d:
+          canvas.save();
+          canvas.translate(pJoint.dx, pJoint.dy);
+          canvas.rotate(angleMain);
+          final collarW = math.max(wBranch * 1.3, 8.0);
+          final collarH = math.max(wBranch * 0.7, 4.5);
+          final collarRect = Rect.fromCenter(center: Offset.zero, width: collarW, height: collarH);
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 5.0;
+            canvas.drawOval(collarRect, glowPaint);
+          }
+          final ringPaint = Paint()
+            ..color = strokeColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.0 : 1.5;
+          canvas.drawOval(collarRect, ringPaint);
+          canvas.restore();
+          break;
+
+        case WeldJointStyle.circle:
+          const r = 4.5;
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.fill;
+            canvas.drawCircle(pJoint, r + 4.0, glowPaint);
+          }
+          final bgPaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
+          canvas.drawCircle(pJoint, r, bgPaint);
+          final strokePaint = Paint()
+            ..color = strokeColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.2 : 1.5;
+          canvas.drawCircle(pJoint, r, strokePaint);
+          break;
+
+        case WeldJointStyle.dot:
+          const r = 3.5;
+          if (isSelected) {
+            final glowPaint = Paint()
+              ..color = Colors.amber.withValues(alpha: 0.35)
+              ..style = PaintingStyle.fill;
+            canvas.drawCircle(pJoint, r + 4.0, glowPaint);
+          }
+          final dotPaint = Paint()..color = strokeColor..style = PaintingStyle.fill;
+          canvas.drawCircle(pJoint, r, dotPaint);
+          final borderPaint = Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0;
+          canvas.drawCircle(pJoint, r, borderPaint);
+          break;
+      }
+    } else {
+      final centerPaint = Paint()
+        ..color = strokeColor
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, 4.0, centerPaint);
+    }
+
+    if (showCallouts && branchWeld == null) {
+      // Полочка-выноска ГОСТ с обозначением шва У18 (если нет отдельной выноски шва)
+      final leaderOffset = const Offset(14.0, -14.0);
+      final pShelfStart = pJoint + leaderOffset;
+      const shelfLen = 30.0;
+      final pShelfEnd = pShelfStart + const Offset(shelfLen, 0);
+
+      final leaderPaint = Paint()
+        ..color = const Color(0xFF546E7A)
+        ..strokeWidth = 1.0;
+      canvas.drawLine(pJoint, pShelfStart, leaderPaint);
+      canvas.drawLine(pShelfStart, pShelfEnd, leaderPaint);
+
       final tp = TextPainter(
         text: const TextSpan(
           text: 'У18',
           style: TextStyle(
-            color: Color(0xFF37474F),
+            color: Color(0xFF263238),
             fontSize: 9.0,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            backgroundColor: Colors.white,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, center + const Offset(9, -12));
+      tp.paint(canvas, pShelfStart + const Offset(4.0, -12.0));
     }
   }
 
-  static void _drawCapSymbol(
-    Canvas canvas, {
-    required AxonometryProjector projector,
-    required PipingNetwork network,
-    required bool isVolumeMode,
-    required Offset center,
-    required double angle,
-    required int dn,
-    required Color color,
-  }) {
-    final w = _calcWidth(dn, network, projector, isVolumeMode);
-    final capRadius = math.max(w * 0.5, 4.0);
-    final capDepth = math.max(w * 0.45, 5.0);
-
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-
-    final capRect = Rect.fromCenter(center: Offset(capDepth * 0.3, 0), width: capDepth * 1.4, height: capRadius * 2);
-
-    if (isVolumeMode) {
-      final paint = Paint()
-        ..style = PaintingStyle.fill
-        ..shader = ui.Gradient.linear(
-          Offset(0, -capRadius),
-          Offset(0, capRadius),
-          [
-            color.withValues(alpha: 0.6),
-            Colors.white.withValues(alpha: 0.8),
-            color,
-            color.withValues(alpha: 0.5),
-          ],
-          [0.0, 0.35, 0.7, 1.0],
-        );
-
-      canvas.drawArc(capRect, -math.pi / 2, math.pi, true, paint);
-
-      final border = Paint()
-        ..style = PaintingStyle.stroke
-        ..color = Colors.black87
-        ..strokeWidth = 1.0;
-      canvas.drawArc(capRect, -math.pi / 2, math.pi, true, border);
-    } else {
-      // 2D СПДС / ГОСТ эллиптическое днище
-      // Фоновая подложка
-      canvas.drawArc(
-        capRect,
-        -math.pi / 2,
-        math.pi,
-        true,
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill,
-      );
-
-      final strokePaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.square;
-
-      // Выпуклая дуга днища
-      canvas.drawArc(capRect, -math.pi / 2, math.pi, false, strokePaint);
-
-      // Приварной стык (основание днища)
-      canvas.drawLine(Offset(capDepth * 0.3, -capRadius - 1.5), Offset(capDepth * 0.3, capRadius + 1.5), strokePaint);
-
-      // Осевая риска
-      canvas.drawLine(
-        Offset(capDepth * 0.3 - 2.0, 0),
-        Offset(capDepth * 0.3 + capDepth * 0.7 + 3.0, 0),
-        Paint()
-          ..color = color.withValues(alpha: 0.5)
-          ..strokeWidth = 0.8,
-      );
-    }
-
-    canvas.restore();
-  }
 }
+

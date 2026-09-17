@@ -581,15 +581,13 @@ class PipePainter {
         final isBranch = isTeeBranchSegment(network, nodeId, seg.id);
         if (isBranch) {
           final strokeW = calcStrokeWidth(fit.dn);
-          trimPx = math.max(strokeW * 0.5 + 2.0, math.min(12.0, screenDist * 0.35));
+          trimPx = math.min(strokeW * 0.5, screenDist * 0.4);
         }
       }
     } else if (fit.fittingType == FittingType.directBranch) {
-      final isBranch = isTeeBranchSegment(network, nodeId, seg.id);
-      if (isBranch) {
-        final strokeW = calcStrokeWidth(fit.dn);
-        trimPx = math.max(strokeW * 0.5 + 2.0, math.min(12.0, screenDist * 0.35));
-      }
+      trimPx = 0.0; // Врезка У18: труба ответвления доходит до оси магистрали без зазора
+    } else if (fit.fittingType == FittingType.cap) {
+      trimPx = 0.0; // Днище приваривается встык к торцу трубы в узле
     } else if (fit.fittingType == FittingType.reducerConcentric ||
         fit.fittingType == FittingType.reducerEccentric) {
       final arm3d = fit.effectiveBuildingLengthMm / 2.0;

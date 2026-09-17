@@ -150,6 +150,7 @@ class DxfWriter {
         start,
         end,
         pipeOuterDiameter: seg.outerDiameterMm,
+        style: weld.getEffectiveStyle(network.defaultWeldStyle),
       );
       for (final l in weldLines) {
         _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
@@ -342,6 +343,26 @@ class DxfWriter {
           height: 45.0,
         );
       } else if (fit.fittingType == FittingType.directBranch) {
+        if (connectedSegs.length == 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connectedSegs);
+          final mainSegs = connectedSegs.where((s) => s.id != branchSeg?.id).toList();
+          if (branchSeg != null && mainSegs.isNotEmpty) {
+            final otherNodeId = branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId;
+            final otherNode = network.nodes[otherNodeId];
+            if (otherNode != null) {
+              final lines = Element3dGeometry.generateDirectBranch3d(
+                fit,
+                node,
+                otherNode,
+                mainOuterDiameter: mainSegs[0].outerDiameterMm,
+                branchOuterDiameter: branchSeg.outerDiameterMm,
+              );
+              for (final l in lines) {
+                _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
+              }
+            }
+          }
+        }
         _writePoint(buffer, layer: 'АКСО_ВРЕЗКИ', x: node.x, y: node.y, z: node.z);
         _writeText(
           buffer,
@@ -683,7 +704,7 @@ class DxfWriter {
       }
     }
 
-    // 6. Фланцы и врезки в 2D (УГО по ГОСТ)
+    // 6. Фланцы, заглушки и врезки в 2D (УГО по ГОСТ)
     for (final fit in network.fittings.values) {
       final node = network.nodes[fit.nodeId];
       if (node == null) continue;
@@ -705,16 +726,59 @@ class DxfWriter {
           dn: fit.dn,
           isPair: fit.isFlangePair,
         );
+      } else if (fit.fittingType == FittingType.cap) {
+        final connectedSegs = network.getConnectedSegments(fit.nodeId);
+        if (connectedSegs.isNotEmpty) {
+          final seg = connectedSegs.first;
+          final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+          final otherNode = network.nodes[otherId];
+          if (otherNode != null) {
+            final pOther = _projectTo2d(projector, otherNode);
+            final angle = math.atan2(center.dy - pOther.dy, center.dx - pOther.dx);
+            _writeGostCap2d(
+              buffer,
+              center: center,
+              angle: angle,
+              dn: fit.dn,
+            );
+          }
+        }
       } else if (fit.fittingType == FittingType.directBranch) {
-        _writeCircle(buffer, layer: 'АКСО_ВРЕЗКИ', cx: center.dx, cy: center.dy, radius: 12.0);
+        final connectedSegs = network.getConnectedSegments(fit.nodeId);
+        Offset pJoint = center;
+        if (connectedSegs.length == 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connectedSegs);
+          final mainSegs = connectedSegs.where((s) => s.id != branchSeg?.id).toList();
+          if (branchSeg != null && mainSegs.length == 2) {
+            final otherBranch = network.nodes[branchSeg.startNodeId == fit.nodeId ? branchSeg.endNodeId : branchSeg.startNodeId];
+            if (otherBranch != null) {
+              final pBranch = _projectTo2d(projector, otherBranch);
+              var vBranch = pBranch - center;
+              if (vBranch.distance > 0.001) vBranch = vBranch / vBranch.distance;
+
+              final rMainMm = (network.pipeCatalog.getDimension(mainSegs[0].dn)?.outerDiameterMm ?? mainSegs[0].dn.toDouble()) / 2.0;
+              pJoint = center + vBranch * (rMainMm * projector.scale);
+            }
+          }
+        }
+
+        _writeCircle(buffer, layer: 'АКСО_ВРЕЗКИ', cx: pJoint.dx, cy: pJoint.dy, radius: 14.0);
+
+        final leaderEndX = pJoint.dx + 40.0;
+        final leaderEndY = pJoint.dy + 40.0;
+        final shelfEndX = leaderEndX + 80.0;
+
+        _write2dLine(buffer, layer: 'АКСО_СВАРКА_ВЫНОСКИ', x1: pJoint.dx, y1: pJoint.dy, x2: leaderEndX, y2: leaderEndY);
+        _write2dLine(buffer, layer: 'АКСО_СВАРКА_ВЫНОСКИ', x1: leaderEndX, y1: leaderEndY, x2: shelfEndX, y2: leaderEndY);
+
         _writeText(
           buffer,
           layer: 'АКСО_СВАРКА_ТЕКСТ',
           text: 'Врезка У18 (Ду${fit.dnSecondary ?? fit.dn})',
-          x: center.dx + 15.0,
-          y: center.dy + 15.0,
+          x: leaderEndX + 5.0,
+          y: leaderEndY + 8.0,
           z: 0.0,
-          height: 35.0,
+          height: 30.0,
         );
       } else if (fit.fittingType == FittingType.tee) {
         final connectedSegs = network.getConnectedSegments(fit.nodeId);
@@ -1329,6 +1393,52 @@ class DxfWriter {
       b,
       layer: 'АКСО_ФЛАНЦЫ_ТЕКСТ',
       text: isPair ? 'Фл. пара Ду$dn' : 'Фланец Ду$dn',
+      x: center.dx - 20.0,
+      y: center.dy + h + 15.0,
+      z: 0.0,
+      height: 35.0,
+    );
+  }
+
+  static void _writeGostCap2d(
+    StringBuffer b, {
+    required Offset center,
+    required double angle,
+    required int dn,
+  }) {
+    final h = math.max(16.0, dn * 0.35);
+    final depth = math.max(18.0, dn * 0.4);
+
+    Offset transform(double lx, double ly) {
+      final rx = lx * math.cos(angle) - ly * math.sin(angle);
+      final ry = lx * math.sin(angle) + ly * math.cos(angle);
+      return Offset(center.dx + rx, center.dy + ry);
+    }
+
+    // 1. Поперечная риска монтажного сварного стыка основания днища
+    final weldTop = transform(0.0, -h);
+    final weldBottom = transform(0.0, h);
+    _write2dLine(b, layer: 'АКСО_ЗАГЛУШКИ', x1: weldTop.dx, y1: weldTop.dy, x2: weldBottom.dx, y2: weldBottom.dy);
+
+    // 2. Выпуклая дуга днища (эллиптическая образующая купола)
+    const steps = 8;
+    Offset? prevPt;
+    for (int i = 0; i <= steps; i++) {
+      final theta = -math.pi / 2 + (math.pi * i / steps);
+      final lx = depth * math.cos(theta);
+      final ly = h * math.sin(theta);
+      final pt = transform(lx, ly);
+      if (prevPt != null) {
+        _write2dLine(b, layer: 'АКСО_ЗАГЛУШКИ', x1: prevPt.dx, y1: prevPt.dy, x2: pt.dx, y2: pt.dy);
+      }
+      prevPt = pt;
+    }
+
+    // 3. Текстовая аннотация
+    _writeText(
+      b,
+      layer: 'АКСО_ЗАГЛУШКИ_ТЕКСТ',
+      text: 'Заглушка Ду$dn',
       x: center.dx - 20.0,
       y: center.dy + h + 15.0,
       z: 0.0,

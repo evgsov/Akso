@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../enums/fitting_type.dart';
 import '../enums/inspection_method.dart';
 import '../enums/valve_type.dart';
+import '../enums/weld_joint_style.dart';
 import '../enums/weld_type.dart';
 import '../services/fitting_detector.dart';
 import '../services/spool_calculator.dart';
@@ -41,6 +42,9 @@ class PipingNetwork {
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
+  /// Стиль визуального отображения сварных стыков по умолчанию для всего проекта
+  WeldJointStyle defaultWeldStyle;
+
   PipingNetwork({
     Map<String, Node3D>? nodes,
     Map<String, PipeSegment>? segments,
@@ -56,6 +60,7 @@ class PipingNetwork {
     Map<String, LinearDimension>? dimensions,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
+    this.defaultWeldStyle = WeldJointStyle.tick,
   })  : nodes = nodes ?? {},
         segments = segments ?? {},
         valves = valves ?? {},
@@ -95,6 +100,7 @@ class PipingNetwork {
     Map<String, LinearDimension>? dimensions,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
+    WeldJointStyle? defaultWeldStyle,
   }) {
     return PipingNetwork(
       nodes: nodes ?? Map.from(this.nodes),
@@ -111,6 +117,7 @@ class PipingNetwork {
       dimensions: dimensions ?? Map.from(this.dimensions),
       catalog: catalog ?? this.catalog,
       pipeCatalog: pipeCatalog ?? this.pipeCatalog,
+      defaultWeldStyle: defaultWeldStyle ?? this.defaultWeldStyle,
     );
   }
 
@@ -131,6 +138,7 @@ class PipingNetwork {
       dimensions: Map.from(dimensions),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
+      defaultWeldStyle: defaultWeldStyle,
     );
   }
 
@@ -692,6 +700,8 @@ class PipingNetwork {
     String? steelGrade,
     String? electrodeGrade,
     String? notes,
+    WeldJointStyle? style,
+    bool clearStyle = false,
   }) {
     for (final id in ids) {
       final w = weldJoints[id];
@@ -704,6 +714,8 @@ class PipingNetwork {
           steelGrade: steelGrade,
           electrodeGrade: electrodeGrade,
           notes: notes,
+          style: style,
+          clearStyle: clearStyle,
         );
       }
     }
@@ -1252,6 +1264,7 @@ class PipingNetwork {
         'dimensions': dimensions.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
+        'defaultWeldStyle': defaultWeldStyle.name,
       };
 
   /// Восстановление состояния сети из JSON
@@ -1326,6 +1339,9 @@ class PipingNetwork {
         pipeCatalog.addCustomDimension(dim);
       }
     }
+    if (json.containsKey('defaultWeldStyle')) {
+      defaultWeldStyle = WeldJointStyle.fromString(json['defaultWeldStyle'] as String?);
+    }
   }
 
   factory PipingNetwork.fromJson(Map<String, dynamic> json) {
@@ -1389,6 +1405,9 @@ class PipingNetwork {
           {},
       catalog: catalog,
       pipeCatalog: pipeCatalog,
+      defaultWeldStyle: json['defaultWeldStyle'] != null
+          ? WeldJointStyle.fromString(json['defaultWeldStyle'] as String?)
+          : WeldJointStyle.tick,
     );
     return net;
   }

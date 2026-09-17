@@ -99,6 +99,7 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
     final isBranch = fit.fittingType == FittingType.tee || fit.fittingType == FittingType.directBranch;
     final isFlange = fit.fittingType == FittingType.flange;
     final isReducer = fit.fittingType == FittingType.reducerConcentric || fit.fittingType == FittingType.reducerEccentric;
+    final isCap = fit.fittingType == FittingType.cap;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -226,6 +227,27 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
 
           // --- ФЛАНЕЦ ---
           if (isFlange) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Воротниковый (юбочный) ГОСТ 33259 тип 11 • Шов С17',
+                      style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade800, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             const Text('Режим подключения фланца:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 6),
             SegmentedButton<FlangeConnectionType>(
@@ -287,6 +309,33 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
                 if (pn == null) return;
                 _update(fit.copyWith(pressurePn: pn));
               },
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Толщина фланца / пакета (мм)',
+                border: OutlineInputBorder(),
+                suffixText: 'мм',
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              controller: TextEditingController(text: (fit.buildingLengthMm ?? (fit.isFlangePair ? 36.0 : 18.0)).toStringAsFixed(0)),
+              onSubmitted: (v) {
+                final l = double.tryParse(v);
+                if (l != null && l > 0) _update(fit.copyWith(buildingLengthMm: l));
+              },
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.rotate_right),
+                label: Text('Поворот вокруг оси: ${fit.rotationAngleDeg.toStringAsFixed(0)}° (+90°)'),
+                onPressed: () {
+                  final newAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
+                  _update(fit.copyWith(rotationAngleDeg: newAngle));
+                },
+              ),
             ),
           ],
 
@@ -447,6 +496,72 @@ class _FittingPropertiesSheetState extends State<FittingPropertiesSheet> {
               onSubmitted: (v) {
                 final l = double.tryParse(v);
                 if (l != null) _update(fit.copyWith(buildingLengthMm: l, radiusMm: l / 2.0));
+              },
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.rotate_right),
+                label: Text('Поворот вокруг оси: ${fit.rotationAngleDeg.toStringAsFixed(0)}° (+90°)'),
+                onPressed: () {
+                  final newAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
+                  _update(fit.copyWith(rotationAngleDeg: newAngle));
+                },
+              ),
+            ),
+          ],
+
+          // --- ЗАГЛУШКА / ДНИЩЕ ---
+          if (isCap) ...[
+            const Text('Исполнение днища / заглушки:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 6),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'ГОСТ 6533-78',
+                  label: Text('Эллиптическое\n(ГОСТ 6533)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
+                  icon: Icon(Icons.rounded_corner),
+                ),
+                ButtonSegment(
+                  value: 'ОСТ 34.10.758',
+                  label: Text('Плоское приварное\n(ОСТ 34.10)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
+                  icon: Icon(Icons.crop_square),
+                ),
+              ],
+              selected: {
+                ((fit.standard?.toLowerCase().contains('плоск') == true) ||
+                        (fit.name?.toLowerCase().contains('плоск') == true) ||
+                        ((fit.standard?.contains('ОСТ') == true) &&
+                            (fit.standard?.contains('ГОСТ') != true)))
+                    ? 'ОСТ 34.10.758'
+                    : 'ГОСТ 6533-78',
+              },
+              onSelectionChanged: (set) {
+                final std = set.first;
+                final isFlat = std.contains('ОСТ');
+                final name = isFlat ? 'Заглушка плоская Ду${fit.dn}' : 'Днище эллиптическое Ду${fit.dn}';
+                _update(fit.copyWith(
+                  standard: std,
+                  name: name,
+                ));
+              },
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Высота / вылет днища H (мм)',
+                border: OutlineInputBorder(),
+                suffixText: 'мм',
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              controller: TextEditingController(
+                text: (fit.buildingLengthMm ?? (fit.dn * 0.25).clamp(10.0, 500.0)).toStringAsFixed(0),
+              ),
+              onSubmitted: (v) {
+                final h = double.tryParse(v);
+                if (h != null && h >= 0) _update(fit.copyWith(buildingLengthMm: h));
               },
             ),
             const SizedBox(height: 10),

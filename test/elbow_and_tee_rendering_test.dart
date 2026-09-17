@@ -183,7 +183,7 @@ void main() {
       expect(spoolBranch.endPoint?.y, closeTo(1000.0, 1.0));
     });
 
-    test('Direct branch (У18) keeps main spool un-cut and deduces D_outer/2 from branch', () {
+    test('Direct branch (У18) keeps main spool un-cut and connects branch spool flush with 0 deduction', () {
       final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
       final nTee = Node3D(id: 'nTee', x: 1000, y: 0, z: 0);
       final n2 = Node3D(id: 'n2', x: 2000, y: 0, z: 0);
@@ -216,9 +216,9 @@ void main() {
 
       // Магистраль идет единой сквозной катушкой через ThroughRun: длина 2000 мм (или 2 сегмента по 1000 без вычета в nTee)
       final branchSpool = net.spools.values.firstWhere((sp) => sp.segmentId == sBranch.id);
-      // DN100 outer diameter = 108 => radius = 54
-      expect(branchSpool.cutLengthMm, closeTo(1000.0 - 54.0, 1.0));
-      expect(branchSpool.startPoint?.y, closeTo(54.0, 1.0));
+      // Прямая врезка: заготовительная длина L_заг = L_осев - R_маг (1000 - 54 = 946 мм), но старт в узле nTee y=0 без визуального зазора
+      expect(branchSpool.cutLengthMm, closeTo(946.0, 1.0));
+      expect(branchSpool.startPoint?.y, closeTo(0.0, 1.0));
     });
 
     test('DXF export includes АКСО_ТРОЙНИКИ layer and tee geometry', () {

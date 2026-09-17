@@ -14,16 +14,19 @@ class SmartCallout {
     required String gostType,
     Color color = Colors.black87,
     bool isLeftSided = false,
+    bool drawMarker = true,
   }) {
     final leaderLength = 35.0;
     final shelfLength = 65.0;
     final shelfDirection = isLeftSided ? -1.0 : 1.0;
 
     // Точка начала на трубе: четкая засечка / точка
-    final dotPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(weldPoint, 3.5, dotPaint);
+    if (drawMarker) {
+      final dotPaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(weldPoint, 3.5, dotPaint);
+    }
 
     // Ножка выноски под углом ~45-60 градусов
     final elbowPoint = Offset(

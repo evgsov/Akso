@@ -3,6 +3,7 @@ import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/enums/inspection_method.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/enums/valve_type.dart';
+import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/pipe_support.dart';
 import '../../../../core/math/snap_engine.dart';
@@ -1469,6 +1470,45 @@ class DesktopCadLayout extends StatelessWidget {
                               controller.network.updateWeldJoint(
                                 weld.id,
                                 (w) => w.copyWith(inspectionMethod: newMethod),
+                              );
+                              controller.refresh();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Стиль:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButton<WeldJointStyle?>(
+                            value: weld.style,
+                            isDense: true,
+                            isExpanded: true,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            items: [
+                              DropdownMenuItem<WeldJointStyle?>(
+                                value: null,
+                                child: Text('По умолчанию (${controller.network.defaultWeldStyle.label})',
+                                    style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                              ),
+                              ...WeldJointStyle.values.map((st) {
+                                return DropdownMenuItem<WeldJointStyle?>(
+                                  value: st,
+                                  child: Text(st.label, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                                );
+                              }),
+                            ],
+                            onChanged: (newStyle) {
+                              controller.history.recordState(controller.network);
+                              controller.network.updateWeldJoint(
+                                weld.id,
+                                (w) => w.copyWith(
+                                  style: newStyle,
+                                  clearStyle: newStyle == null,
+                                ),
                               );
                               controller.refresh();
                             },
