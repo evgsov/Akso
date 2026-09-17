@@ -652,6 +652,110 @@ void main() {
       final discSegments = lines.where((l) => (l.x1 - 1120.0).abs() < 1e-3 && (l.x2 - 1120.0).abs() < 1e-3).toList();
       expect(discSegments.length, greaterThanOrEqualTo(10));
     });
+
+    test('nozzle automatically aligns with connected pipe and flange disc is strictly perpendicular to pipe', () {
+      final net = PipingNetwork(
+        nodes: {},
+        segments: {},
+        valves: {},
+        weldJoints: {},
+        fittings: {},
+        supports: {},
+        equipments: {},
+      );
+
+      final eq = Equipment(
+        id: 'eq_1',
+        name: 'Емкость Е-1',
+        type: EquipmentType.box,
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 1000,
+        height: 2000,
+      );
+      net.addEquipment(eq);
+
+      // 1. Создаем штуцер на верхней крышке аппарата (face: top, default normal: 0, 0, 1)
+      final nozNode = net.attachNozzleAtWorldPoint(
+        eq.id,
+        const Node3D(id: '', x: 1000, y: 1000, z: 2000),
+        dn: 80,
+        face: EquipmentFace.top,
+      );
+
+      final noz = net.equipments[eq.id]!.nozzles.first;
+      // Без подключенной трубы направление равно нормали грани аппарата (0, 0, 1)
+      final freeDir = net.getNozzleEffectiveDirection(noz);
+      expect(freeDir.x, closeTo(0.0, 1e-4));
+      expect(freeDir.y, closeTo(0.0, 1e-4));
+      expect(freeDir.z, closeTo(1.0, 1e-4));
+
+      // 2. Подключаем горизонтальную трубу вдоль оси X: от (1000, 1000, 2000) до (2500, 1000, 2000)
+      const pipeOtherNode = Node3D(id: 'node_pipe_end', x: 2500, y: 1000, z: 2000);
+      net.nodes[pipeOtherNode.id] = pipeOtherNode;
+
+      final pipeSeg = PipeSegment(
+        id: 'seg_horiz',
+        startNodeId: nozNode.id,
+        endNodeId: pipeOtherNode.id,
+        systemId: 'sys_1',
+        dn: 80,
+      );
+      net.addSegment(pipeSeg);
+
+      // 3. Проверяем, что теперь эффективное направление штуцера направлено вдоль трубы (1, 0, 0)
+      final pipeDir = net.getNozzleEffectiveDirection(noz);
+      expect(pipeDir.x, closeTo(1.0, 1e-4));
+      expect(pipeDir.y, closeTo(0.0, 1e-4));
+      expect(pipeDir.z, closeTo(0.0, 1e-4));
+
+      // И сохраненное направление штуцера обновилось
+      final updatedNoz = net.equipments[eq.id]!.nozzles.first;
+      expect(updatedNoz.dirX, closeTo(1.0, 1e-4));
+
+      // 4. Генерируем 3D каркас штуцера по эффективному направлению
+      final wireframe = Element3dGeometry.generateNozzleWireframe(
+        startX: nozNode.x,
+        startY: nozNode.y,
+        startZ: nozNode.z,
+        dirX: pipeDir.x,
+        dirY: pipeDir.y,
+        dirZ: pipeDir.z,
+        dn: updatedNoz.dn,
+        spudLengthMm: 120,
+      );
+
+      // Патрубок штуцера идет вдоль трубы (от X=1000 до X=1120)
+      final spud = wireframe.first;
+      expect(spud.x1, equals(1000.0));
+      expect(spud.x2, equals(1120.0));
+      expect(spud.z1, equals(2000.0));
+      expect(spud.z2, equals(2000.0));
+
+      // Диск фланца лежит строго в вертикальной плоскости X = 1120 (перпендикулярно горизонтальной трубе)
+      final discSegments = wireframe.where((l) => (l.x1 - 1120.0).abs() < 1e-3 && (l.x2 - 1120.0).abs() < 1e-3).toList();
+      expect(discSegments.length, greaterThanOrEqualTo(10));
+
+      // 5. Проверяем адаптивное масштабирование длины патрубка для коротких труб
+      // Создаем очень короткую трубу 80 мм
+      const shortOtherNode = Node3D(id: 'node_short', x: 1080, y: 1000, z: 2000);
+      net.nodes[shortOtherNode.id] = shortOtherNode;
+      final shortSeg = PipeSegment(
+        id: 'seg_short',
+        startNodeId: nozNode.id,
+        endNodeId: shortOtherNode.id,
+        systemId: 'sys_1',
+        dn: 80,
+      );
+      net.segments.clear();
+      net.addSegment(shortSeg);
+
+      final shortSpudLen = net.getNozzleEffectiveSpudLength(updatedNoz, defaultSpudMm: 120.0);
+      // Длина патрубка аккуратно поджалась до 80 * 0.45 = 36 мм, не выходя за трубу
+      expect(shortSpudLen, closeTo(36.0, 1e-2));
+    });
   });
 }
 

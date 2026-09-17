@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:uuid/uuid.dart';
+import '../../core/math/vector_3d.dart';
 import '../enums/fitting_type.dart';
 import '../enums/inspection_method.dart';
 import '../enums/valve_type.dart';
@@ -240,6 +241,9 @@ class PipingNetwork {
     EquipmentFace? face,
     String? name,
     bool includeInMto = false,
+    double? dirX,
+    double? dirY,
+    double? dirZ,
   }) {
     final eq = equipments[eqId];
     if (eq == null) {
@@ -348,9 +352,29 @@ class PipingNetwork {
     }
 
     // Мировое направление нормали
-    final worldDirX = localDirX * cosA - localDirY * sinA;
-    final worldDirY = localDirX * sinA + localDirY * cosA;
-    final worldDirZ = localDirZ;
+    final double worldDirX;
+    final double worldDirY;
+    final double worldDirZ;
+
+    if (dirX != null || dirY != null || dirZ != null) {
+      final dx_ = dirX ?? 0.0;
+      final dy_ = dirY ?? 0.0;
+      final dz_ = dirZ ?? 0.0;
+      final len = math.sqrt(dx_ * dx_ + dy_ * dy_ + dz_ * dz_);
+      if (len > 1e-4) {
+        worldDirX = dx_ / len;
+        worldDirY = dy_ / len;
+        worldDirZ = dz_ / len;
+      } else {
+        worldDirX = localDirX * cosA - localDirY * sinA;
+        worldDirY = localDirX * sinA + localDirY * cosA;
+        worldDirZ = localDirZ;
+      }
+    } else {
+      worldDirX = localDirX * cosA - localDirY * sinA;
+      worldDirY = localDirX * sinA + localDirY * cosA;
+      worldDirZ = localDirZ;
+    }
 
     final nozId = 'noz_${_uuid.v4()}';
     final nozName = name ?? 'Ш-${eq.nozzles.length + 1}';
@@ -381,6 +405,74 @@ class PipingNetwork {
     );
     nodes[node.id] = node;
     return node;
+  }
+
+  /// Возвращает эффективное направление патрубка штуцера в мировых координатах:
+  /// - Если к штуцеру подключен сегмент трубы, вектор направлен строго вдоль трубы наружу от аппарата,
+  ///   благодаря чему привалочная плоскость фланца всегда строго перпендикулярна подключенной трубе.
+  /// - Если труба еще не подключена, используется базовое направление нормали грани (dirX, dirY, dirZ).
+  Vector3D getNozzleEffectiveDirection(Nozzle noz) {
+    final connectedSegs = getConnectedSegments(noz.id);
+    if (connectedSegs.isNotEmpty) {
+      final seg = connectedSegs.first;
+      final otherNodeId = seg.startNodeId == noz.id ? seg.endNodeId : seg.startNodeId;
+      final otherNode = nodes[otherNodeId];
+      final node = nodes[noz.id];
+      if (otherNode != null && node != null) {
+        final dx = otherNode.x - node.x;
+        final dy = otherNode.y - node.y;
+        final dz = otherNode.z - node.z;
+        final len = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (len > 1e-4) {
+          return Vector3D(dx / len, dy / len, dz / len);
+        }
+      }
+    }
+    return Vector3D(noz.dirX, noz.dirY, noz.dirZ);
+  }
+
+  /// Вычисляет эффективную длину патрубка штуцера (мм) с учетом длины подключенной трубы,
+  /// чтобы фланец штуцера не выходил за пределы коротких участков трубопровода.
+  double getNozzleEffectiveSpudLength(Nozzle noz, {double defaultSpudMm = 120.0}) {
+    final connectedSegs = getConnectedSegments(noz.id);
+    if (connectedSegs.isNotEmpty) {
+      final seg = connectedSegs.first;
+      final otherNodeId = seg.startNodeId == noz.id ? seg.endNodeId : seg.startNodeId;
+      final otherNode = nodes[otherNodeId];
+      final node = nodes[noz.id];
+      if (otherNode != null && node != null) {
+        final pipeLen = node.distanceTo(otherNode);
+        if (pipeLen > 10.0) {
+          return math.min(defaultSpudMm, pipeLen * 0.45);
+        }
+      }
+    }
+    return defaultSpudMm;
+  }
+
+  /// Обновляет сохраненное направление штуцера по подключенной трубе (если узел принадлежит оборудованию)
+  void _updateNozzleDirectionForNode(String nodeId) {
+    final node = nodes[nodeId];
+    if (node == null || node.equipmentId == null || node.nozzleId == null) return;
+    final eq = equipments[node.equipmentId!];
+    if (eq == null) return;
+
+    final nozIndex = eq.nozzles.indexWhere((n) => n.id == node.nozzleId);
+    if (nozIndex == -1) return;
+
+    final noz = eq.nozzles[nozIndex];
+    final effDir = getNozzleEffectiveDirection(noz);
+    if ((effDir.x - noz.dirX).abs() > 1e-3 ||
+        (effDir.y - noz.dirY).abs() > 1e-3 ||
+        (effDir.z - noz.dirZ).abs() > 1e-3) {
+      final updatedNozzles = List<Nozzle>.from(eq.nozzles);
+      updatedNozzles[nozIndex] = noz.copyWith(
+        dirX: effDir.x,
+        dirY: effDir.y,
+        dirZ: effDir.z,
+      );
+      equipments[eq.id] = eq.copyWith(nozzles: updatedNozzles);
+    }
   }
 
   /// Поворот оборудования вокруг вертикальной оси Z (через центр аппарата)
@@ -575,6 +667,8 @@ class PipingNetwork {
   /// Добавление нового сегмента трубы в сеть с автоматическим определением фитингов
   void addSegment(PipeSegment segment) {
     segments[segment.id] = segment;
+    _updateNozzleDirectionForNode(segment.startNodeId);
+    _updateNozzleDirectionForNode(segment.endNodeId);
     FittingDetector.autoDetectFittingsForNode(this, segment.startNodeId);
     FittingDetector.autoDetectFittingsForNode(this, segment.endNodeId);
     recalculateSpools();

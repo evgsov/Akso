@@ -1941,18 +1941,19 @@ class DxfWriter {
           wy = eq.y + noz.localX * sinA + noz.localY * cosA;
           wz = eq.z + noz.localZ;
         }
-        const spudLen = 120.0;
-        final fx = wx + noz.dirX * spudLen;
-        final fy = wy + noz.dirY * spudLen;
-        final fz = wz + noz.dirZ * spudLen;
+        final effDir = net.getNozzleEffectiveDirection(noz);
+        final spudLen = net.getNozzleEffectiveSpudLength(noz, defaultSpudMm: 120.0);
+        final fx = wx + effDir.x * spudLen;
+        final fy = wy + effDir.y * spudLen;
+        final fz = wz + effDir.z * spudLen;
 
         final wireframe = Element3dGeometry.generateNozzleWireframe(
           startX: wx,
           startY: wy,
           startZ: wz,
-          dirX: noz.dirX,
-          dirY: noz.dirY,
-          dirZ: noz.dirZ,
+          dirX: effDir.x,
+          dirY: effDir.y,
+          dirZ: effDir.z,
           dn: noz.dn,
           spudLengthMm: spudLen,
           includeCounterFlange: noz.includeInMto,
@@ -2105,18 +2106,19 @@ class DxfWriter {
           wy = eq.y + noz.localX * sinA + noz.localY * cosA;
           wz = eq.z + noz.localZ;
         }
-        const spudLen = 120.0;
-        final fx = wx + noz.dirX * spudLen;
-        final fy = wy + noz.dirY * spudLen;
-        final fz = wz + noz.dirZ * spudLen;
+        final effDir = net.getNozzleEffectiveDirection(noz);
+        final spudLen = net.getNozzleEffectiveSpudLength(noz, defaultSpudMm: 120.0);
+        final fx = wx + effDir.x * spudLen;
+        final fy = wy + effDir.y * spudLen;
+        final fz = wz + effDir.z * spudLen;
 
         final wireframe = Element3dGeometry.generateNozzleWireframe(
           startX: wx,
           startY: wy,
           startZ: wz,
-          dirX: noz.dirX,
-          dirY: noz.dirY,
-          dirZ: noz.dirZ,
+          dirX: effDir.x,
+          dirY: effDir.y,
+          dirZ: effDir.z,
           dn: noz.dn,
           spudLengthMm: spudLen,
           includeCounterFlange: noz.includeInMto,

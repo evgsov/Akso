@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789642694.1923814,
-    "seen": 1789643160.49483,
-    "ast_hash": "7462d86c1ce30192b50deb556e34a47a",
+    "mtime": 1789648454.9144263,
+    "seen": 1789648716.286459,
+    "ast_hash": "dc755380ad55e7ccbda2b26cf23c39bf",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789642472.1804574,
-    "seen": 1789643160.4948747,
-    "ast_hash": "14e23b4f2b7a614e1b9bb81e0bb52486",
+    "mtime": 1789646667.7196538,
+    "seen": 1789647574.0383768,
+    "ast_hash": "e25e57a55a7e9aeb0b751c6f28d459b4",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789642806.9735262,
-    "seen": 1789643160.4948907,
-    "ast_hash": "02d28966b9553a3dd9dd419b1f162647",
+    "mtime": 1789646380.817541,
+    "seen": 1789647574.0383925,
+    "ast_hash": "ae00eab401c5378c4736d3592ab122ee",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
-    "mtime": 1789539738.248706,
-    "seen": 1789541148.8100867,
-    "ast_hash": "aeacc24a8c30d31a4a8cb1dbf7f12953",
+    "mtime": 1789646282.1188042,
+    "seen": 1789647574.0384061,
+    "ast_hash": "4f94cae5ebcfeac88ae528b49df506de",
     "semantic_hash": ""
   },
   "lib/ui/canvas/smart_callout.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789640328.7109416,
-    "seen": 1789643160.4951465,
-    "ast_hash": "e564e6e15689633ad726a110ecdf322b",
+    "mtime": 1789647590.9655812,
+    "seen": 1789648716.286745,
+    "ast_hash": "8193a7b1c3961566960be9aeed515ef5",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1152,9 +1152,9 @@
     "semantic_hash": ""
   },
   "lib/core/math/snap_engine.dart": {
-    "mtime": 1789533503.289298,
-    "seen": 1789534084.6953554,
-    "ast_hash": "73a0ddbc3072cf19ff5eb2083421ea14",
+    "mtime": 1789646272.8172965,
+    "seen": 1789647574.0383403,
+    "ast_hash": "85d40b916a7b0b3839b682454eeeab2d",
     "semantic_hash": ""
   },
   "lib/domain/models/construction_axis.dart": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789643125.3140879,
-    "seen": 1789643160.4949133,
-    "ast_hash": "5dd7aa6f02a859335aeac9c1449ad93d",
+    "mtime": 1789646707.54767,
+    "seen": 1789647574.0384135,
+    "ast_hash": "e27c179ea74191494158f6091f1c4b84",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1266,15 +1266,15 @@
     "semantic_hash": ""
   },
   "lib/domain/services/fitting_detector.dart": {
-    "mtime": 1789530802.799339,
-    "seen": 1789531117.7959206,
-    "ast_hash": "8f32f893a60fe51333eb30c8437b6e49",
+    "mtime": 1789643531.306127,
+    "seen": 1789643805.159873,
+    "ast_hash": "9f359085e900a8dc4c550cb2ff3b158d",
     "semantic_hash": ""
   },
   "lib/domain/services/spool_calculator.dart": {
-    "mtime": 1789631641.901981,
-    "seen": 1789631950.4067502,
-    "ast_hash": "dfd5e56bf9d6e27adf8201d771842336",
+    "mtime": 1789643711.9115522,
+    "seen": 1789643805.159875,
+    "ast_hash": "c7b9bb759c8e418800576c6177e1479e",
     "semantic_hash": ""
   },
   "lib/data/repositories/project_repository.dart": {
@@ -1308,9 +1308,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/fitting_painter.dart": {
-    "mtime": 1789640043.306027,
-    "seen": 1789640301.351621,
-    "ast_hash": "fd477aeb3aa12a318d71181176a1858c",
+    "mtime": 1789643589.81569,
+    "seen": 1789643805.1598883,
+    "ast_hash": "7ff5c20ef54f0ae0e2314b31f8a05414",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/grid_painter.dart": {
@@ -1368,21 +1368,21 @@
     "semantic_hash": ""
   },
   "lib/domain/models/equipment.dart": {
-    "mtime": 1789535537.645684,
-    "seen": 1789535899.4131236,
-    "ast_hash": "176c1397637238def5a3d569fee69264",
+    "mtime": 1789645531.2320187,
+    "seen": 1789647574.0383618,
+    "ast_hash": "e661cf66d2e2d082a357b9f338c6d96b",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/equipment_painter.dart": {
-    "mtime": 1789365834.480529,
-    "seen": 1789469442.6828244,
-    "ast_hash": "7e9d07c791fc4b91b93a42c44b09b71a",
+    "mtime": 1789648412.050069,
+    "seen": 1789648716.2865157,
+    "ast_hash": "24cde70ffbd0a0f83fb28eba74f8d53c",
     "semantic_hash": ""
   },
   "test/equipment_test.dart": {
-    "mtime": 1789355749.663,
-    "seen": 1789469442.6828854,
-    "ast_hash": "8ad4452d5f2113ecba7a347c178d32b4",
+    "mtime": 1789647423.8815556,
+    "seen": 1789647574.038485,
+    "ast_hash": "753435ddbce6379713ae8112680f3fdc",
     "semantic_hash": ""
   },
   "lib/domain/models/pipe_support.dart": {
@@ -1434,9 +1434,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/equipment_properties_sheet.dart": {
-    "mtime": 1789567224.7192364,
-    "seen": 1789567768.1408668,
-    "ast_hash": "5bcfba710c8651cd01589cd9ed62d722",
+    "mtime": 1789646695.508576,
+    "seen": 1789647574.038417,
+    "ast_hash": "a7419dab4afd0eebeb5f7576d783a35c",
     "semantic_hash": ""
   },
   "test/verify_autocad_dxf_test.dart": {
@@ -1554,9 +1554,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/solid_3d_engine.dart": {
-    "mtime": 1789628054.995602,
-    "seen": 1789628121.4555707,
-    "ast_hash": "ebd1602d237b1d264c0de79ff436fe60",
+    "mtime": 1789643624.1425502,
+    "seen": 1789643805.1598926,
+    "ast_hash": "b61c237472d3e17cd67b66e466a1e6f8",
     "semantic_hash": ""
   },
   "test/controllers_refactoring_test.dart": {
@@ -1596,9 +1596,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/element_3d_geometry.dart": {
-    "mtime": 1789642536.7642217,
-    "seen": 1789643160.494881,
-    "ast_hash": "05d2f1313bd54829157e49de5a634ccd",
+    "mtime": 1789648375.1554615,
+    "seen": 1789648716.2865005,
+    "ast_hash": "8228279acd1ed342e66103fba1cfcd57",
     "semantic_hash": ""
   },
   "test/element_selection_and_interaction_test.dart": {
@@ -1764,9 +1764,27 @@
     "semantic_hash": ""
   },
   "test/body_hit_test_and_flanged_valves_test.dart": {
-    "mtime": 1789643131.6070836,
-    "seen": 1789643160.4949522,
-    "ast_hash": "bdd1d962b7b80009f2660ba6772b323c",
+    "mtime": 1789643739.6227238,
+    "seen": 1789643805.159952,
+    "ast_hash": "bb71944d567d92c35c9d3cbd21babd46",
+    "semantic_hash": ""
+  },
+  "test/equipment_dynamic_nozzles_and_rotation_test.dart": {
+    "mtime": 1789648336.5269659,
+    "seen": 1789648716.2866037,
+    "ast_hash": "b036f06426f3b679d64f77ed76c6f0bc",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-17-dynamic-equipment-nozzles-and-rotation.md": {
+    "mtime": 1789645364.136236,
+    "seen": 1789647574.0386274,
+    "ast_hash": "e507df09359d3716bccbcd38017f9906",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-17-dynamic-equipment-nozzles-and-rotation-design.md": {
+    "mtime": 1789645281.9064167,
+    "seen": 1789647574.0386322,
+    "ast_hash": "1e42d3c9e5b83c34def2bcdba1d370d3",
     "semantic_hash": ""
   }
 }

@@ -2156,6 +2156,9 @@ class PipingInputController extends ChangeNotifier {
           w,
           dn: activeDn,
           face: currentSnapResult!.snappedEquipmentFace,
+          dirX: traceStartNode!.x - w.x,
+          dirY: traceStartNode!.y - w.y,
+          dirZ: traceStartNode!.z - w.z,
         );
         targetNodeId = nozzleNode.id;
       } else if ((currentSnapResult!.type == SnapType.segmentAxis ||
@@ -2225,6 +2228,9 @@ class PipingInputController extends ChangeNotifier {
           hitExistingEqId,
           w,
           dn: activeDn,
+          dirX: traceStartNode!.x - w.x,
+          dirY: traceStartNode!.y - w.y,
+          dirZ: traceStartNode!.z - w.z,
         );
         targetNodeId = nozzleNode.id;
       } else if (hitExistingSegId != null) {

@@ -269,20 +269,21 @@ class EquipmentPainter {
         wz = eq.z + noz.localZ;
       }
 
-      const spudLenMm = 120.0;
+      final effDir = network.getNozzleEffectiveDirection(noz);
+      final spudLenMm = network.getNozzleEffectiveSpudLength(noz, defaultSpudMm: 120.0);
       final pFlange = projector.projectCoordinates(
-        wx + noz.dirX * spudLenMm,
-        wy + noz.dirY * spudLenMm,
-        wz + noz.dirZ * spudLenMm,
+        wx + effDir.x * spudLenMm,
+        wy + effDir.y * spudLenMm,
+        wz + effDir.z * spudLenMm,
       );
 
       final wireframe = Element3dGeometry.generateNozzleWireframe(
         startX: wx,
         startY: wy,
         startZ: wz,
-        dirX: noz.dirX,
-        dirY: noz.dirY,
-        dirZ: noz.dirZ,
+        dirX: effDir.x,
+        dirY: effDir.y,
+        dirZ: effDir.z,
         dn: noz.dn,
         spudLengthMm: spudLenMm,
         includeCounterFlange: noz.includeInMto,
