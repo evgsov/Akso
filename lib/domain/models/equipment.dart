@@ -17,6 +17,17 @@ extension EquipmentTypeExt on EquipmentType {
   }
 }
 
+/// Грань или поверхность оборудования, к которой привязан штуцер
+enum EquipmentFace {
+  top,
+  bottom,
+  left,
+  right,
+  front,
+  back,
+  cylindrical,
+}
+
 /// Штуцер технологического оборудования (точка подключения трубопровода)
 class Nozzle {
   final String id;
@@ -30,6 +41,12 @@ class Nozzle {
   final double dirZ;
   final int dn;
 
+  /// Грань аппарата, на которой размещен штуцер (null, если произвольное положение)
+  final EquipmentFace? face;
+
+  /// Включать ли ответный фланец штуцера в заказную спецификацию MTO (по умолчанию false - комплектный)
+  final bool includeInMto;
+
   const Nozzle({
     required this.id,
     required this.equipmentId,
@@ -41,6 +58,8 @@ class Nozzle {
     this.dirY = 0.0,
     this.dirZ = 1.0,
     this.dn = 50,
+    this.face,
+    this.includeInMto = false,
   });
 
   Nozzle copyWith({
@@ -54,6 +73,8 @@ class Nozzle {
     double? dirY,
     double? dirZ,
     int? dn,
+    EquipmentFace? face,
+    bool? includeInMto,
   }) {
     return Nozzle(
       id: id ?? this.id,
@@ -66,6 +87,8 @@ class Nozzle {
       dirY: dirY ?? this.dirY,
       dirZ: dirZ ?? this.dirZ,
       dn: dn ?? this.dn,
+      face: face ?? this.face,
+      includeInMto: includeInMto ?? this.includeInMto,
     );
   }
 
@@ -80,6 +103,8 @@ class Nozzle {
         'dirY': dirY,
         'dirZ': dirZ,
         'dn': dn,
+        if (face != null) 'face': face!.name,
+        'includeInMto': includeInMto,
       };
 
   factory Nozzle.fromJson(Map<String, dynamic> json) => Nozzle(
@@ -93,6 +118,13 @@ class Nozzle {
         dirY: (json['dirY'] as num?)?.toDouble() ?? 0.0,
         dirZ: (json['dirZ'] as num?)?.toDouble() ?? 1.0,
         dn: (json['dn'] as num?)?.toInt() ?? 50,
+        face: json['face'] != null
+            ? EquipmentFace.values.firstWhere(
+                (f) => f.name == json['face'],
+                orElse: () => EquipmentFace.top,
+              )
+            : null,
+        includeInMto: json['includeInMto'] as bool? ?? false,
       );
 
   @override
@@ -109,7 +141,9 @@ class Nozzle {
           dirX == other.dirX &&
           dirY == other.dirY &&
           dirZ == other.dirZ &&
-          dn == other.dn;
+          dn == other.dn &&
+          face == other.face &&
+          includeInMto == other.includeInMto;
 
   @override
   int get hashCode => Object.hash(
@@ -123,6 +157,8 @@ class Nozzle {
         dirY,
         dirZ,
         dn,
+        face,
+        includeInMto,
       );
 }
 
@@ -139,6 +175,9 @@ class Equipment {
   final double height;
   final List<Nozzle> nozzles;
 
+  /// Угол поворота оборудования в плоскости XY (в градусах, по умолчанию 0.0)
+  final double rotationAngleDeg;
+
   /// Заводской номер оборудования (аппарата, насоса, емкости)
   final String? serialNumber;
 
@@ -153,6 +192,7 @@ class Equipment {
     required this.length,
     required this.height,
     this.nozzles = const [],
+    this.rotationAngleDeg = 0.0,
     this.serialNumber,
   });
 
@@ -167,6 +207,7 @@ class Equipment {
     double? length,
     double? height,
     List<Nozzle>? nozzles,
+    double? rotationAngleDeg,
     String? serialNumber,
     bool clearSerialNumber = false,
   }) {
@@ -181,6 +222,7 @@ class Equipment {
       length: length ?? this.length,
       height: height ?? this.height,
       nozzles: nozzles ?? this.nozzles,
+      rotationAngleDeg: rotationAngleDeg ?? this.rotationAngleDeg,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
@@ -196,6 +238,7 @@ class Equipment {
         'length': length,
         'height': height,
         'nozzles': nozzles.map((n) => n.toJson()).toList(),
+        'rotationAngleDeg': rotationAngleDeg,
         if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
@@ -216,6 +259,7 @@ class Equipment {
                 ?.map((n) => Nozzle.fromJson(n as Map<String, dynamic>))
                 .toList() ??
             const [],
+        rotationAngleDeg: (json['rotationAngleDeg'] as num?)?.toDouble() ?? 0.0,
         serialNumber: json['serialNumber'] as String?,
       );
 
@@ -232,7 +276,8 @@ class Equipment {
           z == other.z &&
           width == other.width &&
           length == other.length &&
-          height == other.height;
+          height == other.height &&
+          rotationAngleDeg == other.rotationAngleDeg;
 
   @override
   int get hashCode => Object.hash(
@@ -245,5 +290,6 @@ class Equipment {
         width,
         length,
         height,
+        rotationAngleDeg,
       );
 }
