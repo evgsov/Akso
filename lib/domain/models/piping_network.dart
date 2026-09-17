@@ -232,10 +232,277 @@ class PipingNetwork {
     recalculateSpools();
   }
 
-  /// Удаление оборудования с каскадной очисткой штуцеров и примыкающих элементов
+  /// Создание динамического штуцера на оборудовании в заданной трехмерной точке грани
+  Node3D attachNozzleAtWorldPoint(
+    String eqId,
+    Node3D worldPoint, {
+    int dn = 50,
+    EquipmentFace? face,
+    String? name,
+    bool includeInMto = false,
+  }) {
+    final eq = equipments[eqId];
+    if (eq == null) {
+      final fallback = Node3D(id: 'noz_${_uuid.v4()}', x: worldPoint.x, y: worldPoint.y, z: worldPoint.z);
+      nodes[fallback.id] = fallback;
+      return fallback;
+    }
+
+    final rad = eq.rotationAngleDeg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+
+    // Вектор от центра оборудования к мировой точке
+    final dx = worldPoint.x - eq.x;
+    final dy = worldPoint.y - eq.y;
+    final dz = worldPoint.z - eq.z;
+
+    // Преобразуем в локальную систему координат аппарата (до поворота)
+    final lx = dx * cosA + dy * sinA;
+    final ly = -dx * sinA + dy * cosA;
+    final lz = dz;
+
+    // Определяем грань, если не указана явно
+    EquipmentFace determinedFace = face ?? EquipmentFace.top;
+    double localDirX = 0.0;
+    double localDirY = 0.0;
+    double localDirZ = 1.0;
+
+    if (face == null) {
+      if (eq.type == EquipmentType.box) {
+        final distTop = (lz - eq.height).abs();
+        final distBottom = lz.abs();
+        final distRight = (lx - eq.width / 2.0).abs();
+        final distLeft = (lx + eq.width / 2.0).abs();
+        final distFront = (ly - eq.length / 2.0).abs();
+        final distBack = (ly + eq.length / 2.0).abs();
+
+        final minDist = [distTop, distBottom, distRight, distLeft, distFront, distBack].reduce(math.min);
+        if (minDist == distTop) {
+          determinedFace = EquipmentFace.top;
+          localDirZ = 1.0;
+        } else if (minDist == distBottom) {
+          determinedFace = EquipmentFace.bottom;
+          localDirZ = -1.0;
+        } else if (minDist == distRight) {
+          determinedFace = EquipmentFace.right;
+          localDirX = 1.0;
+          localDirZ = 0.0;
+        } else if (minDist == distLeft) {
+          determinedFace = EquipmentFace.left;
+          localDirX = -1.0;
+          localDirZ = 0.0;
+        } else if (minDist == distFront) {
+          determinedFace = EquipmentFace.front;
+          localDirY = 1.0;
+          localDirZ = 0.0;
+        } else {
+          determinedFace = EquipmentFace.back;
+          localDirY = -1.0;
+          localDirZ = 0.0;
+        }
+      } else if (eq.type == EquipmentType.cylinderVertical) {
+        final distTop = (lz - eq.height).abs();
+        final distBottom = lz.abs();
+        final r = eq.width / 2.0;
+        final radDist = math.sqrt(lx * lx + ly * ly);
+        final distSide = (radDist - r).abs();
+        final minDist = [distTop, distBottom, distSide].reduce(math.min);
+        if (minDist == distTop) {
+          determinedFace = EquipmentFace.top;
+          localDirZ = 1.0;
+        } else if (minDist == distBottom) {
+          determinedFace = EquipmentFace.bottom;
+          localDirZ = -1.0;
+        } else {
+          determinedFace = EquipmentFace.cylindrical;
+          if (radDist > 0.001) {
+            localDirX = lx / radDist;
+            localDirY = ly / radDist;
+            localDirZ = 0.0;
+          }
+        }
+      } else {
+        // cylinderHorizontal
+        final distFront = (ly - eq.length / 2.0).abs();
+        final distBack = (ly + eq.length / 2.0).abs();
+        if (distFront < 50.0) {
+          determinedFace = EquipmentFace.front;
+          localDirY = 1.0;
+          localDirZ = 0.0;
+        } else if (distBack < 50.0) {
+          determinedFace = EquipmentFace.back;
+          localDirY = -1.0;
+          localDirZ = 0.0;
+        } else {
+          determinedFace = EquipmentFace.cylindrical;
+          final r = eq.height / 2.0;
+          final dzCenter = lz - r;
+          final radDist = math.sqrt(lx * lx + dzCenter * dzCenter);
+          if (radDist > 0.001) {
+            localDirX = lx / radDist;
+            localDirZ = dzCenter / radDist;
+          }
+        }
+      }
+    }
+
+    // Мировое направление нормали
+    final worldDirX = localDirX * cosA - localDirY * sinA;
+    final worldDirY = localDirX * sinA + localDirY * cosA;
+    final worldDirZ = localDirZ;
+
+    final nozId = 'noz_${_uuid.v4()}';
+    final nozName = name ?? 'Ш-${eq.nozzles.length + 1}';
+    final nozzle = Nozzle(
+      id: nozId,
+      equipmentId: eq.id,
+      name: nozName,
+      localX: lx,
+      localY: ly,
+      localZ: lz,
+      dirX: worldDirX,
+      dirY: worldDirY,
+      dirZ: worldDirZ,
+      dn: dn,
+      face: determinedFace,
+      includeInMto: includeInMto,
+    );
+
+    equipments[eq.id] = eq.copyWith(nozzles: [...eq.nozzles, nozzle]);
+
+    final node = Node3D(
+      id: nozId,
+      x: worldPoint.x,
+      y: worldPoint.y,
+      z: worldPoint.z,
+      equipmentId: eq.id,
+      nozzleId: nozId,
+    );
+    nodes[node.id] = node;
+    return node;
+  }
+
+  /// Поворот оборудования вокруг вертикальной оси Z (через центр аппарата)
+  void rotateEquipment(String eqId, double angleDeltaDeg) {
+    final eq = equipments[eqId];
+    if (eq == null) return;
+
+    final newAngle = (eq.rotationAngleDeg + angleDeltaDeg) % 360.0;
+    final newRad = newAngle * math.pi / 180.0;
+    final cosNew = math.cos(newRad);
+    final sinNew = math.sin(newRad);
+
+    final movedNodeIds = <String>[];
+    for (final noz in eq.nozzles) {
+      final node = nodes[noz.id];
+      if (node != null) {
+        final newWx = eq.x + noz.localX * cosNew - noz.localY * sinNew;
+        final newWy = eq.y + noz.localX * sinNew + noz.localY * cosNew;
+        final newWz = eq.z + noz.localZ;
+        nodes[noz.id] = node.copyWith(x: newWx, y: newWy, z: newWz);
+        movedNodeIds.add(noz.id);
+      }
+    }
+
+    equipments[eqId] = eq.copyWith(rotationAngleDeg: newAngle);
+
+    for (final nId in movedNodeIds) {
+      FittingDetector.autoDetectFittingsForNode(this, nId);
+    }
+    recalculateSpools();
+  }
+
+  /// Обновление параметров оборудования с пересчетом положений штуцеров на гранях
   void updateEquipment(Equipment updatedEq) {
-    if (!equipments.containsKey(updatedEq.id)) return;
-    equipments[updatedEq.id] = updatedEq;
+    final oldEq = equipments[updatedEq.id];
+    if (oldEq == null) return;
+
+    final rad = updatedEq.rotationAngleDeg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+
+    final updatedNozzles = <Nozzle>[];
+    for (final noz in updatedEq.nozzles) {
+      double lx = noz.localX;
+      double ly = noz.localY;
+      double lz = noz.localZ;
+
+      // Если штуцер привязан к грани, корректируем его координату при изменении габаритов
+      if (noz.face != null) {
+        switch (noz.face!) {
+          case EquipmentFace.top:
+            lz = updatedEq.height;
+            break;
+          case EquipmentFace.bottom:
+            lz = 0.0;
+            break;
+          case EquipmentFace.right:
+            lx = updatedEq.width / 2.0;
+            break;
+          case EquipmentFace.left:
+            lx = -updatedEq.width / 2.0;
+            break;
+          case EquipmentFace.front:
+            ly = updatedEq.length / 2.0;
+            break;
+          case EquipmentFace.back:
+            ly = -updatedEq.length / 2.0;
+            break;
+          case EquipmentFace.cylindrical:
+            if (updatedEq.type == EquipmentType.cylinderVertical) {
+              final rOld = math.sqrt(noz.localX * noz.localX + noz.localY * noz.localY);
+              final rNew = updatedEq.width / 2.0;
+              if (rOld > 0.001) {
+                lx = noz.localX * (rNew / rOld);
+                ly = noz.localY * (rNew / rOld);
+              }
+            }
+            break;
+        }
+      }
+
+      final updatedNoz = noz.copyWith(localX: lx, localY: ly, localZ: lz);
+      updatedNozzles.add(updatedNoz);
+
+      final node = nodes[noz.id];
+      if (node != null) {
+        final wx = updatedEq.x + lx * cosA - ly * sinA;
+        final wy = updatedEq.y + lx * sinA + ly * cosA;
+        final wz = updatedEq.z + lz;
+        nodes[noz.id] = node.copyWith(x: wx, y: wy, z: wz);
+      }
+    }
+
+    equipments[updatedEq.id] = updatedEq.copyWith(nozzles: updatedNozzles);
+    recalculateSpools();
+  }
+
+  /// Автоматическое удаление неиспользуемых штуцеров оборудования (к которым не подключены трубы)
+  void cleanupUnusedEquipmentNozzles() {
+    bool changed = false;
+    for (final eq in equipments.values.toList()) {
+      final activeNozzles = <Nozzle>[];
+      for (final noz in eq.nozzles) {
+        final node = nodes[noz.id];
+        if (node != null) {
+          final connected = getConnectedSegments(noz.id);
+          if (connected.isEmpty) {
+            nodes.remove(noz.id);
+            changed = true;
+          } else {
+            activeNozzles.add(noz);
+          }
+        }
+      }
+      if (activeNozzles.length != eq.nozzles.length) {
+        equipments[eq.id] = eq.copyWith(nozzles: activeNozzles);
+        changed = true;
+      }
+    }
+    if (changed) {
+      recalculateSpools();
+    }
   }
 
   void removeEquipment(String eqId) {
