@@ -3587,6 +3587,16 @@ class PipingInputController extends ChangeNotifier {
     return count;
   }
 
+  /// Проверка топологической связности сварных стыков, удаление невалидных и перенумерация
+  int validateAndCleanWeldJoints() {
+    final removed = network.validateAndCleanWeldJoints();
+    if (removed > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return removed;
+  }
+
   /// Генерация недостающих выносок для сегментов, арматуры и стыков
   int generateMissingCallouts({
     Set<CalloutTargetType>? targetTypes,

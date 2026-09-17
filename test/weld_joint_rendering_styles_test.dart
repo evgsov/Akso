@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
+import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/fitting.dart';
 import 'package:akso/domain/models/weld_joint.dart';
 import 'package:akso/domain/enums/fitting_type.dart';
@@ -406,6 +407,82 @@ void main() {
         expect(dotProduct.abs(), lessThan(1e-10));
         expect(normal.distance, closeTo(1.0, 1e-10));
       }
+    });
+
+    test('FittingPainter paints direct branch dash-dot centerline and suppresses fallback text when callouts exist', () {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      // Без сгенерированных callouts - вызывается нормально
+      expect(
+        () => FittingPainter.paint(
+          canvas,
+          projector,
+          net,
+          null,
+          true,
+        ),
+        returnsNormally,
+      );
+
+      // Добавляем Callout в сеть
+      net.callouts['c_fit'] = const Callout(
+        id: 'c_fit',
+        targetId: 'fit_dir',
+        targetType: CalloutTargetType.fitting,
+      );
+
+      // С наличием callouts - подавляет нередактируемый текст
+      expect(
+        () => FittingPainter.paint(
+          canvas,
+          projector,
+          net,
+          null,
+          true,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('AnnotationPainter paints without uneditable SmartCallout.drawWeldCallout duplicates', () {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      expect(
+        () => AnnotationPainter.paint(
+          canvas,
+          projector,
+          net,
+          null,
+          true,
+          true,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('Element3dGeometry.generateDirectBranch3d generates axial centerline connecting node to contact seam', () {
+      final nNode = net.nodes['n2']!;
+      final nOther = net.nodes['nBranch']!;
+      final fit = net.fittings['n2']!;
+
+      final wireSegments = Element3dGeometry.generateDirectBranch3d(
+        fit,
+        nNode,
+        nOther,
+        mainOuterDiameter: 108.0,
+        branchOuterDiameter: 57.0,
+      );
+
+      // Содержит как 12 сегментов кольца, так и 1 осевой сегмент сопряжения (всего 13)
+      expect(wireSegments.length, equals(13));
+      final centerline = wireSegments.firstWhere(
+        (w) => (w.x1 - nNode.x).abs() < 0.1 && (w.y1 - nNode.y).abs() < 0.1 && (w.z1 - nNode.z).abs() < 0.1,
+      );
+      expect(centerline, isNotNull);
+      // Конечная точка осевого отрезка лежит на расстоянии R_main = 54 мм от nNode (вдоль Y)
+      expect(centerline.y2, closeTo(nNode.y + 54.0, 0.1));
     });
   });
 }

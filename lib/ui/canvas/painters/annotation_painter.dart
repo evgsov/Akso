@@ -5,7 +5,6 @@ import '../../../core/math/axonometry_projector.dart';
 import '../../../core/math/vector_3d.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/weld_joint_style.dart';
-import '../../../domain/enums/weld_type.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 import '../smart_callout.dart';
@@ -28,79 +27,31 @@ class AnnotationPainter {
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
 
-        final p1 = projector.project(start);
-        final p2 = projector.project(end);
-
-        // Позиция стыка на экране: если это ответвление прямой врезки,
-        // стык позиционируется на наружной образующей магистрали (P = node + u * R_маг)
-        Offset? directBranchScreenPoint;
-        Vector3D? directBranchContact3d;
+        // Определение направления магистрали для врезки (если стык относится к врезке)
         Vector3D? directBranchMainDir3d;
-
-        if (weld.ratio < 0.05) {
-          final fit = network.fittings[seg.startNodeId];
-          if (fit?.fittingType == FittingType.directBranch) {
-            final conn = network.getConnectedSegments(fit!.nodeId);
-            final bSeg = network.identifyBranchSegment(fit.nodeId, conn);
-            if (bSeg?.id == seg.id) {
-              final mainSegs = conn.where((s) => s.id != bSeg?.id).toList();
-              final mainDia = mainSegs.isNotEmpty ? mainSegs[0].outerDiameterMm : fit.dn.toDouble();
-              final rMain = mainDia / 2.0;
-              final start3d = Vector3D.fromNode(start);
-              final end3d = Vector3D.fromNode(end);
-              final u = (end3d - start3d).normalized();
-              final contact3d = start3d + u * rMain;
-              directBranchContact3d = contact3d;
-              directBranchScreenPoint = projector.projectCoordinates(contact3d.x, contact3d.y, contact3d.z);
-
-              if (mainSegs.isNotEmpty) {
-                final m0 = mainSegs[0];
-                final nStart = network.nodes[m0.startNodeId];
-                final nEnd = network.nodes[m0.endNodeId];
-                if (nStart != null && nEnd != null) {
-                  final vm = Vector3D.fromNode(nEnd) - Vector3D.fromNode(nStart);
-                  if (vm.length > 1e-4) {
-                    directBranchMainDir3d = vm.normalized();
-                  }
-                }
-              }
-            }
-          }
-        } else if (weld.ratio > 0.95) {
-          final fit = network.fittings[seg.endNodeId];
-          if (fit?.fittingType == FittingType.directBranch) {
-            final conn = network.getConnectedSegments(fit!.nodeId);
-            final bSeg = network.identifyBranchSegment(fit.nodeId, conn);
-            if (bSeg?.id == seg.id) {
-              final mainSegs = conn.where((s) => s.id != bSeg?.id).toList();
-              final mainDia = mainSegs.isNotEmpty ? mainSegs[0].outerDiameterMm : fit.dn.toDouble();
-              final rMain = mainDia / 2.0;
-              final start3d = Vector3D.fromNode(start);
-              final end3d = Vector3D.fromNode(end);
-              final u = (start3d - end3d).normalized();
-              final contact3d = end3d + u * rMain;
-              directBranchContact3d = contact3d;
-              directBranchScreenPoint = projector.projectCoordinates(contact3d.x, contact3d.y, contact3d.z);
-
-              if (mainSegs.isNotEmpty) {
-                final m0 = mainSegs[0];
-                final nStart = network.nodes[m0.startNodeId];
-                final nEnd = network.nodes[m0.endNodeId];
-                if (nStart != null && nEnd != null) {
-                  final vm = Vector3D.fromNode(nEnd) - Vector3D.fromNode(nStart);
-                  if (vm.length > 1e-4) {
-                    directBranchMainDir3d = vm.normalized();
-                  }
+        final nearNodeId = weld.ratio < 0.5 ? seg.startNodeId : seg.endNodeId;
+        final fit = network.fittings[nearNodeId];
+        if (fit?.fittingType == FittingType.directBranch) {
+          final conn = network.getConnectedSegments(nearNodeId);
+          final bSeg = network.identifyBranchSegment(nearNodeId, conn);
+          if (bSeg?.id == seg.id) {
+            final mainSegs = conn.where((s) => s.id != bSeg?.id).toList();
+            if (mainSegs.isNotEmpty) {
+              final m0 = mainSegs[0];
+              final nStart = network.nodes[m0.startNodeId];
+              final nEnd = network.nodes[m0.endNodeId];
+              if (nStart != null && nEnd != null) {
+                final vm = Vector3D.fromNode(nEnd) - Vector3D.fromNode(nStart);
+                if (vm.length > 1e-4) {
+                  directBranchMainDir3d = vm.normalized();
                 }
               }
             }
           }
         }
 
-        final weldPos = directBranchScreenPoint ?? Offset(
-          p1.dx + (p2.dx - p1.dx) * weld.ratio,
-          p1.dy + (p2.dy - p1.dy) * weld.ratio,
-        );
+        final center3d = Vector3D.fromNode(weld.calculatePosition(start, end));
+        final weldPos = projector.projectCoordinates(center3d.x, center3d.y, center3d.z);
 
         final isSelected = weld.id == selectedWeldId;
         final style = weld.getEffectiveStyle(network.defaultWeldStyle);
@@ -110,7 +61,7 @@ class AnnotationPainter {
         switch (style) {
           case WeldJointStyle.tick:
             // Засечка, строго лежащая в плоскости X, Y (под 0° по оси Z)
-            // и ориентированная перпендикулярно оси трубы
+            // и ориентированная перпендикулярно оси трубы (или вдоль магистрали для врезки)
             final effectiveTickSize = weld.getEffectiveTickSize(
               network.defaultWeldTickSizeMm,
               seg.outerDiameterMm,
@@ -120,14 +71,12 @@ class AnnotationPainter {
             final Vector3D p13d;
             final Vector3D p23d;
 
-            if (directBranchContact3d != null && directBranchMainDir3d != null) {
-              p13d = directBranchContact3d - directBranchMainDir3d * halfLenMm;
-              p23d = directBranchContact3d + directBranchMainDir3d * halfLenMm;
+            if (directBranchMainDir3d != null) {
+              p13d = center3d - directBranchMainDir3d * halfLenMm;
+              p23d = center3d + directBranchMainDir3d * halfLenMm;
             } else {
               final vStart = Vector3D.fromNode(start);
               final vEnd = Vector3D.fromNode(end);
-              final center3d = vStart + (vEnd - vStart) * weld.ratio;
-
               final dx = vEnd.x - vStart.x;
               final dy = vEnd.y - vStart.y;
               final lenXy = math.sqrt(dx * dx + dy * dy);
@@ -252,16 +201,6 @@ class AnnotationPainter {
             canvas.drawCircle(weldPos, r, borderPaint);
             break;
         }
-
-        SmartCallout.drawWeldCallout(
-          canvas,
-          weldPoint: weldPos,
-          weldNumber: weld.number,
-          stamp: weld.stamp,
-          gostType: weld.weldType.shortName,
-          color: const Color(0xFF37474F),
-          drawMarker: false,
-        );
       }
     }
 

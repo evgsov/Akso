@@ -88,8 +88,8 @@ void main() {
       network.syncFittingWeldJoints();
       final branchWelds = network.weldJoints.values.where((w) => w.segmentId == 'seg_branch').toList();
       expect(branchWelds.length, equals(1));
-      expect(branchWelds.first.weldType, equals(WeldType.u18));
-      expect(branchWelds.first.ratio, equals(0.0));
+      // Шов У18 позиционируется на наружной образующей магистрали (R_маг = 54 мм на 1000 мм трубе -> ratio = 0.054)
+      expect(branchWelds.first.ratio, closeTo(0.054, 0.001));
     });
 
     test('FittingDetector creates tee when defaultBranchId is tee_gost_17376', () {

@@ -52,12 +52,12 @@ void main() {
 
       network.syncFittingWeldJoints();
 
-      // Для отвода должно быть сгенерировано 2 шва: на seg1 в ratio 1.0 и на seg2 в ratio 0.0
+      // Для отвода генерируется 2 шва со смещением на тангенс отвода (120 мм)
       expect(network.weldJoints.length, equals(2));
       final w1 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg1');
       final w2 = network.weldJoints.values.firstWhere((w) => w.segmentId == 'seg2');
-      expect((w1.ratio - 1.0).abs() < 0.01, isTrue);
-      expect((w2.ratio - 0.0).abs() < 0.01, isTrue);
+      expect((w1.ratio - 0.88).abs() < 0.01, isTrue);
+      expect((w2.ratio - 0.12).abs() < 0.01, isTrue);
     });
 
     test('generateMissingCallouts creates callouts for segments, fittings, welds, valves, and equipments', () {

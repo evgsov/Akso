@@ -576,6 +576,13 @@ class Element3dGeometry {
       ));
     }
 
+    // Осевая линия сопряжения от центра узла магистрали до шва контакта
+    lines.add(WireframeSegment3D(
+      node.x, node.y, node.z,
+      center.x, center.y, center.z,
+      layer: layer,
+    ));
+
     return lines;
   }
 

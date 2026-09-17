@@ -122,13 +122,13 @@ class SpoolCalculator {
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
         final totalLen = start.distanceTo(end);
-        final startDeduction = _getFittingDeduction(
+        final startDeduction = getFittingDeduction(
           network,
           seg.startNodeId,
           segmentId: seg.id,
           isDirectBranch: _isDirectBranchRun(network, seg.startNodeId, seg.id),
         );
-        final endDeduction = _getFittingDeduction(
+        final endDeduction = getFittingDeduction(
           network,
           seg.endNodeId,
           segmentId: seg.id,
@@ -236,7 +236,7 @@ class SpoolCalculator {
     return branch?.id != segId;
   }
 
-  static double _getFittingDeduction(
+  static double getFittingDeduction(
     PipingNetwork network,
     String nodeId, {
     bool isDirectBranch = false,
@@ -312,7 +312,7 @@ class SpoolCalculator {
       return 0.0;
     }
 
-    return _getFittingDeduction(network, nodeId, isDirectBranch: isDirectBranch, segmentId: segmentId);
+    return getFittingDeduction(network, nodeId, isDirectBranch: isDirectBranch, segmentId: segmentId);
   }
 
   static int _generateSubSpoolsForSingle({
@@ -450,8 +450,8 @@ class SpoolCalculator {
     if (totalChainLen <= 0.1) return spoolCounter;
 
     final outerEndNodeId = curExpectedStart;
-    final startDeduction = _getFittingDeduction(network, outerStartNodeId, segmentId: chain.first.id);
-    final endDeduction = _getFittingDeduction(network, outerEndNodeId, segmentId: chain.last.id);
+    final startDeduction = getFittingDeduction(network, outerStartNodeId, segmentId: chain.first.id);
+    final endDeduction = getFittingDeduction(network, outerEndNodeId, segmentId: chain.last.id);
 
     // Собираем все точки реза (сварные швы и арматуру) вдоль всей цепочки
     final cutDistances = <double>[0.0];
