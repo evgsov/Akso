@@ -23,6 +23,7 @@ class EquipmentPainter {
               network.nodes[selectedNodeId]?.equipmentId == eq.id);
 
       _paintEquipmentBody(canvas, projector, eq, isSelected);
+      _paintNozzles(canvas, projector, eq, network, isSelected);
       _paintEquipmentLabel(canvas, projector, eq, isSelected);
     }
   }
@@ -66,22 +67,37 @@ class EquipmentPainter {
     Paint fillPaint,
     Paint edgePaint,
   ) {
-    final x1 = eq.x - eq.width / 2;
-    final x2 = eq.x + eq.width / 2;
-    final y1 = eq.y - eq.length / 2;
-    final y2 = eq.y + eq.length / 2;
+    final rad = eq.rotationAngleDeg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+
+    Offset rot(double lx, double ly) {
+      return Offset(
+        eq.x + lx * cosA - ly * sinA,
+        eq.y + lx * sinA + ly * cosA,
+      );
+    }
+
+    final halfW = eq.width / 2.0;
+    final halfL = eq.length / 2.0;
+
+    final c0 = rot(-halfW, -halfL);
+    final c1 = rot(halfW, -halfL);
+    final c2 = rot(halfW, halfL);
+    final c3 = rot(-halfW, halfL);
+
     final z1 = eq.z;
     final z2 = eq.z + eq.height;
 
-    final p0 = projector.projectCoordinates(x1, y1, z1);
-    final p1 = projector.projectCoordinates(x2, y1, z1);
-    final p2 = projector.projectCoordinates(x2, y2, z1);
-    final p3 = projector.projectCoordinates(x1, y2, z1);
+    final p0 = projector.projectCoordinates(c0.dx, c0.dy, z1);
+    final p1 = projector.projectCoordinates(c1.dx, c1.dy, z1);
+    final p2 = projector.projectCoordinates(c2.dx, c2.dy, z1);
+    final p3 = projector.projectCoordinates(c3.dx, c3.dy, z1);
 
-    final p4 = projector.projectCoordinates(x1, y1, z2);
-    final p5 = projector.projectCoordinates(x2, y1, z2);
-    final p6 = projector.projectCoordinates(x2, y2, z2);
-    final p7 = projector.projectCoordinates(x1, y2, z2);
+    final p4 = projector.projectCoordinates(c0.dx, c0.dy, z2);
+    final p5 = projector.projectCoordinates(c1.dx, c1.dy, z2);
+    final p6 = projector.projectCoordinates(c2.dx, c2.dy, z2);
+    final p7 = projector.projectCoordinates(c3.dx, c3.dy, z2);
 
     void drawQuad(Offset a, Offset b, Offset c, Offset d) {
       final path = Path()
@@ -123,9 +139,10 @@ class EquipmentPainter {
     final segments = 16;
     final bottomPts = <Offset>[];
     final topPts = <Offset>[];
+    final rad = eq.rotationAngleDeg * math.pi / 180.0;
 
     for (int i = 0; i < segments; i++) {
-      final angle = (2 * math.pi * i) / segments;
+      final angle = (2 * math.pi * i) / segments + rad;
       final vx = eq.x + radius * math.cos(angle);
       final vy = eq.y + radius * math.sin(angle);
       bottomPts.add(projector.projectCoordinates(vx, vy, eq.z));
@@ -167,22 +184,29 @@ class EquipmentPainter {
     Paint fillPaint,
     Paint edgePaint,
   ) {
-    // Горизонтальный цилиндр по оси Y
     final radius = eq.height / 2;
     final segments = 16;
-    final yStart = eq.y - eq.length / 2;
-    final yEnd = eq.y + eq.length / 2;
+    final halfL = eq.length / 2;
     final centerZ = eq.z + radius;
+    final rad = eq.rotationAngleDeg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
 
     final startCapPts = <Offset>[];
     final endCapPts = <Offset>[];
 
     for (int i = 0; i < segments; i++) {
       final angle = (2 * math.pi * i) / segments;
-      final vx = eq.x + radius * math.cos(angle);
+      final lx = radius * math.cos(angle);
       final vz = centerZ + radius * math.sin(angle);
-      startCapPts.add(projector.projectCoordinates(vx, yStart, vz));
-      endCapPts.add(projector.projectCoordinates(vx, yEnd, vz));
+
+      final sx = eq.x + lx * cosA - (-halfL) * sinA;
+      final sy = eq.y + lx * sinA + (-halfL) * cosA;
+      startCapPts.add(projector.projectCoordinates(sx, sy, vz));
+
+      final ex = eq.x + lx * cosA - halfL * sinA;
+      final ey = eq.y + lx * sinA + halfL * cosA;
+      endCapPts.add(projector.projectCoordinates(ex, ey, vz));
     }
 
     for (int i = 0; i < segments; i++) {
@@ -205,6 +229,84 @@ class EquipmentPainter {
 
     for (int i = 0; i < segments; i += segments ~/ 4) {
       canvas.drawLine(startCapPts[i], endCapPts[i], edgePaint);
+    }
+  }
+
+  static void _paintNozzles(
+    Canvas canvas,
+    AxonometryProjector projector,
+    Equipment eq,
+    PipingNetwork network,
+    bool isSelected,
+  ) {
+    if (eq.nozzles.isEmpty) return;
+
+    final spudPaint = Paint()
+      ..color = isSelected ? const Color(0xFF00ACC1) : const Color(0xFF0277BD)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4;
+
+    final flangePaint = Paint()
+      ..color = isSelected ? const Color(0xFF00838F) : const Color(0xFF01579B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5;
+
+    final rad = eq.rotationAngleDeg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+
+    for (final noz in eq.nozzles) {
+      final node = network.nodes[noz.id];
+      final double wx, wy, wz;
+      if (node != null) {
+        wx = node.x;
+        wy = node.y;
+        wz = node.z;
+      } else {
+        wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+        wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+        wz = eq.z + noz.localZ;
+      }
+
+      final pBase = projector.projectCoordinates(wx, wy, wz);
+      final spudLenMm = 120.0;
+      final pFlange = projector.projectCoordinates(
+        wx + noz.dirX * spudLenMm,
+        wy + noz.dirY * spudLenMm,
+        wz + noz.dirZ * spudLenMm,
+      );
+
+      // Патрубок
+      canvas.drawLine(pBase, pFlange, spudPaint);
+
+      // Привалочная плоскость фланца
+      final spudVec = pFlange - pBase;
+      final spudDist = spudVec.distance;
+      if (spudDist > 1.0) {
+        final perp = Offset(-spudVec.dy, spudVec.dx) / spudDist * 7.0;
+        canvas.drawLine(pFlange - perp, pFlange + perp, flangePaint);
+      } else {
+        canvas.drawCircle(pFlange, 4.0, flangePaint);
+      }
+
+      // Текстовая подпись штуцера
+      final labelText = noz.name.isNotEmpty ? '${noz.name} Ду${noz.dn}' : 'Ду${noz.dn}';
+      final textSpan = TextSpan(
+        text: labelText,
+        style: const TextStyle(
+          color: Color(0xFF006064),
+          fontSize: 9.5,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+      final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
+      final labelPos = pFlange + const Offset(8, -12);
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(labelPos.dx - 2, labelPos.dy - 1, tp.width + 4, tp.height + 2),
+        const Radius.circular(3),
+      );
+      canvas.drawRRect(rrect, Paint()..color = Colors.white.withValues(alpha: 0.85));
+      tp.paint(canvas, labelPos);
     }
   }
 

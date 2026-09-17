@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/core/math/snap_engine.dart';
@@ -6,6 +7,7 @@ import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
+import 'package:akso/ui/canvas/painters/equipment_painter.dart';
 
 void main() {
   group('Equipment and Nozzle Data Model Tests', () {
@@ -386,6 +388,85 @@ void main() {
       expect(controller.network.segments.length, equals(1));
       final seg = controller.network.segments.values.first;
       expect(seg.startNodeId, equals(nozzleNodeId));
+    });
+  });
+
+  group('EquipmentPainter Rendering Tests', () {
+    test('EquipmentPainter renders rotated box, vertical cylinder, and horizontal cylinder with nozzles', () {
+      final network = PipingNetwork();
+      final projector = AxonometryProjector(scale: 1.0, panOffset: Offset.zero);
+
+      final eqBox = Equipment(
+        id: 'eq_box',
+        name: 'Бокс Е-1',
+        type: EquipmentType.box,
+        x: 1000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 2000,
+        height: 1500,
+        rotationAngleDeg: 45.0,
+        nozzles: const [
+          Nozzle(
+            id: 'noz_b1',
+            equipmentId: 'eq_box',
+            name: 'Ш-1',
+            localX: 0,
+            localY: 0,
+            localZ: 1500,
+            dirX: 0,
+            dirY: 0,
+            dirZ: 1,
+            dn: 80,
+          ),
+        ],
+      );
+
+      final eqCylV = Equipment(
+        id: 'eq_cyl_v',
+        name: 'Колонна К-1',
+        type: EquipmentType.cylinderVertical,
+        x: 3000,
+        y: 1000,
+        z: 0,
+        width: 1200,
+        length: 1200,
+        height: 4000,
+        rotationAngleDeg: 90.0,
+        nozzles: const [],
+      );
+
+      final eqCylH = Equipment(
+        id: 'eq_cyl_h',
+        name: 'Ресивер Р-1',
+        type: EquipmentType.cylinderHorizontal,
+        x: 6000,
+        y: 1000,
+        z: 0,
+        width: 1000,
+        length: 3000,
+        height: 1000,
+        rotationAngleDeg: 30.0,
+        nozzles: const [],
+      );
+
+      network.addEquipment(eqBox);
+      network.addEquipment(eqCylV);
+      network.addEquipment(eqCylH);
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+
+      EquipmentPainter.paint(
+        canvas,
+        projector,
+        network,
+        selectedEquipmentId: 'eq_box',
+      );
+
+      final picture = recorder.endRecording();
+      expect(picture, isNotNull);
     });
   });
 }
