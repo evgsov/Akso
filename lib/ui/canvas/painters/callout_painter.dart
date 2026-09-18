@@ -251,7 +251,11 @@ class CalloutPainter {
       maxTextWidth = math.max(maxTextWidth, bottomTp.width);
     }
 
-    final isRight = callout.screenOffsetX >= 0;
+    final isRight = callout.shelfDirection == ShelfDirection.right
+        ? true
+        : (callout.shelfDirection == ShelfDirection.left
+            ? false
+            : callout.screenOffsetX >= 0);
 
     if (callout.targetType == CalloutTargetType.node) {
       const flagH = 14.4;
@@ -334,7 +338,11 @@ class CalloutPainter {
 
     final topText = network.generateCalloutText(callout, templates);
     final bottomText = network.generateCalloutBottomText(callout, templates);
-    final isRight = callout.screenOffsetX >= 0;
+    final isRight = callout.shelfDirection == ShelfDirection.right
+        ? true
+        : (callout.shelfDirection == ShelfDirection.left
+            ? false
+            : callout.screenOffsetX >= 0);
 
     final primaryColor = isSelected ? const Color(0xFF2563EB) : Color(callout.textColor);
 
@@ -382,30 +390,72 @@ class CalloutPainter {
     );
 
     if (callout.targetType == CalloutTargetType.node) {
-      // Отрисовка отметки уровня по ГОСТ 21.101 (∇ +2.400)
+      final styleName = templates['elevation_style'];
+      final defaultStyle = ElevationMarkStyleExt.fromString(styleName, fallback: ElevationMarkStyle.gostOutline);
+      final effectiveStyle = callout.elevationStyle ?? defaultStyle;
+
       const flagSize = 8.0;
       final flagH = flagSize * 1.3;
       final flagW = flagSize * 0.75;
       final flagTopY = textPos.dy - flagH;
-      final shelfY = flagTopY - 4.0;
+      final shelfY = effectiveStyle == ElevationMarkStyle.compactFlag
+          ? textPos.dy - 12.0
+          : flagTopY - 4.0;
 
       // 1. Выносная ножка от объекта к основанию стрелки отметки
       if ((anchorScreen - textPos).distance > 2.0) {
         canvas.drawLine(anchorScreen, textPos, linePaint);
       }
 
-      // 2. Треугольный флажок отметки (острием в textPos)
-      final flagPath = Path()
-        ..moveTo(textPos.dx, textPos.dy)
-        ..lineTo(textPos.dx - flagW, flagTopY)
-        ..lineTo(textPos.dx + flagW, flagTopY)
-        ..close();
-      canvas.drawPath(flagPath, linePaint);
+      // 2. Отрисовка знака отметки в соответствии со стилем
+      switch (effectiveStyle) {
+        case ElevationMarkStyle.gostOutline:
+          final flagPath = Path()
+            ..moveTo(textPos.dx, textPos.dy)
+            ..lineTo(textPos.dx - flagW, flagTopY)
+            ..lineTo(textPos.dx + flagW, flagTopY)
+            ..close();
+          canvas.drawPath(flagPath, linePaint);
+          canvas.drawLine(Offset(textPos.dx, flagTopY), Offset(textPos.dx, shelfY), linePaint);
+          break;
 
-      // 3. Вертикальная стойка от треугольника вверх к полочке
-      canvas.drawLine(Offset(textPos.dx, flagTopY), Offset(textPos.dx, shelfY), linePaint);
+        case ElevationMarkStyle.gostFilled:
+          final flagPath = Path()
+            ..moveTo(textPos.dx, textPos.dy)
+            ..lineTo(textPos.dx - flagW, flagTopY)
+            ..lineTo(textPos.dx + flagW, flagTopY)
+            ..close();
+          final fillPaint = Paint()
+            ..color = primaryColor
+            ..style = PaintingStyle.fill;
+          canvas.drawPath(flagPath, fillPaint);
+          canvas.drawPath(flagPath, linePaint);
+          canvas.drawLine(Offset(textPos.dx, flagTopY), Offset(textPos.dx, shelfY), linePaint);
+          break;
 
-      // 4. Горизонтальная полочка
+        case ElevationMarkStyle.compactFlag:
+          canvas.drawLine(textPos, Offset(textPos.dx, shelfY), linePaint);
+          canvas.drawLine(
+            Offset(textPos.dx - 3.5, textPos.dy + 3.5),
+            Offset(textPos.dx + 3.5, textPos.dy - 3.5),
+            linePaint,
+          );
+          break;
+
+        case ElevationMarkStyle.isoCircle:
+          const circleR = 4.5;
+          final circlePaint = Paint()
+            ..color = primaryColor
+            ..strokeWidth = isSelected ? 2.0 : 1.2
+            ..style = PaintingStyle.stroke;
+          canvas.drawCircle(textPos, circleR, circlePaint);
+          canvas.drawLine(Offset(textPos.dx - circleR, textPos.dy), Offset(textPos.dx + circleR, textPos.dy), linePaint);
+          canvas.drawLine(Offset(textPos.dx, textPos.dy - circleR), Offset(textPos.dx, textPos.dy + circleR), linePaint);
+          canvas.drawLine(Offset(textPos.dx, textPos.dy - circleR), Offset(textPos.dx, shelfY), linePaint);
+          break;
+      }
+
+      // 3. Горизонтальная полочка
       final shelfEnd = Offset(
         isRight ? textPos.dx + shelfLength : textPos.dx - shelfLength,
         shelfY,

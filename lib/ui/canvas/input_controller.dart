@@ -3929,7 +3929,13 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Добавление или удаление выноски высотной отметки ГОСТ 21.101 для конкретного узла
-  bool toggleNodeElevationCallout(String nodeId, {double offsetX = 50.0, double offsetY = -50.0}) {
+  bool toggleNodeElevationCallout(
+    String nodeId, {
+    double offsetX = 50.0,
+    double offsetY = -50.0,
+    ElevationMarkStyle? style,
+    ShelfDirection? direction,
+  }) {
     if (!network.nodes.containsKey(nodeId)) return false;
     final existingCallout = network.callouts.values
         .where((c) => c.targetType == CalloutTargetType.node && c.targetId == nodeId)
@@ -3947,6 +3953,8 @@ class PipingInputController extends ChangeNotifier {
         targetType: CalloutTargetType.node,
         screenOffsetX: offsetX,
         screenOffsetY: offsetY,
+        elevationStyle: style,
+        shelfDirection: direction ?? ShelfDirection.auto,
       );
       history.recordState(network);
       notifyListeners();
@@ -3957,6 +3965,29 @@ class PipingInputController extends ChangeNotifier {
   /// Проверка, имеет ли узел выноску высотной отметки
   bool nodeHasElevationCallout(String nodeId) {
     return network.callouts.values.any((c) => c.targetType == CalloutTargetType.node && c.targetId == nodeId);
+  }
+
+  /// Получить выноску высотной отметки узла (если есть)
+  Callout? getNodeElevationCallout(String nodeId) {
+    return network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.node && c.targetId == nodeId)
+        .firstOrNull;
+  }
+
+  /// Обновление стиля или стороны полки высотной отметки узла
+  void updateNodeElevationCallout(
+    String nodeId, {
+    ElevationMarkStyle? style,
+    ShelfDirection? direction,
+  }) {
+    final existing = getNodeElevationCallout(nodeId);
+    if (existing == null) return;
+    network.callouts[existing.id] = existing.copyWith(
+      elevationStyle: style,
+      shelfDirection: direction ?? existing.shelfDirection,
+    );
+    history.recordState(network);
+    notifyListeners();
   }
 
   /// Генерация сварных стыков для элементов сети и создание выносок для них

@@ -319,6 +319,155 @@ void main() {
       expect(removed, isFalse);
       expect(controller.nodeHasElevationCallout('n_elev'), isFalse);
     });
+
+    test('Callout serialization and enums ElevationMarkStyle and ShelfDirection', () {
+      const c1 = Callout(
+        id: 'c1',
+        targetId: 'n1',
+        targetType: CalloutTargetType.node,
+        elevationStyle: ElevationMarkStyle.gostFilled,
+        shelfDirection: ShelfDirection.left,
+      );
+      final json = c1.toJson();
+      expect(json['elevationStyle'], 'gostFilled');
+      expect(json['shelfDirection'], 'left');
+
+      final c2 = Callout.fromJson(json);
+      expect(c2.elevationStyle, ElevationMarkStyle.gostFilled);
+      expect(c2.shelfDirection, ShelfDirection.left);
+
+      // fromString tests
+      expect(ElevationMarkStyleExt.fromString('gostOutline'), ElevationMarkStyle.gostOutline);
+      expect(ElevationMarkStyleExt.fromString('gostFilled'), ElevationMarkStyle.gostFilled);
+      expect(ElevationMarkStyleExt.fromString('compactFlag'), ElevationMarkStyle.compactFlag);
+      expect(ElevationMarkStyleExt.fromString('isoCircle'), ElevationMarkStyle.isoCircle);
+      expect(ElevationMarkStyleExt.fromString('unknown', fallback: ElevationMarkStyle.isoCircle), ElevationMarkStyle.isoCircle);
+
+      expect(ShelfDirectionExt.fromString('auto'), ShelfDirection.auto);
+      expect(ShelfDirectionExt.fromString('left'), ShelfDirection.left);
+      expect(ShelfDirectionExt.fromString('right'), ShelfDirection.right);
+      expect(ShelfDirectionExt.fromString(null), ShelfDirection.auto);
+    });
+
+    test('DXF export generates SOLID for gostFilled and CIRCLE for isoCircle in 2D and 3D', () {
+      final network = PipingNetwork();
+      final n1 = Node3D(id: 'n_filled', x: 0, y: 0, z: 2000);
+      final n2 = Node3D(id: 'n_circle', x: 1000, y: 0, z: 2000);
+      network.nodes[n1.id] = n1;
+      network.nodes[n2.id] = n2;
+
+      network.callouts['c_filled'] = const Callout(
+        id: 'c_filled',
+        targetId: 'n_filled',
+        targetType: CalloutTargetType.node,
+        elevationStyle: ElevationMarkStyle.gostFilled,
+        shelfDirection: ShelfDirection.left,
+      );
+
+      network.callouts['c_circle'] = const Callout(
+        id: 'c_circle',
+        targetId: 'n_circle',
+        targetType: CalloutTargetType.node,
+        elevationStyle: ElevationMarkStyle.isoCircle,
+        shelfDirection: ShelfDirection.right,
+      );
+
+      final proj = AxonometryProjector(projectionType: ProjectionType.gostFrontal45, scale: 1.0);
+      final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network, activeProjector: proj);
+      final dxf3d = DxfWriter.generate3dDxf(network);
+
+      // Check for SOLID entity in BLOCKS section for gostFilled
+      expect(dxf2d.contains('SOLID'), isTrue);
+      expect(dxf3d.contains('SOLID'), isTrue);
+
+      // Check for CIRCLE entity in BLOCKS section for isoCircle
+      expect(dxf2d.contains('CIRCLE'), isTrue);
+      expect(dxf3d.contains('CIRCLE'), isTrue);
+    });
+
+    test('updateNodeElevationCallout updates style and shelf direction in controller', () {
+      final network = PipingNetwork();
+      final node = Node3D(id: 'n_test', x: 0, y: 0, z: 1000);
+      network.nodes[node.id] = node;
+
+      final controller = PipingInputController(initialNetwork: network);
+      controller.toggleNodeElevationCallout('n_test');
+
+      var callout = controller.getNodeElevationCallout('n_test');
+      expect(callout, isNotNull);
+      expect(callout!.shelfDirection, ShelfDirection.auto);
+
+      controller.updateNodeElevationCallout(
+        'n_test',
+        style: ElevationMarkStyle.compactFlag,
+        direction: ShelfDirection.left,
+      );
+
+      callout = controller.getNodeElevationCallout('n_test');
+      expect(callout!.elevationStyle, ElevationMarkStyle.compactFlag);
+      expect(callout.shelfDirection, ShelfDirection.left);
+    });
+
+    testWidgets('CalloutManagerPanel shows elevation style and shelf dropdowns when node category is selected', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final network = PipingNetwork();
+      final controller = PipingInputController(initialNetwork: network);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CalloutManagerPanel(controller: controller),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open tab 2: Конструктор шаблонов
+      final tab2 = find.textContaining('Конструктор шаблонов');
+      expect(tab2, findsOneWidget);
+      await tester.tap(tab2);
+      await tester.pumpAndSettle();
+
+      // Initially Category is Труба. Find dropdown for category
+      final categoryDropdown = find.byWidgetPredicate(
+        (w) => w is DropdownButton<CalloutTargetType>,
+      );
+      expect(categoryDropdown, findsOneWidget);
+
+      // Select 'Узел'
+      await tester.tap(categoryDropdown);
+      await tester.pumpAndSettle();
+
+      final nodeItem = find.text('Узел').last;
+      await tester.tap(nodeItem);
+      await tester.pumpAndSettle();
+
+      // Now "Знак отметки:" and "Полочка:" dropdowns should be visible
+      expect(find.text('Знак отметки:'), findsOneWidget);
+      expect(find.text('Полочка:'), findsOneWidget);
+      expect(find.byType(DropdownButton<ElevationMarkStyle>), findsOneWidget);
+      expect(find.byType(DropdownButton<ShelfDirection>), findsOneWidget);
+
+      // Select "ГОСТ залитый ▼"
+      await tester.tap(find.byType(DropdownButton<ElevationMarkStyle>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ГОСТ залитый ▼').last);
+      await tester.pumpAndSettle();
+
+      // Save template
+      final saveBtn = find.text('Сохранить');
+      await tester.tap(saveBtn);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(controller.currentProject.calloutTemplates['elevation_style'], 'gostFilled');
+
+      controller.dispose();
+    });
   });
 }
 

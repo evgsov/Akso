@@ -7,6 +7,7 @@ import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/pipe_support.dart';
 import '../../../../core/math/snap_engine.dart';
+import '../../../../domain/models/callout.dart';
 import '../../../canvas/input_controller.dart';
 import 'callout_manager_panel.dart';
 import 'custom_pipe_dimension_dialog.dart';
@@ -1926,31 +1927,115 @@ class DesktopCadLayout extends StatelessWidget {
 
                     () {
                       final hasElevCallout = controller.nodeHasElevationCallout(nodeId);
-                      return SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.tonalIcon(
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            backgroundColor: hasElevCallout ? Colors.green.shade50 : null,
-                            foregroundColor: hasElevCallout ? Colors.green.shade800 : null,
-                          ),
-                          icon: Icon(hasElevCallout ? Icons.check_circle_outline : Icons.height, size: 16),
-                          label: Text(
-                            hasElevCallout ? 'Отметка ГОСТ 21.101 (установлена)' : 'Поставить отметку уровня (ГОСТ)',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          onPressed: () {
-                            final added = controller.toggleNodeElevationCallout(nodeId);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  added ? 'Высотная отметка ГОСТ 21.101 создана' : 'Высотная отметка удалена',
-                                ),
-                                duration: const Duration(seconds: 1),
+                      final callout = hasElevCallout ? controller.getNodeElevationCallout(nodeId) : null;
+                      final effectiveStyle = callout?.elevationStyle ??
+                          ElevationMarkStyleExt.fromString(
+                            controller.currentProject.calloutTemplates['elevation_style'],
+                            fallback: ElevationMarkStyle.gostOutline,
+                          );
+                      final effectiveDir = callout?.shelfDirection ?? ShelfDirection.auto;
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.tonalIcon(
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                backgroundColor: hasElevCallout ? Colors.green.shade50 : null,
+                                foregroundColor: hasElevCallout ? Colors.green.shade800 : null,
                               ),
-                            );
-                          },
-                        ),
+                              icon: Icon(hasElevCallout ? Icons.check_circle_outline : Icons.height, size: 16),
+                              label: Text(
+                                hasElevCallout ? 'Отметка ГОСТ (установлена)' : 'Поставить отметку уровня (ГОСТ)',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              onPressed: () {
+                                final added = controller.toggleNodeElevationCallout(nodeId);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      added ? 'Высотная отметка ГОСТ создана' : 'Высотная отметка удалена',
+                                    ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          if (hasElevCallout) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        flex: 2,
+                                        child: Text('Стиль:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                      ),
+                                      Expanded(
+                                        flex: 3,
+                                        child: DropdownButton<ElevationMarkStyle>(
+                                          isDense: true,
+                                          isExpanded: true,
+                                          value: effectiveStyle,
+                                          items: ElevationMarkStyle.values.map((s) {
+                                            return DropdownMenuItem(
+                                              value: s,
+                                              child: Text(s.shortName, style: const TextStyle(fontSize: 11)),
+                                            );
+                                          }).toList(),
+                                          onChanged: (newStyle) {
+                                            if (newStyle != null) {
+                                              controller.updateNodeElevationCallout(nodeId, style: newStyle);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        flex: 2,
+                                        child: Text('Полка:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                      ),
+                                      Expanded(
+                                        flex: 3,
+                                        child: DropdownButton<ShelfDirection>(
+                                          isDense: true,
+                                          isExpanded: true,
+                                          value: effectiveDir,
+                                          items: ShelfDirection.values.map((d) {
+                                            return DropdownMenuItem(
+                                              value: d,
+                                              child: Text(d.displayName, style: const TextStyle(fontSize: 11)),
+                                            );
+                                          }).toList(),
+                                          onChanged: (newDir) {
+                                            if (newDir != null) {
+                                              controller.updateNodeElevationCallout(nodeId, direction: newDir);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       );
                     }(),
                     const SizedBox(height: 6),

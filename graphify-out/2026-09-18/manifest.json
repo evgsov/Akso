@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789714836.4259255,
-    "seen": 1789714975.9434087,
-    "ast_hash": "6db2a18be1bdd6ba37116a9e2085c43c",
+    "mtime": 1789717450.619344,
+    "seen": 1789717841.0559719,
+    "ast_hash": "ae6c7d3a7f9bad8e4a3913f7ba1b56d0",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789711528.3568504,
-    "seen": 1789714975.9438083,
-    "ast_hash": "119390456d55f75640776673a0a2a034",
+    "mtime": 1789714993.8709176,
+    "seen": 1789717841.0563242,
+    "ast_hash": "2ab38ba5babba0338fb7d2d22e652d71",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789646707.54767,
-    "seen": 1789647574.0384135,
-    "ast_hash": "e27c179ea74191494158f6091f1c4b84",
+    "mtime": 1789717488.3162062,
+    "seen": 1789717841.0560029,
+    "ast_hash": "3bc96c2e713615a641f09c390e60ad5a",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1410,9 +1410,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/callout_manager_panel.dart": {
-    "mtime": 1789714191.873882,
-    "seen": 1789714975.9434369,
-    "ast_hash": "4d42c89d24656ae9ad5e802849f1ea08",
+    "mtime": 1789717759.6660886,
+    "seen": 1789717841.0559995,
+    "ast_hash": "0be435c7a7428149c21dc22f0c231558",
     "semantic_hash": ""
   },
   "test/callout_test.dart": {
@@ -1806,9 +1806,9 @@
     "semantic_hash": ""
   },
   "test/elevation_callout_and_dxf_export_test.dart": {
-    "mtime": 1789714634.084537,
-    "seen": 1789714975.9435494,
-    "ast_hash": "5cd0c26601d94470799bfee2a917bae8",
+    "mtime": 1789717608.7656665,
+    "seen": 1789717841.0561235,
+    "ast_hash": "bab6d5fb2d0d845bfb7ef07b47cd4972",
     "semantic_hash": ""
   }
 }

@@ -78,6 +78,77 @@ extension CalloutTargetTypeExt on CalloutTargetType {
   }
 }
 
+/// Стиль графического знака высотной отметки (ГОСТ 21.101 / ISO)
+enum ElevationMarkStyle {
+  gostOutline, // ГОСТ 21.101 контурный треугольник ▽
+  gostFilled,  // ГОСТ 21.101 сплошной залитый треугольник ▼
+  compactFlag, // Компактный флажок (стойка без треугольника)
+  isoCircle,   // ISO / Revit круглая отметка с перекрестием ⊕
+}
+
+extension ElevationMarkStyleExt on ElevationMarkStyle {
+  String get displayName {
+    switch (this) {
+      case ElevationMarkStyle.gostOutline:
+        return 'ГОСТ контурный ▽';
+      case ElevationMarkStyle.gostFilled:
+        return 'ГОСТ залитый ▼';
+      case ElevationMarkStyle.compactFlag:
+        return 'Компактный флажок';
+      case ElevationMarkStyle.isoCircle:
+        return 'Круг ISO / Revit ⊕';
+    }
+  }
+
+  String get shortName {
+    switch (this) {
+      case ElevationMarkStyle.gostOutline:
+        return '▽ Контур';
+      case ElevationMarkStyle.gostFilled:
+        return '▼ Залитый';
+      case ElevationMarkStyle.compactFlag:
+        return '⚑ Флажок';
+      case ElevationMarkStyle.isoCircle:
+        return '⊕ Круг';
+    }
+  }
+  static ElevationMarkStyle fromString(String? name, {ElevationMarkStyle fallback = ElevationMarkStyle.gostOutline}) {
+    if (name == null) return fallback;
+    return ElevationMarkStyle.values.firstWhere(
+      (e) => e.name.toLowerCase() == name.toLowerCase(),
+      orElse: () => fallback,
+    );
+  }
+}
+
+/// Ориентация (направление) горизонтальной полочки выноски
+enum ShelfDirection {
+  auto,  // Автоматически по знаку screenOffsetX
+  left,  // Влево (←)
+  right, // Вправо (→)
+}
+
+extension ShelfDirectionExt on ShelfDirection {
+  String get displayName {
+    switch (this) {
+      case ShelfDirection.auto:
+        return 'Авто';
+      case ShelfDirection.left:
+        return 'Влево ⇦';
+      case ShelfDirection.right:
+        return 'Вправо ⇨';
+    }
+  }
+
+  static ShelfDirection fromString(String? name, {ShelfDirection fallback = ShelfDirection.auto}) {
+    if (name == null) return fallback;
+    return ShelfDirection.values.firstWhere(
+      (e) => e.name.toLowerCase() == name.toLowerCase(),
+      orElse: () => fallback,
+    );
+  }
+}
+
 /// Стандартные шаблоны выносок для проекта
 const Map<String, String> defaultCalloutTemplates = {
   'segment': 'Ø{DN}x{WALL} {MATERIAL}',
@@ -96,6 +167,8 @@ const Map<String, String> defaultCalloutTemplates = {
   'support_bottom': '{TYPE}',
   'node': '+{Z_M}',
   'node_bottom': 'Ур.ч.п.',
+  'elevation_style': 'gostOutline',
+  'elevation_shelf_direction': 'auto',
 };
 
 /// Умная выноска (Screen-Aligned Billboard Annotation),
@@ -110,6 +183,8 @@ class Callout {
   final double screenOffsetY;
   final double textHeight;
   final int textColor;
+  final ElevationMarkStyle? elevationStyle;
+  final ShelfDirection shelfDirection;
 
   const Callout({
     required this.id,
@@ -121,6 +196,8 @@ class Callout {
     this.screenOffsetY = -50.0,
     this.textHeight = 12.0,
     this.textColor = 0xFF1E293B,
+    this.elevationStyle,
+    this.shelfDirection = ShelfDirection.auto,
   });
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
@@ -140,6 +217,9 @@ class Callout {
     double? screenOffsetY,
     double? textHeight,
     int? textColor,
+    ElevationMarkStyle? elevationStyle,
+    bool clearElevationStyle = false,
+    ShelfDirection? shelfDirection,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -151,6 +231,8 @@ class Callout {
       screenOffsetY: screenOffsetY ?? this.screenOffsetY,
       textHeight: textHeight ?? this.textHeight,
       textColor: textColor ?? this.textColor,
+      elevationStyle: clearElevationStyle ? null : (elevationStyle ?? this.elevationStyle),
+      shelfDirection: shelfDirection ?? this.shelfDirection,
     );
   }
 
@@ -164,6 +246,8 @@ class Callout {
         'screenOffsetY': screenOffsetY,
         'textHeight': textHeight,
         'textColor': textColor,
+        if (elevationStyle != null) 'elevationStyle': elevationStyle!.name,
+        'shelfDirection': shelfDirection.name,
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -180,6 +264,21 @@ class Callout {
       parsedType = CalloutTargetType.segment;
     }
 
+    ElevationMarkStyle? parsedElevStyle;
+    final rawElevStyle = json['elevationStyle'];
+    if (rawElevStyle is String) {
+      parsedElevStyle = ElevationMarkStyle.values.where((e) => e.name == rawElevStyle).firstOrNull;
+    }
+
+    ShelfDirection parsedShelfDir = ShelfDirection.auto;
+    final rawShelfDir = json['shelfDirection'];
+    if (rawShelfDir is String) {
+      parsedShelfDir = ShelfDirection.values.firstWhere(
+        (e) => e.name == rawShelfDir,
+        orElse: () => ShelfDirection.auto,
+      );
+    }
+
     return Callout(
       id: json['id'] as String,
       targetId: json['targetId'] as String,
@@ -190,6 +289,8 @@ class Callout {
       screenOffsetY: (json['screenOffsetY'] as num?)?.toDouble() ?? -50.0,
       textHeight: (json['textHeight'] as num?)?.toDouble() ?? 12.0,
       textColor: (json['textColor'] as num?)?.toInt() ?? 0xFF1E293B,
+      elevationStyle: parsedElevStyle,
+      shelfDirection: parsedShelfDir,
     );
   }
 
@@ -206,7 +307,9 @@ class Callout {
           screenOffsetX == other.screenOffsetX &&
           screenOffsetY == other.screenOffsetY &&
           textHeight == other.textHeight &&
-          textColor == other.textColor;
+          textColor == other.textColor &&
+          elevationStyle == other.elevationStyle &&
+          shelfDirection == other.shelfDirection;
 
   @override
   int get hashCode => Object.hash(
@@ -219,9 +322,11 @@ class Callout {
         screenOffsetY,
         textHeight,
         textColor,
+        elevationStyle,
+        shelfDirection,
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY))';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name})';
 }

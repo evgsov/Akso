@@ -1221,26 +1221,64 @@ class DxfWriter {
         if (blk.isElevationMark) {
           const flagH = 35.0;
           const flagW = 20.0;
-          final shelfY = blk.localElbowY + flagH + 15.0;
+          final shelfY = blk.elevationStyle == ElevationMarkStyle.compactFlag
+              ? blk.localElbowY + 20.0
+              : blk.localElbowY + flagH + 15.0;
           if (blk.localElbowX.abs() > 2.0 || blk.localElbowY.abs() > 2.0) {
             b.writeln(
               '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
             );
           }
-          // Треугольник отметки ∇
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
-          );
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
-          );
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
-          );
-          // Вертикальная стойка
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
-          );
+          switch (blk.elevationStyle) {
+            case ElevationMarkStyle.gostOutline:
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.gostFilled:
+              b.writeln(
+                '  0\nSOLID\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0\n 12\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 22\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 32\n0.0\n 13\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 23\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 33\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.compactFlag:
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX - 12.0).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + 12.0).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX + 12.0).toStringAsFixed(1)}\n 21\n${(blk.localElbowY - 12.0).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.isoCircle:
+              const r = 15.0;
+              b.writeln(
+                '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 40\n$r',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX - r).toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX + r).toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY - r).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${(blk.localElbowY + r).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY + r).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+          }
           // Горизонтальная полочка
           b.writeln(
             '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${shelfY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localShelfEndX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
@@ -1287,27 +1325,65 @@ class DxfWriter {
         if (blk.isElevationMark) {
           const flagH = 30.0;
           const flagW = 18.0;
-          final shelfY = blk.dy + flagH + 15.0;
+          final shelfY = blk.elevationStyle == ElevationMarkStyle.compactFlag
+              ? blk.dy + 18.0
+              : blk.dy + flagH + 15.0;
           final distSq = blk.dx * blk.dx + blk.dy * blk.dy;
           if (distSq > 4.0) {
             b.writeln(
               '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
             );
           }
-          // Треугольник отметки ∇
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx - flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
-          );
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx - flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx + flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
-          );
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx + flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
-          );
-          // Вертикальная стойка
-          b.writeln(
-            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
-          );
+          switch (blk.elevationStyle) {
+            case ElevationMarkStyle.gostOutline:
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx - flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx - flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx + flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx + flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.gostFilled:
+              b.writeln(
+                '  0\nSOLID\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx - flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0\n 12\n${(blk.dx + flagW).toStringAsFixed(1)}\n 22\n${(blk.dy + flagH).toStringAsFixed(1)}\n 32\n0.0\n 13\n${(blk.dx + flagW).toStringAsFixed(1)}\n 23\n${(blk.dy + flagH).toStringAsFixed(1)}\n 33\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.compactFlag:
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx - 10.0).toStringAsFixed(1)}\n 20\n${(blk.dy + 10.0).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx + 10.0).toStringAsFixed(1)}\n 21\n${(blk.dy - 10.0).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+
+            case ElevationMarkStyle.isoCircle:
+              const r = 12.0;
+              b.writeln(
+                '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 40\n$r',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx - r).toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx + r).toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy - r).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${(blk.dy + r).toStringAsFixed(1)}\n 31\n0.0',
+              );
+              b.writeln(
+                '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy + r).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+              );
+              break;
+          }
           // Горизонтальная полочка
           b.writeln(
             '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${shelfY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.shelfEndX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
@@ -1651,7 +1727,9 @@ class DxfWriter {
 
       final userDist = math.sqrt(callout.screenOffsetX * callout.screenOffsetX + callout.screenOffsetY * callout.screenOffsetY);
       final scale = (userDist * 3.5).clamp(200.0, 700.0);
-      final isRight = callout.screenOffsetX >= 0;
+      final isRight = callout.shelfDirection == ShelfDirection.right
+          ? true
+          : (callout.shelfDirection == ShelfDirection.left ? false : callout.screenOffsetX >= 0);
       final maxLen = (bottomText != null && bottomText.isNotEmpty) ? math.max(text.length, bottomText.length) : text.length;
       final shelfLen = math.max(140.0, maxLen * 35.0);
 
@@ -1659,12 +1737,16 @@ class DxfWriter {
       // Локальная ось X направлена горизонтально по экрану (axX, axY, 0)
       // Локальная ось Y направлена вертикально вверх по оси Z (0, 0, 1)
       final isElevation = callout.targetType == CalloutTargetType.node;
+      final effectiveElevStyle = callout.elevationStyle ??
+          ElevationMarkStyleExt.fromString(templates['elevation_style']);
       final flagH = isElevation ? 35.0 : 0.0;
       final localElbowX = isRight ? scale * 0.7 : -scale * 0.7;
       final localElbowY = isElevation
           ? math.max(120.0, callout.screenOffsetY.abs() * 3.0).clamp(120.0, 450.0)
           : math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0);
-      final shelfY = isElevation ? localElbowY + flagH + 15.0 : localElbowY;
+      final shelfY = isElevation
+          ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? localElbowY + 20.0 : localElbowY + flagH + 15.0)
+          : localElbowY;
       final localShelfEndX = isRight ? localElbowX + shelfLen : localElbowX - shelfLen;
       final localTextX = isRight ? localElbowX + 10.0 : localElbowX - shelfLen + 10.0;
       final localTextY = shelfY + 15.0;
@@ -1712,6 +1794,7 @@ class DxfWriter {
         isRight: isRight,
         isMonolithic: calloutType == DxfCalloutType.monolithicBlock,
         isElevationMark: isElevation,
+        elevationStyle: effectiveElevStyle,
         nx: extrusionVector.nx,
         ny: extrusionVector.ny,
         nz: extrusionVector.nz,
@@ -1744,11 +1827,17 @@ class DxfWriter {
       final dy = -callout.screenOffsetY * px2cad; // Инвертируем Y для CAD (Y вверх)
       final maxLen = (bottomText != null && bottomText.isNotEmpty) ? math.max(text.length, bottomText.length) : text.length;
       final shelfLen = math.max(100.0, maxLen * 35.0);
-      final isRight = callout.screenOffsetX >= 0;
+      final isRight = callout.shelfDirection == ShelfDirection.right
+          ? true
+          : (callout.shelfDirection == ShelfDirection.left ? false : callout.screenOffsetX >= 0);
       final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
       final isElevation = callout.targetType == CalloutTargetType.node;
+      final effectiveElevStyle = callout.elevationStyle ??
+          ElevationMarkStyleExt.fromString(templates['elevation_style']);
       final flagH = isElevation ? 30.0 : 0.0;
-      final shelfY = isElevation ? dy + flagH + 15.0 : dy;
+      final shelfY = isElevation
+          ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? dy + 18.0 : dy + flagH + 15.0)
+          : dy;
       final textX = isRight ? dx + 10.0 : dx - shelfLen + 10.0;
       final textY = shelfY + 15.0;
 
@@ -1770,6 +1859,7 @@ class DxfWriter {
         anchorY: anchorScreen.dy,
         anchorZ: 0.0,
         isElevationMark: isElevation,
+        elevationStyle: effectiveElevStyle,
         isRight: isRight,
         shelfLen: shelfLen,
       ));
@@ -2357,6 +2447,7 @@ class _DxfCalloutBlockDef {
   final bool isRight;
   final bool isMonolithic;
   final bool isElevationMark;
+  final ElevationMarkStyle elevationStyle;
   final double nx;
   final double ny;
   final double nz;
@@ -2389,6 +2480,7 @@ class _DxfCalloutBlockDef {
     this.isRight = true,
     this.isMonolithic = false,
     this.isElevationMark = false,
+    this.elevationStyle = ElevationMarkStyle.gostOutline,
     this.nx = 0.0,
     this.ny = 0.0,
     this.nz = 1.0,

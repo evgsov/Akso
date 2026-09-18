@@ -396,6 +396,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   final FocusNode _topFocusNode = FocusNode();
   final FocusNode _bottomFocusNode = FocusNode();
   String _selectedDateFormat = 'DD.MM.YYYY';
+  ElevationMarkStyle _selectedElevationStyle = ElevationMarkStyle.gostOutline;
+  ShelfDirection _selectedShelfDirection = ShelfDirection.auto;
 
   @override
   void initState() {
@@ -430,12 +432,24 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     _topTemplateController.text = top;
     _bottomTemplateController.text = bottom;
     _selectedDateFormat = templates['date_format'] ?? 'DD.MM.YYYY';
+    _selectedElevationStyle = ElevationMarkStyleExt.fromString(
+      templates['elevation_style'],
+      fallback: ElevationMarkStyle.gostOutline,
+    );
+    _selectedShelfDirection = ShelfDirectionExt.fromString(
+      templates['elevation_shelf_direction'],
+      fallback: ShelfDirection.auto,
+    );
   }
 
   void _saveCurrentTemplate() {
     widget.controller.updateCalloutTemplate(_templateType.name, _topTemplateController.text);
     widget.controller.updateCalloutTemplate('${_templateType.name}_bottom', _bottomTemplateController.text);
     widget.controller.updateCalloutTemplate('date_format', _selectedDateFormat);
+    if (_templateType == CalloutTargetType.node) {
+      widget.controller.updateCalloutTemplate('elevation_style', _selectedElevationStyle.name);
+      widget.controller.updateCalloutTemplate('elevation_shelf_direction', _selectedShelfDirection.name);
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Шаблон для ${_templateType.displayName} успешно сохранен'),
@@ -447,6 +461,10 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   void _resetTemplateToDefault() {
     _topTemplateController.text = _templateType.defaultTemplate;
     _bottomTemplateController.text = _templateType.defaultBottomTemplate ?? '';
+    if (_templateType == CalloutTargetType.node) {
+      _selectedElevationStyle = ElevationMarkStyle.gostOutline;
+      _selectedShelfDirection = ShelfDirection.auto;
+    }
     _saveCurrentTemplate();
   }
 
@@ -1066,28 +1084,81 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                       }
                     },
                   ),
-                  const SizedBox(width: 16),
-                  const Text('Формат даты швов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: _selectedDateFormat,
-                    items: const [
-                      DropdownMenuItem(value: 'DD.MM.YYYY', child: Text('ДД.ММ.ГГГГ (18.09.2026)')),
-                      DropdownMenuItem(value: 'DD.MM.YY', child: Text('ДД.ММ.ГГ (18.09.26)')),
-                      DropdownMenuItem(value: 'YYYY-MM-DD', child: Text('ГГГГ-ММ-ДД (2026-09-18)')),
-                      DropdownMenuItem(value: 'DD/MM/YYYY', child: Text('ДД/ММ/ГГГГ (18/09/2026)')),
-                    ],
-                    onChanged: (newFormat) {
-                      if (newFormat != null) {
-                        setState(() {
-                          _selectedDateFormat = newFormat;
-                          widget.controller.updateCalloutTemplate('date_format', newFormat);
-                        });
-                      }
-                    },
-                  ),
                 ],
               ),
+              if (_templateType == CalloutTargetType.node) ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Знак отметки:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    DropdownButton<ElevationMarkStyle>(
+                      value: _selectedElevationStyle,
+                      items: ElevationMarkStyle.values.map((s) {
+                        return DropdownMenuItem(
+                          value: s,
+                          child: Text(s.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (newStyle) {
+                        if (newStyle != null) {
+                          setState(() {
+                            _selectedElevationStyle = newStyle;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Полочка:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    DropdownButton<ShelfDirection>(
+                      value: _selectedShelfDirection,
+                      items: ShelfDirection.values.map((d) {
+                        return DropdownMenuItem(
+                          value: d,
+                          child: Text(d.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (newDir) {
+                        if (newDir != null) {
+                          setState(() {
+                            _selectedShelfDirection = newDir;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Формат даты швов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: _selectedDateFormat,
+                      items: const [
+                        DropdownMenuItem(value: 'DD.MM.YYYY', child: Text('ДД.ММ.ГГГГ (18.09.2026)')),
+                        DropdownMenuItem(value: 'DD.MM.YY', child: Text('ДД.ММ.ГГ (18.09.26)')),
+                        DropdownMenuItem(value: 'YYYY-MM-DD', child: Text('ГГГГ-ММ-ДД (2026-09-18)')),
+                        DropdownMenuItem(value: 'DD/MM/YYYY', child: Text('ДД/ММ/ГГГГ (18/09/2026)')),
+                      ],
+                      onChanged: (newFormat) {
+                        if (newFormat != null) {
+                          setState(() {
+                            _selectedDateFormat = newFormat;
+                            widget.controller.updateCalloutTemplate('date_format', newFormat);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1199,15 +1270,16 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Icon(Icons.touch_app_outlined, size: 18, color: Colors.indigo),
-                      const SizedBox(width: 8),
                       const Text(
                         'Кликните на чип для вставки в строку:',
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -1226,7 +1298,6 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       TextButton.icon(
                         icon: const Icon(Icons.swap_vert, size: 16),
                         label: Text(
@@ -1518,6 +1589,15 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       templates: widget.controller.currentProject.calloutTemplates,
     );
 
+    if (_templateType == CalloutTargetType.node) {
+      return _ElevationCalloutPreview(
+        style: _selectedElevationStyle,
+        direction: _selectedShelfDirection,
+        topText: previewTop.isNotEmpty ? previewTop : '+2.400',
+        bottomText: previewBottom,
+      );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1720,6 +1800,174 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.node:
         return Colors.blueGrey.shade700;
     }
+  }
+}
+
+class _ElevationCalloutPreview extends StatelessWidget {
+  final ElevationMarkStyle style;
+  final ShelfDirection direction;
+  final String topText;
+  final String bottomText;
+
+  const _ElevationCalloutPreview({
+    required this.style,
+    required this.direction,
+    required this.topText,
+    required this.bottomText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isRight = direction != ShelfDirection.left;
+    const primaryColor = Color(0xFF1E293B);
+
+    return CustomPaint(
+      size: const Size(280, 130),
+      painter: _ElevationPreviewPainter(
+        style: style,
+        isRight: isRight,
+        topText: topText,
+        bottomText: bottomText,
+        primaryColor: primaryColor,
+      ),
+    );
+  }
+}
+
+class _ElevationPreviewPainter extends CustomPainter {
+  final ElevationMarkStyle style;
+  final bool isRight;
+  final String topText;
+  final String bottomText;
+  final Color primaryColor;
+
+  const _ElevationPreviewPainter({
+    required this.style,
+    required this.isRight,
+    required this.topText,
+    required this.bottomText,
+    required this.primaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final anchorX = isRight ? 40.0 : size.width - 40.0;
+    final anchorY = size.height / 2 + 25.0;
+    final elbowX = isRight ? 80.0 : size.width - 80.0;
+    final elbowY = size.height / 2 + 5.0;
+
+    final topTp = TextPainter(
+      text: TextSpan(
+        text: topText,
+        style: TextStyle(
+          color: primaryColor,
+          fontSize: 13,
+          fontFamily: 'monospace',
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    TextPainter? bottomTp;
+    if (bottomText.isNotEmpty) {
+      bottomTp = TextPainter(
+        text: TextSpan(
+          text: bottomText,
+          style: const TextStyle(
+            color: Color(0xFF475569),
+            fontSize: 11,
+            fontFamily: 'monospace',
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
+
+    final maxW = math.max(topTp.width, bottomTp?.width ?? 0.0);
+    final shelfLen = math.max(120.0, maxW + 16.0);
+    final shelfEndX = isRight ? elbowX + shelfLen : elbowX - shelfLen;
+
+    const flagH = 14.0;
+    const flagW = 9.0;
+    final shelfY = style == ElevationMarkStyle.compactFlag ? elbowY - 14.0 : elbowY - flagH - 5.0;
+
+    final linePaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
+
+    final fillPaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.fill;
+
+    // 1. Точка привязки
+    canvas.drawCircle(Offset(anchorX, anchorY), 3.5, fillPaint);
+
+    // 2. Ножка к отметке
+    canvas.drawLine(Offset(anchorX, anchorY), Offset(elbowX, elbowY), linePaint);
+
+    // 3. Знак отметки
+    switch (style) {
+      case ElevationMarkStyle.gostOutline:
+        final path = Path()
+          ..moveTo(elbowX, elbowY)
+          ..lineTo(elbowX - flagW, elbowY - flagH)
+          ..lineTo(elbowX + flagW, elbowY - flagH)
+          ..close();
+        canvas.drawPath(path, linePaint);
+        canvas.drawLine(Offset(elbowX, elbowY - flagH), Offset(elbowX, shelfY), linePaint);
+        break;
+
+      case ElevationMarkStyle.gostFilled:
+        final path = Path()
+          ..moveTo(elbowX, elbowY)
+          ..lineTo(elbowX - flagW, elbowY - flagH)
+          ..lineTo(elbowX + flagW, elbowY - flagH)
+          ..close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, linePaint);
+        canvas.drawLine(Offset(elbowX, elbowY - flagH), Offset(elbowX, shelfY), linePaint);
+        break;
+
+      case ElevationMarkStyle.compactFlag:
+        canvas.drawLine(Offset(elbowX, elbowY), Offset(elbowX, shelfY), linePaint);
+        canvas.drawLine(
+          Offset(elbowX - 5.0, elbowY + 5.0),
+          Offset(elbowX + 5.0, elbowY - 5.0),
+          linePaint,
+        );
+        break;
+
+      case ElevationMarkStyle.isoCircle:
+        const r = 6.5;
+        canvas.drawCircle(Offset(elbowX, elbowY - r), r, linePaint);
+        canvas.drawLine(Offset(elbowX - r, elbowY - r), Offset(elbowX + r, elbowY - r), linePaint);
+        canvas.drawLine(Offset(elbowX, elbowY - 2 * r), Offset(elbowX, elbowY), linePaint);
+        canvas.drawLine(Offset(elbowX, elbowY - 2 * r), Offset(elbowX, shelfY), linePaint);
+        break;
+    }
+
+    // 4. Горизонтальная полочка
+    canvas.drawLine(Offset(elbowX, shelfY), Offset(shelfEndX, shelfY), linePaint);
+
+    // 5. Текст над полочкой
+    final textX = isRight ? elbowX + 8.0 : elbowX - shelfLen + 8.0;
+    topTp.paint(canvas, Offset(textX, shelfY - topTp.height - 2.0));
+
+    // 6. Текст под полочкой
+    bottomTp?.paint(canvas, Offset(textX, shelfY + 3.0));
+  }
+
+  @override
+  bool shouldRepaint(covariant _ElevationPreviewPainter oldDelegate) {
+    return oldDelegate.style != style ||
+        oldDelegate.isRight != isRight ||
+        oldDelegate.topText != topText ||
+        oldDelegate.bottomText != bottomText ||
+        oldDelegate.primaryColor != primaryColor;
   }
 }
 
