@@ -1706,3 +1706,36 @@
     - Все **500 тестов** проекта пройдены успешно (`flutter test`).
     - Статический анализ `dart analyze lib test` чист: 0 замечаний.
     - Граф знаний актуализирован: `graphify update .` (3166 узлов, 4217 ребер, 193 сообщества).
+
+- **Релиз Akso v0.8.0, фирменный 3D CAD логотип и сборка релизных пакетов Windows & Android (Phase 49):**
+  - **Постановка задачи:**
+    1. «Версию зальем на основу под версией "v 0.8"»: слияние ветки жизненного цикла проекта в `main`, обновление версии до `0.8.0+1` и установка тега `v0.8`.
+    2. «Сделаем красивый логотип для приложения»: разработка современного технологичного 3D CAD-логотипа, нарезка во все форматы системных иконок (Windows ICO, Android mipmap, Web favicon) и интеграция в интерфейс.
+    3. «Приложения для виндоус и андроид (экзешник и апк)»: сборка полноценных оптимизированных релизных пакетов для ПК (`akso.exe`) и планшета/смартфона (`app-release.apk`).
+  - **Реализация:**
+    1. **Слияние и тегирование**:
+       - Ветка `feature/project-lifecycle-quickbridge` влита в `main`.
+       - `pubspec.yaml`: версия установлена в `0.8.0+1`, зарегистрированы ассеты `assets/images/`.
+       - Установлен аннотированный git-тег `v0.8`.
+    2. **Фирменный 3D CAD логотип и иконки**:
+       - Сгенерирован высокодетализированный мастер-логотип: изометрический трубопроводный узел из полированной стали с вентилем, фланцем, открытым отводом и неоново-бирюзовыми стыками на темном технологичном фоне.
+       - Скриптом нарезки сгенерированы:
+         - Windows: `windows/runner/resources/app_icon.ico` (мульти-размерный ICO: 16, 24, 32, 48, 64, 128, 256 px);
+         - Android: `android/app/src/main/res/mipmap-*/ic_launcher.png` (mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi);
+         - Web: `web/favicon.png` и `web/icons/Icon-*.png`;
+         - Внутри приложения: `assets/images/akso_logo.png` интегрирован в шапки `DesktopCadLayout` и `EditorTopBar`.
+    3. **Конфигурация платформ**:
+       - `windows/runner/main.cpp`: заголовок окна обновлен на `"Akso 3D"`.
+       - `android/app/src/main/AndroidManifest.xml`: имя приложения задано как `Akso 3D`, добавлены права `INTERNET`, `ACCESS_NETWORK_STATE`, `CHANGE_WIFI_MULTICAST_STATE` для беспроводного P2P обмена QuickBridge.
+    4. **Сборка релизных пакетов**:
+       - **Windows**: `flutter build windows --release` $\rightarrow$ `build\windows\x64\runner\Release\akso.exe`.
+       - **Android**: `flutter build apk --release` $\rightarrow$ `build\app\outputs\flutter-apk\app-release.apk` (56.1 МБ).
+       - Сформирована удобная папка развертывания `dist/`:
+         - `dist\Akso-v0.8-Windows-x64\` (распакованная готовая к запуску папка);
+         - `dist\Akso-v0.8-Windows-x64.zip` (14.2 МБ ZIP-архив);
+         - `dist\Akso-v0.8.apk` (56.1 МБ APK-пакет для планшетов и смартфонов).
+  - **Верификация:**
+    - Все 500 тестов проекта пройдены успешно (`flutter test`).
+    - Статический анализ `dart analyze lib test` чист: 0 замечаний.
+    - Обе сборки успешно скомпилированы без ошибок.
+
