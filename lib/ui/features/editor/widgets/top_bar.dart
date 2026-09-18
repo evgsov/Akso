@@ -104,11 +104,20 @@ class EditorTopBar extends StatelessWidget {
                 color: Colors.indigo.shade700,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.hub, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text(
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.asset(
+                      'assets/images/akso_logo.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(Icons.hub, color: Colors.white, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
                     'AKSO 3D',
                     style: TextStyle(
                       color: Colors.white,

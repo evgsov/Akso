@@ -244,7 +244,16 @@ class DesktopCadLayout extends StatelessWidget {
   Widget _buildFileMenu(BuildContext context) {
     return PopupMenuButton<String>(
       tooltip: 'Меню проекта',
-      icon: const Icon(Icons.hub, color: Colors.cyanAccent, size: 20),
+      icon: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Image.asset(
+          'assets/images/akso_logo.png',
+          width: 22,
+          height: 22,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const Icon(Icons.hub, color: Colors.cyanAccent, size: 20),
+        ),
+      ),
       color: const Color(0xFF1E293B),
       onSelected: (value) async {
         switch (value) {
