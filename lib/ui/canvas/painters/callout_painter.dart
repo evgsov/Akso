@@ -251,8 +251,31 @@ class CalloutPainter {
       maxTextWidth = math.max(maxTextWidth, bottomTp.width);
     }
 
-    final totalHeight = topTp.height + 6.0 + bottomHeight;
     final isRight = callout.screenOffsetX >= 0;
+
+    if (callout.targetType == CalloutTargetType.node) {
+      const flagH = 14.4;
+      final shelfY = textPos.dy - flagH;
+      final bgTop = shelfY - topTp.height - 4.0;
+      final totalHeight = (textPos.dy - bgTop) + (bottomHeight > 0 ? bottomHeight : 4.0);
+      if (isRight) {
+        return Rect.fromLTWH(
+          textPos.dx - 8.0,
+          bgTop,
+          maxTextWidth + 18.0,
+          totalHeight,
+        );
+      } else {
+        return Rect.fromLTWH(
+          textPos.dx - maxTextWidth - 10.0,
+          bgTop,
+          maxTextWidth + 18.0,
+          totalHeight,
+        );
+      }
+    }
+
+    final totalHeight = topTp.height + 6.0 + bottomHeight;
     if (isRight) {
       return Rect.fromLTWH(
         textPos.dx,
@@ -315,6 +338,13 @@ class CalloutPainter {
 
     final primaryColor = isSelected ? const Color(0xFF2563EB) : Color(callout.textColor);
 
+    final linePaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = isSelected ? 2.0 : 1.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
+
     final topTp = TextPainter(
       text: TextSpan(
         text: topText,
@@ -351,6 +381,82 @@ class CalloutPainter {
       textPos.dy,
     );
 
+    if (callout.targetType == CalloutTargetType.node) {
+      // Отрисовка отметки уровня по ГОСТ 21.101 (∇ +2.400)
+      const flagSize = 8.0;
+      final flagH = flagSize * 1.3;
+      final flagW = flagSize * 0.75;
+      final flagTopY = textPos.dy - flagH;
+      final shelfY = flagTopY - 4.0;
+
+      // 1. Выносная ножка от объекта к основанию стрелки отметки
+      if ((anchorScreen - textPos).distance > 2.0) {
+        canvas.drawLine(anchorScreen, textPos, linePaint);
+      }
+
+      // 2. Треугольный флажок отметки (острием в textPos)
+      final flagPath = Path()
+        ..moveTo(textPos.dx, textPos.dy)
+        ..lineTo(textPos.dx - flagW, flagTopY)
+        ..lineTo(textPos.dx + flagW, flagTopY)
+        ..close();
+      canvas.drawPath(flagPath, linePaint);
+
+      // 3. Вертикальная стойка от треугольника вверх к полочке
+      canvas.drawLine(Offset(textPos.dx, flagTopY), Offset(textPos.dx, shelfY), linePaint);
+
+      // 4. Горизонтальная полочка
+      final shelfEnd = Offset(
+        isRight ? textPos.dx + shelfLength : textPos.dx - shelfLength,
+        shelfY,
+      );
+
+      final bgTop = shelfY - topTp.height - 4.0;
+      final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+      final bgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          isRight ? textPos.dx : textPos.dx - shelfLength,
+          bgTop,
+          shelfLength,
+          totalHeight,
+        ),
+        const Radius.circular(2.0),
+      );
+
+      canvas.drawRRect(
+        bgRect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.92)
+          ..style = PaintingStyle.fill,
+      );
+
+      canvas.drawLine(Offset(textPos.dx, shelfY), shelfEnd, linePaint);
+
+      final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;
+      topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - 2.0));
+
+      if (bottomTp != null) {
+        bottomTp.paint(canvas, Offset(textLeft, shelfY + 2.0));
+      }
+
+      if (isSelected) {
+        final borderPaint = Paint()
+          ..color = const Color(0xFF2563EB).withValues(alpha: 0.75)
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+        canvas.drawRRect(bgRect, borderPaint);
+
+        final gripPaint = Paint()
+          ..color = const Color(0xFF2563EB)
+          ..style = PaintingStyle.fill;
+        canvas.drawRect(
+          Rect.fromCenter(center: textPos, width: 6.0, height: 6.0),
+          gripPaint,
+        );
+      }
+      return;
+    }
+
     // 1. Точка привязки (кружок на 3D объекте по ГОСТ)
     final dotPaint = Paint()
       ..color = primaryColor
@@ -358,13 +464,6 @@ class CalloutPainter {
     canvas.drawCircle(anchorScreen, 3.0, dotPaint);
 
     // 2. Наклонная линия-ножка от объекта до излома (textPos)
-    final linePaint = Paint()
-      ..color = primaryColor
-      ..strokeWidth = isSelected ? 2.0 : 1.2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.square
-      ..strokeJoin = StrokeJoin.miter;
-
     canvas.drawLine(anchorScreen, textPos, linePaint);
 
     // 3. Фон для текста над и под полочкой (рисуем ДО линии полочки для четкости)
@@ -423,5 +522,36 @@ class CalloutPainter {
           ..style = PaintingStyle.stroke,
       );
     }
+  }
+
+  /// Вычисление единичного вектора нормали в плоскости экрана к трубе, примыкающей к узлу.
+  /// Работает для прямых углов (90°), наклонных (45°, 30°) и произвольных уклонов.
+  static Offset computeNodeNormalVector(
+    PipingNetwork network,
+    AxonometryProjector projector,
+    String nodeId,
+  ) {
+    final connected = network.getConnectedSegments(nodeId);
+    if (connected.isEmpty) {
+      return const Offset(1.0, 0.0);
+    }
+    final seg = connected.first;
+    final s = network.nodes[seg.startNodeId];
+    final e = network.nodes[seg.endNodeId];
+    if (s == null || e == null) {
+      return const Offset(1.0, 0.0);
+    }
+    final p1 = projector.project(s);
+    final p2 = projector.project(e);
+    final v = Offset(p2.dx - p1.dx, p2.dy - p1.dy);
+    final len = v.distance;
+    if (len < 0.001) {
+      return const Offset(1.0, 0.0);
+    }
+    var n = Offset(-v.dy / len, v.dx / len);
+    if (n.dx < 0 || (n.dx == 0 && n.dy > 0)) {
+      n = -n;
+    }
+    return n;
   }
 }

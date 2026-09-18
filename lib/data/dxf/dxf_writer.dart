@@ -36,6 +36,7 @@ class DxfWriter {
     DxfCalloutType calloutType = DxfCalloutType.monolithicBlock,
     DxfCalloutOrientation calloutOrientation = DxfCalloutOrientation.cameraFacing,
     AxonometryProjector? activeProjector,
+    bool exportInlineDiameters = false,
   }) {
     final buffer = StringBuffer();
     final extVec = calloutOrientation.getExtrusionVector(activeProjector);
@@ -118,24 +119,26 @@ class DxfWriter {
       }
     }
 
-    for (final seg in network.segments.values) {
-      final start = network.nodes[seg.startNodeId];
-      final end = network.nodes[seg.endNodeId];
-      if (start == null || end == null) continue;
+    if (exportInlineDiameters) {
+      for (final seg in network.segments.values) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
 
-      // Диаметр трубы как текст в 3D
-      final midX = (start.x + end.x) / 2;
-      final midY = (start.y + end.y) / 2;
-      final midZ = (start.z + end.z) / 2 + 50.0;
-      _writeText(
-        buffer,
-        layer: 'АКСО_ДИАМЕТРЫ',
-        text: seg.shortCallout,
-        x: midX,
-        y: midY,
-        z: midZ,
-        height: 60.0,
-      );
+        // Диаметр трубы как текст в 3D
+        final midX = (start.x + end.x) / 2;
+        final midY = (start.y + end.y) / 2;
+        final midZ = (start.z + end.z) / 2 + 50.0;
+        _writeText(
+          buffer,
+          layer: 'АКСО_ДИАМЕТРЫ',
+          text: seg.shortCallout,
+          x: midX,
+          y: midY,
+          z: midZ,
+          height: 60.0,
+        );
+      }
     }
 
     // 2. Сварные стыки в 3D (пространственные кольца усиления шва и засечки)
@@ -233,7 +236,13 @@ class DxfWriter {
     }
 
     // 4. Высотные отметки
+    final nodeIdsWithCallouts = network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.node)
+        .map((c) => c.targetId)
+        .toSet();
+
     for (final node in network.nodes.values) {
+      if (nodeIdsWithCallouts.contains(node.id)) continue;
       _writeText(
         buffer,
         layer: 'АКСО_ОТМЕТКИ',
@@ -500,6 +509,7 @@ class DxfWriter {
     ProjectionType projection = ProjectionType.gostFrontal45,
     AxonometryProjector? activeProjector,
     Map<String, String>? calloutTemplates,
+    bool exportInlineDiameters = false,
   }) {
     final buffer = StringBuffer();
     final projector = activeProjector ?? AxonometryProjector(projectionType: projection, scale: 1.0);
@@ -560,18 +570,21 @@ class DxfWriter {
       final p1 = _projectTo2d(projector, start);
       final p2 = _projectTo2d(projector, end);
 
-      // Выноска диаметра (горизонтальный текст над трубой)
       final midX = (p1.dx + p2.dx) / 2;
       final midY = (p1.dy + p2.dy) / 2 + 30.0;
-      _writeText(
-        buffer,
-        layer: 'АКСО_ДИАМЕТРЫ',
-        text: seg.shortCallout,
-        x: midX - 30.0,
-        y: midY,
-        z: 0.0,
-        height: 50.0,
-      );
+
+      // Выноска диаметра (горизонтальный текст над трубой)
+      if (exportInlineDiameters) {
+        _writeText(
+          buffer,
+          layer: 'АКСО_ДИАМЕТРЫ',
+          text: seg.shortCallout,
+          x: midX - 30.0,
+          y: midY,
+          z: 0.0,
+          height: 50.0,
+        );
+      }
 
       // Уклон трубы
       if (seg.slope > 0.0001) {
@@ -654,7 +667,13 @@ class DxfWriter {
     }
 
     // 4. Отметки уровней по ГОСТ 21.101 (∇ +2.500)
+    final nodeIdsWithCallouts = network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.node)
+        .map((c) => c.targetId)
+        .toSet();
+
     for (final node in network.nodes.values) {
+      if (nodeIdsWithCallouts.contains(node.id)) continue;
       final p = _projectTo2d(projector, node);
 
       // Треугольный флажок отметки
@@ -1192,64 +1211,140 @@ class DxfWriter {
   static void _writeBlocks(StringBuffer b, [List<_DxfCalloutBlockDef> blocks = const []]) {
     b.writeln('  0\nSECTION\n  2\nBLOCKS');
     for (final blk in blocks) {
-      final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
-      final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
+      final calloutLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ') : toAutoCadString('АКСО_ВЫНОСКИ');
+      final calloutTextLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ_ТЕКСТ') : toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
 
       if (blk.isMonolithic) {
-        // Монолитный блок: базовая точка (0, 0, 0) строго на трубе (anchor)!
-        // Вся выноска (маркер, ножка, полочка, текст) собрана в ЕДИНЫЙ монолитный блок.
-        // Ни полочка, ни текст, ни ножка не могут оторваться или разделиться.
         b.writeln(
           '  0\nBLOCK\n  8\n0\n  2\n${blk.blockName}\n 70\n0\n 10\n0.0\n 20\n0.0\n 30\n0.0\n  3\n${blk.blockName}',
         );
-        // 1. Маркер привязки к трубе (кружок в начале ножки)
-        b.writeln(
-          '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius.toStringAsFixed(1)}',
-        );
-        // 2. Ножка выноски от точки привязки к излому
-        b.writeln(
-          '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
-        );
-        // 3. Горизонтальная полочка
-        b.writeln(
-          '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localShelfEndX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
-        );
-        // 4. Текст на полочке
-        b.writeln(
-          '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${blk.localTextY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}',
-        );
-        if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
-          final bottomY = blk.localElbowY - blk.textHeight - 10.0;
+        if (blk.isElevationMark) {
+          const flagH = 35.0;
+          const flagW = 20.0;
+          final shelfY = blk.localElbowY + flagH + 15.0;
+          if (blk.localElbowX.abs() > 2.0 || blk.localElbowY.abs() > 2.0) {
+            b.writeln(
+              '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+            );
+          }
+          // Треугольник отметки ∇
           b.writeln(
-            '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${bottomY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.bottomText!)}',
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
           );
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX - flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 21\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 31\n0.0',
+          );
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.localElbowX + flagW).toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // Вертикальная стойка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${(blk.localElbowY + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // Горизонтальная полочка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${shelfY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localShelfEndX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // Текст
+          b.writeln(
+            '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${blk.localTextY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}',
+          );
+          if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+            final bottomY = shelfY - blk.textHeight - 15.0;
+            b.writeln(
+              '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${bottomY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.bottomText!)}',
+            );
+          }
+        } else {
+          // 1. Маркер привязки к трубе (кружок в начале ножки)
+          b.writeln(
+            '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius.toStringAsFixed(1)}',
+          );
+          // 2. Ножка выноски от точки привязки к излому
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // 3. Горизонтальная полочка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.localElbowX.toStringAsFixed(1)}\n 20\n${blk.localElbowY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.localShelfEndX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // 4. Текст на полочке
+          b.writeln(
+            '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${blk.localTextY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.text)}',
+          );
+          if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+            final bottomY = blk.localElbowY - blk.textHeight - 10.0;
+            b.writeln(
+              '  0\nTEXT\n  8\n$calloutTextLayer\n 10\n${blk.localTextX.toStringAsFixed(1)}\n 20\n${bottomY.toStringAsFixed(1)}\n 30\n0.0\n 40\n${blk.textHeight.toStringAsFixed(1)}\n  1\n${toAutoCadString(blk.bottomText!)}',
+            );
+          }
         }
         b.writeln('  0\nENDBLK\n  8\n0');
       } else {
         b.writeln(
           '  0\nBLOCK\n  8\n0\n  2\n${blk.blockName}\n 70\n0\n 10\n0.0\n 20\n0.0\n 30\n0.0\n  3\n${blk.blockName}',
         );
-        // Кружок в точке привязки
-        b.writeln(
-          '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius}',
-        );
-        // Наклонная ножка выноски
-        b.writeln(
-          '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx}\n 21\n${blk.dy}\n 31\n${blk.dz}',
-        );
-        // Горизонтальная полочка
-        b.writeln(
-          '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx}\n 20\n${blk.dy}\n 30\n${blk.dz}\n 11\n${blk.shelfEndX}\n 21\n${blk.dy}\n 31\n${blk.dz}',
-        );
-        // Определение атрибута текста (ATTDEF)
-        b.writeln(
-          '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n${blk.textY}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n  3\n${toAutoCadString("Текст выноски")}\n 70\n0',
-        );
-        if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
-          final bottomY = blk.textY - blk.textHeight - 20.0;
+        if (blk.isElevationMark) {
+          const flagH = 30.0;
+          const flagW = 18.0;
+          final shelfY = blk.dy + flagH + 15.0;
+          final distSq = blk.dx * blk.dx + blk.dy * blk.dy;
+          if (distSq > 4.0) {
+            b.writeln(
+              '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
+            );
+          }
+          // Треугольник отметки ∇
           b.writeln(
-            '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n$bottomY\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.bottomText!)}\n  2\nBOTTOM_TEXT\n  3\n${toAutoCadString("Текст под полкой")}\n 70\n0',
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${blk.dy.toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx - flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
           );
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx - flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${(blk.dx + flagW).toStringAsFixed(1)}\n 21\n${(blk.dy + flagH).toStringAsFixed(1)}\n 31\n0.0',
+          );
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${(blk.dx + flagW).toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // Вертикальная стойка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${(blk.dy + flagH).toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // Горизонтальная полочка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx.toStringAsFixed(1)}\n 20\n${shelfY.toStringAsFixed(1)}\n 30\n0.0\n 11\n${blk.shelfEndX.toStringAsFixed(1)}\n 21\n${shelfY.toStringAsFixed(1)}\n 31\n0.0',
+          );
+          // ATTDEF текста
+          b.writeln(
+            '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX.toStringAsFixed(1)}\n 20\n${blk.textY.toStringAsFixed(1)}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n  3\n${toAutoCadString("Отметка уровня")}\n 70\n0',
+          );
+          if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+            final bottomY = shelfY - blk.textHeight - 15.0;
+            b.writeln(
+              '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX.toStringAsFixed(1)}\n 20\n${bottomY.toStringAsFixed(1)}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.bottomText!)}\n  2\nBOTTOM_TEXT\n  3\n${toAutoCadString("Пояснение отметки")}\n 70\n0',
+            );
+          }
+        } else {
+          // Кружок в точке привязки
+          b.writeln(
+            '  0\nCIRCLE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 40\n${blk.circleRadius}',
+          );
+          // Наклонная ножка выноски
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx}\n 21\n${blk.dy}\n 31\n${blk.dz}',
+          );
+          // Горизонтальная полочка
+          b.writeln(
+            '  0\nLINE\n  8\n$calloutLayer\n 10\n${blk.dx}\n 20\n${blk.dy}\n 30\n${blk.dz}\n 11\n${blk.shelfEndX}\n 21\n${blk.dy}\n 31\n${blk.dz}',
+          );
+          // Определение атрибута текста (ATTDEF)
+          b.writeln(
+            '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n${blk.textY}\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.text)}\n  2\nTEXT\n  3\n${toAutoCadString("Текст выноски")}\n 70\n0',
+          );
+          if (blk.bottomText != null && blk.bottomText!.isNotEmpty) {
+            final bottomY = blk.textY - blk.textHeight - 20.0;
+            b.writeln(
+              '  0\nATTDEF\n  8\n$calloutTextLayer\n 10\n${blk.textX}\n 20\n$bottomY\n 30\n${blk.textZ}\n 40\n${blk.textHeight}\n  1\n${toAutoCadString(blk.bottomText!)}\n  2\nBOTTOM_TEXT\n  3\n${toAutoCadString("Текст под полкой")}\n 70\n0',
+            );
+          }
         }
         b.writeln('  0\nENDBLK\n  8\n0');
       }
@@ -1563,11 +1658,16 @@ class DxfWriter {
       // Локальные координаты выноски в плоскости, повернутой лицом к камере/ракурсу:
       // Локальная ось X направлена горизонтально по экрану (axX, axY, 0)
       // Локальная ось Y направлена вертикально вверх по оси Z (0, 0, 1)
+      final isElevation = callout.targetType == CalloutTargetType.node;
+      final flagH = isElevation ? 35.0 : 0.0;
       final localElbowX = isRight ? scale * 0.7 : -scale * 0.7;
-      final localElbowY = math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0);
+      final localElbowY = isElevation
+          ? math.max(120.0, callout.screenOffsetY.abs() * 3.0).clamp(120.0, 450.0)
+          : math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0);
+      final shelfY = isElevation ? localElbowY + flagH + 15.0 : localElbowY;
       final localShelfEndX = isRight ? localElbowX + shelfLen : localElbowX - shelfLen;
       final localTextX = isRight ? localElbowX + 10.0 : localElbowX - shelfLen + 10.0;
-      final localTextY = localElbowY + 15.0;
+      final localTextY = shelfY + 15.0;
 
       // Мировые 3D-координаты точки излома (WCS)
       final double elbowX, elbowY, elbowZ;
@@ -1601,7 +1701,7 @@ class DxfWriter {
         localTextX: localTextX,
         localTextY: localTextY,
         textHeight: 45.0,
-        circleRadius: 12.0,
+        circleRadius: isElevation ? 0.0 : 12.0,
         anchorX: anchor.x,
         anchorY: anchor.y,
         anchorZ: anchor.z,
@@ -1611,6 +1711,7 @@ class DxfWriter {
         shelfLen: shelfLen,
         isRight: isRight,
         isMonolithic: calloutType == DxfCalloutType.monolithicBlock,
+        isElevationMark: isElevation,
         nx: extrusionVector.nx,
         ny: extrusionVector.ny,
         nz: extrusionVector.nz,
@@ -1645,8 +1746,11 @@ class DxfWriter {
       final shelfLen = math.max(100.0, maxLen * 35.0);
       final isRight = callout.screenOffsetX >= 0;
       final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
+      final isElevation = callout.targetType == CalloutTargetType.node;
+      final flagH = isElevation ? 30.0 : 0.0;
+      final shelfY = isElevation ? dy + flagH + 15.0 : dy;
       final textX = isRight ? dx + 10.0 : dx - shelfLen + 10.0;
-      final textY = dy + 15.0;
+      final textY = shelfY + 15.0;
 
       idx++;
       blocks.add(_DxfCalloutBlockDef(
@@ -1661,10 +1765,13 @@ class DxfWriter {
         textY: textY,
         textZ: 0.0,
         textHeight: 40.0,
-        circleRadius: 8.0,
+        circleRadius: isElevation ? 0.0 : 8.0,
         anchorX: anchorScreen.dx,
         anchorY: anchorScreen.dy,
         anchorZ: 0.0,
+        isElevationMark: isElevation,
+        isRight: isRight,
+        shelfLen: shelfLen,
       ));
     }
     return blocks;
@@ -1713,10 +1820,10 @@ class DxfWriter {
     DxfCalloutType calloutType,
     ({double nx, double ny, double nz}) extVec,
   ) {
-    final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
-    final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
-
     for (final blk in blocks) {
+      final calloutLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ') : toAutoCadString('АКСО_ВЫНОСКИ');
+      final calloutTextLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ_ТЕКСТ') : toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
+
       if (calloutType == DxfCalloutType.monolithicBlock) {
         // Способ 1: Вставка монолитного блока
         // Базовая точка блока (0, 0, 0) в точке привязки на трубе (anchor).
@@ -1735,20 +1842,22 @@ class DxfWriter {
         continue;
       } else {
         // Способ 2: Раздельные примитивы (nativeLeader)
-        // 1. Маркер точки привязки на трубе (кружок на высоте трубы)
-        _writeCircle(
-          b,
-          layer: 'АКСО_ВЫНОСКИ',
-          cx: blk.anchorX,
-          cy: blk.anchorY,
-          cz: blk.anchorZ,
-          radius: blk.circleRadius,
-        );
+        // 1. Маркер точки привязки на трубе (кружок на высоте трубы, если не отметка уровня)
+        if (blk.circleRadius > 0.0) {
+          _writeCircle(
+            b,
+            layer: blk.isElevationMark ? 'АКСО_ОТМЕТКИ' : 'АКСО_ВЫНОСКИ',
+            cx: blk.anchorX,
+            cy: blk.anchorY,
+            cz: blk.anchorZ,
+            radius: blk.circleRadius,
+          );
+        }
 
         // 2. Ножка выноски от трубы к излому
         _write3dLine(
           b,
-          layer: 'АКСО_ВЫНОСКИ',
+          layer: blk.isElevationMark ? 'АКСО_ОТМЕТКИ' : 'АКСО_ВЫНОСКИ',
           x1: blk.anchorX,
           y1: blk.anchorY,
           z1: blk.anchorZ,
@@ -1774,7 +1883,7 @@ class DxfWriter {
         // 3. Полочка выноски
         _write3dLine(
           b,
-          layer: 'АКСО_ВЫНОСКИ',
+          layer: blk.isElevationMark ? 'АКСО_ОТМЕТКИ' : 'АКСО_ВЫНОСКИ',
           x1: blk.elbowX,
           y1: blk.elbowY,
           z1: blk.elbowZ,
@@ -1790,7 +1899,7 @@ class DxfWriter {
           final textZ = blk.elbowZ;
           _writeText(
             b,
-            layer: 'АКСО_ВЫНОСКИ_ТЕКСТ',
+            layer: blk.isElevationMark ? 'АКСО_ОТМЕТКИ_ТЕКСТ' : 'АКСО_ВЫНОСКИ_ТЕКСТ',
             text: blk.text,
             x: textX,
             y: textY,
@@ -2196,9 +2305,9 @@ class DxfWriter {
 
   /// Запись сущностей вставки блоков выносок в секцию ENTITIES (INSERT + ATTRIB + SEQEND)
   static void _writeCalloutEntities(StringBuffer b, List<_DxfCalloutBlockDef> blocks) {
-    final calloutLayer = toAutoCadString('АКСО_ВЫНОСКИ');
-    final calloutTextLayer = toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
     for (final blk in blocks) {
+      final calloutLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ') : toAutoCadString('АКСО_ВЫНОСКИ');
+      final calloutTextLayer = blk.isElevationMark ? toAutoCadString('АКСО_ОТМЕТКИ_ТЕКСТ') : toAutoCadString('АКСО_ВЫНОСКИ_ТЕКСТ');
       b.writeln(
         '  0\nINSERT\n  8\n$calloutLayer\n  2\n${blk.blockName}\n 10\n${blk.anchorX}\n 20\n${blk.anchorY}\n 30\n${blk.anchorZ}\n 66\n1',
       );
@@ -2247,6 +2356,7 @@ class _DxfCalloutBlockDef {
   final double shelfLen;
   final bool isRight;
   final bool isMonolithic;
+  final bool isElevationMark;
   final double nx;
   final double ny;
   final double nz;
@@ -2278,6 +2388,7 @@ class _DxfCalloutBlockDef {
     this.shelfLen = 140.0,
     this.isRight = true,
     this.isMonolithic = false,
+    this.isElevationMark = false,
     this.nx = 0.0,
     this.ny = 0.0,
     this.nz = 1.0,

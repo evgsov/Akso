@@ -2430,13 +2430,48 @@ class PipingNetwork {
         if (node == null) return 'Узел (удален)';
 
         final cleanNum = node.id.replaceFirst(RegExp(r'^(node_|n_)'), '');
+        final zM = node.elevationString;
+        final zMm = node.z.round();
+
+        final connectedSegs = getConnectedSegments(node.id);
+        final primarySeg = connectedSegs.isNotEmpty ? connectedSegs.first : null;
+        final pipeDn = primarySeg?.dn ?? 0;
+        final pipeOd = primarySeg != null ? primarySeg.outerDiameterMm : (pipeDn.toDouble());
+        final radiusMeters = (pipeOd / 2.0) / 1000.0;
+        final zMeters = node.z / 1000.0;
+        final zTopM = zMeters + radiusMeters;
+        final zBotM = zMeters - radiusMeters;
+
+        String formatM(double m) {
+          if (m.abs() < 0.0001) return '0.000';
+          final sign = m > 0 ? '+' : '';
+          return '$sign${m.toStringAsFixed(3)}';
+        }
+
+        final zTopStr = formatM(zTopM);
+        final zBotStr = formatM(zBotM);
+        final sysCode = (primarySeg != null && systems[primarySeg.systemId] != null)
+            ? systems[primarySeg.systemId]!.code
+            : '';
 
         text = text
+            .replaceAll('+{Z_M}', zM)
+            .replaceAll('{Z_M}', zM)
+            .replaceAll('{Z_MM}', '$zMm')
+            .replaceAll('{Z}', '$zMm')
+            .replaceAll('{TOP}', 'В.Т. $zTopStr')
+            .replaceAll('{Z_TOP}', zTopStr)
+            .replaceAll('{BOP}', 'Н.Т. $zBotStr')
+            .replaceAll('{BOT}', 'Н.Т. $zBotStr')
+            .replaceAll('{Z_BOT}', zBotStr)
+            .replaceAll('{Z_AXIS}', 'ОСЬ $zM')
+            .replaceAll('{DN}', pipeDn > 0 ? '$pipeDn' : '')
+            .replaceAll('{SYSTEM}', sysCode)
+            .replaceAll('{NAME}', node.customElevation != null ? node.customElevation! : 'Узел $cleanNum')
             .replaceAll('{ID}', cleanNum)
             .replaceAll('{NUM}', cleanNum)
             .replaceAll('{X}', '${node.x.round()}')
-            .replaceAll('{Y}', '${node.y.round()}')
-            .replaceAll('{Z}', '${node.z.round()}');
+            .replaceAll('{Y}', '${node.y.round()}');
         break;
     }
     return text;
@@ -2450,7 +2485,17 @@ class PipingNetwork {
   }) {
     if (!ignoreCustomText && callout.customText != null && callout.customText!.trim().isNotEmpty) {
       final lines = callout.customText!.split('\n');
-      return lines.first;
+      final firstLine = lines.first;
+      if (firstLine.contains('{') && firstLine.contains('}')) {
+        return formatCalloutTemplate(
+          callout.targetType,
+          callout.targetId,
+          firstLine,
+          dateFormat: templates['date_format'],
+          templates: templates,
+        );
+      }
+      return firstLine;
     }
 
     final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
@@ -2471,12 +2516,31 @@ class PipingNetwork {
     bool ignoreCustomText = false,
   }) {
     if (!ignoreCustomText && callout.customBottomText != null && callout.customBottomText!.trim().isNotEmpty) {
+      if (callout.customBottomText!.contains('{') && callout.customBottomText!.contains('}')) {
+        return formatCalloutTemplate(
+          callout.targetType,
+          callout.targetId,
+          callout.customBottomText!,
+          dateFormat: templates['date_format'],
+          templates: templates,
+        );
+      }
       return callout.customBottomText!;
     }
     if (!ignoreCustomText && callout.customText != null && callout.customText!.contains('\n')) {
       final lines = callout.customText!.split('\n');
       if (lines.length > 1 && lines[1].trim().isNotEmpty) {
-        return lines.sublist(1).join('\n');
+        final bottomPart = lines.sublist(1).join('\n');
+        if (bottomPart.contains('{') && bottomPart.contains('}')) {
+          return formatCalloutTemplate(
+            callout.targetType,
+            callout.targetId,
+            bottomPart,
+            dateFormat: templates['date_format'],
+            templates: templates,
+          );
+        }
+        return bottomPart;
       }
     }
 
@@ -2694,6 +2758,33 @@ class PipingNetwork {
           );
           existingTargetIds.add(sup.id);
           addedCount++;
+        }
+      }
+    }
+
+    if (targetTypes?.contains(CalloutTargetType.node) == true) {
+      for (final node in nodes.values) {
+        final connected = getConnectedSegments(node.id);
+        final hasVertical = connected.any((s) {
+          final sNode = nodes[s.startNodeId];
+          final eNode = nodes[s.endNodeId];
+          return sNode != null && eNode != null && s.isVertical(sNode, eNode);
+        });
+        if (connected.length == 1 || hasVertical || node.customElevation != null) {
+          if (!existingTargetIds.contains(node.id)) {
+            final id = 'callout_${_uuid.v4()}';
+            final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+            callouts[id] = Callout(
+              id: id,
+              targetId: node.id,
+              targetType: CalloutTargetType.node,
+              screenOffsetX: offsetX,
+              screenOffsetY: resolvedY,
+              textHeight: textHeight,
+            );
+            existingTargetIds.add(node.id);
+            addedCount++;
+          }
         }
       }
     }

@@ -168,10 +168,15 @@ void main() {
       expect(csv.contains('ГОСТ 8732-78'), isTrue);
       expect(csv.contains('09Г2С'), isTrue);
 
-      final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network);
+      // По умолчанию экспорт мини-выносок диаметров отключен (Task 1)
+      final dxf2dDefault = DxfWriter.generate2dGostAxonometryDxf(network);
+      expect(dxf2dDefault.contains(DxfWriter.toAutoCadString('⌀159×4.5')), isFalse);
+
+      // При включенном exportInlineDiameters выгружается реальный диаметр и стенка
+      final dxf2d = DxfWriter.generate2dGostAxonometryDxf(network, exportInlineDiameters: true);
       expect(dxf2d.contains(DxfWriter.toAutoCadString('⌀159×4.5')), isTrue);
 
-      final dxf3d = DxfWriter.generate3dDxf(network);
+      final dxf3d = DxfWriter.generate3dDxf(network, exportInlineDiameters: true);
       expect(dxf3d.contains(DxfWriter.toAutoCadString('⌀159×4.5')), isTrue);
     });
 

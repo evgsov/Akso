@@ -6,6 +6,7 @@ import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/callout.dart';
 import '../../../../domain/models/equipment.dart';
+import '../../../../domain/models/pipe_segment.dart';
 import '../../../../domain/models/piping_network.dart';
 import '../../../canvas/input_controller.dart';
 
@@ -311,16 +312,49 @@ String formatPreviewCalloutText(
       final cleanNum = realNode != null
           ? realNode.id.replaceFirst(RegExp(r'^(node_|n_)'), '')
           : '1';
-      final zStr = realNode != null ? '${realNode.z.round()}' : '2400';
+      final zM = realNode?.elevationString ?? '+2.400';
+      final zMm = realNode != null ? '${realNode.z.round()}' : '2400';
       final xStr = realNode != null ? '${realNode.x.round()}' : '1200';
       final yStr = realNode != null ? '${realNode.y.round()}' : '800';
 
+      final connectedSegs = realNode != null && net != null ? net.getConnectedSegments(realNode.id) : <PipeSegment>[];
+      final primarySeg = connectedSegs.isNotEmpty ? connectedSegs.first : realSeg;
+      final pipeDn = primarySeg?.dn ?? 80;
+      final pipeOd = primarySeg != null ? primarySeg.outerDiameterMm : 89.0;
+      final radiusMeters = (pipeOd / 2.0) / 1000.0;
+      final zMeters = (realNode?.z ?? 2400.0) / 1000.0;
+      final zTopM = zMeters + radiusMeters;
+      final zBotM = zMeters - radiusMeters;
+
+      String formatM(double m) {
+        if (m.abs() < 0.0001) return '0.000';
+        final sign = m > 0 ? '+' : '';
+        return '$sign${m.toStringAsFixed(3)}';
+      }
+
+      final zTopStr = formatM(zTopM);
+      final zBotStr = formatM(zBotM);
+      final sysCode = (primarySeg != null && net?.systems[primarySeg.systemId] != null)
+          ? net!.systems[primarySeg.systemId]!.code
+          : 'В1';
+
       return text
+          .replaceAll('+{Z_M}', zM)
+          .replaceAll('{Z_M}', zM)
+          .replaceAll('{Z_MM}', zMm)
+          .replaceAll('{Z}', zMm)
+          .replaceAll('{TOP}', 'В.Т. $zTopStr')
+          .replaceAll('{Z_TOP}', zTopStr)
+          .replaceAll('{BOP}', 'Н.Т. $zBotStr')
+          .replaceAll('{BOT}', 'Н.Т. $zBotStr')
+          .replaceAll('{Z_BOT}', zBotStr)
+          .replaceAll('{Z_AXIS}', 'ОСЬ $zM')
+          .replaceAll('{DN}', '$pipeDn')
+          .replaceAll('{SYSTEM}', sysCode)
           .replaceAll('{NUM}', cleanNum)
           .replaceAll('{NUMBER}', cleanNum)
-          .replaceAll('{NAME}', 'Узел $cleanNum')
+          .replaceAll('{NAME}', realNode?.customElevation != null ? realNode!.customElevation! : 'Узел $cleanNum')
           .replaceAll('{ID}', cleanNum)
-          .replaceAll('{Z}', zStr)
           .replaceAll('{X}', xStr)
           .replaceAll('{Y}', yStr)
           .replaceAll('{TECH_ID}', realNode?.id ?? 'node_001');
@@ -1585,11 +1619,17 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.node:
         return {
+          '{Z_M}': 'Отметка в метрах по ГОСТ (напр. +2.400)',
+          '{TOP}': 'Верх трубы (напр. В.Т. +2.445)',
+          '{BOP}': 'Низ трубы (напр. Н.Т. +2.355)',
+          '{Z_AXIS}': 'Ось трубы (напр. ОСЬ +2.400)',
+          '{Z}': 'Высота Z в мм (напр. 2400)',
+          '{DN}': 'Диаметр примыкающей трубы',
+          '{SYSTEM}': 'Код системы (напр. В1)',
           '{NUM}': 'Номер узла',
-          '{Z}': 'Отметка высоты Z (мм)',
+          '{ID}': 'Номер узла',
           '{X}': 'Координата X (мм)',
           '{Y}': 'Координата Y (мм)',
-          '{ID}': 'Номер узла',
         };
     }
   }

@@ -3919,6 +3919,15 @@ class PipingInputController extends ChangeNotifier {
     );
   }
 
+  /// Генерация выносок высотных отметок для стояков и свободных концов (ГОСТ 21.101)
+  int generateElevationCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
+    return generateMissingCallouts(
+      targetTypes: const {CalloutTargetType.node},
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+  }
+
   /// Генерация сварных стыков для элементов сети и создание выносок для них
   Map<String, int> generateWeldsAndCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
     final weldsAdded = network.generateElementWeldJoints();

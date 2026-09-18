@@ -51,7 +51,7 @@ extension CalloutTargetTypeExt on CalloutTargetType {
       case CalloutTargetType.support:
         return '{NAME}';
       case CalloutTargetType.node:
-        return 'Узел {ID}';
+        return '+{Z_M}';
     }
   }
 
@@ -73,7 +73,7 @@ extension CalloutTargetTypeExt on CalloutTargetType {
       case CalloutTargetType.support:
         return '{TYPE}';
       case CalloutTargetType.node:
-        return 'Отм. {Z}';
+        return 'Ур.ч.п.';
     }
   }
 }
@@ -94,8 +94,8 @@ const Map<String, String> defaultCalloutTemplates = {
   'nozzle_bottom': '{EQUIPMENT}',
   'support': '{NAME}',
   'support_bottom': '{TYPE}',
-  'node': 'Узел {ID}',
-  'node_bottom': 'Отм. {Z}',
+  'node': '+{Z_M}',
+  'node_bottom': 'Ур.ч.п.',
 };
 
 /// Умная выноска (Screen-Aligned Billboard Annotation),
