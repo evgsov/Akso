@@ -1924,6 +1924,36 @@ class DesktopCadLayout extends StatelessWidget {
                       const SizedBox(height: 10),
                     ],
 
+                    () {
+                      final hasElevCallout = controller.nodeHasElevationCallout(nodeId);
+                      return SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: hasElevCallout ? Colors.green.shade50 : null,
+                            foregroundColor: hasElevCallout ? Colors.green.shade800 : null,
+                          ),
+                          icon: Icon(hasElevCallout ? Icons.check_circle_outline : Icons.height, size: 16),
+                          label: Text(
+                            hasElevCallout ? 'Отметка ГОСТ 21.101 (установлена)' : 'Поставить отметку уровня (ГОСТ)',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          onPressed: () {
+                            final added = controller.toggleNodeElevationCallout(nodeId);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  added ? 'Высотная отметка ГОСТ 21.101 создана' : 'Высотная отметка удалена',
+                                ),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }(),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(

@@ -665,6 +665,32 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     );
   }
 
+  Widget _buildElevationsButton(BuildContext context) {
+    return Tooltip(
+      message: 'Сгенерировать отметки уровня по ГОСТ 21.101 для стояков и свободных концов',
+      child: FilledButton.tonalIcon(
+        onPressed: () {
+          final added = widget.controller.generateElevationCallouts();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                added > 0
+                    ? 'Создано $added отметок уровня'
+                    : 'Все ключевые узлы уже имеют отметки',
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        icon: const Icon(Icons.height, size: 18),
+        label: const Text('Отметки'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterDropdown() {
     return DropdownButton<CalloutTargetType?>(
       value: _selectedFilterType,
@@ -712,7 +738,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   Widget _buildToolbar(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 850;
+        final isNarrow = constraints.maxWidth < 1180;
         if (isNarrow) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -725,6 +751,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                   _buildGenerateAllButton(context),
                   _buildWeldsButton(context),
                   _buildElementsButton(context),
+                  _buildElevationsButton(context),
                   _buildFilterDropdown(),
                 ],
               ),
@@ -740,6 +767,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
             _buildWeldsButton(context),
             const SizedBox(width: 8),
             _buildElementsButton(context),
+            const SizedBox(width: 8),
+            _buildElevationsButton(context),
             const SizedBox(width: 12),
             _buildFilterDropdown(),
             const SizedBox(width: 12),

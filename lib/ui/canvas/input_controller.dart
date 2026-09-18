@@ -3928,6 +3928,37 @@ class PipingInputController extends ChangeNotifier {
     );
   }
 
+  /// Добавление или удаление выноски высотной отметки ГОСТ 21.101 для конкретного узла
+  bool toggleNodeElevationCallout(String nodeId, {double offsetX = 50.0, double offsetY = -50.0}) {
+    if (!network.nodes.containsKey(nodeId)) return false;
+    final existingCallout = network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.node && c.targetId == nodeId)
+        .firstOrNull;
+    if (existingCallout != null) {
+      network.callouts.remove(existingCallout.id);
+      history.recordState(network);
+      notifyListeners();
+      return false;
+    } else {
+      final id = 'callout_elev_${DateTime.now().millisecondsSinceEpoch}_$nodeId';
+      network.callouts[id] = Callout(
+        id: id,
+        targetId: nodeId,
+        targetType: CalloutTargetType.node,
+        screenOffsetX: offsetX,
+        screenOffsetY: offsetY,
+      );
+      history.recordState(network);
+      notifyListeners();
+      return true;
+    }
+  }
+
+  /// Проверка, имеет ли узел выноску высотной отметки
+  bool nodeHasElevationCallout(String nodeId) {
+    return network.callouts.values.any((c) => c.targetType == CalloutTargetType.node && c.targetId == nodeId);
+  }
+
   /// Генерация сварных стыков для элементов сети и создание выносок для них
   Map<String, int> generateWeldsAndCallouts({double offsetX = 50.0, double offsetY = -50.0}) {
     final weldsAdded = network.generateElementWeldJoints();

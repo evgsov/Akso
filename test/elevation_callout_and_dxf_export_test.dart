@@ -9,6 +9,7 @@ import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/piping_system.dart';
+import 'package:akso/ui/canvas/input_controller.dart';
 import 'package:akso/ui/canvas/painters/callout_painter.dart';
 import 'package:akso/ui/features/editor/widgets/callout_manager_panel.dart';
 
@@ -294,6 +295,29 @@ void main() {
       expect(dxf3d.contains(textZM), isTrue);
       expect(dxf3d.contains(textBottom), isTrue);
       expect(dxf3d.contains('CALLOUT_SHELF_1'), isTrue);
+    });
+
+    test('toggleNodeElevationCallout adds and removes node elevation callout', () {
+      final network = PipingNetwork();
+      final node = Node3D(id: 'n_elev', x: 100, y: 200, z: 1500);
+      network.nodes[node.id] = node;
+
+      final controller = PipingInputController(initialNetwork: network);
+      expect(controller.nodeHasElevationCallout('n_elev'), isFalse);
+
+      final added = controller.toggleNodeElevationCallout('n_elev');
+      expect(added, isTrue);
+      expect(controller.nodeHasElevationCallout('n_elev'), isTrue);
+
+      final callout = controller.network.callouts.values.firstWhere((c) => c.targetId == 'n_elev');
+      expect(callout.targetType, CalloutTargetType.node);
+      expect(callout.screenOffsetX, 50.0);
+      expect(callout.screenOffsetY, -50.0);
+
+      // Toggling again should remove it
+      final removed = controller.toggleNodeElevationCallout('n_elev');
+      expect(removed, isFalse);
+      expect(controller.nodeHasElevationCallout('n_elev'), isFalse);
     });
   });
 }
