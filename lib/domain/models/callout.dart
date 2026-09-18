@@ -5,6 +5,7 @@ enum CalloutTargetType {
   weld,
   fitting,
   equipment,
+  nozzle,
   support,
   node,
 }
@@ -23,6 +24,8 @@ extension CalloutTargetTypeExt on CalloutTargetType {
         return 'Фасонный элемент';
       case CalloutTargetType.equipment:
         return 'Оборудование';
+      case CalloutTargetType.nozzle:
+        return 'Штуцер';
       case CalloutTargetType.support:
         return 'Опора / подвеска';
       case CalloutTargetType.node:
@@ -43,6 +46,8 @@ extension CalloutTargetTypeExt on CalloutTargetType {
         return '{NAME}';
       case CalloutTargetType.equipment:
         return '{NAME}';
+      case CalloutTargetType.nozzle:
+        return 'Шт. {NAME} Ду{DN}';
       case CalloutTargetType.support:
         return '{NAME}';
       case CalloutTargetType.node:
@@ -56,13 +61,19 @@ extension CalloutTargetTypeExt on CalloutTargetType {
       case CalloutTargetType.segment:
         return '{SYSTEM}';
       case CalloutTargetType.weld:
-        return '{TYPE} {STAMP}';
+        return '{TYPE} {STAMP} {DATE}';
       case CalloutTargetType.valve:
         return '{SYSTEM} {MATERIAL}';
       case CalloutTargetType.fitting:
         return '{STANDARD} {MATERIAL}';
-      default:
-        return null;
+      case CalloutTargetType.equipment:
+        return '{TYPE}';
+      case CalloutTargetType.nozzle:
+        return '{EQUIPMENT}';
+      case CalloutTargetType.support:
+        return '{TYPE}';
+      case CalloutTargetType.node:
+        return 'Отм. {Z}';
     }
   }
 }
@@ -72,14 +83,19 @@ const Map<String, String> defaultCalloutTemplates = {
   'segment': 'Ø{DN}x{WALL} {MATERIAL}',
   'segment_bottom': '{SYSTEM}',
   'weld': 'Стык №{ID}',
-  'weld_bottom': '{TYPE} {STAMP}',
+  'weld_bottom': '{TYPE} {STAMP} {DATE}',
   'valve': '{NAME} Ду{DN}',
   'valve_bottom': '{SYSTEM} {MATERIAL}',
   'fitting': '{NAME}',
   'fitting_bottom': '{STANDARD} {MATERIAL}',
   'equipment': '{NAME}',
+  'equipment_bottom': '{TYPE}',
+  'nozzle': 'Шт. {NAME} Ду{DN}',
+  'nozzle_bottom': '{EQUIPMENT}',
   'support': '{NAME}',
+  'support_bottom': '{TYPE}',
   'node': 'Узел {ID}',
+  'node_bottom': 'Отм. {Z}',
 };
 
 /// Умная выноска (Screen-Aligned Billboard Annotation),

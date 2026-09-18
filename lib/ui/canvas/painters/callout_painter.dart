@@ -174,6 +174,24 @@ class CalloutPainter {
           z: eq.z + eq.height / 2.0,
         );
 
+      case CalloutTargetType.nozzle:
+        final node = network.nodes[callout.targetId];
+        if (node != null) return node;
+        for (final eq in network.equipments.values) {
+          for (final noz in eq.nozzles) {
+            if (noz.id == callout.targetId) {
+              final rad = eq.rotationAngleDeg * math.pi / 180.0;
+              final cosA = math.cos(rad);
+              final sinA = math.sin(rad);
+              final wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+              final wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+              final wz = eq.z + noz.localZ;
+              return Node3D(id: 'anchor_${callout.id}', x: wx, y: wy, z: wz);
+            }
+          }
+        }
+        return null;
+
       case CalloutTargetType.fitting:
         final fit = network.fittings[callout.targetId] ??
             network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;

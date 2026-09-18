@@ -869,18 +869,26 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         .replaceAll('{MATERIAL}', 'Сталь 20')
         .replaceAll('{STANDARD}', 'ГОСТ 10704-91')
         .replaceAll('{SYSTEM}', 'В1')
-        .replaceAll('{ID}', '12')
-        .replaceAll('{NUM}', '12')
-        .replaceAll('{NUMBER}', '12')
+        .replaceAll('{ID}', 'К-1')
+        .replaceAll('{NUM}', '1')
+        .replaceAll('{NUMBER}', '1')
         .replaceAll('{STAMP}', 'СВ-01')
+        .replaceAll('{DATE}', '18.09.2024')
         .replaceAll('{TYPE}', 'Задвижка')
         .replaceAll('{NAME}', 'Задвижка 30с41нж')
-        .replaceAll('{TAG}', 'Т1-1')
+        .replaceAll('{TAG}', 'Е-1')
+        .replaceAll('{DIMENSIONS}', '1200x3000x1500')
+        .replaceAll('{EQUIPMENT}', 'Емкость Е-1')
+        .replaceAll('{EQUIPMENT_TAG}', 'Е-1')
+        .replaceAll('{FACE}', 'top')
         .replaceAll('{SERIAL}', '48219')
         .replaceAll('{SERIAL_NUMBER}', '48219')
         .replaceAll('{BATCH}', 'ПЛ-530')
+        .replaceAll('{SPOOL}', 'К-1')
         .replaceAll('{LENGTH}', '2400')
         .replaceAll('{L}', '2400')
+        .replaceAll('{L_CUT}', '2400')
+        .replaceAll('{CUT_LENGTH}', '2400')
         .replaceAll('{STEEL}', 'Сталь 20')
         .replaceAll('{ELECTRODE}', 'УОНИ-13/55');
   }
@@ -889,63 +897,83 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     switch (type) {
       case CalloutTargetType.segment:
         return {
+          '{SPOOL}': 'Марка катушки из ведомости (напр. К-1)',
+          '{NUM}': 'Номер катушки или трубы (К-1)',
           '{DN}': 'Диаметр условный (напр. 80)',
           '{WALL}': 'Толщина стенки (напр. 4.0)',
           '{D_OUT}': 'Наружный диаметр (напр. 89)',
+          '{CUT_LENGTH}': 'Длина заготовки реза (мм)',
           '{MATERIAL}': 'Марка стали (напр. Сталь 20)',
-          '{NAME}': 'Маркировка / наименование (напр. Т1-1)',
+          '{NAME}': 'Маркировка / наименование (напр. К-1)',
           '{SERIAL}': 'Зав. № / партия (актуально Ду≥500)',
           '{SYSTEM}': 'Код системы (напр. В1)',
-          '{LENGTH}': 'Длина трубы (мм)',
-          '{ID}': 'Идентификатор трубы',
+          '{ID}': 'Марка катушки / трубы',
         };
       case CalloutTargetType.valve:
         return {
           '{NAME}': 'Наименование арматуры',
+          '{TAG}': 'Позиция арматуры',
           '{SERIAL}': 'Заводской номер арматуры',
           '{DN}': 'Диаметр условный',
           '{TYPE}': 'Тип арматуры (задвижка/кран/клапан)',
           '{LENGTH}': 'Строительная длина (мм)',
-          '{ID}': 'Идентификатор арматуры',
+          '{ID}': 'Наименование / позиция',
         };
       case CalloutTargetType.weld:
         return {
           '{NUM}': 'Номер шва в журнале (напр. 1)',
+          '{DATE}': 'Дата выполнения шва (напр. 18.09.2024)',
           '{STAMP}': 'Клеймо сварщика (напр. СВ-01)',
           '{TYPE}': 'Тип сварного шва (С17/У18)',
           '{STEEL}': 'Марка стали стыкуемых труб',
           '{ELECTRODE}': 'Марка электрода',
-          '{ID}': 'Идентификатор шва',
+          '{METHOD}': 'Метод контроля (ВИК/РК/УЗК)',
+          '{ID}': 'Номер шва (напр. 1)',
         };
       case CalloutTargetType.fitting:
         return {
           '{NAME}': 'Наименование детали',
+          '{TAG}': 'Марка детали',
           '{SERIAL}': 'Зав. № / партия детали',
           '{TYPE}': 'Тип фитинга (отвод/тройник/переход)',
           '{STANDARD}': 'Стандарт ГОСТ',
           '{MATERIAL}': 'Материал детали',
           '{DN}': 'Основной диаметр',
           '{DN2}': 'Вторичный диаметр (для переходов)',
+          '{ID}': 'Наименование детали',
         };
       case CalloutTargetType.equipment:
         return {
-          '{NAME}': 'Наименование оборудования',
+          '{TAG}': 'Короткая позиция/тег (напр. Е-1, Н-1)',
+          '{NAME}': 'Полное наименование оборудования',
+          '{TYPE}': 'Тип (насос/бак/емкость)',
+          '{DIMENSIONS}': 'Габариты ШхДхВ (мм)',
           '{SERIAL}': 'Заводской номер оборудования',
-          '{TYPE}': 'Тип (насос/бак/котел)',
-          '{ID}': 'Идентификатор',
+          '{ID}': 'Позиция аппарата (Е-1)',
+        };
+      case CalloutTargetType.nozzle:
+        return {
+          '{NAME}': 'Обозначение штуцера (напр. Ш-1, А1)',
+          '{DN}': 'Диаметр условный (напр. 80)',
+          '{EQUIPMENT}': 'Наименование аппарата (Емкость Е-1)',
+          '{EQUIPMENT_TAG}': 'Позиция аппарата (Е-1)',
+          '{FACE}': 'Грань оборудования',
+          '{ID}': 'Обозначение штуцера',
         };
       case CalloutTargetType.support:
         return {
-          '{NAME}': 'Наименование опоры',
-          '{TYPE}': 'Тип опоры',
-          '{ID}': 'Идентификатор',
+          '{NAME}': 'Наименование / марка опоры (напр. ОП-1)',
+          '{TYPE}': 'Тип опоры (скользящая/неподвижная)',
+          '{CODE}': 'Код типа (ОП/НО/ПП)',
+          '{ID}': 'Марка опоры',
         };
       case CalloutTargetType.node:
         return {
-          '{ID}': 'Номер узла',
+          '{NUM}': 'Номер узла',
+          '{Z}': 'Отметка высоты Z (мм)',
           '{X}': 'Координата X (мм)',
           '{Y}': 'Координата Y (мм)',
-          '{Z}': 'Отметка Z (мм)',
+          '{ID}': 'Номер узла',
         };
     }
   }
@@ -955,7 +983,9 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     switch (callout.targetType) {
       case CalloutTargetType.segment:
         final s = net.segments[callout.targetId];
-        return s != null ? 'DN${s.dn} (${s.id})' : callout.targetId;
+        final spool = net.spools.values.where((sp) => sp.segmentId == callout.targetId).firstOrNull;
+        final mark = spool?.number ?? s?.id ?? callout.targetId;
+        return s != null ? '$mark (DN${s.dn})' : callout.targetId;
       case CalloutTargetType.valve:
         final v = net.valves[callout.targetId];
         return v != null ? '${v.name} Ду${v.dn}' : callout.targetId;
@@ -965,13 +995,22 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.equipment:
         final eq = net.equipments[callout.targetId];
         return eq != null ? eq.name : callout.targetId;
+      case CalloutTargetType.nozzle:
+        for (final eq in net.equipments.values) {
+          for (final n in eq.nozzles) {
+            if (n.id == callout.targetId) {
+              return '${n.name} Ду${n.dn} (${eq.name})';
+            }
+          }
+        }
+        return 'Штуцер ${callout.targetId}';
       case CalloutTargetType.fitting:
         final f = net.fittings[callout.targetId] ??
             net.fittings.values.where((fit) => fit.id == callout.targetId).firstOrNull;
         return f != null ? (f.name ?? f.fittingType.displayName) : callout.targetId;
       case CalloutTargetType.support:
         final sup = net.supports[callout.targetId];
-        return sup != null ? sup.name : callout.targetId;
+        return sup != null ? (sup.name.isNotEmpty ? sup.name : sup.type.displayName) : callout.targetId;
       case CalloutTargetType.node:
         return 'Узел ${callout.targetId}';
     }
@@ -989,6 +1028,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         return Colors.indigo.shade700;
       case CalloutTargetType.equipment:
         return Colors.teal.shade700;
+      case CalloutTargetType.nozzle:
+        return Colors.cyan.shade800;
       case CalloutTargetType.support:
         return Colors.orange.shade800;
       case CalloutTargetType.node:

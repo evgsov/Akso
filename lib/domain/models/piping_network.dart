@@ -2192,10 +2192,20 @@ class PipingNetwork {
         final nameStr = (spool?.name != null && spool!.name!.isNotEmpty)
             ? spool.name!
             : (seg?.name ?? '');
+
+        final segName = seg?.name;
+        // Человекочитаемая марка катушки / трубы (напр. "К-1", "К-2", либо пользовательское имя "Уч-1")
+        final spoolMark = (spool?.name != null && spool!.name!.isNotEmpty)
+            ? spool.name!
+            : (spool?.number != null && spool!.number.isNotEmpty)
+                ? spool.number
+                : (segName != null && segName.isNotEmpty)
+                    ? segName
+                    : 'К-1';
+
         final serialStr = (spool?.serialNumber != null && spool!.serialNumber!.isNotEmpty)
             ? spool.serialNumber!
             : (seg?.serialNumber ?? '');
-        final idStr = spool?.id ?? seg?.id ?? targetId;
 
         text = text
             .replaceAll('{DN}', '$dn')
@@ -2207,12 +2217,14 @@ class PipingNetwork {
             .replaceAll('{MATERIAL}', mat)
             .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{NAME}', nameStr)
-            .replaceAll('{TAG}', nameStr)
+            .replaceAll('{TAG}', nameStr.isNotEmpty ? nameStr : spoolMark)
             .replaceAll('{SERIAL}', serialStr)
             .replaceAll('{SERIAL_NUMBER}', serialStr)
             .replaceAll('{BATCH}', serialStr)
-            .replaceAll('{SPOOL}', spool?.name ?? spool?.id ?? '')
-            .replaceAll('{ID}', idStr);
+            .replaceAll('{SPOOL}', spoolMark)
+            .replaceAll('{NUM}', spoolMark)
+            .replaceAll('{ID}', spoolMark)
+            .replaceAll('{TECH_ID}', spool?.id ?? seg?.id ?? targetId);
 
         final int len;
         if (spool != null) {
@@ -2253,7 +2265,8 @@ class PipingNetwork {
             .replaceAll('{MATERIAL}', material)
             .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{PN}', 'Ру16')
-            .replaceAll('{ID}', v.id);
+            .replaceAll('{ID}', v.name.isNotEmpty ? v.name : v.id)
+            .replaceAll('{TECH_ID}', v.id);
         break;
 
       case CalloutTargetType.fitting:
@@ -2267,9 +2280,10 @@ class PipingNetwork {
         final material = fit.material.isNotEmpty ? fit.material : (firstSeg?.material ?? 'Ст20');
         final standard = (fit.standard != null && fit.standard!.isNotEmpty) ? fit.standard! : 'ГОСТ 17375';
 
+        final fitName = fit.name ?? fit.fittingType.displayName;
         text = text
-            .replaceAll('{NAME}', fit.name ?? fit.fittingType.displayName)
-            .replaceAll('{TAG}', fit.name ?? fit.fittingType.displayName)
+            .replaceAll('{NAME}', fitName)
+            .replaceAll('{TAG}', fitName)
             .replaceAll('{SERIAL}', fit.serialNumber ?? '')
             .replaceAll('{SERIAL_NUMBER}', fit.serialNumber ?? '')
             .replaceAll('{BATCH}', fit.serialNumber ?? '')
@@ -2279,14 +2293,15 @@ class PipingNetwork {
             .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{DN}', '${fit.dn}')
             .replaceAll('{DN2}', fit.dnSecondary != null ? '${fit.dnSecondary}' : '${fit.dn}')
-            .replaceAll('{ID}', fit.id);
+            .replaceAll('{ID}', fitName)
+            .replaceAll('{TECH_ID}', fit.id);
         break;
 
       case CalloutTargetType.weld:
         final w = weldJoints[targetId];
         if (w == null) return 'Стык (удален)';
 
-        final numStr = w.number > 0 ? '${w.number}' : w.id;
+        final numStr = w.number > 0 ? '${w.number}' : '1';
         final seg = segments[w.segmentId];
         final dStr = seg != null
             ? (seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
@@ -2302,10 +2317,11 @@ class PipingNetwork {
 
         text = text
             .replaceAll('{ID}', numStr)
-            .replaceAll('{NUM}', '${w.number}')
-            .replaceAll('{NUMBER}', '${w.number}')
+            .replaceAll('{NUM}', numStr)
+            .replaceAll('{NUMBER}', numStr)
             .replaceAll('{STAMP}', w.stamp)
             .replaceAll('{TYPE}', w.weldType.shortName)
+            .replaceAll('{DATE}', w.date)
             .replaceAll('{STEEL}', w.steelGrade)
             .replaceAll('{MATERIAL}', w.steelGrade)
             .replaceAll('{ELECTRODE}', w.electrodeGrade)
@@ -2316,40 +2332,88 @@ class PipingNetwork {
             .replaceAll('{D_OUT}', dStr)
             .replaceAll('{OD}', dStr)
             .replaceAll('{DIAMETER}', dStr)
-            .replaceAll('{WELD_ID}', w.id);
+            .replaceAll('{WELD_ID}', w.id)
+            .replaceAll('{TECH_ID}', w.id);
         break;
 
       case CalloutTargetType.equipment:
         final eq = equipments[targetId];
         if (eq == null) return 'Оборудование (удалено)';
 
+        // Короткий тег аппарата (напр. "Е-1", "Н-1", "Т-2")
+        final tagStr = eq.name.trim().contains(RegExp(r'\s+'))
+            ? eq.name.trim().split(RegExp(r'\s+')).last
+            : eq.name;
+        final dimsStr = '${eq.width.round()}x${eq.length.round()}x${eq.height.round()}';
+
         text = text
             .replaceAll('{NAME}', eq.name)
-            .replaceAll('{TAG}', eq.name)
+            .replaceAll('{TAG}', tagStr)
             .replaceAll('{SERIAL}', eq.serialNumber ?? '')
             .replaceAll('{SERIAL_NUMBER}', eq.serialNumber ?? '')
             .replaceAll('{BATCH}', eq.serialNumber ?? '')
             .replaceAll('{TYPE}', eq.type.displayName)
-            .replaceAll('{ID}', eq.id);
+            .replaceAll('{DIMENSIONS}', dimsStr)
+            .replaceAll('{ID}', tagStr)
+            .replaceAll('{TECH_ID}', eq.id);
+        break;
+
+      case CalloutTargetType.nozzle:
+        Nozzle? noz;
+        Equipment? parentEq;
+        for (final eq in equipments.values) {
+          for (final n in eq.nozzles) {
+            if (n.id == targetId) {
+              noz = n;
+              parentEq = eq;
+              break;
+            }
+          }
+          if (noz != null) break;
+        }
+
+        if (noz == null) return 'Штуцер (удален)';
+
+        final eqTag = parentEq != null
+            ? (parentEq.name.trim().contains(RegExp(r'\s+'))
+                ? parentEq.name.trim().split(RegExp(r'\s+')).last
+                : parentEq.name)
+            : '';
+
+        text = text
+            .replaceAll('{NAME}', noz.name)
+            .replaceAll('{TAG}', noz.name)
+            .replaceAll('{DN}', '${noz.dn}')
+            .replaceAll('{EQUIPMENT}', parentEq?.name ?? '')
+            .replaceAll('{EQUIPMENT_TAG}', eqTag)
+            .replaceAll('{FACE}', noz.face?.name ?? '')
+            .replaceAll('{ID}', noz.name)
+            .replaceAll('{TECH_ID}', noz.id);
         break;
 
       case CalloutTargetType.support:
         final sup = supports[targetId];
         if (sup == null) return 'Опора (удалена)';
 
+        final supName = sup.name.isNotEmpty ? sup.name : sup.type.shortCode;
         text = text
-            .replaceAll('{NAME}', sup.name)
+            .replaceAll('{NAME}', supName)
+            .replaceAll('{TAG}', supName)
             .replaceAll('{TYPE}', sup.type.displayName)
             .replaceAll('{CODE}', sup.type.shortCode)
-            .replaceAll('{ID}', sup.id);
+            .replaceAll('{ID}', supName)
+            .replaceAll('{TECH_ID}', sup.id);
         break;
 
       case CalloutTargetType.node:
         final node = nodes[targetId];
         if (node == null) return 'Узел (удален)';
 
+        final cleanNum = node.id.replaceFirst(RegExp(r'^(node_|n_)'), '');
+
         text = text
-            .replaceAll('{ID}', node.id)
+            .replaceAll('{ID}', cleanNum)
+            .replaceAll('{NUM}', cleanNum)
             .replaceAll('{X}', '${node.x.round()}')
             .replaceAll('{Y}', '${node.y.round()}')
             .replaceAll('{Z}', '${node.z.round()}');
@@ -2427,6 +2491,7 @@ class PipingNetwork {
         return null;
       case CalloutTargetType.support:
         return supports[targetId]?.segmentId;
+      case CalloutTargetType.nozzle:
       case CalloutTargetType.node:
       case CalloutTargetType.equipment:
         return null;
@@ -2449,24 +2514,14 @@ class PipingNetwork {
 
     double resolveNonCollidingOffsetY(String? segmentId, double initialOffsetY) {
       double curY = initialOffsetY;
-      bool collision;
-      int iterations = 0;
-      do {
-        collision = false;
-        for (final existing in callouts.values.toList()) {
-          final existingSegId = getTargetSegmentId(existing.targetType, existing.targetId);
-          final sameContext = segmentId != null && existingSegId == segmentId;
-          if (sameContext || (existingSegId == null && segmentId == null)) {
-            if ((existing.screenOffsetX - offsetX).abs() < 40.0 &&
-                (existing.screenOffsetY - curY).abs() < step) {
-              curY += step;
-              collision = true;
-              break;
-            }
-          }
+      while (callouts.values.any((c) {
+        if (segmentId != null && getTargetSegmentId(c.targetType, c.targetId) != segmentId) {
+          return false;
         }
-        iterations++;
-      } while (collision && iterations < 50);
+        return (c.screenOffsetY - curY).abs() < step;
+      })) {
+        curY += step;
+      }
       return curY;
     }
 
@@ -2565,6 +2620,27 @@ class PipingNetwork {
       }
     }
 
+    if (targetTypes == null || targetTypes.contains(CalloutTargetType.nozzle)) {
+      for (final eq in equipments.values) {
+        for (final noz in eq.nozzles) {
+          if (!existingTargetIds.contains(noz.id)) {
+            final id = 'callout_${_uuid.v4()}';
+            final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
+            callouts[id] = Callout(
+              id: id,
+              targetId: noz.id,
+              targetType: CalloutTargetType.nozzle,
+              screenOffsetX: offsetX,
+              screenOffsetY: resolvedY,
+              textHeight: textHeight,
+            );
+            existingTargetIds.add(noz.id);
+            addedCount++;
+          }
+        }
+      }
+    }
+
     if (targetTypes == null || targetTypes.contains(CalloutTargetType.support)) {
       for (final sup in supports.values) {
         if (!existingTargetIds.contains(sup.id)) {
@@ -2619,6 +2695,9 @@ class PipingNetwork {
           break;
         case CalloutTargetType.equipment:
           exists = equipments.containsKey(c.targetId);
+          break;
+        case CalloutTargetType.nozzle:
+          exists = equipments.values.any((eq) => eq.nozzles.any((n) => n.id == c.targetId));
           break;
         case CalloutTargetType.support:
           exists = supports.containsKey(c.targetId);

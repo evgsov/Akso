@@ -1455,7 +1455,47 @@
     - Все 413 тестов пройдены успешно (`flutter test`).
     - `dart analyze lib test` — 0 ошибок и предупреждений.
 
-
-
-
-
+- **Человекочитаемые выноски, шаблоны на все элементы, дата сварки и штуцеры оборудования (Phase 41):**
+  - **Постановка задачи:**
+    1. **Шаблоны выносок для всех типов элементов:** двухполочные выноски по ГОСТ для труб/сегментов, сварных стыков, оборудования, штуцеров, опор, узлов, арматуры и фитингов с информативным заполнением обеих полок по умолчанию.
+    2. **Человекочитаемые обозначения вместо сырых UUID:** устранить отображение технических идентификаторов (`seg_178...`, `spool_seg_...`, `eq_...`, `node_...`) в выносках. Плейсхолдеры `{ID}`, `{NUM}`, `{SPOOL}`, `{TAG}` должны выводить чистые монтажные марки: марку катушки из ведомости («К-1», «К-2»), марку оборудования («Е-1», «Н-1»), номер стыка («1», «2»), номер узла («1», «2»). Для системных UUID предусмотрен плейсхолдер `{TECH_ID}`.
+    3. **Дата сварки стыков:** добавить плейсхолдер `{DATE}` в шаблоны выносок сварных швов (`{TYPE} {STAMP} {DATE}`).
+    4. **Выноски для штуцеров технологического оборудования (`CalloutTargetType.nozzle`):** отдельный тип выноски с привязкой к 3D-точке штуцера на аппарате с шаблоном по умолчанию `'Шт. {NAME} Ду{DN}'` / `'{EQUIPMENT}'`.
+    5. **Возможность редактирования марок:** поддержка изменения обозначений как через инспекторы свойств элементов (маркировка катушки, имя оборудования, номер стыка), так и непосредственно в выноске через режим ручного переопределения (`customText` / `customBottomText`).
+  - **Реализация:**
+    - `lib/domain/models/callout.dart`:
+      - В `CalloutTargetType` добавлен тип `nozzle` (`'Штуцер'`).
+      - В `CalloutTargetTypeExt.defaultTemplate` для `nozzle` задан шаблон `'Шт. {NAME} Ду{DN}'`, для `equipment` — `'{NAME}'`.
+      - В `CalloutTargetTypeExt.defaultBottomTemplate` добавлены нижние полки по умолчанию для всех 8 типов:
+        - `weld`: `'{TYPE} {STAMP} {DATE}'`
+        - `equipment`: `'{TYPE}'`
+        - `nozzle`: `'{EQUIPMENT}'`
+        - `support`: `'{TYPE}'`
+        - `node`: `'Отм. {Z}'`
+        - `segment`: `'{SYSTEM}'`
+        - `valve`: `'{SYSTEM} {MATERIAL}'`
+        - `fitting`: `'{STANDARD} {MATERIAL}'`
+      - В `defaultCalloutTemplates` зарегистрированы пары верхних и нижних шаблонов для всех типов.
+    - `lib/domain/models/piping_network.dart`:
+      - В `formatCalloutTemplate`:
+        - `CalloutTargetType.segment`: `{SPOOL}`, `{NUM}`, `{ID}` подставляют марку катушки из ведомости катушек (`spool.name ?? spool.number ?? seg.name ?? 'К-1'`). `{NAME}` выводит пользовательское имя или пустую строку, `{TAG}` — марку, `{CUT_LENGTH}` / `{L_CUT}` — длину реза заготовки, `{TECH_ID}` — системный UUID.
+        - `CalloutTargetType.equipment`: `{TAG}`, `{ID}` извлекают короткую марку (например, `Е-1` из `Емкость Е-1`), `{DIMENSIONS}` выводит габариты $W \times L \times H$ (`1200x3000x1500`), `{TECH_ID}` — системный ID.
+        - `CalloutTargetType.weld`: добавлен плейсхолдер `{DATE}` (`w.date`), `{NUM}` и `{ID}` возвращают номер шва `w.number`.
+        - `CalloutTargetType.nozzle`: подстановка `{NAME}` (`Ш-1`), `{DN}` (`80`), `{EQUIPMENT}` (`Емкость Е-1`), `{EQUIPMENT_TAG}` (`Е-1`), `{FACE}`, `{ID}`.
+        - `CalloutTargetType.support`: `{ID}` и `{NAME}` возвращают пользовательскую марку (`ОП-1`) или код типа (`ОП`).
+        - `CalloutTargetType.node`: `{NUM}` и `{ID}` очищают префиксы `node_` / `n_`.
+      - В `generateMissingCallouts`: поддержана автогенерация выносок штуцеров (`CalloutTargetType.nozzle`) и скорректирован шаг смещения полок `curY += step`.
+      - В `cleanOrphanedCallouts`: очистка осиротевших выносок штуцеров при удалении аппарата или штуцера.
+      - В `getTargetSegmentId`: для `nozzle` возвращается `null`.
+    - `lib/ui/canvas/painters/callout_painter.dart`:
+      - В `getTarget3DPoint` добавлена обработка `CalloutTargetType.nozzle`: возвращает координаты узла штуцера `network.nodes[noz.id]` либо рассчитывает мировые координаты с учетом центра и угла поворота аппарата `eq.rotationAngleDeg`.
+    - `lib/ui/features/editor/widgets/callout_manager_panel.dart`:
+      - В `_getPlaceholdersForType` добавлены чипы-подсказки для сварки (`{DATE}`), труб (`{SPOOL}`, `{CUT_LENGTH}`, `{NUM}`), оборудования (`{TAG}`, `{DIMENSIONS}`) и штуцеров (`{NAME}`, `{DN}`, `{EQUIPMENT}`, `{EQUIPMENT_TAG}`, `{FACE}`, `{ID}`).
+      - В `_formatPreviewText` добавлены реалистичные превью для всех новых плейсхолдеров.
+      - В `_getTargetDescription` и `_getTypeColor` поддержан тип `CalloutTargetType.nozzle`.
+    - `test/callout_templates_and_human_ids_test.dart`:
+      - Создан комплексный тест (9 тестовых кейсов): проверка шаблонов по умолчанию для всех 8 типов, человекочитаемых ID катушек, оборудования, стыков, узлов, плейсхолдера `{DATE}`, выносок штуцеров и вычисления их 3D-точки.
+  - **Верификация:**
+    - Все 422 теста пройдены успешно (`flutter test`).
+    - Статический анализ `dart analyze lib test` чист: 0 замечаний.
+    - База знаний графа актуализирована: `graphify update .`.
