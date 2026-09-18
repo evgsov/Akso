@@ -3935,6 +3935,7 @@ class PipingInputController extends ChangeNotifier {
     double offsetY = -50.0,
     ElevationMarkStyle? style,
     ShelfDirection? direction,
+    bool? arrowOnNode,
   }) {
     if (!network.nodes.containsKey(nodeId)) return false;
     final existingCallout = network.callouts.values
@@ -3947,6 +3948,7 @@ class PipingInputController extends ChangeNotifier {
       return false;
     } else {
       final id = 'callout_elev_${DateTime.now().millisecondsSinceEpoch}_$nodeId';
+      final defaultArrowOnNode = currentProject.calloutTemplates['elevation_arrow_on_node'] != 'false';
       network.callouts[id] = Callout(
         id: id,
         targetId: nodeId,
@@ -3955,6 +3957,7 @@ class PipingInputController extends ChangeNotifier {
         screenOffsetY: offsetY,
         elevationStyle: style,
         shelfDirection: direction ?? ShelfDirection.auto,
+        arrowOnNode: arrowOnNode ?? defaultArrowOnNode,
       );
       history.recordState(network);
       notifyListeners();
@@ -3974,17 +3977,19 @@ class PipingInputController extends ChangeNotifier {
         .firstOrNull;
   }
 
-  /// Обновление стиля или стороны полки высотной отметки узла
+  /// Обновление стиля, стороны полки или положения стрелки высотной отметки узла
   void updateNodeElevationCallout(
     String nodeId, {
     ElevationMarkStyle? style,
     ShelfDirection? direction,
+    bool? arrowOnNode,
   }) {
     final existing = getNodeElevationCallout(nodeId);
     if (existing == null) return;
     network.callouts[existing.id] = existing.copyWith(
       elevationStyle: style,
       shelfDirection: direction ?? existing.shelfDirection,
+      arrowOnNode: arrowOnNode ?? existing.arrowOnNode,
     );
     history.recordState(network);
     notifyListeners();

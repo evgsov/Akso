@@ -169,6 +169,7 @@ const Map<String, String> defaultCalloutTemplates = {
   'node_bottom': 'Ур.ч.п.',
   'elevation_style': 'gostOutline',
   'elevation_shelf_direction': 'auto',
+  'elevation_arrow_on_node': 'true',
 };
 
 /// Умная выноска (Screen-Aligned Billboard Annotation),
@@ -185,6 +186,7 @@ class Callout {
   final int textColor;
   final ElevationMarkStyle? elevationStyle;
   final ShelfDirection shelfDirection;
+  final bool arrowOnNode;
 
   const Callout({
     required this.id,
@@ -198,6 +200,7 @@ class Callout {
     this.textColor = 0xFF1E293B,
     this.elevationStyle,
     this.shelfDirection = ShelfDirection.auto,
+    this.arrowOnNode = true,
   });
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
@@ -220,6 +223,7 @@ class Callout {
     ElevationMarkStyle? elevationStyle,
     bool clearElevationStyle = false,
     ShelfDirection? shelfDirection,
+    bool? arrowOnNode,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -233,6 +237,7 @@ class Callout {
       textColor: textColor ?? this.textColor,
       elevationStyle: clearElevationStyle ? null : (elevationStyle ?? this.elevationStyle),
       shelfDirection: shelfDirection ?? this.shelfDirection,
+      arrowOnNode: arrowOnNode ?? this.arrowOnNode,
     );
   }
 
@@ -248,6 +253,7 @@ class Callout {
         'textColor': textColor,
         if (elevationStyle != null) 'elevationStyle': elevationStyle!.name,
         'shelfDirection': shelfDirection.name,
+        'arrowOnNode': arrowOnNode,
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -279,6 +285,9 @@ class Callout {
       );
     }
 
+    final rawArrowOnNode = json['arrowOnNode'] ?? json['arrow_on_node'];
+    final parsedArrowOnNode = rawArrowOnNode is bool ? rawArrowOnNode : true;
+
     return Callout(
       id: json['id'] as String,
       targetId: json['targetId'] as String,
@@ -291,6 +300,7 @@ class Callout {
       textColor: (json['textColor'] as num?)?.toInt() ?? 0xFF1E293B,
       elevationStyle: parsedElevStyle,
       shelfDirection: parsedShelfDir,
+      arrowOnNode: parsedArrowOnNode,
     );
   }
 
@@ -309,7 +319,8 @@ class Callout {
           textHeight == other.textHeight &&
           textColor == other.textColor &&
           elevationStyle == other.elevationStyle &&
-          shelfDirection == other.shelfDirection;
+          shelfDirection == other.shelfDirection &&
+          arrowOnNode == other.arrowOnNode;
 
   @override
   int get hashCode => Object.hash(
@@ -324,9 +335,10 @@ class Callout {
         textColor,
         elevationStyle,
         shelfDirection,
+        arrowOnNode,
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name})';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode)';
 }

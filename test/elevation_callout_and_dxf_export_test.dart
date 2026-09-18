@@ -385,7 +385,7 @@ void main() {
       expect(dxf3d.contains('CIRCLE'), isTrue);
     });
 
-    test('updateNodeElevationCallout updates style and shelf direction in controller', () {
+    test('updateNodeElevationCallout updates style, shelf direction, and arrowOnNode in controller', () {
       final network = PipingNetwork();
       final node = Node3D(id: 'n_test', x: 0, y: 0, z: 1000);
       network.nodes[node.id] = node;
@@ -396,19 +396,83 @@ void main() {
       var callout = controller.getNodeElevationCallout('n_test');
       expect(callout, isNotNull);
       expect(callout!.shelfDirection, ShelfDirection.auto);
+      expect(callout.arrowOnNode, isTrue);
 
       controller.updateNodeElevationCallout(
         'n_test',
         style: ElevationMarkStyle.compactFlag,
         direction: ShelfDirection.left,
+        arrowOnNode: false,
       );
 
       callout = controller.getNodeElevationCallout('n_test');
       expect(callout!.elevationStyle, ElevationMarkStyle.compactFlag);
       expect(callout.shelfDirection, ShelfDirection.left);
+      expect(callout.arrowOnNode, isFalse);
     });
 
-    testWidgets('CalloutManagerPanel shows elevation style and shelf dropdowns when node category is selected', (tester) async {
+    test('Callout serialization preserves arrowOnNode', () {
+      final c1 = Callout(
+        id: 'c1',
+        targetType: CalloutTargetType.node,
+        targetId: 'n1',
+        arrowOnNode: true,
+      );
+      final json1 = c1.toJson();
+      expect(json1['arrowOnNode'], isTrue);
+      final from1 = Callout.fromJson(json1);
+      expect(from1.arrowOnNode, isTrue);
+
+      final c2 = c1.copyWith(arrowOnNode: false);
+      expect(c2.arrowOnNode, isFalse);
+      final json2 = c2.toJson();
+      expect(json2['arrowOnNode'], isFalse);
+      final from2 = Callout.fromJson(json2);
+      expect(from2.arrowOnNode, isFalse);
+
+      // Backwards compatibility with snake_case
+      final fromSnake = Callout.fromJson({'id': 'c3', 'targetType': 'node', 'targetId': 'n3', 'arrow_on_node': false});
+      expect(fromSnake.arrowOnNode, isFalse);
+    });
+
+    test('DXF export handles arrowOnNode true and false appropriately', () {
+      final network = PipingNetwork();
+      final node = Node3D(id: 'n1', x: 1000, y: 1000, z: 2000);
+      network.nodes[node.id] = node;
+
+      // Node callout with arrow on node
+      final cOnNode = Callout(
+        id: 'c_on_node',
+        targetType: CalloutTargetType.node,
+        targetId: 'n1',
+        arrowOnNode: true,
+        screenOffsetX: 50.0,
+        screenOffsetY: -50.0,
+      );
+      network.callouts[cOnNode.id] = cOnNode;
+
+      final proj = AxonometryProjector(projectionType: ProjectionType.gostFrontal45, scale: 1.0);
+      final dxf2dOnNode = DxfWriter.generate2dGostAxonometryDxf(network, activeProjector: proj);
+      final dxf3dOnNode = DxfWriter.generate3dDxf(network);
+
+      final elevLayer = DxfWriter.toAutoCadString('АКСО_ОТМЕТКИ');
+      expect(dxf2dOnNode.contains(elevLayer), isTrue);
+      expect(dxf3dOnNode.contains(elevLayer), isTrue);
+      expect(dxf2dOnNode.contains('CALLOUT_2D_1'), isTrue);
+      expect(dxf3dOnNode.contains('CALLOUT_SHELF_1'), isTrue);
+
+      // Now set arrowOnNode: false
+      network.callouts[cOnNode.id] = cOnNode.copyWith(arrowOnNode: false);
+      final dxf2dOffNode = DxfWriter.generate2dGostAxonometryDxf(network, activeProjector: proj);
+      final dxf3dOffNode = DxfWriter.generate3dDxf(network);
+
+      expect(dxf2dOffNode.contains(elevLayer), isTrue);
+      expect(dxf3dOffNode.contains(elevLayer), isTrue);
+      expect(dxf2dOffNode.contains('CALLOUT_2D_1'), isTrue);
+      expect(dxf3dOffNode.contains('CALLOUT_SHELF_1'), isTrue);
+    });
+
+    testWidgets('CalloutManagerPanel shows elevation style, shelf and arrowOnNode dropdowns when node category is selected', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -446,16 +510,24 @@ void main() {
       await tester.tap(nodeItem);
       await tester.pumpAndSettle();
 
-      // Now "Знак отметки:" and "Полочка:" dropdowns should be visible
+      // Now "Знак отметки:", "Полочка:" and "Стрелка:" dropdowns should be visible
       expect(find.text('Знак отметки:'), findsOneWidget);
       expect(find.text('Полочка:'), findsOneWidget);
+      expect(find.text('Стрелка:'), findsOneWidget);
       expect(find.byType(DropdownButton<ElevationMarkStyle>), findsOneWidget);
       expect(find.byType(DropdownButton<ShelfDirection>), findsOneWidget);
+      expect(find.byType(DropdownButton<bool>), findsOneWidget);
 
       // Select "ГОСТ залитый ▼"
       await tester.tap(find.byType(DropdownButton<ElevationMarkStyle>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('ГОСТ залитый ▼').last);
+      await tester.pumpAndSettle();
+
+      // Select "На выноске"
+      await tester.tap(find.byType(DropdownButton<bool>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('На выноске').last);
       await tester.pumpAndSettle();
 
       // Save template
@@ -465,6 +537,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.currentProject.calloutTemplates['elevation_style'], 'gostFilled');
+      expect(controller.currentProject.calloutTemplates['elevation_arrow_on_node'], 'false');
 
       controller.dispose();
     });

@@ -398,6 +398,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   String _selectedDateFormat = 'DD.MM.YYYY';
   ElevationMarkStyle _selectedElevationStyle = ElevationMarkStyle.gostOutline;
   ShelfDirection _selectedShelfDirection = ShelfDirection.auto;
+  bool _selectedArrowOnNode = true;
 
   @override
   void initState() {
@@ -440,6 +441,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       templates['elevation_shelf_direction'],
       fallback: ShelfDirection.auto,
     );
+    _selectedArrowOnNode = templates['elevation_arrow_on_node'] != 'false';
   }
 
   void _saveCurrentTemplate() {
@@ -449,6 +451,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     if (_templateType == CalloutTargetType.node) {
       widget.controller.updateCalloutTemplate('elevation_style', _selectedElevationStyle.name);
       widget.controller.updateCalloutTemplate('elevation_shelf_direction', _selectedShelfDirection.name);
+      widget.controller.updateCalloutTemplate('elevation_arrow_on_node', _selectedArrowOnNode ? 'true' : 'false');
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -464,6 +467,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     if (_templateType == CalloutTargetType.node) {
       _selectedElevationStyle = ElevationMarkStyle.gostOutline;
       _selectedShelfDirection = ShelfDirection.auto;
+      _selectedArrowOnNode = true;
     }
     _saveCurrentTemplate();
   }
@@ -1133,6 +1137,33 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                     ),
                   ],
                 ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Стрелка:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    DropdownButton<bool>(
+                      value: _selectedArrowOnNode,
+                      items: const [
+                        DropdownMenuItem(
+                          value: true,
+                          child: Text('На узле'),
+                        ),
+                        DropdownMenuItem(
+                          value: false,
+                          child: Text('На выноске'),
+                        ),
+                      ],
+                      onChanged: (newArrow) {
+                        if (newArrow != null) {
+                          setState(() {
+                            _selectedArrowOnNode = newArrow;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ] else ...[
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1593,6 +1624,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       return _ElevationCalloutPreview(
         style: _selectedElevationStyle,
         direction: _selectedShelfDirection,
+        arrowOnNode: _selectedArrowOnNode,
         topText: previewTop.isNotEmpty ? previewTop : '+2.400',
         bottomText: previewBottom,
       );
@@ -1806,12 +1838,14 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 class _ElevationCalloutPreview extends StatelessWidget {
   final ElevationMarkStyle style;
   final ShelfDirection direction;
+  final bool arrowOnNode;
   final String topText;
   final String bottomText;
 
   const _ElevationCalloutPreview({
     required this.style,
     required this.direction,
+    this.arrowOnNode = true,
     required this.topText,
     required this.bottomText,
   });
@@ -1825,7 +1859,9 @@ class _ElevationCalloutPreview extends StatelessWidget {
       size: const Size(280, 130),
       painter: _ElevationPreviewPainter(
         style: style,
+        direction: direction,
         isRight: isRight,
+        arrowOnNode: arrowOnNode,
         topText: topText,
         bottomText: bottomText,
         primaryColor: primaryColor,
@@ -1836,14 +1872,18 @@ class _ElevationCalloutPreview extends StatelessWidget {
 
 class _ElevationPreviewPainter extends CustomPainter {
   final ElevationMarkStyle style;
+  final ShelfDirection direction;
   final bool isRight;
+  final bool arrowOnNode;
   final String topText;
   final String bottomText;
   final Color primaryColor;
 
   const _ElevationPreviewPainter({
     required this.style,
+    required this.direction,
     required this.isRight,
+    required this.arrowOnNode,
     required this.topText,
     required this.bottomText,
     required this.primaryColor,
@@ -1855,6 +1895,9 @@ class _ElevationPreviewPainter extends CustomPainter {
     final anchorY = size.height / 2 + 25.0;
     final elbowX = isRight ? 80.0 : size.width - 80.0;
     final elbowY = size.height / 2 + 5.0;
+
+    final baseX = arrowOnNode ? anchorX : elbowX;
+    final baseY = arrowOnNode ? anchorY : elbowY;
 
     final topTp = TextPainter(
       text: TextSpan(
@@ -1886,11 +1929,11 @@ class _ElevationPreviewPainter extends CustomPainter {
 
     final maxW = math.max(topTp.width, bottomTp?.width ?? 0.0);
     final shelfLen = math.max(120.0, maxW + 16.0);
-    final shelfEndX = isRight ? elbowX + shelfLen : elbowX - shelfLen;
+    final shelfEndX = isRight ? baseX + shelfLen : baseX - shelfLen;
 
     const flagH = 14.0;
     const flagW = 9.0;
-    final shelfY = style == ElevationMarkStyle.compactFlag ? elbowY - 14.0 : elbowY - flagH - 5.0;
+    final shelfY = style == ElevationMarkStyle.compactFlag ? baseY - 14.0 : baseY - flagH - 5.0;
 
     final linePaint = Paint()
       ..color = primaryColor
@@ -1906,55 +1949,57 @@ class _ElevationPreviewPainter extends CustomPainter {
     // 1. Точка привязки
     canvas.drawCircle(Offset(anchorX, anchorY), 3.5, fillPaint);
 
-    // 2. Ножка к отметке
-    canvas.drawLine(Offset(anchorX, anchorY), Offset(elbowX, elbowY), linePaint);
+    // 2. Ножка к отметке (только если стрелка на выноске)
+    if (!arrowOnNode) {
+      canvas.drawLine(Offset(anchorX, anchorY), Offset(elbowX, elbowY), linePaint);
+    }
 
     // 3. Знак отметки
     switch (style) {
       case ElevationMarkStyle.gostOutline:
         final path = Path()
-          ..moveTo(elbowX, elbowY)
-          ..lineTo(elbowX - flagW, elbowY - flagH)
-          ..lineTo(elbowX + flagW, elbowY - flagH)
+          ..moveTo(baseX, baseY)
+          ..lineTo(baseX - flagW, baseY - flagH)
+          ..lineTo(baseX + flagW, baseY - flagH)
           ..close();
         canvas.drawPath(path, linePaint);
-        canvas.drawLine(Offset(elbowX, elbowY - flagH), Offset(elbowX, shelfY), linePaint);
+        canvas.drawLine(Offset(baseX, baseY - flagH), Offset(baseX, shelfY), linePaint);
         break;
 
       case ElevationMarkStyle.gostFilled:
         final path = Path()
-          ..moveTo(elbowX, elbowY)
-          ..lineTo(elbowX - flagW, elbowY - flagH)
-          ..lineTo(elbowX + flagW, elbowY - flagH)
+          ..moveTo(baseX, baseY)
+          ..lineTo(baseX - flagW, baseY - flagH)
+          ..lineTo(baseX + flagW, baseY - flagH)
           ..close();
         canvas.drawPath(path, fillPaint);
         canvas.drawPath(path, linePaint);
-        canvas.drawLine(Offset(elbowX, elbowY - flagH), Offset(elbowX, shelfY), linePaint);
+        canvas.drawLine(Offset(baseX, baseY - flagH), Offset(baseX, shelfY), linePaint);
         break;
 
       case ElevationMarkStyle.compactFlag:
-        canvas.drawLine(Offset(elbowX, elbowY), Offset(elbowX, shelfY), linePaint);
+        canvas.drawLine(Offset(baseX, baseY), Offset(baseX, shelfY), linePaint);
         canvas.drawLine(
-          Offset(elbowX - 5.0, elbowY + 5.0),
-          Offset(elbowX + 5.0, elbowY - 5.0),
+          Offset(baseX - 5.0, baseY + 5.0),
+          Offset(baseX + 5.0, baseY - 5.0),
           linePaint,
         );
         break;
 
       case ElevationMarkStyle.isoCircle:
         const r = 6.5;
-        canvas.drawCircle(Offset(elbowX, elbowY - r), r, linePaint);
-        canvas.drawLine(Offset(elbowX - r, elbowY - r), Offset(elbowX + r, elbowY - r), linePaint);
-        canvas.drawLine(Offset(elbowX, elbowY - 2 * r), Offset(elbowX, elbowY), linePaint);
-        canvas.drawLine(Offset(elbowX, elbowY - 2 * r), Offset(elbowX, shelfY), linePaint);
+        canvas.drawCircle(Offset(baseX, baseY - r), r, linePaint);
+        canvas.drawLine(Offset(baseX - r, baseY - r), Offset(baseX + r, baseY - r), linePaint);
+        canvas.drawLine(Offset(baseX, baseY - 2 * r), Offset(baseX, baseY), linePaint);
+        canvas.drawLine(Offset(baseX, baseY - 2 * r), Offset(baseX, shelfY), linePaint);
         break;
     }
 
     // 4. Горизонтальная полочка
-    canvas.drawLine(Offset(elbowX, shelfY), Offset(shelfEndX, shelfY), linePaint);
+    canvas.drawLine(Offset(baseX, shelfY), Offset(shelfEndX, shelfY), linePaint);
 
     // 5. Текст над полочкой
-    final textX = isRight ? elbowX + 8.0 : elbowX - shelfLen + 8.0;
+    final textX = isRight ? baseX + 8.0 : baseX - shelfLen + 8.0;
     topTp.paint(canvas, Offset(textX, shelfY - topTp.height - 2.0));
 
     // 6. Текст под полочкой
@@ -1964,7 +2009,9 @@ class _ElevationPreviewPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ElevationPreviewPainter oldDelegate) {
     return oldDelegate.style != style ||
+        oldDelegate.direction != direction ||
         oldDelegate.isRight != isRight ||
+        oldDelegate.arrowOnNode != arrowOnNode ||
         oldDelegate.topText != topText ||
         oldDelegate.bottomText != bottomText ||
         oldDelegate.primaryColor != primaryColor;

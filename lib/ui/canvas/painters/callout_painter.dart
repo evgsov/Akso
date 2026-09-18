@@ -258,6 +258,30 @@ class CalloutPainter {
             : callout.screenOffsetX >= 0);
 
     if (callout.targetType == CalloutTargetType.node) {
+      if (callout.arrowOnNode) {
+        final shelfY = anchorScreen.dy + callout.screenOffsetY;
+        final bgTop = shelfY - topTp.height - 4.0;
+        final totalTextH = topTp.height + 4.0 + bottomHeight;
+        final minY = math.min(bgTop, math.min(shelfY, anchorScreen.dy)) - 2.0;
+        final maxY = math.max(bgTop + totalTextH, math.max(shelfY, anchorScreen.dy)) + 2.0;
+        final shelfLength = maxTextWidth + 8.0;
+        if (isRight) {
+          return Rect.fromLTRB(
+            anchorScreen.dx - 8.0,
+            minY,
+            anchorScreen.dx + shelfLength + 4.0,
+            maxY,
+          );
+        } else {
+          return Rect.fromLTRB(
+            anchorScreen.dx - shelfLength - 4.0,
+            minY,
+            anchorScreen.dx + 8.0,
+            maxY,
+          );
+        }
+      }
+
       const flagH = 14.4;
       final shelfY = textPos.dy - flagH;
       final bgTop = shelfY - topTp.height - 4.0;
@@ -397,6 +421,114 @@ class CalloutPainter {
       const flagSize = 8.0;
       final flagH = flagSize * 1.3;
       final flagW = flagSize * 0.75;
+
+      if (callout.arrowOnNode) {
+        // --- РЕЖИМ 1: Стрелка знака отметки установлена строго на узле (по ГОСТ 21.101) ---
+        final shelfY = anchorScreen.dy + callout.screenOffsetY;
+        final isAbove = shelfY <= anchorScreen.dy;
+        final flagBaseY = isAbove ? anchorScreen.dy - flagH : anchorScreen.dy + flagH;
+
+        switch (effectiveStyle) {
+          case ElevationMarkStyle.gostOutline:
+            final flagPath = Path()
+              ..moveTo(anchorScreen.dx, anchorScreen.dy)
+              ..lineTo(anchorScreen.dx - flagW, flagBaseY)
+              ..lineTo(anchorScreen.dx + flagW, flagBaseY)
+              ..close();
+            canvas.drawPath(flagPath, linePaint);
+            canvas.drawLine(Offset(anchorScreen.dx, flagBaseY), Offset(anchorScreen.dx, shelfY), linePaint);
+            break;
+
+          case ElevationMarkStyle.gostFilled:
+            final flagPath = Path()
+              ..moveTo(anchorScreen.dx, anchorScreen.dy)
+              ..lineTo(anchorScreen.dx - flagW, flagBaseY)
+              ..lineTo(anchorScreen.dx + flagW, flagBaseY)
+              ..close();
+            final fillPaint = Paint()
+              ..color = primaryColor
+              ..style = PaintingStyle.fill;
+            canvas.drawPath(flagPath, fillPaint);
+            canvas.drawPath(flagPath, linePaint);
+            canvas.drawLine(Offset(anchorScreen.dx, flagBaseY), Offset(anchorScreen.dx, shelfY), linePaint);
+            break;
+
+          case ElevationMarkStyle.compactFlag:
+            canvas.drawLine(anchorScreen, Offset(anchorScreen.dx, shelfY), linePaint);
+            canvas.drawLine(
+              Offset(anchorScreen.dx - 3.5, anchorScreen.dy + 3.5),
+              Offset(anchorScreen.dx + 3.5, anchorScreen.dy - 3.5),
+              linePaint,
+            );
+            break;
+
+          case ElevationMarkStyle.isoCircle:
+            const circleR = 4.5;
+            final circlePaint = Paint()
+              ..color = primaryColor
+              ..strokeWidth = isSelected ? 2.0 : 1.2
+              ..style = PaintingStyle.stroke;
+            canvas.drawCircle(anchorScreen, circleR, circlePaint);
+            canvas.drawLine(Offset(anchorScreen.dx - circleR, anchorScreen.dy), Offset(anchorScreen.dx + circleR, anchorScreen.dy), linePaint);
+            canvas.drawLine(Offset(anchorScreen.dx, anchorScreen.dy - circleR), Offset(anchorScreen.dx, anchorScreen.dy + circleR), linePaint);
+            final circleEdgeY = isAbove ? anchorScreen.dy - circleR : anchorScreen.dy + circleR;
+            canvas.drawLine(Offset(anchorScreen.dx, circleEdgeY), Offset(anchorScreen.dx, shelfY), linePaint);
+            break;
+        }
+
+        final shelfStart = Offset(anchorScreen.dx, shelfY);
+        final shelfEnd = Offset(
+          isRight ? anchorScreen.dx + shelfLength : anchorScreen.dx - shelfLength,
+          shelfY,
+        );
+
+        final bgTop = shelfY - topTp.height - 4.0;
+        final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+        final bgRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            isRight ? anchorScreen.dx : anchorScreen.dx - shelfLength,
+            bgTop,
+            shelfLength,
+            totalHeight,
+          ),
+          const Radius.circular(2.0),
+        );
+
+        canvas.drawRRect(
+          bgRect,
+          Paint()
+            ..color = Colors.white.withValues(alpha: 0.92)
+            ..style = PaintingStyle.fill,
+        );
+
+        canvas.drawLine(shelfStart, shelfEnd, linePaint);
+
+        final textLeft = isRight ? anchorScreen.dx + 4.0 : anchorScreen.dx - shelfLength + 4.0;
+        topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - 2.0));
+
+        if (bottomTp != null) {
+          bottomTp.paint(canvas, Offset(textLeft, shelfY + 2.0));
+        }
+
+        if (isSelected) {
+          final borderPaint = Paint()
+            ..color = const Color(0xFF2563EB).withValues(alpha: 0.75)
+            ..strokeWidth = 1.2
+            ..style = PaintingStyle.stroke;
+          canvas.drawRRect(bgRect, borderPaint);
+
+          final gripPaint = Paint()
+            ..color = const Color(0xFF2563EB)
+            ..style = PaintingStyle.fill;
+          canvas.drawRect(
+            Rect.fromCenter(center: shelfStart, width: 6.0, height: 6.0),
+            gripPaint,
+          );
+        }
+        return;
+      }
+
+      // --- РЕЖИМ 2: Стрелка на выносной ножке (со смещением от узла) ---
       final flagTopY = textPos.dy - flagH;
       final shelfY = effectiveStyle == ElevationMarkStyle.compactFlag
           ? textPos.dy - 12.0

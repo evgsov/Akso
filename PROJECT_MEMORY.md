@@ -1625,5 +1625,25 @@
     - Статический анализ `dart analyze lib test` чист: 0 замечаний.
     - Граф знаний актуализирован: `graphify update .` (2994 узла, 3977 ребер).
 
+- **Позиционирование стрелки высотной отметки на узле (`arrowOnNode`), полное удаление статических нередактируемых отметок и селекторы положения (Phase 46):**
+  - **Постановка задачи:**
+    1. «Отметки высотные на узлах стоят автоматически (нередактируемые)»: устранить автоматическую отрисовку статических нередактируемых высотных отметок на открытых концах труб и стояках (`SmartCallout.drawElevationCallout` в `AnnotationPainter`). Все высотные отметки в проекте должны быть полноправными интерактивными объектами `Callout`, доступными для выбора, перемещения, редактирования и удаления.
+    2. «Стрелка на узле при выборе/генерации высотных выносок»: добавить режим `arrowOnNode: true` (по умолчанию для отметок ГОСТ 21.101), при котором остриё стрелки $\nabla$ касается непосредственно точки узла (`anchorScreen`), стойка поднимается вертикально к полочке `shelfY`, а полочка и текст располагаются строго горизонтально без наклонной ножки-выноски.
+    3. Опция `arrowOnNode: false` («На выноске») сохранена для случаев, когда чертеж насыщен и отметку нужно отнести в сторону на наклонной выноске.
+  - **Реализация:**
+    - `lib/ui/canvas/painters/annotation_painter.dart`: полностью удален вызов `SmartCallout.drawElevationCallout`, очищены неиспользуемые импорты.
+    - `lib/domain/models/callout.dart`: добавлено поле `final bool arrowOnNode;` (default `true`), сериализация в/из JSON (с обратной совместимостью для `snake_case`), `copyWith`, `==`, `hashCode`, `toString`, настройка `'elevation_arrow_on_node': 'true'` в `defaultCalloutTemplates`.
+    - `lib/domain/models/piping_network.dart`: в `generateMissingCallouts` для `CalloutTargetType.node` передается `arrowOnNode: true`.
+    - `lib/ui/canvas/painters/callout_painter.dart`: при `arrowOnNode == true` остриё стрелки касается узла `anchorScreen`, стойка идет строго вертикально к `shelfY`, полочка горизонтально в направлении `isRight`, синий CAD-грип размещен на стыке стойки и полки; `getCalloutBounds` точно учитывает геометрию без наклонной ножки.
+    - `lib/data/dxf/dxf_writer.dart`: в `_DxfCalloutBlockDef` добавлен флаг `arrowOnNode`; при `arrowOnNode == true` остриё знака помещается в `(0, 0, 0)` (точка вставки узла), стойка поднимается вертикально, полочка отходит горизонтально, а наклонная линия выноски в секции `BLOCKS` не создается.
+    - `lib/ui/canvas/input_controller.dart`: добавлены параметры `bool? arrowOnNode` в `toggleNodeElevationCallout` и `updateNodeElevationCallout`.
+    - `lib/ui/features/editor/widgets/callout_manager_panel.dart`: в Конструкторе шаблонов при выборе категории «Узел» добавлен выпадающий список «Стрелка:» (`На узле` / `На выноске`), обновлен предпросмотр `_ElevationCalloutPreview` и `_ElevationPreviewPainter`.
+    - `lib/ui/features/editor/widgets/desktop_cad_layout.dart`: в инспекторе свойств узла добавлен компактный селектор «Стрелка:» (`На узле` / `На выноске`), вызывающий `controller.updateNodeElevationCallout(nodeId, arrowOnNode: ...)`.
+    - `test/elevation_callout_and_dxf_export_test.dart`: написаны тесты сериализации `arrowOnNode`, DXF экспорта и изменения через контроллер и UI.
+  - **Верификация:**
+    - Все 454 теста проекта пройдены успешно (`flutter test`).
+    - Статический анализ `dart analyze lib test` чист: 0 замечаний.
+    - Граф знаний актуализирован: `graphify update .` (2998 узлов, 3979 ребер).
+
 
 

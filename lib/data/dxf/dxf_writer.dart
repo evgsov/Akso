@@ -1224,7 +1224,7 @@ class DxfWriter {
           final shelfY = blk.elevationStyle == ElevationMarkStyle.compactFlag
               ? blk.localElbowY + 20.0
               : blk.localElbowY + flagH + 15.0;
-          if (blk.localElbowX.abs() > 2.0 || blk.localElbowY.abs() > 2.0) {
+          if (!blk.arrowOnNode && (blk.localElbowX.abs() > 2.0 || blk.localElbowY.abs() > 2.0)) {
             b.writeln(
               '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.localElbowX.toStringAsFixed(1)}\n 21\n${blk.localElbowY.toStringAsFixed(1)}\n 31\n0.0',
             );
@@ -1329,7 +1329,7 @@ class DxfWriter {
               ? blk.dy + 18.0
               : blk.dy + flagH + 15.0;
           final distSq = blk.dx * blk.dx + blk.dy * blk.dy;
-          if (distSq > 4.0) {
+          if (!blk.arrowOnNode && distSq > 4.0) {
             b.writeln(
               '  0\nLINE\n  8\n$calloutLayer\n 10\n0.0\n 20\n0.0\n 30\n0.0\n 11\n${blk.dx.toStringAsFixed(1)}\n 21\n${blk.dy.toStringAsFixed(1)}\n 31\n0.0',
             );
@@ -1737,16 +1737,21 @@ class DxfWriter {
       // Локальная ось X направлена горизонтально по экрану (axX, axY, 0)
       // Локальная ось Y направлена вертикально вверх по оси Z (0, 0, 1)
       final isElevation = callout.targetType == CalloutTargetType.node;
+      final arrowOnNode = callout.arrowOnNode;
       final effectiveElevStyle = callout.elevationStyle ??
           ElevationMarkStyleExt.fromString(templates['elevation_style']);
       final flagH = isElevation ? 35.0 : 0.0;
-      final localElbowX = isRight ? scale * 0.7 : -scale * 0.7;
-      final localElbowY = isElevation
-          ? math.max(120.0, callout.screenOffsetY.abs() * 3.0).clamp(120.0, 450.0)
-          : math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0);
-      final shelfY = isElevation
-          ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? localElbowY + 20.0 : localElbowY + flagH + 15.0)
-          : localElbowY;
+      final localElbowX = isElevation && arrowOnNode ? 0.0 : (isRight ? scale * 0.7 : -scale * 0.7);
+      final localElbowY = isElevation && arrowOnNode
+          ? 0.0
+          : (isElevation
+              ? math.max(120.0, callout.screenOffsetY.abs() * 3.0).clamp(120.0, 450.0)
+              : math.max(180.0, callout.screenOffsetY.abs() * 3.0).clamp(180.0, 500.0));
+      final shelfY = isElevation && arrowOnNode
+          ? math.max(100.0, callout.screenOffsetY.abs() * 3.0).clamp(100.0, 450.0)
+          : (isElevation
+              ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? localElbowY + 20.0 : localElbowY + flagH + 15.0)
+              : localElbowY);
       final localShelfEndX = isRight ? localElbowX + shelfLen : localElbowX - shelfLen;
       final localTextX = isRight ? localElbowX + 10.0 : localElbowX - shelfLen + 10.0;
       final localTextY = shelfY + 15.0;
@@ -1794,6 +1799,7 @@ class DxfWriter {
         isRight: isRight,
         isMonolithic: calloutType == DxfCalloutType.monolithicBlock,
         isElevationMark: isElevation,
+        arrowOnNode: arrowOnNode,
         elevationStyle: effectiveElevStyle,
         nx: extrusionVector.nx,
         ny: extrusionVector.ny,
@@ -1823,21 +1829,24 @@ class DxfWriter {
       final bottomText = network.generateCalloutBottomText(callout, templates);
 
       final anchorScreen = _projectTo2d(projector, anchor3D);
-      final dx = callout.screenOffsetX * px2cad;
-      final dy = -callout.screenOffsetY * px2cad; // Инвертируем Y для CAD (Y вверх)
       final maxLen = (bottomText != null && bottomText.isNotEmpty) ? math.max(text.length, bottomText.length) : text.length;
       final shelfLen = math.max(100.0, maxLen * 35.0);
       final isRight = callout.shelfDirection == ShelfDirection.right
           ? true
           : (callout.shelfDirection == ShelfDirection.left ? false : callout.screenOffsetX >= 0);
-      final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
       final isElevation = callout.targetType == CalloutTargetType.node;
+      final arrowOnNode = callout.arrowOnNode;
       final effectiveElevStyle = callout.elevationStyle ??
           ElevationMarkStyleExt.fromString(templates['elevation_style']);
       final flagH = isElevation ? 30.0 : 0.0;
-      final shelfY = isElevation
-          ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? dy + 18.0 : dy + flagH + 15.0)
-          : dy;
+      final dx = isElevation && arrowOnNode ? 0.0 : callout.screenOffsetX * px2cad;
+      final dy = isElevation && arrowOnNode ? 0.0 : -callout.screenOffsetY * px2cad;
+      final shelfY = isElevation && arrowOnNode
+          ? math.max(60.0, callout.screenOffsetY.abs() * px2cad)
+          : (isElevation
+              ? (effectiveElevStyle == ElevationMarkStyle.compactFlag ? dy + 18.0 : dy + flagH + 15.0)
+              : dy);
+      final shelfEndX = isRight ? dx + shelfLen : dx - shelfLen;
       final textX = isRight ? dx + 10.0 : dx - shelfLen + 10.0;
       final textY = shelfY + 15.0;
 
@@ -1859,6 +1868,7 @@ class DxfWriter {
         anchorY: anchorScreen.dy,
         anchorZ: 0.0,
         isElevationMark: isElevation,
+        arrowOnNode: arrowOnNode,
         elevationStyle: effectiveElevStyle,
         isRight: isRight,
         shelfLen: shelfLen,
@@ -2447,6 +2457,7 @@ class _DxfCalloutBlockDef {
   final bool isRight;
   final bool isMonolithic;
   final bool isElevationMark;
+  final bool arrowOnNode;
   final ElevationMarkStyle elevationStyle;
   final double nx;
   final double ny;
@@ -2480,6 +2491,7 @@ class _DxfCalloutBlockDef {
     this.isRight = true,
     this.isMonolithic = false,
     this.isElevationMark = false,
+    this.arrowOnNode = true,
     this.elevationStyle = ElevationMarkStyle.gostOutline,
     this.nx = 0.0,
     this.ny = 0.0,

@@ -1934,6 +1934,8 @@ class DesktopCadLayout extends StatelessWidget {
                             fallback: ElevationMarkStyle.gostOutline,
                           );
                       final effectiveDir = callout?.shelfDirection ?? ShelfDirection.auto;
+                      final effectiveArrowOnNode = callout?.arrowOnNode ??
+                          (controller.currentProject.calloutTemplates['elevation_arrow_on_node'] != 'false');
 
                       return Column(
                         mainAxisSize: MainAxisSize.min,
@@ -2025,6 +2027,38 @@ class DesktopCadLayout extends StatelessWidget {
                                           onChanged: (newDir) {
                                             if (newDir != null) {
                                               controller.updateNodeElevationCallout(nodeId, direction: newDir);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        flex: 2,
+                                        child: Text('Стрелка:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                      ),
+                                      Expanded(
+                                        flex: 3,
+                                        child: DropdownButton<bool>(
+                                          isDense: true,
+                                          isExpanded: true,
+                                          value: effectiveArrowOnNode,
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: true,
+                                              child: Text('На узле', style: TextStyle(fontSize: 11)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: false,
+                                              child: Text('На выноске', style: TextStyle(fontSize: 11)),
+                                            ),
+                                          ],
+                                          onChanged: (newArrow) {
+                                            if (newArrow != null) {
+                                              controller.updateNodeElevationCallout(nodeId, arrowOnNode: newArrow);
                                             }
                                           },
                                         ),

@@ -2781,6 +2781,7 @@ class PipingNetwork {
               screenOffsetX: offsetX,
               screenOffsetY: resolvedY,
               textHeight: textHeight,
+              arrowOnNode: true,
             );
             existingTargetIds.add(node.id);
             addedCount++;

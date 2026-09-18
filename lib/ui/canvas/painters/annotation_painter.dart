@@ -5,10 +5,8 @@ import '../../../core/math/axonometry_projector.dart';
 import '../../../core/math/vector_3d.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/weld_joint_style.dart';
-import '../../../domain/models/callout.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/services/element_3d_geometry.dart';
-import '../smart_callout.dart';
 
 class AnnotationPainter {
   static void paint(
@@ -238,28 +236,6 @@ class AnnotationPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0;
         canvas.drawCircle(screenPos, 3.5, borderPaint);
-      }
-
-      if (showCallouts) {
-        final hasCallout = network.callouts.values.any(
-          (c) => c.targetType == CalloutTargetType.node && c.targetId == node.id,
-        );
-        if (!hasCallout) {
-          final hasVertical = connected.any((s) {
-            final sNode = network.nodes[s.startNodeId];
-            final eNode = network.nodes[s.endNodeId];
-            return sNode != null && eNode != null && s.isVertical(sNode, eNode);
-          });
-
-          if (connected.length == 1 || hasVertical || node.customElevation != null) {
-            SmartCallout.drawElevationCallout(
-              canvas,
-              point: screenPos,
-              elevationText: node.elevationString,
-              color: const Color(0xFF263238),
-            );
-          }
-        }
       }
     }
   }
