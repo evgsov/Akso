@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1789649679.509065,
-    "seen": 1789649812.8361845,
-    "ast_hash": "db8b0598b5fada2c41ed7f33c8e6d828",
+    "mtime": 1789710392.2356608,
+    "seen": 1789710685.5061073,
+    "ast_hash": "416a47b168357711e22fe3c24042ee77",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789648730.6650257,
-    "seen": 1789649812.8364222,
-    "ast_hash": "46988ecf4f845d73e4e27d6d9b3fc0ef",
+    "mtime": 1789708797.2205799,
+    "seen": 1789710685.5063486,
+    "ast_hash": "6d54f2bef2c698adaee1e9a0651bcd9e",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1404,15 +1404,15 @@
     "semantic_hash": ""
   },
   "lib/domain/models/callout.dart": {
-    "mtime": 1789464488.3596845,
-    "seen": 1789469442.6827927,
-    "ast_hash": "bf39c499782fb53ed212531f97c63807",
+    "mtime": 1789708372.168985,
+    "seen": 1789708730.1294975,
+    "ast_hash": "eedb487d9e91f28acad4404bf4ba981d",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/callout_manager_panel.dart": {
-    "mtime": 1789535747.3185115,
-    "seen": 1789535899.4131942,
-    "ast_hash": "f8783208f7e01f0f56156c51455cd752",
+    "mtime": 1789710619.657465,
+    "seen": 1789710685.5061405,
+    "ast_hash": "d88e7a6cbca11b0824c2198857ff00a0",
     "semantic_hash": ""
   },
   "test/callout_test.dart": {
@@ -1422,9 +1422,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/callout_painter.dart": {
-    "mtime": 1789540821.2696278,
-    "seen": 1789541148.8100753,
-    "ast_hash": "b2eccd61cc49e7f4fdc26e709acb9214",
+    "mtime": 1789707754.6536374,
+    "seen": 1789708730.1295424,
+    "ast_hash": "7dd083bcaa7c8260d2bb04bb23902495",
     "semantic_hash": ""
   },
   "test/callout_canvas_test.dart": {
@@ -1785,6 +1785,24 @@
     "mtime": 1789645281.9064167,
     "seen": 1789647574.0386322,
     "ast_hash": "1e42d3c9e5b83c34def2bcdba1d370d3",
+    "semantic_hash": ""
+  },
+  "test/callout_templates_and_human_ids_test.dart": {
+    "mtime": 1789707778.0159788,
+    "seen": 1789708730.129618,
+    "ast_hash": "66fa17b48e8df0c9291500cd2a71ffeb",
+    "semantic_hash": ""
+  },
+  "test/callout_brick_builder_and_date_format_test.dart": {
+    "mtime": 1789710627.4917574,
+    "seen": 1789710685.5061798,
+    "ast_hash": "b305911312054b3de777649669a2e961",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-18-callout-template-builder-improvements.md": {
+    "mtime": 1789710297.9136949,
+    "seen": 1789710685.5063558,
+    "ast_hash": "683c1f448bce01010beb5f6fca1897dd",
     "semantic_hash": ""
   }
 }

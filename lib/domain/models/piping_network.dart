@@ -2162,7 +2162,13 @@ class PipingNetwork {
   }
 
   /// Подстановка плейсхолдеров шаблона для целевого объекта выноски
-  String formatCalloutTemplate(CalloutTargetType targetType, String targetId, String template) {
+  String formatCalloutTemplate(
+    CalloutTargetType targetType,
+    String targetId,
+    String template, {
+    String? dateFormat,
+    Map<String, String>? templates,
+  }) {
     var text = template;
     switch (targetType) {
       case CalloutTargetType.segment:
@@ -2320,8 +2326,21 @@ class PipingNetwork {
             .replaceAll('{NUM}', numStr)
             .replaceAll('{NUMBER}', numStr)
             .replaceAll('{STAMP}', w.stamp)
-            .replaceAll('{TYPE}', w.weldType.shortName)
-            .replaceAll('{DATE}', w.date)
+            .replaceAll('{TYPE}', w.weldType.shortName);
+
+        // Форматирование даты сварного шва с учетом настройки и инлайн-модификатора {DATE:FORMAT}
+        final effectiveFormat = dateFormat ?? templates?['date_format'] ?? 'DD.MM.YYYY';
+        final formattedDate = formatWeldDate(w.date, effectiveFormat);
+        final dateRegex = RegExp(r'\{DATE(?::([A-Za-z0-9_./-]+))?\}');
+        text = text.replaceAllMapped(dateRegex, (match) {
+          final inlineFormat = match.group(1);
+          if (inlineFormat != null && inlineFormat.isNotEmpty) {
+            return formatWeldDate(w.date, inlineFormat);
+          }
+          return formattedDate;
+        });
+
+        text = text
             .replaceAll('{STEEL}', w.steelGrade)
             .replaceAll('{MATERIAL}', w.steelGrade)
             .replaceAll('{ELECTRODE}', w.electrodeGrade)
@@ -2435,7 +2454,13 @@ class PipingNetwork {
 
     final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
     final topTemplate = template.split('\n').first;
-    return formatCalloutTemplate(callout.targetType, callout.targetId, topTemplate);
+    return formatCalloutTemplate(
+      callout.targetType,
+      callout.targetId,
+      topTemplate,
+      dateFormat: templates['date_format'],
+      templates: templates,
+    );
   }
 
   /// Генерация нижнего текста для двухполочной выноски (под полочкой)
@@ -2457,7 +2482,13 @@ class PipingNetwork {
     final bottomKey = '${callout.targetType.name}_bottom';
     final bottomTemplate = templates[bottomKey] ?? callout.targetType.defaultBottomTemplate;
     if (bottomTemplate != null && bottomTemplate.trim().isNotEmpty) {
-      final formatted = formatCalloutTemplate(callout.targetType, callout.targetId, bottomTemplate);
+      final formatted = formatCalloutTemplate(
+        callout.targetType,
+        callout.targetId,
+        bottomTemplate,
+        dateFormat: templates['date_format'],
+        templates: templates,
+      );
       if (formatted.trim().isNotEmpty) return formatted.trim();
     }
 
@@ -2465,7 +2496,13 @@ class PipingNetwork {
     if (template != null && template.contains('\n')) {
       final lines = template.split('\n');
       if (lines.length > 1 && lines[1].trim().isNotEmpty) {
-        return formatCalloutTemplate(callout.targetType, callout.targetId, lines.sublist(1).join('\n'));
+        return formatCalloutTemplate(
+          callout.targetType,
+          callout.targetId,
+          lines.sublist(1).join('\n'),
+          dateFormat: templates['date_format'],
+          templates: templates,
+        );
       }
     }
 
@@ -2714,5 +2751,58 @@ class PipingNetwork {
       callouts.remove(id);
     }
     return toRemove.length;
+  }
+}
+
+/// Форматирование даты выполнения сварного шва в заданный формат
+/// Поддерживаемые форматы: 'DD.MM.YYYY', 'DD.MM.YY', 'YYYY-MM-DD', 'DD/MM/YYYY'
+String formatWeldDate(String rawDate, [String format = 'DD.MM.YYYY']) {
+  final trimmed = rawDate.trim();
+  if (trimmed.isEmpty) return '';
+
+  int year = 0;
+  int month = 0;
+  int day = 0;
+
+  // 1. Попытка разобрать ISO (YYYY-MM-DD или YYYY.MM.DD или YYYY/MM/DD)
+  final isoMatch = RegExp(r'^(\d{4})[-./](\d{1,2})[-./](\d{1,2})').firstMatch(trimmed);
+  if (isoMatch != null) {
+    year = int.tryParse(isoMatch.group(1)!) ?? 0;
+    month = int.tryParse(isoMatch.group(2)!) ?? 0;
+    day = int.tryParse(isoMatch.group(3)!) ?? 0;
+  } else {
+    // 2. Попытка разобрать ДД.ММ.ГГГГ или ДД/ММ/ГГГГ или ДД-ММ-ГГГГ
+    final dmyMatch = RegExp(r'^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})').firstMatch(trimmed);
+    if (dmyMatch != null) {
+      day = int.tryParse(dmyMatch.group(1)!) ?? 0;
+      month = int.tryParse(dmyMatch.group(2)!) ?? 0;
+      var y = int.tryParse(dmyMatch.group(3)!) ?? 0;
+      if (y < 100) {
+        y += 2000;
+      }
+      year = y;
+    } else {
+      // Не удалось распарсить структуру даты — возвращаем как есть
+      return trimmed;
+    }
+  }
+
+  if (year == 0 || month == 0 || day == 0) return trimmed;
+
+  final dd = day.toString().padLeft(2, '0');
+  final mm = month.toString().padLeft(2, '0');
+  final yyyy = year.toString().padLeft(4, '0');
+  final yy = (year % 100).toString().padLeft(2, '0');
+
+  switch (format.toUpperCase()) {
+    case 'DD.MM.YY':
+      return '$dd.$mm.$yy';
+    case 'YYYY-MM-DD':
+      return '$yyyy-$mm-$dd';
+    case 'DD/MM/YYYY':
+      return '$dd/$mm/$yyyy';
+    case 'DD.MM.YYYY':
+    default:
+      return '$dd.$mm.$yyyy';
   }
 }

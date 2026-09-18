@@ -2,7 +2,81 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/models/callout.dart';
+import '../../../../domain/models/piping_network.dart';
 import '../../../canvas/input_controller.dart';
+
+/// Полка выноски в конструкторе шаблонов
+enum CalloutShelf { top, bottom }
+
+/// Блок (кирпичик) шаблона выноски — статический текст или интерактивный плейсхолдер
+class TemplateBrick {
+  final String id;
+  final String text;
+  final bool isPlaceholder;
+
+  const TemplateBrick({
+    required this.id,
+    required this.text,
+    required this.isPlaceholder,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TemplateBrick &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          text == other.text &&
+          isPlaceholder == other.isPlaceholder;
+
+  @override
+  int get hashCode => Object.hash(id, text, isPlaceholder);
+
+  @override
+  String toString() => 'TemplateBrick(id: $id, text: $text, isPlaceholder: $isPlaceholder)';
+}
+
+/// Разбиение строки шаблона на список блоков-кирпичиков (токены)
+List<TemplateBrick> parseTemplateToBricks(String template) {
+  if (template.isEmpty) return [];
+
+  final bricks = <TemplateBrick>[];
+  final regex = RegExp(r'\{[A-Za-z0-9_./:-]+\}');
+  int lastEnd = 0;
+  int idCounter = 0;
+
+  for (final match in regex.allMatches(template)) {
+    if (match.start > lastEnd) {
+      final staticText = template.substring(lastEnd, match.start);
+      bricks.add(TemplateBrick(
+        id: 'txt_${idCounter++}',
+        text: staticText,
+        isPlaceholder: false,
+      ));
+    }
+    bricks.add(TemplateBrick(
+      id: 'ph_${idCounter++}',
+      text: match.group(0)!,
+      isPlaceholder: true,
+    ));
+    lastEnd = match.end;
+  }
+
+  if (lastEnd < template.length) {
+    bricks.add(TemplateBrick(
+      id: 'txt_${idCounter++}',
+      text: template.substring(lastEnd),
+      isPlaceholder: false,
+    ));
+  }
+
+  return bricks;
+}
+
+/// Сборка списка кирпичиков обратно в единую строку шаблона
+String bricksToTemplate(List<TemplateBrick> bricks) {
+  return bricks.map((b) => b.text).join('');
+}
 
 /// Модальная панель управления умными выносками (Smart Callouts Manager)
 /// с поддержкой адаптивного размера, двухполочных выносок по ГОСТ и конструктора шаблонов
@@ -33,33 +107,52 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
   // Состояние конструктора шаблонов
   CalloutTargetType _templateType = CalloutTargetType.segment;
+  CalloutShelf _activeShelf = CalloutShelf.top;
   final TextEditingController _topTemplateController = TextEditingController();
   final TextEditingController _bottomTemplateController = TextEditingController();
+  final FocusNode _topFocusNode = FocusNode();
+  final FocusNode _bottomFocusNode = FocusNode();
+  String _selectedDateFormat = 'DD.MM.YYYY';
 
   @override
   void initState() {
     super.initState();
+    _selectedDateFormat = widget.controller.currentProject.calloutTemplates['date_format'] ?? 'DD.MM.YYYY';
     _loadTemplateForType(_templateType);
+    _topFocusNode.addListener(() {
+      if (_topFocusNode.hasFocus && _activeShelf != CalloutShelf.top) {
+        setState(() => _activeShelf = CalloutShelf.top);
+      }
+    });
+    _bottomFocusNode.addListener(() {
+      if (_bottomFocusNode.hasFocus && _activeShelf != CalloutShelf.bottom) {
+        setState(() => _activeShelf = CalloutShelf.bottom);
+      }
+    });
   }
 
   @override
   void dispose() {
     _topTemplateController.dispose();
     _bottomTemplateController.dispose();
+    _topFocusNode.dispose();
+    _bottomFocusNode.dispose();
     super.dispose();
   }
 
   void _loadTemplateForType(CalloutTargetType type) {
     final templates = widget.controller.currentProject.calloutTemplates;
     final top = templates[type.name] ?? type.defaultTemplate;
-    final bottom = templates['${type.name}_bottom'] ?? '';
+    final bottom = templates['${type.name}_bottom'] ?? (type.defaultBottomTemplate ?? '');
     _topTemplateController.text = top;
     _bottomTemplateController.text = bottom;
+    _selectedDateFormat = templates['date_format'] ?? 'DD.MM.YYYY';
   }
 
   void _saveCurrentTemplate() {
     widget.controller.updateCalloutTemplate(_templateType.name, _topTemplateController.text);
     widget.controller.updateCalloutTemplate('${_templateType.name}_bottom', _bottomTemplateController.text);
+    widget.controller.updateCalloutTemplate('date_format', _selectedDateFormat);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Шаблон для ${_templateType.displayName} успешно сохранен'),
@@ -70,7 +163,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
   void _resetTemplateToDefault() {
     _topTemplateController.text = _templateType.defaultTemplate;
-    _bottomTemplateController.text = '';
+    _bottomTemplateController.text = _templateType.defaultBottomTemplate ?? '';
     _saveCurrentTemplate();
   }
 
@@ -632,46 +725,153 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Выбор типа объекта
-          Row(
+          // 1. Выбор типа объекта и глобального формата даты
+          Wrap(
+            spacing: 16,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              const Text('Категория элементов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(width: 16),
-              DropdownButton<CalloutTargetType>(
-                value: _templateType,
-                items: CalloutTargetType.values.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type.displayName),
-                  );
-                }).toList(),
-                onChanged: (newType) {
-                  if (newType != null) {
-                    setState(() {
-                      _templateType = newType;
-                      _loadTemplateForType(newType);
-                    });
-                  }
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Категория:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(width: 8),
+                  DropdownButton<CalloutTargetType>(
+                    value: _templateType,
+                    items: CalloutTargetType.values.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Text(type.displayName),
+                      );
+                    }).toList(),
+                    onChanged: (newType) {
+                      if (newType != null) {
+                        setState(() {
+                          _templateType = newType;
+                          _loadTemplateForType(newType);
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                  const Text('Формат даты швов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _selectedDateFormat,
+                    items: const [
+                      DropdownMenuItem(value: 'DD.MM.YYYY', child: Text('ДД.ММ.ГГГГ (18.09.2026)')),
+                      DropdownMenuItem(value: 'DD.MM.YY', child: Text('ДД.ММ.ГГ (18.09.26)')),
+                      DropdownMenuItem(value: 'YYYY-MM-DD', child: Text('ГГГГ-ММ-ДД (2026-09-18)')),
+                      DropdownMenuItem(value: 'DD/MM/YYYY', child: Text('ДД/ММ/ГГГГ (18/09/2026)')),
+                    ],
+                    onChanged: (newFormat) {
+                      if (newFormat != null) {
+                        setState(() {
+                          _selectedDateFormat = newFormat;
+                          widget.controller.updateCalloutTemplate('date_format', newFormat);
+                        });
+                      }
+                    },
+                  ),
+                ],
               ),
-              const Spacer(),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.restart_alt, size: 18),
-                label: const Text('Сбросить к стандарту ГОСТ'),
-                onPressed: _resetTemplateToDefault,
-              ),
-              const SizedBox(width: 12),
-              FilledButton.icon(
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Сохранить шаблон'),
-                style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
-                onPressed: _saveCurrentTemplate,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.restart_alt, size: 18),
+                    label: const Text('Сбросить к ГОСТ'),
+                    onPressed: _resetTemplateToDefault,
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Сохранить'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                    onPressed: _saveCurrentTemplate,
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 16),
 
-          // 2. Доступные плейсхолдеры (чипы)
+          // 2. Интерактивные полки (с кирпичиками и прямым вводом) + Предпросмотр
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Левая колонка: полка над полкой и полка под полкой
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    _buildShelfCard(
+                      CalloutShelf.top,
+                      'Над полкой (основной текст)',
+                      _topTemplateController,
+                      _topFocusNode,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildShelfCard(
+                      CalloutShelf.bottom,
+                      'Под полкой (дополнительный текст)',
+                      _bottomTemplateController,
+                      _bottomFocusNode,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // Правая колонка: Интерактивный предпросмотр выноски
+              Expanded(
+                flex: 2,
+                child: Container(
+                  height: 230,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 8,
+                        left: 12,
+                        child: Row(
+                          children: [
+                            const Text(
+                              'ПРЕДПРОСМОТР ВЫНОСКИ (ГОСТ 2.316)',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _selectedDateFormat,
+                                style: TextStyle(fontSize: 9, color: Colors.indigo.shade700, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Center(
+                        child: _buildCalloutPreview(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Доступные плейсхолдеры (чипы) с таргетингом в активную полку
           Card(
             color: Colors.blue.shade50.withValues(alpha: 0.5),
             elevation: 0,
@@ -684,13 +884,46 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.touch_app_outlined, size: 18, color: Colors.indigo),
-                      SizedBox(width: 8),
-                      Text(
-                        'Кликните на чип для вставки плейсхолдера в шаблон:',
+                      const Icon(Icons.touch_app_outlined, size: 18, color: Colors.indigo),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Кликните на чип для вставки в строку:',
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _activeShelf == CalloutShelf.top ? Colors.indigo.shade100 : Colors.teal.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _activeShelf == CalloutShelf.top ? Colors.indigo : Colors.teal,
+                          ),
+                        ),
+                        child: Text(
+                          _activeShelf == CalloutShelf.top ? 'НАД ПОЛКОЙ' : 'ПОД ПОЛКОЙ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: _activeShelf == CalloutShelf.top ? Colors.indigo.shade900 : Colors.teal.shade900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        icon: const Icon(Icons.swap_vert, size: 16),
+                        label: Text(
+                          _activeShelf == CalloutShelf.top ? 'Переключить на "Под полкой"' : 'Переключить на "Над полкой"',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: () {
+                          setState(() {
+                            _activeShelf = _activeShelf == CalloutShelf.top ? CalloutShelf.bottom : CalloutShelf.top;
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -714,68 +947,222 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
 
-          // 3. Поля редактирования текста над и под полкой
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: _topTemplateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Текст над полкой (основной)',
-                        hintText: 'например: Ø{DN}x{WALL} {MATERIAL}',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.arrow_upward, size: 18),
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _bottomTemplateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Текст под полкой (дополнительный)',
-                        hintText: 'например: {STANDARD} или оставьте пустым',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.arrow_downward, size: 18),
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              // 4. Интерактивный предпросмотр выноски
-              Expanded(
-                child: Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+  Widget _buildShelfCard(
+    CalloutShelf shelf,
+    String title,
+    TextEditingController controller,
+    FocusNode focusNode,
+  ) {
+    final isActive = _activeShelf == shelf;
+    final bricks = parseTemplateToBricks(controller.text);
+
+    return InkWell(
+      onTap: () {
+        if (_activeShelf != shelf) {
+          setState(() => _activeShelf = shelf);
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.indigo.shade50.withValues(alpha: 0.35) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive ? Colors.indigo : Colors.grey.shade300,
+            width: isActive ? 2.0 : 1.0,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.indigo.withValues(alpha: 0.12),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Stack(
-                    children: [
-                      const Positioned(
-                        top: 8,
-                        left: 12,
-                        child: Text(
-                          'ПРЕДПРОСМОТР ВЫНОСКИ (ГОСТ 2.316)',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Заголовок полки + бейдж активности
+            Row(
+              children: [
+                Icon(
+                  shelf == CalloutShelf.top ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 16,
+                  color: isActive ? Colors.indigo : Colors.grey.shade600,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isActive ? Colors.indigo.shade900 : Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (isActive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Активно для вставки',
+                          style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      Center(
-                        child: _buildCalloutPreview(),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Лента блоков-кирпичиков (Reorderable)
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-            ],
+              child: bricks.isEmpty
+                  ? Center(
+                      child: Text(
+                        '(Полка пуста. Кликните на чип в палитре или введите текст ниже)',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                      ),
+                    )
+                  : ReorderableListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      buildDefaultDragHandles: false,
+                      itemCount: bricks.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (oldIndex < newIndex) {
+                            newIndex -= 1;
+                          }
+                          final item = bricks.removeAt(oldIndex);
+                          bricks.insert(newIndex, item);
+                          controller.text = bricksToTemplate(bricks);
+                          controller.selection = TextSelection.collapsed(offset: controller.text.length);
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final brick = bricks[index];
+                        return ReorderableDragStartListener(
+                          key: ValueKey(brick.id),
+                          index: index,
+                          child: _buildBrickWidget(brick, index, bricks, controller),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 8),
+
+            // Прямой ввод текста
+            TextField(
+              controller: controller,
+              focusNode: focusNode,
+              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                hintText: shelf == CalloutShelf.top ? 'напр: {NAME} Ду{DN} L={L}' : 'напр: {SYSTEM} или пусто',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.edit_note, size: 16),
+                suffixIcon: controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        tooltip: 'Очистить строку',
+                        onPressed: () {
+                          controller.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrickWidget(
+    TemplateBrick brick,
+    int index,
+    List<TemplateBrick> bricks,
+    TextEditingController controller,
+  ) {
+    final isPh = brick.isPlaceholder;
+    final bg = isPh ? Colors.indigo.shade50 : const Color(0xFFF1F5F9);
+    final border = isPh ? Colors.indigo.shade200 : const Color(0xFFCBD5E1);
+    final textStyle = TextStyle(
+      fontSize: 11,
+      fontFamily: 'monospace',
+      fontWeight: isPh ? FontWeight.bold : FontWeight.w500,
+      color: isPh ? Colors.indigo.shade900 : const Color(0xFF334155),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.drag_indicator,
+            size: 13,
+            color: isPh ? Colors.indigo.shade300 : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            brick.text.trim().isEmpty ? '␣' : brick.text,
+            style: textStyle,
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: () {
+              setState(() {
+                bricks.removeAt(index);
+                controller.text = bricksToTemplate(bricks);
+                controller.selection = TextSelection.collapsed(offset: controller.text.length);
+              });
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(
+                Icons.close,
+                size: 13,
+                color: isPh ? Colors.indigo.shade400 : Colors.grey.shade500,
+              ),
+            ),
           ),
         ],
       ),
@@ -783,17 +1170,19 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   }
 
   void _insertChip(String placeholder) {
-    // Вставляем в верхнее поле, если активно или по умолчанию
-    final text = _topTemplateController.text;
-    final selection = _topTemplateController.selection;
-    if (selection.start >= 0 && selection.end >= 0) {
+    final controller = _activeShelf == CalloutShelf.top ? _topTemplateController : _bottomTemplateController;
+    final text = controller.text;
+    final selection = controller.selection;
+    if (selection.start >= 0 && selection.end >= 0 && selection.start <= text.length && selection.end <= text.length) {
       final newText = text.replaceRange(selection.start, selection.end, placeholder);
-      _topTemplateController.value = TextEditingValue(
+      controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: selection.start + placeholder.length),
       );
     } else {
-      _topTemplateController.text = text + placeholder;
+      final prefix = (text.isNotEmpty && !text.endsWith(' ') && !placeholder.startsWith(' ')) ? ' ' : '';
+      controller.text = text + prefix + placeholder;
+      controller.selection = TextSelection.collapsed(offset: controller.text.length);
     }
     setState(() {});
   }
@@ -858,7 +1247,18 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
   String _formatPreviewText(String template) {
     if (template.isEmpty) return '';
-    return template
+    final formattedDate = formatWeldDate('2026-09-18', _selectedDateFormat);
+    var text = template;
+    final dateRegex = RegExp(r'\{DATE(?::([A-Za-z0-9_./-]+))?\}');
+    text = text.replaceAllMapped(dateRegex, (match) {
+      final inlineFormat = match.group(1);
+      if (inlineFormat != null && inlineFormat.isNotEmpty) {
+        return formatWeldDate('2026-09-18', inlineFormat);
+      }
+      return formattedDate;
+    });
+
+    return text
         .replaceAll('{DN}', '80')
         .replaceAll('{DN2}', '50')
         .replaceAll('{WALL}', '4.0')
@@ -873,7 +1273,6 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         .replaceAll('{NUM}', '1')
         .replaceAll('{NUMBER}', '1')
         .replaceAll('{STAMP}', 'СВ-01')
-        .replaceAll('{DATE}', '18.09.2024')
         .replaceAll('{TYPE}', 'Задвижка')
         .replaceAll('{NAME}', 'Задвижка 30с41нж')
         .replaceAll('{TAG}', 'Е-1')
