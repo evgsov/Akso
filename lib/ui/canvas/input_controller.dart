@@ -22,6 +22,7 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../data/repositories/project_repository.dart';
+import '../../data/repositories/recent_projects_manager.dart';
 import '../../data/repositories/recovery_repository.dart';
 import 'controllers/selection_controller.dart';
 import 'controllers/tracing_controller.dart';
@@ -104,7 +105,7 @@ class PipingInputController extends ChangeNotifier {
   }
 
   // История и отмена (Undo / Redo)
-  final NetworkHistoryManager history = NetworkHistoryManager(maxSnapshots: 50);
+  late final NetworkHistoryManager history;
 
   // Движок магнитных привязок и полярных углов
   final SnapEngine snapEngine = const SnapEngine();
@@ -259,6 +260,10 @@ class PipingInputController extends ChangeNotifier {
 
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
+  final RecentProjectsManager recentProjectsManager;
+  String? currentFilePath;
+  bool hasUnsavedChanges = false;
+  bool _isInitializing = true;
 
   Timer? _recoveryTimer;
 
@@ -268,12 +273,22 @@ class PipingInputController extends ChangeNotifier {
     AxonometryProjector? projector,
     IProjectRepository? projectRepository,
     IProjectRepository? repository,
+    RecentProjectsManager? recentProjectsManager,
   })  : network = network ?? initialNetwork ?? PipingNetwork(),
         projector = projector ??
             const AxonometryProjector(
               projectionType: ProjectionType.gostFrontal45,
             ),
-        projectRepository = repository ?? projectRepository ?? ProjectRepository() {
+        projectRepository = repository ?? projectRepository ?? ProjectRepository(),
+        recentProjectsManager = recentProjectsManager ?? RecentProjectsManager() {
+    history = NetworkHistoryManager(
+      maxSnapshots: 50,
+      onStateRecorded: () {
+        if (!_isInitializing) {
+          hasUnsavedChanges = true;
+        }
+      },
+    );
     currentProject = ProjectModel(
       id: _uuid.v4(),
       title: 'Новый проект',
@@ -284,6 +299,7 @@ class PipingInputController extends ChangeNotifier {
     _recoveryTimer = Timer.periodic(const Duration(minutes: 2), (_) {
       RecoveryRepository().saveRecovery(currentProject.copyWith(network: this.network));
     });
+    _isInitializing = false;
   }
 
   Future<void> tryLoadRecovery() async {
@@ -309,6 +325,7 @@ class PipingInputController extends ChangeNotifier {
   void undo() {
     if (history.undo(network)) {
       cancelCurrentOperation(keepTool: true);
+      hasUnsavedChanges = true;
       notifyListeners();
     }
   }
@@ -316,6 +333,15 @@ class PipingInputController extends ChangeNotifier {
   void redo() {
     if (history.redo(network)) {
       cancelCurrentOperation(keepTool: true);
+      hasUnsavedChanges = true;
+      notifyListeners();
+    }
+  }
+
+  /// Помечает проект как содержащий несохраненные изменения
+  void markDirty() {
+    if (!hasUnsavedChanges) {
+      hasUnsavedChanges = true;
       notifyListeners();
     }
   }
@@ -4110,32 +4136,164 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveProject() async {
+  /// Сохранение текущего проекта. Если файл еще не имеет пути на диске — вызывает saveProjectAs()
+  Future<bool> saveProject() async {
+    if (currentFilePath == null) {
+      return await saveProjectAs();
+    }
     isSaving = true;
     notifyListeners();
     try {
-      currentProject = currentProject.copyWith(network: network);
-      await projectRepository.saveProject(currentProject);
+      currentProject = currentProject.copyWith(
+        network: network,
+        lastModifiedDate: DateTime.now().toIso8601String(),
+      );
+      final savedPath = await projectRepository.saveProject(
+        currentProject,
+        targetPath: currentFilePath,
+      );
+      if (savedPath != null) {
+        currentFilePath = savedPath;
+        hasUnsavedChanges = false;
+        await recentProjectsManager.addRecentProject(RecentProjectEntry(
+          title: currentProject.title,
+          filePath: savedPath,
+          projectCode: currentProject.projectCode,
+          lastOpened: DateTime.now(),
+        ));
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error saving project: $e');
+      return false;
     } finally {
       isSaving = false;
       notifyListeners();
     }
   }
 
-  Future<void> loadProject() async {
+  /// Сохранение проекта в новый файл (Диалог выбора папки и имени)
+  Future<bool> saveProjectAs() async {
+    isSaving = true;
+    notifyListeners();
+    try {
+      currentProject = currentProject.copyWith(
+        network: network,
+        lastModifiedDate: DateTime.now().toIso8601String(),
+      );
+      final savedPath = await projectRepository.saveProject(
+        currentProject,
+        targetPath: null,
+      );
+      if (savedPath != null) {
+        currentFilePath = savedPath;
+        hasUnsavedChanges = false;
+        await recentProjectsManager.addRecentProject(RecentProjectEntry(
+          title: currentProject.title,
+          filePath: savedPath,
+          projectCode: currentProject.projectCode,
+          lastOpened: DateTime.now(),
+        ));
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error saving project as: $e');
+      return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  /// Открытие проекта (по указанному пути или через диалог выбора файлов)
+  Future<bool> openProject({String? filePath}) async {
     isLoading = true;
     notifyListeners();
     try {
-      final result = await projectRepository.loadProject();
+      final result = await projectRepository.loadProject(filePath: filePath);
       if (result != null) {
         currentProject = result.project;
         network = result.project.network;
-        // Обязательно обновить историю и уведомить слушателей
+        currentFilePath = result.filePath.isNotEmpty ? result.filePath : null;
+        history.clear();
         history.recordState(network);
+        hasUnsavedChanges = false;
+
+        if (currentFilePath != null) {
+          await recentProjectsManager.addRecentProject(RecentProjectEntry(
+            title: currentProject.title,
+            filePath: currentFilePath!,
+            projectCode: currentProject.projectCode,
+            lastOpened: DateTime.now(),
+          ));
+        }
+
+        cancelCurrentOperation(keepTool: true);
+        notifyListeners();
+        return true;
       }
+      return false;
+    } catch (e) {
+      debugPrint('Error opening project: $e');
+      return false;
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Загрузка проекта (совместимость со старыми вызовами)
+  Future<void> loadProject() async {
+    await openProject();
+  }
+
+  /// Создание нового чистого проекта
+  bool newProject({bool force = false}) {
+    network = PipingNetwork();
+    currentProject = ProjectModel(
+      id: _uuid.v4(),
+      title: 'Новый проект',
+      network: network,
+    );
+    currentFilePath = null;
+    history.clear();
+    history.recordState(network);
+    hasUnsavedChanges = false;
+    cancelCurrentOperation(keepTool: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Обновление метаданных проекта (название, шифр, адрес, инженер, примечания)
+  void updateProjectMetadata({
+    String? title,
+    String? projectCode,
+    String? objectAddress,
+    String? engineerName,
+    String? notes,
+  }) {
+    currentProject = currentProject.copyWith(
+      title: title,
+      projectCode: projectCode,
+      objectAddress: objectAddress,
+      engineerName: engineerName,
+      notes: notes,
+      lastModifiedDate: DateTime.now().toIso8601String(),
+    );
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  /// Системный экспорт/передача проекта через SharePlus
+  Future<void> shareCurrentProject() async {
+    currentProject = currentProject.copyWith(
+      network: network,
+      lastModifiedDate: DateTime.now().toIso8601String(),
+    );
+    await projectRepository.shareProjectFile(currentProject);
   }
 }

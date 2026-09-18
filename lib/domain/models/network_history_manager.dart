@@ -4,10 +4,11 @@ import 'piping_network.dart';
 /// Менеджер состояний топологической сети (Undo / Redo)
 class NetworkHistoryManager {
   final int maxSnapshots;
+  final void Function()? onStateRecorded;
   final List<String> _undoStack = [];
   final List<String> _redoStack = [];
 
-  NetworkHistoryManager({this.maxSnapshots = 50});
+  NetworkHistoryManager({this.maxSnapshots = 50, this.onStateRecorded});
 
   bool get canUndo => _undoStack.length > 1;
   bool get canRedo => _redoStack.isNotEmpty;
@@ -23,6 +24,7 @@ class NetworkHistoryManager {
       _undoStack.removeAt(0);
     }
     _redoStack.clear();
+    onStateRecorded?.call();
   }
 
   /// Отменить последнее действие (Undo)
