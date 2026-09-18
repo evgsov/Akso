@@ -212,6 +212,25 @@ class _EditorScreenState extends State<EditorScreen> {
       return KeyEventResult.handled;
     }
 
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyS) {
+      if (isShift) {
+        widget.controller.saveProjectAs();
+      } else {
+        widget.controller.saveProject();
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyO) {
+      widget.controller.openProject();
+      return KeyEventResult.handled;
+    }
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyN) {
+      widget.controller.newProject();
+      return KeyEventResult.handled;
+    }
+
     return KeyEventResult.ignored;
   }
 

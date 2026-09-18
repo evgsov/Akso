@@ -8,6 +8,8 @@ import 'dxf_export_dialog.dart';
 import 'fitting_catalog_dialog.dart';
 import 'materials_specification_dialog.dart';
 import 'weld_journal_dialog.dart';
+import 'project_properties_dialog.dart';
+import 'quick_bridge_dialog.dart';
 
 class EditorTopBar extends StatelessWidget {
   final PipingInputController controller;
@@ -118,9 +120,49 @@ class EditorTopBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            Text(
-              controller.currentProject.title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Tooltip(
+              message: 'Свойства проекта (нажмите для редактирования)',
+              child: InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ProjectPropertiesDialog(controller: controller),
+                  );
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        controller.currentProject.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      if (controller.currentProject.projectCode.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '[${controller.currentProject.projectCode}]',
+                          style: TextStyle(
+                            color: Colors.indigo.shade700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      if (controller.hasUnsavedChanges)
+                        const Text(
+                          ' *',
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 16),
 
@@ -169,8 +211,8 @@ class EditorTopBar extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.save, size: 18),
-              label: const Text('Сохранить'),
+                  : Icon(Icons.save, size: 18, color: controller.hasUnsavedChanges ? Colors.amber.shade800 : null),
+              label: Text(controller.hasUnsavedChanges ? 'Сохранить *' : 'Сохранить'),
               onPressed: controller.isSaving
                   ? null
                   : () async {
@@ -206,8 +248,8 @@ class EditorTopBar extends StatelessWidget {
                   ? null
                   : () async {
                       try {
-                        await controller.loadProject();
-                        if (context.mounted) {
+                        final ok = await controller.openProject();
+                        if (ok && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Проект успешно загружен')),
                           );
@@ -220,6 +262,19 @@ class EditorTopBar extends StatelessWidget {
                         }
                       }
                     },
+            ),
+            const SizedBox(width: 8),
+
+            // Wi-Fi QuickBridge
+            OutlinedButton.icon(
+              icon: const Icon(Icons.wifi_tethering, size: 18, color: Colors.blueAccent),
+              label: const Text('Wi-Fi обмен'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => QuickBridgeDialog(controller: controller),
+                );
+              },
             ),
             const SizedBox(width: 8),
 

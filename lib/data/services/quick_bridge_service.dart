@@ -50,7 +50,7 @@ class QuickBridgeDiscoveredHost {
 
 /// Активная сессия передачи/приема проекта
 class QuickBridgeSession {
-  final HttpServer _server;
+  final HttpServer? _server;
   final Timer? _beaconTimer;
   final RawDatagramSocket? _beaconSocket;
   final String localIp;
@@ -59,22 +59,23 @@ class QuickBridgeSession {
   final String serverUrl;
 
   QuickBridgeSession({
-    required HttpServer server,
+    HttpServer? server,
     Timer? beaconTimer,
     RawDatagramSocket? beaconSocket,
     required this.localIp,
     required this.port,
     required this.pin,
+    String? serverUrl,
   })  : _server = server,
         _beaconTimer = beaconTimer,
         _beaconSocket = beaconSocket,
-        serverUrl = 'http://$localIp:$port';
+        serverUrl = serverUrl ?? 'http://$localIp:$port';
 
   /// Останавливает HTTP-сервер и широковещательный маяк
   Future<void> stop() async {
     _beaconTimer?.cancel();
     _beaconSocket?.close();
-    await _server.close(force: true);
+    await _server?.close(force: true);
   }
 }
 
@@ -104,6 +105,7 @@ class QuickBridgeService {
   Future<QuickBridgeSession> startSender({
     required ProjectModel project,
     InternetAddress? bindAddress,
+    bool enableBeacon = true,
     Function(String clientIp)? onTransferred,
     Function(ProjectModel project)? onProjectReceived,
   }) async {
@@ -119,36 +121,38 @@ class QuickBridgeService {
     // Запуск UDP маяка для автообнаружения в локальной сети
     RawDatagramSocket? beaconSocket;
     Timer? beaconTimer;
-    try {
-      beaconSocket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        0,
-        reuseAddress: true,
-      );
-      beaconSocket.broadcastEnabled = true;
+    if (enableBeacon) {
+      try {
+        beaconSocket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          0,
+          reuseAddress: true,
+        );
+        beaconSocket.broadcastEnabled = true;
 
-      final beaconData = jsonEncode({
-        'app': 'akso',
-        'type': 'beacon',
-        'host': Platform.localHostname,
-        'ip': localIp,
-        'port': port,
-        'title': project.title,
-        'pin': pin,
-      });
-      final bytes = utf8.encode(beaconData);
+        final beaconData = jsonEncode({
+          'app': 'akso',
+          'type': 'beacon',
+          'host': Platform.localHostname,
+          'ip': localIp,
+          'port': port,
+          'title': project.title,
+          'pin': pin,
+        });
+        final bytes = utf8.encode(beaconData);
 
-      beaconTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        try {
-          beaconSocket?.send(
-            bytes,
-            InternetAddress('255.255.255.255'),
-            beaconPort,
-          );
-        } catch (_) {}
-      });
-    } catch (_) {
-      // Игнорируем ошибки сокета маяка (например, если нет broadcast поддержки)
+        beaconTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          try {
+            beaconSocket?.send(
+              bytes,
+              InternetAddress('255.255.255.255'),
+              beaconPort,
+            );
+          } catch (_) {}
+        });
+      } catch (_) {
+        // Игнорируем ошибки сокета маяка (например, если нет broadcast поддержки)
+      }
     }
 
     // Обработка входящих HTTP-запросов

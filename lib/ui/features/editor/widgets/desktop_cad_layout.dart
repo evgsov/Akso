@@ -22,6 +22,8 @@ import 'pipe_assortment_dialog.dart';
 import 'piping_systems_dialog.dart';
 import 'weld_journal_dialog.dart';
 import 'touch_distance_entry_dialog.dart';
+import 'project_properties_dialog.dart';
+import 'quick_bridge_dialog.dart';
 
 class DesktopCadLayout extends StatelessWidget {
   final PipingInputController controller;
@@ -129,6 +131,293 @@ class DesktopCadLayout extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmAndNewProject(BuildContext context) async {
+    if (controller.hasUnsavedChanges) {
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Несохраненные изменения', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'В текущем проекте есть несохраненные изменения. Создать новый проект без сохранения?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.amber.shade700),
+              child: const Text('Создать новый'),
+            ),
+          ],
+        ),
+      );
+      if (shouldProceed != true) return;
+    }
+    await controller.newProject(force: true);
+  }
+
+  Future<void> _showRecentProjectsDialog(BuildContext context) async {
+    final recents = await controller.recentProjectsManager.getRecentProjects();
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Row(
+          children: [
+            Icon(Icons.history, color: Colors.cyanAccent),
+            SizedBox(width: 8),
+            Text('Недавние проекты', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: SizedBox(
+          width: 520,
+          child: recents.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text('Список недавних проектов пуст', style: TextStyle(color: Colors.white54)),
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: recents.length,
+                  separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+                  itemBuilder: (ctx, i) {
+                    final item = recents[i];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.description, color: Colors.cyanAccent),
+                      title: Text(item.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        item.filePath,
+                        style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text(
+                        '${item.lastOpened.day.toString().padLeft(2, '0')}.${item.lastOpened.month.toString().padLeft(2, '0')}',
+                        style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      ),
+                      onTap: () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          await controller.openProject(filePath: item.filePath);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Проект "${item.title}" загружен')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Ошибка открытия проекта: $e')),
+                            );
+                          }
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          if (recents.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                await controller.recentProjectsManager.clearRecentProjects();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+              child: const Text('Очистить список', style: TextStyle(color: Colors.redAccent)),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Закрыть'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFileMenu(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Меню проекта',
+      icon: const Icon(Icons.menu, color: Colors.white, size: 20),
+      color: const Color(0xFF1E293B),
+      onSelected: (value) async {
+        switch (value) {
+          case 'new':
+            await _confirmAndNewProject(context);
+            break;
+          case 'open':
+            try {
+              final ok = await controller.openProject();
+              if (ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Проект открыт')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка открытия: $e')),
+                );
+              }
+            }
+            break;
+          case 'recent':
+            _showRecentProjectsDialog(context);
+            break;
+          case 'save':
+            try {
+              final ok = await controller.saveProject();
+              if (ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Проект сохранён')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка сохранения: $e')),
+                );
+              }
+            }
+            break;
+          case 'save_as':
+            try {
+              final ok = await controller.saveProjectAs();
+              if (ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Проект сохранён как новый файл')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка сохранения: $e')),
+                );
+              }
+            }
+            break;
+          case 'properties':
+            showDialog(
+              context: context,
+              builder: (_) => ProjectPropertiesDialog(controller: controller),
+            );
+            break;
+          case 'quick_bridge':
+            showDialog(
+              context: context,
+              builder: (_) => QuickBridgeDialog(controller: controller),
+            );
+            break;
+          case 'share':
+            try {
+              await controller.shareCurrentProject();
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка экспорта: $e')),
+                );
+              }
+            }
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'new',
+          child: Row(
+            children: [
+              Icon(Icons.add, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Новый проект', style: TextStyle(color: Colors.white, fontSize: 13))),
+              Text('Ctrl+N', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'open',
+          child: Row(
+            children: [
+              Icon(Icons.folder_open, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Открыть...', style: TextStyle(color: Colors.white, fontSize: 13))),
+              Text('Ctrl+O', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'recent',
+          child: Row(
+            children: [
+              Icon(Icons.history, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Недавние проекты', style: TextStyle(color: Colors.white, fontSize: 13))),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 8),
+        const PopupMenuItem(
+          value: 'save',
+          child: Row(
+            children: [
+              Icon(Icons.save, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Сохранить', style: TextStyle(color: Colors.white, fontSize: 13))),
+              Text('Ctrl+S', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'save_as',
+          child: Row(
+            children: [
+              Icon(Icons.save_as, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Сохранить как...', style: TextStyle(color: Colors.white, fontSize: 13))),
+              Text('Ctrl+Shift+S', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 8),
+        const PopupMenuItem(
+          value: 'properties',
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Свойства проекта...', style: TextStyle(color: Colors.white, fontSize: 13))),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'quick_bridge',
+          child: Row(
+            children: [
+              Icon(Icons.wifi_tethering, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Wi-Fi QuickBridge...', style: TextStyle(color: Colors.white, fontSize: 13))),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'share',
+          child: Row(
+            children: [
+              Icon(Icons.share, color: Colors.cyanAccent, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text('Поделиться файлом...', style: TextStyle(color: Colors.white, fontSize: 13))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     final net = controller.network;
     final activeSys = net.systems[controller.activeSystemId];
@@ -144,20 +433,68 @@ class DesktopCadLayout extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            // Меню «Файл»
+            _buildFileMenu(context),
+            const SizedBox(width: 4),
+
             // Бренд
             const Icon(Icons.hub, color: Colors.cyanAccent, size: 20),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             const Text(
               'AKSO 3D',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 14),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
 
-            // Кнопки Сохранить / Загрузить
+            // Кликабельный заголовок проекта (открывает свойства)
+            Tooltip(
+              message: 'Свойства проекта (нажмите для редактирования)',
+              child: InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ProjectPropertiesDialog(controller: controller),
+                  );
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: controller.hasUnsavedChanges ? Colors.amber.shade700 : const Color(0xFF334155)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        controller.currentProject.title,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      if (controller.currentProject.projectCode.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '[${controller.currentProject.projectCode}]',
+                          style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                      if (controller.hasUnsavedChanges)
+                        const Text(
+                          ' *',
+                          style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Быстрые кнопки Сохранить / Загрузить / Wi-Fi QuickBridge
             IconButton(
               icon: controller.isSaving ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.save, size: 18),
-              color: Colors.white,
-              tooltip: 'Сохранить проект (Ctrl+S)',
+              color: controller.hasUnsavedChanges ? Colors.amberAccent : Colors.white,
+              tooltip: controller.hasUnsavedChanges ? 'Сохранить изменения * (Ctrl+S)' : 'Сохранить проект (Ctrl+S)',
               onPressed: controller.isSaving ? null : () async {
                 try {
                   await controller.saveProject();
@@ -170,14 +507,25 @@ class DesktopCadLayout extends StatelessWidget {
             IconButton(
               icon: controller.isLoading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.folder_open, size: 18),
               color: Colors.white,
-              tooltip: 'Загрузить проект',
+              tooltip: 'Открыть проект (Ctrl+O)',
               onPressed: controller.isLoading ? null : () async {
                 try {
-                  await controller.loadProject();
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Проект загружен')));
+                  final ok = await controller.openProject();
+                  if (ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Проект загружен')));
                 } catch (e) {
                   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
                 }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.wifi_tethering, size: 18),
+              color: Colors.cyanAccent,
+              tooltip: 'Быстрый обмен Wi-Fi (ПК ↔ Планшет)',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => QuickBridgeDialog(controller: controller),
+                );
               },
             ),
 
