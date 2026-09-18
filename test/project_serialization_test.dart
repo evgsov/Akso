@@ -20,16 +20,23 @@ class MockProjectRepository implements IProjectRepository {
   int loadCount = 0;
 
   @override
-  Future<void> saveProject(ProjectModel project) async {
+  Future<String?> saveProject(ProjectModel project, {String? targetPath}) async {
     savedProject = project;
     saveCount++;
+    return targetPath ?? 'mock_path.akso';
   }
 
   @override
-  Future<ProjectModel?> loadProject() async {
+  Future<({ProjectModel project, String filePath})?> loadProject({String? filePath}) async {
     loadCount++;
-    return projectToReturn;
+    if (projectToReturn != null) {
+      return (project: projectToReturn!, filePath: filePath ?? 'mock_path.akso');
+    }
+    return null;
   }
+
+  @override
+  Future<void> shareProjectFile(ProjectModel project, {String? customFileName}) async {}
 }
 
 void main() {

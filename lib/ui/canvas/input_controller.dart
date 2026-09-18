@@ -4126,10 +4126,10 @@ class PipingInputController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      final proj = await projectRepository.loadProject();
-      if (proj != null) {
-        currentProject = proj;
-        network = proj.network;
+      final result = await projectRepository.loadProject();
+      if (result != null) {
+        currentProject = result.project;
+        network = result.project.network;
         // Обязательно обновить историю и уведомить слушателей
         history.recordState(network);
       }

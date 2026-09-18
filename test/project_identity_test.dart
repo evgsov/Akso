@@ -12,15 +12,19 @@ class FakeProjectRepository extends ProjectRepository {
   int loadCount = 0;
 
   @override
-  Future<void> saveProject(ProjectModel project) async {
+  Future<String?> saveProject(ProjectModel project, {String? targetPath}) async {
     lastSavedProject = project;
     saveCount++;
+    return targetPath ?? 'fake_path.akso';
   }
 
   @override
-  Future<ProjectModel?> loadProject() async {
+  Future<({ProjectModel project, String filePath})?> loadProject({String? filePath}) async {
     loadCount++;
-    return projectToLoad;
+    if (projectToLoad != null) {
+      return (project: projectToLoad!, filePath: filePath ?? 'fake_path.akso');
+    }
+    return null;
   }
 }
 
