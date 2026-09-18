@@ -1664,3 +1664,45 @@
     - Все 466 тестов проекта пройдены успешно (`flutter test`).
     - Статический анализ `dart analyze lib test` чист: 0 предупреждений.
     - Граф знаний актуализирован: `graphify update .` (3000 узлов, 3991 ребро, 176 сообществ).
+
+- **Жизненный цикл проекта (.akso) и беспроводной P2P обмен ПК $\leftrightarrow$ планшет Akso QuickBridge (Phase 48):**
+  - **Постановка задачи:**
+    1. «Загрузка и сохранение проекта»: реализация полноценного жизненного цикла инженерного проекта — сохранение в нативный кроссплатформенный файл `.akso`, сохранение под новым именем («Сохранить как...»), открытие файла, создание нового проекта, отслеживание флага несохраненных изменений (`*`), история недавних проектов с быстрым открытием, диалог свойств проекта (код, примечания, даты, статистика элементов сети).
+    2. «Быстрый обмен проектами с компьютера на планшет»: реализация автономной передачи проектов по локальной сети Wi-Fi (ПК $\leftrightarrow$ планшет/смартфон) без облака, сторонних мессенджеров или флешек. Сценарий: инженер готовит трассу на ПК $\rightarrow$ перебрасывает в 1 клик на планшет $\rightarrow$ выполняет исполнительную съемку на объекте $\rightarrow$ отправляет готовую схему обратно на ПК.
+  - **Реализация:**
+    1. **Модель данных и формат проекта (`ProjectModel`):**
+       - `lib/domain/models/project_model.dart`: добавлены метаданные `projectCode`, `notes`, `lastModifiedDate`. Реализована полная обратная совместимость сериализации в/из JSON.
+    2. **Менеджер недавних проектов (`RecentProjectsManager`, `RecentProjectEntry`):**
+       - `lib/data/repositories/recent_projects_manager.dart`: хранение ротируемого списка недавних файлов (по умолчанию до 10 записей) в `recent_projects.json` (с использованием `getApplicationSupportDirectory` / `getApplicationDocumentsDirectory`), обновление временных меток, валидация существования файлов на диске, удаление битых путей.
+    3. **Репозиторий проектов (`ProjectRepository`):**
+       - `lib/data/repositories/project_repository.dart`: добавлены методы сохранения в файл по произвольному пути `saveProjectToPath`, загрузки `loadProjectFromPath`, прямого экспорта байт `exportProjectBytes` и импорта `importProjectFromBytes`, обновление интеграции `shareProjectViaSharePlus` на современный API `SharePlus.instance.share(ShareParams(...))`.
+    4. **Сетевой сервис P2P обмена (`QuickBridgeService`):**
+       - `lib/data/services/quick_bridge_service.dart`:
+         - Встроенный легковесный HTTP-сервер на случайном локальном порту.
+         - Аутентификация по динамическому 4-значному PIN-коду (отклонение неавторизованных запросов с HTTP 403 `Forbidden`).
+         - Эндпоинты `/info` (метаданные сессии и проекта), `/project` (GET для скачивания `.akso` с передатчика, POST для мгновенной загрузки проекта в память приёмника).
+         - UDP Broadcast маяк автообнаружения на порту 41234: фоновая трансляция пакетов `akso_beacon` и фоновый сканер сети для обнаружения доступных устройств без ручного ввода IP.
+         - Режим прямого подключения по IP:Port для сетей с изолированным broadcast/multicast.
+    5. **Контроллер ввода (`PipingInputController`):**
+       - `lib/ui/canvas/input_controller.dart`: добавлены свойства `currentProject`, `currentProjectPath`, `hasUnsavedChanges`, методы `saveCurrentProject()`, `saveProjectAs()`, `loadProjectFile(path)`, `createNewProject()`, автоматическая фиксация флага несохраненных правок при любых изменениях топологии сети и свойств объектов.
+    6. **Интерфейс пользователя (UI):**
+       - `lib/ui/features/editor/widgets/project_properties_dialog.dart`: диалог редактирования свойств проекта (имя, шифр, примечания) со сводной статистикой (узлы, участки труб, стыки, арматура, оборудование, даты создания и модификации).
+       - `lib/ui/features/editor/widgets/quick_bridge_dialog.dart`: диалог Wi-Fi обмена QuickBridge:
+         - Режим отправки (Send): генерация QR-кода (`qr_flutter`) с IP, портом и PIN-кодом, крупный индикатор PIN, копирование ссылки в буфер, статус UDP-маяка.
+         - Режим приёма (Receive): сканер устройств в локальной сети, подключение в 1 клик с запросом PIN, ручной ввод `IP:Port`.
+       - `lib/ui/features/editor/widgets/desktop_cad_layout.dart`:
+         - Выпадающее меню «Файл» (Новый `Ctrl+N`, Открыть `Ctrl+O`, список «Недавние проекты», Сохранить `Ctrl+S`, Сохранить как `Ctrl+Shift+S`, Свойства проекта, QuickBridge).
+         - Кликабельный заголовок в шапке с индикатором несохраненных изменений `*` (`ИмяПроекта * - AKSO 3D`).
+         - Кнопка быстрого вызова QuickBridge (Wi-Fi) на верхней панели.
+       - `lib/ui/features/editor/widgets/top_bar.dart`: интеграция меню проекта и QuickBridge для мобильных и планшетных представлений.
+       - `lib/ui/features/editor/screens/editor_screen.dart`: глобальные горячие клавиши `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`, `Ctrl+N`.
+    7. **Тестирование:**
+       - `test/project_model_test.dart`: тесты сериализации, клонирования и обратной совместимости `ProjectModel`.
+       - `test/recent_projects_manager_test.dart`: тесты добавления, сортировки по дате, ротации до лимита, очистки удаленных файлов.
+       - `test/quick_bridge_service_test.dart`: тесты запуска сервера, генерации PIN, проверки неверного PIN (403), передачи проекта через HTTP GET и POST, UDP discovery.
+       - `test/input_controller_project_lifecycle_test.dart`: тесты сброса и выставления `hasUnsavedChanges`, сохранения и загрузки сети.
+       - `test/project_ui_test.dart`: виджет-тесты отображения диалогов `ProjectPropertiesDialog` и `QuickBridgeDialog`.
+  - **Верификация:**
+    - Все **500 тестов** проекта пройдены успешно (`flutter test`).
+    - Статический анализ `dart analyze lib test` чист: 0 замечаний.
+    - Граф знаний актуализирован: `graphify update .` (3166 узлов, 4217 ребер, 193 сообщества).

@@ -46,8 +46,9 @@ class RecentProjectsManager {
 
   Future<File> _getConfigFile() async {
     Directory dir;
-    if (_getStorageDir != null) {
-      dir = await _getStorageDir!();
+    final getDir = _getStorageDir;
+    if (getDir != null) {
+      dir = await getDir();
     } else {
       try {
         dir = await getApplicationSupportDirectory();

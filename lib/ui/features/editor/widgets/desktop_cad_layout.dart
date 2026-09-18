@@ -157,7 +157,7 @@ class DesktopCadLayout extends StatelessWidget {
       );
       if (shouldProceed != true) return;
     }
-    await controller.newProject(force: true);
+    controller.newProject(force: true);
   }
 
   Future<void> _showRecentProjectsDialog(BuildContext context) async {
@@ -186,7 +186,7 @@ class DesktopCadLayout extends StatelessWidget {
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: recents.length,
-                  separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+                  separatorBuilder: (_, _) => const Divider(color: Colors.white12),
                   itemBuilder: (ctx, i) {
                     final item = recents[i];
                     return ListTile(
@@ -244,7 +244,7 @@ class DesktopCadLayout extends StatelessWidget {
   Widget _buildFileMenu(BuildContext context) {
     return PopupMenuButton<String>(
       tooltip: 'Меню проекта',
-      icon: const Icon(Icons.menu, color: Colors.white, size: 20),
+      icon: const Icon(Icons.hub, color: Colors.cyanAccent, size: 20),
       color: const Color(0xFF1E293B),
       onSelected: (value) async {
         switch (value) {
@@ -433,18 +433,14 @@ class DesktopCadLayout extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Меню «Файл»
+            // Меню «Файл» (Бренд)
             _buildFileMenu(context),
             const SizedBox(width: 4),
-
-            // Бренд
-            const Icon(Icons.hub, color: Colors.cyanAccent, size: 20),
-            const SizedBox(width: 6),
             const Text(
               'AKSO 3D',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 14),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 4),
 
             // Кликабельный заголовок проекта (открывает свойства)
             Tooltip(
@@ -458,7 +454,7 @@ class DesktopCadLayout extends StatelessWidget {
                 },
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(4),
@@ -488,10 +484,11 @@ class DesktopCadLayout extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
 
-            // Быстрые кнопки Сохранить / Загрузить / Wi-Fi QuickBridge
+            // Быстрые кнопки Сохранить / Wi-Fi QuickBridge
             IconButton(
+              visualDensity: VisualDensity.compact,
               icon: controller.isSaving ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.save, size: 18),
               color: controller.hasUnsavedChanges ? Colors.amberAccent : Colors.white,
               tooltip: controller.hasUnsavedChanges ? 'Сохранить изменения * (Ctrl+S)' : 'Сохранить проект (Ctrl+S)',
@@ -505,19 +502,7 @@ class DesktopCadLayout extends StatelessWidget {
               },
             ),
             IconButton(
-              icon: controller.isLoading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent)) : const Icon(Icons.folder_open, size: 18),
-              color: Colors.white,
-              tooltip: 'Открыть проект (Ctrl+O)',
-              onPressed: controller.isLoading ? null : () async {
-                try {
-                  final ok = await controller.openProject();
-                  if (ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Проект загружен')));
-                } catch (e) {
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
-                }
-              },
-            ),
-            IconButton(
+              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.wifi_tethering, size: 18),
               color: Colors.cyanAccent,
               tooltip: 'Быстрый обмен Wi-Fi (ПК ↔ Планшет)',
@@ -533,12 +518,14 @@ class DesktopCadLayout extends StatelessWidget {
 
             // Кнопки Undo / Redo
             IconButton(
+              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.undo, size: 18),
               color: controller.canUndo ? Colors.white : Colors.white38,
               tooltip: 'Отменить (Ctrl+Z)',
               onPressed: controller.canUndo ? controller.undo : null,
             ),
             IconButton(
+              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.redo, size: 18),
               color: controller.canRedo ? Colors.white : Colors.white38,
               tooltip: 'Повторить (Ctrl+Y)',
@@ -546,7 +533,7 @@ class DesktopCadLayout extends StatelessWidget {
             ),
 
             const VerticalDivider(color: Colors.white24, indent: 8, endIndent: 8),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
 
             // Переключатель проекций
             DropdownButtonHideUnderline(
@@ -567,7 +554,7 @@ class DesktopCadLayout extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 24),
+            const SizedBox(width: 8),
 
           // Выбор инженерной системы
           ActionChip(
@@ -598,8 +585,12 @@ class DesktopCadLayout extends StatelessWidget {
           Tooltip(
             message: 'Таблица сортамента труб (ГОСТ 8732/10704/20295) и толщины стенок',
             child: TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: const Icon(Icons.line_weight, size: 16, color: Colors.cyanAccent),
-              label: const Text('Сортамент труб', style: TextStyle(color: Colors.white, fontSize: 12)),
+              label: const Text('Сортамент', style: TextStyle(color: Colors.white, fontSize: 12)),
               onPressed: () {
                 PipeAssortmentDialog.show(
                   context,
@@ -610,12 +601,16 @@ class DesktopCadLayout extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
 
           // Каталог фитингов
           Tooltip(
             message: 'Каталог фитингов и правила трассировки',
             child: TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: const Icon(Icons.settings_suggest, size: 16, color: Colors.cyanAccent),
               label: const Text('Каталог', style: TextStyle(color: Colors.white, fontSize: 12)),
               onPressed: () {
@@ -629,17 +624,22 @@ class DesktopCadLayout extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(width: 4),
 
           // Выноски
           Tooltip(
             message: 'Умные выноски и аннотации',
             child: TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: const Icon(Icons.label_outline, size: 16, color: Colors.amberAccent),
               label: const Text('Выноски', style: TextStyle(color: Colors.white, fontSize: 12)),
               onPressed: () => CalloutManagerPanel.show(context, controller: controller),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
 
           // Ведомости (Спецификация, Сварка, Выноски)
           PopupMenuButton<String>(

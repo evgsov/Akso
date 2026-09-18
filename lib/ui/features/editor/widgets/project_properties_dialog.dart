@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../domain/models/project_model.dart';
 import '../../../canvas/input_controller.dart';
 
 /// Диалог просмотра и редактирования реквизитов и свойств проекта
@@ -137,20 +136,20 @@ class _ProjectPropertiesDialogState extends State<ProjectPropertiesDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.08),
+                  color: Colors.grey.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: [
+                       children: [
                         const Icon(Icons.folder_open, size: 16, color: Colors.grey),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            filePath != null ? filePath : 'Файл еще не сохранен на диске',
+                            filePath ?? 'Файл еще не сохранен на диске',
                             style: TextStyle(
                               fontSize: 12,
                               color: filePath != null ? null : Colors.orangeAccent,

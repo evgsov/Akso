@@ -119,7 +119,7 @@ class EditorTopBar extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             Tooltip(
               message: 'Свойства проекта (нажмите для редактирования)',
               child: InkWell(
@@ -131,7 +131,7 @@ class EditorTopBar extends StatelessWidget {
                 },
                 borderRadius: BorderRadius.circular(6),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -164,7 +164,7 @@ class EditorTopBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
 
             // Переключатель видов
             SegmentedButton<ProjectionType>(
@@ -201,10 +201,14 @@ class EditorTopBar extends StatelessWidget {
               },
             ),
 
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
 
             // Сохранить проект
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: controller.isSaving
                   ? const SizedBox(
                       width: 16,
@@ -232,10 +236,14 @@ class EditorTopBar extends StatelessWidget {
                       }
                     },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
             // Загрузить проект
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: controller.isLoading
                   ? const SizedBox(
                       width: 16,
@@ -263,10 +271,14 @@ class EditorTopBar extends StatelessWidget {
                       }
                     },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
             // Wi-Fi QuickBridge
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                visualDensity: VisualDensity.compact,
+              ),
               icon: const Icon(Icons.wifi_tethering, size: 18, color: Colors.blueAccent),
               label: const Text('Wi-Fi обмен'),
               onPressed: () {
@@ -276,7 +288,7 @@ class EditorTopBar extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
             // Загрузить демо-сеть
             OutlinedButton.icon(

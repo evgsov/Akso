@@ -261,7 +261,7 @@ class _QuickBridgeDialogState extends State<QuickBridgeDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15),
+                    color: Colors.green.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.green.shade400),
                   ),
@@ -285,7 +285,7 @@ class _QuickBridgeDialogState extends State<QuickBridgeDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
+                    color: Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.red.shade400),
                   ),
@@ -366,9 +366,9 @@ class _QuickBridgeDialogState extends State<QuickBridgeDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.cyan.withOpacity(0.15),
+                    color: Colors.cyan.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                    border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     _session!.pin.split('').join(' '),
@@ -451,7 +451,7 @@ class _QuickBridgeDialogState extends State<QuickBridgeDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(

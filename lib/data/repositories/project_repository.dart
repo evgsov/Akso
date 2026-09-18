@@ -105,9 +105,11 @@ class ProjectRepository implements IProjectRepository {
     final tempFile = File('${tempDir.path}${Platform.pathSeparator}$fileName');
     await tempFile.writeAsString(jsonString, flush: true);
 
-    await Share.shareXFiles(
-      [XFile(tempFile.path)],
-      text: 'Проект Akso: ${project.title}',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(tempFile.path)],
+        text: 'Проект Akso: ${project.title}',
+      ),
     );
   }
 }

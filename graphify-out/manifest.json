@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/project_model.dart": {
-    "mtime": 1789355749.647369,
-    "seen": 1789469442.682809,
-    "ast_hash": "68c89b209c2680ed717f50e806e49d89",
+    "mtime": 1789731553.1638906,
+    "seen": 1789733857.898468,
+    "ast_hash": "f3f6fe66398ba74546e4ddb7ee1ae86c",
     "semantic_hash": ""
   },
   "lib/domain/models/valve.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789725781.9703734,
-    "seen": 1789726531.5794513,
-    "ast_hash": "eccc0e2b85f092195b232d2645a3ea8a",
+    "mtime": 1789732158.242731,
+    "seen": 1789733857.8984976,
+    "ast_hash": "74867b667f3e8c01a487d90cb1f7b139",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789564000.1594803,
-    "seen": 1789564849.3152907,
-    "ast_hash": "08f424c376fc45f5ccb8e154df4b4fa2",
+    "mtime": 1789732505.6595528,
+    "seen": 1789733857.8985322,
+    "ast_hash": "0656aa6bb8815264f7f3abbe75a53d0f",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789544899.192101,
-    "seen": 1789544931.9318209,
-    "ast_hash": "234d4def81edc0804f15e4e90589ff7e",
+    "mtime": 1789733142.0145025,
+    "seen": 1789733857.8985708,
+    "ast_hash": "096c316f3d1af47a98c7b42c00efece4",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789723467.722317,
-    "seen": 1789723535.4578087,
-    "ast_hash": "477e4eb0265b8ab127670147128cd1c5",
+    "mtime": 1789730033.033708,
+    "seen": 1789733857.89902,
+    "ast_hash": "21faff29977e36068265aa4a8139be3c",
     "semantic_hash": ""
   },
   "README.md": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1789099021.460965,
-    "seen": 1789469442.6830015,
-    "ast_hash": "e423b030a5b9c8900f11de4218c300e9",
+    "mtime": 1789732205.6271055,
+    "seen": 1789733857.8990648,
+    "ast_hash": "25bf40498143f82b333139904f5dd961",
     "semantic_hash": ""
   },
   "web/index.html": {
@@ -1164,15 +1164,15 @@
     "semantic_hash": ""
   },
   "lib/domain/models/network_history_manager.dart": {
-    "mtime": 1789106931.115949,
-    "seen": 1789469442.6828005,
-    "ast_hash": "7e81540d7765c86470e5243f47620cee",
+    "mtime": 1789732069.5306883,
+    "seen": 1789733857.8984401,
+    "ast_hash": "3394fad43ce7e4d22338dc193e4afc8e",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789726227.297134,
-    "seen": 1789726531.5794723,
-    "ast_hash": "a564b07abb973b9681f4b0ad7ab9a630",
+    "mtime": 1789733721.9041643,
+    "seen": 1789733857.89854,
+    "ast_hash": "523dbeb011885414c92d1122a1249fcf",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1278,21 +1278,21 @@
     "semantic_hash": ""
   },
   "lib/data/repositories/project_repository.dart": {
-    "mtime": 1789355749.6433654,
-    "seen": 1789469442.682784,
-    "ast_hash": "511e96434563d8ff01b9b83d20f0bcc9",
+    "mtime": 1789733699.4623685,
+    "seen": 1789733857.8983831,
+    "ast_hash": "aa4673db566318dafab0be3809e8cef8",
     "semantic_hash": ""
   },
   "test/project_identity_test.dart": {
-    "mtime": 1789355749.6660106,
-    "seen": 1789469442.6829,
-    "ast_hash": "2233cddfb8fd64aa5a518e76d8fd7f81",
+    "mtime": 1789731758.073993,
+    "seen": 1789733857.8987494,
+    "ast_hash": "f09cf708690ab5fa05feb6e9574e3110",
     "semantic_hash": ""
   },
   "test/project_serialization_test.dart": {
-    "mtime": 1789355749.6660106,
-    "seen": 1789469442.682901,
-    "ast_hash": "9d6b5cb8546d03085ac2e22ee4729de9",
+    "mtime": 1789731760.9223938,
+    "seen": 1789733857.8987565,
+    "ast_hash": "772211587afeb363c0af3a5eee7156b0",
     "semantic_hash": ""
   },
   "lib/data/repositories/recovery_repository.dart": {
@@ -1809,6 +1809,84 @@
     "mtime": 1789726422.9004674,
     "seen": 1789726531.579541,
     "ast_hash": "7bfc5904bec4f1132c0e7b2e214fb1b6",
+    "semantic_hash": ""
+  },
+  "test/copy_tool_and_undo_test.dart": {
+    "mtime": 1789729901.6116283,
+    "seen": 1789729967.2785075,
+    "ast_hash": "cae59518e8f2b3781aeb2779450d93b0",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/recent_projects_manager.dart": {
+    "mtime": 1789733790.4496105,
+    "seen": 1789733857.8983872,
+    "ast_hash": "fa180f9ac2ac96785d2f6c1108672841",
+    "semantic_hash": ""
+  },
+  "lib/data/services/quick_bridge_service.dart": {
+    "mtime": 1789732372.801207,
+    "seen": 1789733857.8983934,
+    "ast_hash": "c8e5ff8f2a223dc3c649ada84fc81ef1",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/project_properties_dialog.dart": {
+    "mtime": 1789733742.2730649,
+    "seen": 1789733857.8985636,
+    "ast_hash": "ce6c39fc99be654d31e17b91809fd9fb",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/quick_bridge_dialog.dart": {
+    "mtime": 1789733797.4633267,
+    "seen": 1789733857.8985658,
+    "ast_hash": "ca1f43a27e9c866e8236de45b55cdbf4",
+    "semantic_hash": ""
+  },
+  "test/project_controller_integration_test.dart": {
+    "mtime": 1789732008.2673483,
+    "seen": 1789733857.898747,
+    "ast_hash": "5a6a193fb1c5cbc0b6ca3a9f1e0125be",
+    "semantic_hash": ""
+  },
+  "test/project_lifecycle_test.dart": {
+    "mtime": 1789731570.552948,
+    "seen": 1789733857.8987517,
+    "ast_hash": "34fb841d7166df825b3e42c7e27054f4",
+    "semantic_hash": ""
+  },
+  "test/project_repository_test.dart": {
+    "mtime": 1789731720.5073295,
+    "seen": 1789733857.898754,
+    "ast_hash": "663f6a5459edf819eac8dfa3f81caab2",
+    "semantic_hash": ""
+  },
+  "test/project_ui_test.dart": {
+    "mtime": 1789732674.4665446,
+    "seen": 1789733857.898759,
+    "ast_hash": "7555560bffa1e57677687d86556330de",
+    "semantic_hash": ""
+  },
+  "test/quick_bridge_service_test.dart": {
+    "mtime": 1789731953.667155,
+    "seen": 1789733857.898761,
+    "ast_hash": "c648c40799556a53af8f3cdf314717fa",
+    "semantic_hash": ""
+  },
+  "test/recent_projects_test.dart": {
+    "mtime": 1789731643.8453538,
+    "seen": 1789733857.898763,
+    "ast_hash": "363295a65bcaf4762e957f3a3423f764",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-18-project-lifecycle-and-wifi-sync.md": {
+    "mtime": 1789731314.2348795,
+    "seen": 1789733857.899039,
+    "ast_hash": "fd50390640be7f21fb2cd1a3dec927ce",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-18-project-lifecycle-and-wifi-sync-design.md": {
+    "mtime": 1789731107.4936876,
+    "seen": 1789733857.8990521,
+    "ast_hash": "1a0a07b970e5f9e0b83c2967d9f55ba3",
     "semantic_hash": ""
   }
 }
