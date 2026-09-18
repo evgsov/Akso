@@ -426,7 +426,8 @@ class PipingInputController extends ChangeNotifier {
   void setTool(CanvasTool tool) {
     if (currentTool != tool) {
       final isModifyTool = tool == CanvasTool.move || tool == CanvasTool.copy || tool == CanvasTool.rotate;
-      if (!isModifyTool) {
+      final wasModifyTool = currentTool == CanvasTool.move || currentTool == CanvasTool.copy || currentTool == CanvasTool.rotate;
+      if (!isModifyTool && !(tool == CanvasTool.select && wasModifyTool)) {
         cancelCurrentOperation(keepTool: true);
       } else {
         modifyBasePointWorld = null;
@@ -591,11 +592,6 @@ class PipingInputController extends ChangeNotifier {
       return;
     }
 
-    // Если чертим или выбран узел — строим подъем/опуск от базовой точки
-    history.recordState(network);
-    final dim = network.pipeCatalog.getDimension(activeDn);
-    final outerD = dim?.outerDiameterMm;
-
     final newNode = Node3D(
       id: 'node_${_uuid.v4()}',
       x: baseNode.x,
@@ -603,6 +599,9 @@ class PipingInputController extends ChangeNotifier {
       z: targetElevationZ,
     );
     network.nodes[newNode.id] = newNode;
+
+    final dim = network.pipeCatalog.getDimension(activeDn);
+    final outerD = dim?.outerDiameterMm;
 
     final segId = 'seg_${_uuid.v4()}';
     final seg = PipeSegment(
@@ -616,6 +615,7 @@ class PipingInputController extends ChangeNotifier {
       material: activeMaterial,
     );
     network.addSegment(seg);
+    history.recordState(network);
 
     traceStartNode = newNode;
     selectedNodeId = newNode.id;
@@ -707,7 +707,6 @@ class PipingInputController extends ChangeNotifier {
             z: currentElevationZ,
           );
         } else {
-          history.recordState(network);
           final snapWorld = isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none
               ? currentSnapResult!.worldPoint
               : projector.unproject(screenPos, currentElevationZ);
@@ -725,6 +724,7 @@ class PipingInputController extends ChangeNotifier {
             endPoint: axisEndNode,
             isBuildingGrid: isBuildingGridAxis,
           );
+          history.recordState(network);
 
           // Инкремент марки, только если это строительная ось и число
           if (isBuildingGridAxis) {
@@ -771,8 +771,8 @@ class PipingInputController extends ChangeNotifier {
             endNodeId: dimensionEndNodeId,
             offsetDistance: dimensionOffset == 0.0 ? 35.0 : dimensionOffset,
           );
-          history.recordState(network);
           network.addDimension(newDim);
+          history.recordState(network);
           dimensionStartNode = null;
           dimensionEndNode = null;
           dimensionStartNodeId = null;
@@ -797,7 +797,6 @@ class PipingInputController extends ChangeNotifier {
             currentSnapResult!.type == SnapType.equipmentFace &&
             currentSnapResult!.snappedEquipmentId != null &&
             network.equipments.containsKey(currentSnapResult!.snappedEquipmentId)) {
-          history.recordState(network);
           final eqId = currentSnapResult!.snappedEquipmentId!;
           final w = currentSnapResult!.worldPoint;
           final nozzleNode = network.attachNozzleAtWorldPoint(
@@ -806,12 +805,12 @@ class PipingInputController extends ChangeNotifier {
             dn: activeDn,
             face: currentSnapResult!.snappedEquipmentFace,
           );
+          history.recordState(network);
           traceStartNode = nozzleNode;
           selectedNodeId = nozzleNode.id;
         } else if (_findEquipmentAtScreenPos(screenPos) != null &&
             network.equipments.containsKey(_findEquipmentAtScreenPos(screenPos))) {
           final hitEqId = _findEquipmentAtScreenPos(screenPos)!;
-          history.recordState(network);
           final eq = network.equipments[hitEqId]!;
           final worldPt = projector.unproject(screenPos, eq.z + eq.height);
           final nozzleNode = network.attachNozzleAtWorldPoint(
@@ -819,10 +818,10 @@ class PipingInputController extends ChangeNotifier {
             worldPt,
             dn: activeDn,
           );
+          history.recordState(network);
           traceStartNode = nozzleNode;
           selectedNodeId = nozzleNode.id;
         } else if (hitSegId != null) {
-          history.recordState(network);
           // Начало ответвления от существующей трубы: делим сегмент в точке касания
           final double ratio;
           if (currentSnapResult != null &&
@@ -846,11 +845,11 @@ class PipingInputController extends ChangeNotifier {
           }
           final midNode = network.splitSegmentAtRatio(hitSegId, ratio);
           if (midNode != null) {
+            history.recordState(network);
             traceStartNode = midNode;
             selectedNodeId = midNode.id;
           }
         } else {
-          history.recordState(network);
           // Начинаем трассировку из новой точки на текущей отметке Z
           final worldNode = _snapToGrid(projector.unproject(screenPos, currentElevationZ));
           final newNode = Node3D(
@@ -860,6 +859,7 @@ class PipingInputController extends ChangeNotifier {
             z: currentElevationZ,
           );
           network.nodes[newNode.id] = newNode;
+          history.recordState(network);
           traceStartNode = newNode;
           selectedNodeId = newNode.id;
         }
@@ -1333,7 +1333,7 @@ class PipingInputController extends ChangeNotifier {
           final dx = snapped.x - modifyBasePointWorld!.x;
           final dy = snapped.y - modifyBasePointWorld!.y;
           final dz = snapped.z - modifyBasePointWorld!.z;
-          duplicateSelection(dx: dx, dy: dy, dz: dz);
+          duplicateSelection(dx: dx, dy: dy, dz: dz, updateSelection: false);
         }
         break;
 
@@ -1391,8 +1391,8 @@ class PipingInputController extends ChangeNotifier {
           nozzles: const [],
         );
 
-        history.recordState(network);
         network.addEquipment(eq);
+        history.recordState(network);
         selectedEquipmentId = eq.id;
         selectedNodeId = null;
         break;
@@ -1401,11 +1401,11 @@ class PipingInputController extends ChangeNotifier {
         if (hitNodeId != null) {
           final conn = network.getConnectedSegments(hitNodeId);
           if (conn.length == 1) {
-            history.recordState(network);
             network.attachEndValveToNode(
               hitNodeId,
               valveType: selectedValveType,
             );
+            history.recordState(network);
             notifyListeners();
             break;
           }
@@ -1413,7 +1413,6 @@ class PipingInputController extends ChangeNotifier {
         if (hitSegId != null) {
           final seg = network.segments[hitSegId];
           if (seg != null) {
-            history.recordState(network);
             final ratio = _calcSegmentRatio(hitSegId, screenPos);
             network.addValve(
               segmentId: hitSegId,
@@ -1421,13 +1420,13 @@ class PipingInputController extends ChangeNotifier {
               valveType: selectedValveType,
               dn: seg.dn,
             );
+            history.recordState(network);
           }
         }
         break;
 
       case CanvasTool.insertWeld:
         if (hitSegId != null) {
-          history.recordState(network);
           final ratio = _calcSegmentRatio(hitSegId, screenPos);
           network.addWeldJoint(
             segmentId: hitSegId,
@@ -1435,12 +1434,12 @@ class PipingInputController extends ChangeNotifier {
             stamp: currentWelderStamp,
             weldType: currentWeldType,
           );
+          history.recordState(network);
         }
         break;
 
       case CanvasTool.insertReducer:
         if (hitSegId != null) {
-          history.recordState(network);
           final ratio = _calcSegmentRatio(hitSegId, screenPos);
           network.insertReducer(
             segmentId: hitSegId,
@@ -1448,6 +1447,7 @@ class PipingInputController extends ChangeNotifier {
             newDn: targetReducerDn,
             isEccentric: isEccentricReducer,
           );
+          history.recordState(network);
         }
         break;
 
@@ -1455,18 +1455,17 @@ class PipingInputController extends ChangeNotifier {
         if (hitNodeId != null) {
           final conn = network.getConnectedSegments(hitNodeId);
           if (conn.length == 1) {
-            history.recordState(network);
             network.attachEndFlangeToNode(
               hitNodeId,
               flangeConnectionType: isFlangePair ? FlangeConnectionType.pipeToPipe : FlangeConnectionType.toEquipment,
               pressurePn: flangePressurePn,
               material: activeMaterial,
             );
+            history.recordState(network);
             break;
           }
         }
         if (hitSegId != null) {
-          history.recordState(network);
           final ratio = _calcSegmentRatio(hitSegId, screenPos);
           network.insertFlange(
             segmentId: hitSegId,
@@ -1475,6 +1474,7 @@ class PipingInputController extends ChangeNotifier {
             pressurePn: flangePressurePn,
             material: activeMaterial,
           );
+          history.recordState(network);
         }
         break;
 
@@ -1482,8 +1482,8 @@ class PipingInputController extends ChangeNotifier {
         if (hitNodeId != null) {
           final conn = network.getConnectedSegments(hitNodeId);
           if (conn.length == 1) {
-            history.recordState(network);
             network.attachCapToNode(hitNodeId);
+            history.recordState(network);
             break;
           }
         } else if (hitSegId != null) {
@@ -1493,8 +1493,8 @@ class PipingInputController extends ChangeNotifier {
             final targetNodeId = ratio < 0.5 ? seg.startNodeId : seg.endNodeId;
             final conn = network.getConnectedSegments(targetNodeId);
             if (conn.length == 1) {
-              history.recordState(network);
               network.attachCapToNode(targetNodeId);
+              history.recordState(network);
               break;
             }
           }
@@ -1503,13 +1503,13 @@ class PipingInputController extends ChangeNotifier {
 
       case CanvasTool.insertSupport:
         if (hitSegId != null) {
-          history.recordState(network);
           final ratio = _calcSegmentRatio(hitSegId, screenPos);
           network.addSupport(
             segmentId: hitSegId,
             distanceRatio: ratio,
             type: selectedSupportType,
           );
+          history.recordState(network);
         }
         break;
 
@@ -2435,6 +2435,10 @@ class PipingInputController extends ChangeNotifier {
         setTool(CanvasTool.select);
       } else if (currentTool == CanvasTool.copy) {
         duplicateSelection(dx: dx, dy: dy, dz: dz);
+        modifyBasePointWorld = null;
+        modifyBasePointScreen = null;
+        modifyCurrentPointScreen = null;
+        setTool(CanvasTool.select);
       }
 
       if (currentCursorScreenPos != null) {
@@ -3477,7 +3481,12 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Дублирование выделенного подграфа со сдвигом (dx, dy, dz)
-  bool duplicateSelection({double dx = 500.0, double dy = 500.0, double dz = 0.0}) {
+  bool duplicateSelection({
+    double dx = 500.0,
+    double dy = 500.0,
+    double dz = 0.0,
+    bool updateSelection = true,
+  }) {
     final nodeIdsToCopy = <String>{...selectedNodeIds};
     for (final segId in selectedSegmentIds) {
       final seg = network.segments[segId];
@@ -3502,8 +3511,6 @@ class PipingInputController extends ChangeNotifier {
     if (nodeIdsToCopy.isEmpty && eqIdsToCopy.isEmpty && axisIdsToCopy.isEmpty && dimIdsToCopy.isEmpty) {
       return false;
     }
-
-    history.recordState(network);
 
     final oldToNewNodeId = <String, String>{};
     for (final oldId in nodeIdsToCopy) {
@@ -3606,22 +3613,24 @@ class PipingInputController extends ChangeNotifier {
     network.recalculateSpools();
 
     // Выбираем скопированные элементы
-    selectedNodeIds.clear();
-    selectedNodeIds.addAll(oldToNewNodeId.values);
-    selectedSegmentIds.clear();
-    selectedSegmentIds.addAll(newSegmentIds);
-    selectedEquipmentIds.clear();
-    selectedEquipmentIds.addAll(oldToNewEqId.values);
-    selectedAxisIds.clear();
-    selectedAxisIds.addAll(newAxisIds);
-    selectedDimensionIds.clear();
-    selectedDimensionIds.addAll(newDimIds);
+    if (updateSelection) {
+      selectedNodeIds.clear();
+      selectedNodeIds.addAll(oldToNewNodeId.values);
+      selectedSegmentIds.clear();
+      selectedSegmentIds.addAll(newSegmentIds);
+      selectedEquipmentIds.clear();
+      selectedEquipmentIds.addAll(oldToNewEqId.values);
+      selectedAxisIds.clear();
+      selectedAxisIds.addAll(newAxisIds);
+      selectedDimensionIds.clear();
+      selectedDimensionIds.addAll(newDimIds);
 
-    selectedNodeId = selectedNodeIds.isNotEmpty ? selectedNodeIds.first : null;
-    selectedSegmentId = selectedSegmentIds.isNotEmpty ? selectedSegmentIds.first : null;
-    selectedEquipmentId = selectedEquipmentIds.isNotEmpty ? selectedEquipmentIds.first : null;
-    selectedAxisId = selectedAxisIds.isNotEmpty ? selectedAxisIds.first : null;
-    selectedDimensionId = selectedDimensionIds.isNotEmpty ? selectedDimensionIds.first : null;
+      selectedNodeId = selectedNodeIds.isNotEmpty ? selectedNodeIds.first : null;
+      selectedSegmentId = selectedSegmentIds.isNotEmpty ? selectedSegmentIds.first : null;
+      selectedEquipmentId = selectedEquipmentIds.isNotEmpty ? selectedEquipmentIds.first : null;
+      selectedAxisId = selectedAxisIds.isNotEmpty ? selectedAxisIds.first : null;
+      selectedDimensionId = selectedDimensionIds.isNotEmpty ? selectedDimensionIds.first : null;
+    }
 
     history.recordState(network);
     notifyListeners();

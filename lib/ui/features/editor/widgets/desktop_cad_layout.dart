@@ -1346,11 +1346,11 @@ class DesktopCadLayout extends StatelessWidget {
                             }).toList(),
                             onChanged: (newType) {
                               if (newType == null) return;
-                              controller.history.recordState(controller.network);
                               controller.network.updateSupport(
                                 support.id,
                                 support.copyWith(type: newType),
                               );
+                              controller.history.recordState(controller.network);
                               controller.refresh();
                             },
                           ),
@@ -1439,11 +1439,11 @@ class DesktopCadLayout extends StatelessWidget {
                             }).toList(),
                             onChanged: (newType) {
                               if (newType == null) return;
-                              controller.history.recordState(controller.network);
                               controller.network.updateWeldJoint(
                                 weld.id,
                                 (w) => w.copyWith(weldType: newType),
                               );
+                              controller.history.recordState(controller.network);
                               controller.refresh();
                             },
                           ),
@@ -1469,11 +1469,11 @@ class DesktopCadLayout extends StatelessWidget {
                             }).toList(),
                             onChanged: (newMethod) {
                               if (newMethod == null) return;
-                              controller.history.recordState(controller.network);
                               controller.network.updateWeldJoint(
                                 weld.id,
                                 (w) => w.copyWith(inspectionMethod: newMethod),
                               );
+                              controller.history.recordState(controller.network);
                               controller.refresh();
                             },
                           ),
@@ -1505,7 +1505,6 @@ class DesktopCadLayout extends StatelessWidget {
                               }),
                             ],
                             onChanged: (newStyle) {
-                              controller.history.recordState(controller.network);
                               controller.network.updateWeldJoint(
                                 weld.id,
                                 (w) => w.copyWith(
@@ -1513,6 +1512,7 @@ class DesktopCadLayout extends StatelessWidget {
                                   clearStyle: newStyle == null,
                                 ),
                               );
+                              controller.history.recordState(controller.network);
                               controller.refresh();
                             },
                           ),
@@ -1579,7 +1579,6 @@ class DesktopCadLayout extends StatelessWidget {
                                 ),
                               );
                               if (res != null) {
-                                controller.history.recordState(controller.network);
                                 controller.network.updateWeldJoint(
                                   weld.id,
                                   (w) => w.copyWith(
@@ -1587,6 +1586,7 @@ class DesktopCadLayout extends StatelessWidget {
                                     clearTickSize: res <= 0,
                                   ),
                                 );
+                                controller.history.recordState(controller.network);
                                 controller.refresh();
                               }
                             },
@@ -1745,8 +1745,8 @@ class DesktopCadLayout extends StatelessWidget {
                                       onSubmitted: (v) {
                                         final l = double.tryParse(v);
                                         if (l != null && l > 0) {
-                                          controller.history.recordState(controller.network);
                                           controller.network.updateFittingLength(nodeId, l);
+                                          controller.history.recordState(controller.network);
                                           controller.refresh();
                                         }
                                       },
@@ -1761,9 +1761,9 @@ class DesktopCadLayout extends StatelessWidget {
                                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     onPressed: () {
-                                      controller.history.recordState(controller.network);
                                       final nextAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
                                       controller.network.updateFittingRotation(nodeId, nextAngle);
+                                      controller.history.recordState(controller.network);
                                       controller.refresh();
                                     },
                                     child: Text('Поворот ${fit.rotationAngleDeg.round()}°', style: const TextStyle(fontSize: 10)),
@@ -1797,7 +1797,6 @@ class DesktopCadLayout extends StatelessWidget {
                                   selected: {fit.fittingType},
                                   onSelectionChanged: (set) {
                                     final newType = set.first;
-                                    controller.history.recordState(controller.network);
                                     if (newType == FittingType.directBranch) {
                                       controller.network.updateFitting(
                                         nodeId,
@@ -1823,6 +1822,8 @@ class DesktopCadLayout extends StatelessWidget {
                                         ),
                                       );
                                     }
+                                    controller.network.generateElementWeldJoints();
+                                    controller.history.recordState(controller.network);
                                     controller.refresh();
                                   },
                                 ),
@@ -1855,8 +1856,8 @@ class DesktopCadLayout extends StatelessWidget {
                                     foregroundColor: Colors.red,
                                   ),
                                   onPressed: () {
-                                    controller.history.recordState(controller.network);
                                     controller.network.removeFitting(nodeId);
+                                    controller.history.recordState(controller.network);
                                     controller.refresh();
                                   },
                                   child: const Text('Снять', style: TextStyle(fontSize: 11)),
@@ -1879,8 +1880,8 @@ class DesktopCadLayout extends StatelessWidget {
                           icon: const Icon(Icons.block, size: 16),
                           label: const Text('Установить днище (заглушку)', style: TextStyle(fontSize: 12)),
                           onPressed: () {
-                            controller.history.recordState(controller.network);
                             controller.network.attachCapToNode(nodeId);
+                            controller.history.recordState(controller.network);
                             controller.refresh();
                           },
                         ),
@@ -1893,13 +1894,13 @@ class DesktopCadLayout extends StatelessWidget {
                           icon: const Icon(Icons.radio_button_checked, size: 16),
                           label: const Text('Установить концевой фланец', style: TextStyle(fontSize: 12)),
                           onPressed: () {
-                            controller.history.recordState(controller.network);
                             controller.network.attachEndFlangeToNode(
                               nodeId,
                               flangeConnectionType: FlangeConnectionType.toEquipment,
                               pressurePn: controller.flangePressurePn,
                               material: controller.activeMaterial,
                             );
+                            controller.history.recordState(controller.network);
                             controller.refresh();
                           },
                         ),
@@ -1912,12 +1913,12 @@ class DesktopCadLayout extends StatelessWidget {
                           icon: const Icon(Icons.settings_input_component, size: 16),
                           label: const Text('Установить арматуру на торец', style: TextStyle(fontSize: 12)),
                           onPressed: () {
-                            controller.history.recordState(controller.network);
                             controller.network.attachEndValveToNode(
                               nodeId,
                               valveType: controller.selectedValveType,
                             );
                             controller.network.generateElementWeldJoints();
+                            controller.history.recordState(controller.network);
                             controller.refresh();
                           },
                         ),
@@ -2943,8 +2944,8 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     if (valve == null) return;
     final text = _nameController.text.trim();
     if (text.isNotEmpty && text != valve.name) {
-      widget.controller.history.recordState(widget.controller.network);
       widget.controller.network.updateValve(valve.id, valve.copyWith(name: text));
+      widget.controller.history.recordState(widget.controller.network);
       widget.controller.refresh();
     }
   }
@@ -2955,7 +2956,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     final text = _serialController.text.trim();
     final newSerial = text.isEmpty ? null : text;
     if (newSerial != valve.serialNumber) {
-      widget.controller.history.recordState(widget.controller.network);
       widget.controller.network.updateValve(
         valve.id,
         valve.copyWith(
@@ -2963,6 +2963,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
           clearSerialNumber: text.isEmpty,
         ),
       );
+      widget.controller.history.recordState(widget.controller.network);
       widget.controller.refresh();
     }
   }
@@ -2972,8 +2973,8 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     if (valve == null) return;
     final l = double.tryParse(_lengthController.text.replaceAll(' ', ''));
     if (l != null && l > 0 && l != valve.lengthMm) {
-      widget.controller.history.recordState(widget.controller.network);
       widget.controller.network.updateValveLength(valve.id, l);
+      widget.controller.history.recordState(widget.controller.network);
       widget.controller.refresh();
     }
   }
@@ -3049,11 +3050,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                 }).toList(),
                 onChanged: (newType) {
                   if (newType == null) return;
-                  widget.controller.history.recordState(widget.controller.network);
                   widget.controller.network.updateValve(
                     valve.id,
                     valve.copyWith(valveType: newType),
                   );
+                  widget.controller.history.recordState(widget.controller.network);
                   widget.controller.refresh();
                 },
               ),
@@ -3122,12 +3123,12 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () {
-                widget.controller.history.recordState(widget.controller.network);
                 final nextAngle = (valve.handleAngleDeg + 90.0) % 360.0;
                 widget.controller.network.updateValve(
                   valve.id,
                   valve.copyWith(handleAngleDeg: nextAngle),
                 );
+                widget.controller.history.recordState(widget.controller.network);
                 widget.controller.refresh();
               },
               child: const Text('Поворот +90°', style: TextStyle(fontSize: 10)),
@@ -3145,12 +3146,12 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               value: valve.isFlanged,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: (val) {
-                widget.controller.history.recordState(widget.controller.network);
                 widget.controller.network.updateValve(
                   valve.id,
                   valve.copyWith(isFlanged: val),
                 );
                 widget.controller.network.generateElementWeldJoints();
+                widget.controller.history.recordState(widget.controller.network);
                 widget.controller.refresh();
               },
             ),
@@ -3188,11 +3189,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                   ],
                   onChanged: (pn) {
                     if (pn == null) return;
-                    widget.controller.history.recordState(widget.controller.network);
                     widget.controller.network.updateValve(
                       valve.id,
                       valve.copyWith(flangePressurePn: pn),
                     );
+                    widget.controller.history.recordState(widget.controller.network);
                     widget.controller.refresh();
                   },
                 ),
@@ -3205,12 +3206,12 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                       value: valve.includeCounterFlanges,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onChanged: (val) {
-                        widget.controller.history.recordState(widget.controller.network);
                         widget.controller.network.updateValve(
                           valve.id,
                           valve.copyWith(includeCounterFlanges: val),
                         );
                         widget.controller.network.generateElementWeldJoints();
+                        widget.controller.history.recordState(widget.controller.network);
                         widget.controller.refresh();
                       },
                     ),
@@ -3238,11 +3239,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                   ],
                   onChanged: (type) {
                     if (type == null) return;
-                    widget.controller.history.recordState(widget.controller.network);
                     widget.controller.network.updateValve(
                       valve.id,
                       valve.copyWith(counterFlangeType: type),
                     );
+                    widget.controller.history.recordState(widget.controller.network);
                     widget.controller.refresh();
                   },
                 ),
@@ -3261,11 +3262,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               value: valve.isReversed,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: (val) {
-                widget.controller.history.recordState(widget.controller.network);
                 widget.controller.network.updateValve(
                   valve.id,
                   valve.copyWith(isReversed: val),
                 );
+                widget.controller.history.recordState(widget.controller.network);
                 widget.controller.refresh();
               },
             ),
