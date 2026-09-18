@@ -2221,6 +2221,7 @@ class PipingNetwork {
             .replaceAll('{OD}', dStr)
             .replaceAll('{OUTER_DIAMETER}', dStr)
             .replaceAll('{MATERIAL}', mat)
+            .replaceAll('{STANDARD}', 'ГОСТ 10704-91')
             .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{NAME}', nameStr)
             .replaceAll('{TAG}', nameStr.isNotEmpty ? nameStr : spoolMark)

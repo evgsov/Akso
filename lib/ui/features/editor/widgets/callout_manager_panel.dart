@@ -1,7 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/fitting_type.dart';
+import '../../../../domain/enums/inspection_method.dart';
+import '../../../../domain/enums/valve_type.dart';
+import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/callout.dart';
+import '../../../../domain/models/equipment.dart';
 import '../../../../domain/models/piping_network.dart';
 import '../../../canvas/input_controller.dart';
 
@@ -76,6 +80,251 @@ List<TemplateBrick> parseTemplateToBricks(String template) {
 /// Сборка списка кирпичиков обратно в единую строку шаблона
 String bricksToTemplate(List<TemplateBrick> bricks) {
   return bricks.map((b) => b.text).join('');
+}
+
+/// Форматирование текста предпросмотра выноски по категории с реалистичными образцами данных по ГОСТ 2.316
+String formatPreviewCalloutText(
+  String template,
+  CalloutTargetType type, {
+  PipingNetwork? network,
+  String dateFormat = 'DD.MM.YYYY',
+  Map<String, String>? templates,
+}) {
+  if (template.isEmpty) return '';
+
+  final net = network;
+  final realSeg = net?.segments.values.firstOrNull;
+  final realSpool = net?.spools.values.firstOrNull;
+  final realWeld = net?.weldJoints.values.firstOrNull;
+  final realValve = net?.valves.values.firstOrNull;
+  final realFitting = net?.fittings.values.firstOrNull;
+  final realEquipment = net?.equipments.values.firstOrNull;
+  final realNozzle = net?.equipments.values.expand((e) => e.nozzles).firstOrNull;
+  final realParentEq = realNozzle != null
+      ? net?.equipments.values.where((e) => e.nozzles.any((n) => n.id == realNozzle.id)).firstOrNull
+      : null;
+  final realSupport = net?.supports.values.firstOrNull;
+  final realNode = net?.nodes.values.firstOrNull;
+
+  var text = template;
+
+  // 1. Форматирование даты {DATE} и {DATE:FORMAT}
+  final dateRegex = RegExp(r'\{DATE(?::([A-Za-z0-9_./-]+))?\}');
+  final defaultDateRaw = realWeld?.date.isNotEmpty == true ? realWeld!.date : '2026-09-18';
+  final effectiveFormattedDate = formatWeldDate(defaultDateRaw, dateFormat);
+
+  text = text.replaceAllMapped(dateRegex, (match) {
+    final inlineFormat = match.group(1);
+    if (inlineFormat != null && inlineFormat.isNotEmpty) {
+      return formatWeldDate(defaultDateRaw, inlineFormat);
+    }
+    return effectiveFormattedDate;
+  });
+
+  // 2. Специфические плейсхолдеры по категориям объектов
+  switch (type) {
+    case CalloutTargetType.segment:
+      final spoolForSeg = realSeg != null
+          ? net?.spools.values.where((s) => s.segmentId == realSeg.id).firstOrNull
+          : realSpool;
+      final spoolMark = spoolForSeg?.name?.isNotEmpty == true
+          ? spoolForSeg!.name!
+          : (spoolForSeg?.number.isNotEmpty == true
+              ? spoolForSeg!.number
+              : (realSeg?.name?.isNotEmpty == true ? realSeg!.name! : 'К-1'));
+      final dn = spoolForSeg?.dn ?? realSeg?.dn ?? 80;
+      final od = realSeg != null ? realSeg.outerDiameterMm : 89.0;
+      final wall = spoolForSeg?.wallThickness ?? realSeg?.wallThicknessMm ?? 4.0;
+      final mat = spoolForSeg?.material.isNotEmpty == true
+          ? spoolForSeg!.material
+          : (realSeg?.material.isNotEmpty == true ? realSeg!.material : 'Сталь 20');
+      final sysCode = (realSeg != null && net?.systems[realSeg.systemId] != null)
+          ? net!.systems[realSeg.systemId]!.code
+          : 'В1';
+      final len = spoolForSeg?.cutLengthMm.round() ?? 2400;
+      final serial = spoolForSeg?.serialNumber?.isNotEmpty == true
+          ? spoolForSeg!.serialNumber!
+          : (realSeg?.serialNumber?.isNotEmpty == true ? realSeg!.serialNumber! : '48219');
+      final dStr = od.truncateToDouble() == od ? od.toStringAsFixed(0) : od.toStringAsFixed(1);
+      final sStr = wall.truncateToDouble() == wall ? wall.toStringAsFixed(0) : wall.toStringAsFixed(1);
+
+      return text
+          .replaceAll('{SPOOL}', spoolMark)
+          .replaceAll('{NUM}', spoolMark)
+          .replaceAll('{ID}', spoolMark)
+          .replaceAll('{NAME}', spoolMark)
+          .replaceAll('{TAG}', spoolMark)
+          .replaceAll('{DN}', '$dn')
+          .replaceAll('{WALL}', sStr)
+          .replaceAll('{S}', sStr)
+          .replaceAll('{D_OUT}', dStr)
+          .replaceAll('{OD}', dStr)
+          .replaceAll('{OUTER_DIAMETER}', dStr)
+          .replaceAll('{MATERIAL}', mat)
+          .replaceAll('{STANDARD}', 'ГОСТ 10704-91')
+          .replaceAll('{SYSTEM}', sysCode)
+          .replaceAll('{CUT_LENGTH}', '$len')
+          .replaceAll('{L_CUT}', '$len')
+          .replaceAll('{LENGTH}', '$len')
+          .replaceAll('{L}', '$len')
+          .replaceAll('{SERIAL}', serial)
+          .replaceAll('{SERIAL_NUMBER}', serial)
+          .replaceAll('{BATCH}', serial)
+          .replaceAll('{TECH_ID}', spoolForSeg?.id ?? realSeg?.id ?? 'seg_001');
+
+    case CalloutTargetType.weld:
+      final numStr = realWeld != null && realWeld.number > 0 ? '${realWeld.number}' : '1';
+      final stamp = realWeld?.stamp.isNotEmpty == true ? realWeld!.stamp : 'СВ-01';
+      final typeName = realWeld != null ? realWeld.weldType.shortName : 'С17';
+      final steel = realWeld?.steelGrade.isNotEmpty == true ? realWeld!.steelGrade : 'Сталь 20';
+      final electrode = realWeld?.electrodeGrade.isNotEmpty == true ? realWeld!.electrodeGrade : 'УОНИ-13/55';
+      final method = realWeld != null ? realWeld.inspectionMethod.shortName : 'ВИК+РК';
+      final weldSeg = (realWeld?.segmentId != null && net != null) ? net.segments[realWeld!.segmentId] : null;
+      final dnStr = '${weldSeg?.dn ?? 80}';
+      final wallMm = weldSeg?.wallThicknessMm ?? 4.0;
+      final wallStr = wallMm.truncateToDouble() == wallMm ? wallMm.toStringAsFixed(0) : wallMm.toStringAsFixed(1);
+      final odMm = weldSeg?.outerDiameterMm ?? 89.0;
+      final odStr = odMm.truncateToDouble() == odMm ? odMm.toStringAsFixed(0) : odMm.toStringAsFixed(1);
+
+      return text
+          .replaceAll('{NUM}', numStr)
+          .replaceAll('{NUMBER}', numStr)
+          .replaceAll('{ID}', numStr)
+          .replaceAll('{STAMP}', stamp)
+          .replaceAll('{TYPE}', typeName)
+          .replaceAll('{STEEL}', steel)
+          .replaceAll('{MATERIAL}', steel)
+          .replaceAll('{ELECTRODE}', electrode)
+          .replaceAll('{METHOD}', method)
+          .replaceAll('{DN}', dnStr)
+          .replaceAll('{WALL}', wallStr)
+          .replaceAll('{S}', wallStr)
+          .replaceAll('{D_OUT}', odStr)
+          .replaceAll('{OD}', odStr)
+          .replaceAll('{DIAMETER}', odStr)
+          .replaceAll('{WELD_ID}', realWeld?.id ?? 'weld_001')
+          .replaceAll('{TECH_ID}', realWeld?.id ?? 'weld_001');
+
+    case CalloutTargetType.valve:
+      final name = realValve?.name.isNotEmpty == true ? realValve!.name : 'Задвижка 30с41нж';
+      final tag = realValve?.name.isNotEmpty == true ? realValve!.name : 'ЗКЛ-1';
+      final dn = realValve?.dn != null && realValve!.dn > 0 ? realValve.dn : 80;
+      final typeStr = realValve != null ? realValve.valveType.displayName : 'Задвижка';
+      final len = realValve != null ? realValve.lengthMm.round() : 210;
+      final serial = realValve?.serialNumber?.isNotEmpty == true ? realValve!.serialNumber! : '48219';
+
+      return text
+          .replaceAll('{NAME}', name)
+          .replaceAll('{TAG}', tag)
+          .replaceAll('{TYPE}', typeStr)
+          .replaceAll('{DN}', '$dn')
+          .replaceAll('{PN}', 'Ру16')
+          .replaceAll('{LENGTH}', '$len')
+          .replaceAll('{L}', '$len')
+          .replaceAll('{MATERIAL}', 'Сталь 20')
+          .replaceAll('{SYSTEM}', 'В1')
+          .replaceAll('{SERIAL}', serial)
+          .replaceAll('{SERIAL_NUMBER}', serial)
+          .replaceAll('{BATCH}', serial)
+          .replaceAll('{ID}', name)
+          .replaceAll('{TECH_ID}', realValve?.id ?? 'valve_001');
+
+    case CalloutTargetType.fitting:
+      final name = realFitting?.name?.isNotEmpty == true
+          ? realFitting!.name!
+          : (realFitting != null ? realFitting.fittingType.displayName : 'Отвод 90° 89х4');
+      final typeStr = realFitting != null ? realFitting.fittingType.displayName : 'Отвод 90°';
+      final dn = realFitting?.dn != null && realFitting!.dn > 0 ? realFitting.dn : 80;
+      final dn2 = realFitting?.dnSecondary != null && realFitting!.dnSecondary! > 0 ? realFitting.dnSecondary! : dn;
+      final standard = realFitting?.standard?.isNotEmpty == true ? realFitting!.standard! : 'ГОСТ 17375-2001';
+      final mat = realFitting?.material.isNotEmpty == true ? realFitting!.material : 'Сталь 20';
+      final serial = realFitting?.serialNumber?.isNotEmpty == true ? realFitting!.serialNumber! : '48219';
+
+      return text
+          .replaceAll('{NAME}', name)
+          .replaceAll('{TAG}', 'ОТ-1')
+          .replaceAll('{TYPE}', typeStr)
+          .replaceAll('{STANDARD}', standard)
+          .replaceAll('{MATERIAL}', mat)
+          .replaceAll('{SYSTEM}', 'В1')
+          .replaceAll('{DN}', '$dn')
+          .replaceAll('{DN2}', '$dn2')
+          .replaceAll('{SERIAL}', serial)
+          .replaceAll('{SERIAL_NUMBER}', serial)
+          .replaceAll('{BATCH}', serial)
+          .replaceAll('{ID}', name)
+          .replaceAll('{TECH_ID}', realFitting?.id ?? 'fit_001');
+
+    case CalloutTargetType.equipment:
+      final name = realEquipment?.name.isNotEmpty == true ? realEquipment!.name : 'Емкость Е-1';
+      final tag = name.trim().contains(RegExp(r'\s+')) ? name.trim().split(RegExp(r'\s+')).last : name;
+      final typeStr = realEquipment != null ? realEquipment.type.displayName : 'Горизонтальный цилиндр';
+      final dims = realEquipment != null
+          ? '${realEquipment.width.round()}x${realEquipment.length.round()}x${realEquipment.height.round()}'
+          : '1200x3000x1500';
+      final serial = realEquipment?.serialNumber?.isNotEmpty == true ? realEquipment!.serialNumber! : 'Е-014';
+
+      return text
+          .replaceAll('{NAME}', name)
+          .replaceAll('{TAG}', tag)
+          .replaceAll('{TYPE}', typeStr)
+          .replaceAll('{DIMENSIONS}', dims)
+          .replaceAll('{SERIAL}', serial)
+          .replaceAll('{SERIAL_NUMBER}', serial)
+          .replaceAll('{BATCH}', serial)
+          .replaceAll('{ID}', tag)
+          .replaceAll('{TECH_ID}', realEquipment?.id ?? 'eq_001');
+
+    case CalloutTargetType.nozzle:
+      final name = realNozzle?.name.isNotEmpty == true ? realNozzle!.name : 'Ш-1';
+      final dn = realNozzle?.dn != null && realNozzle!.dn > 0 ? realNozzle.dn : 80;
+      final eqName = realParentEq?.name.isNotEmpty == true ? realParentEq!.name : 'Емкость Е-1';
+      final eqTag = eqName.trim().contains(RegExp(r'\s+')) ? eqName.trim().split(RegExp(r'\s+')).last : eqName;
+      final face = realNozzle?.face?.name ?? 'top';
+
+      return text
+          .replaceAll('{NAME}', name)
+          .replaceAll('{TAG}', name)
+          .replaceAll('{DN}', '$dn')
+          .replaceAll('{EQUIPMENT}', eqName)
+          .replaceAll('{EQUIPMENT_TAG}', eqTag)
+          .replaceAll('{FACE}', face)
+          .replaceAll('{ID}', name)
+          .replaceAll('{TECH_ID}', realNozzle?.id ?? 'noz_001');
+
+    case CalloutTargetType.support:
+      final name = realSupport?.name.isNotEmpty == true
+          ? realSupport!.name
+          : (realSupport != null ? realSupport.type.shortCode : 'ОП-1');
+      final typeStr = realSupport != null ? realSupport.type.displayName : 'Опора подвижная';
+      final code = realSupport != null ? realSupport.type.shortCode : 'ОП';
+
+      return text
+          .replaceAll('{NAME}', name)
+          .replaceAll('{TAG}', name)
+          .replaceAll('{TYPE}', typeStr)
+          .replaceAll('{CODE}', code)
+          .replaceAll('{ID}', name)
+          .replaceAll('{TECH_ID}', realSupport?.id ?? 'sup_001');
+
+    case CalloutTargetType.node:
+      final cleanNum = realNode != null
+          ? realNode.id.replaceFirst(RegExp(r'^(node_|n_)'), '')
+          : '1';
+      final zStr = realNode != null ? '${realNode.z.round()}' : '2400';
+      final xStr = realNode != null ? '${realNode.x.round()}' : '1200';
+      final yStr = realNode != null ? '${realNode.y.round()}' : '800';
+
+      return text
+          .replaceAll('{NUM}', cleanNum)
+          .replaceAll('{NUMBER}', cleanNum)
+          .replaceAll('{NAME}', 'Узел $cleanNum')
+          .replaceAll('{ID}', cleanNum)
+          .replaceAll('{Z}', zStr)
+          .replaceAll('{X}', xStr)
+          .replaceAll('{Y}', yStr)
+          .replaceAll('{TECH_ID}', realNode?.id ?? 'node_001');
+  }
 }
 
 /// Модальная панель управления умными выносками (Smart Callouts Manager)
@@ -841,22 +1090,25 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                         left: 12,
                         child: Row(
                           children: [
-                            const Text(
-                              'ПРЕДПРОСМОТР ВЫНОСКИ (ГОСТ 2.316)',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                            Text(
+                              'ПРЕДПРОСМОТР (${_templateType.displayName.toUpperCase()})',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                             ),
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.indigo.shade50,
-                                borderRadius: BorderRadius.circular(4),
+                            if (_templateType == CalloutTargetType.weld ||
+                                _topTemplateController.text.contains('{DATE') ||
+                                _bottomTemplateController.text.contains('{DATE'))
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.indigo.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _selectedDateFormat,
+                                  style: TextStyle(fontSize: 9, color: Colors.indigo.shade700, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                              child: Text(
-                                _selectedDateFormat,
-                                style: TextStyle(fontSize: 9, color: Colors.indigo.shade700, fontWeight: FontWeight.bold),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -1188,8 +1440,20 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   }
 
   Widget _buildCalloutPreview() {
-    final previewTop = _formatPreviewText(_topTemplateController.text);
-    final previewBottom = _formatPreviewText(_bottomTemplateController.text);
+    final previewTop = formatPreviewCalloutText(
+      _topTemplateController.text,
+      _templateType,
+      network: widget.controller.network,
+      dateFormat: _selectedDateFormat,
+      templates: widget.controller.currentProject.calloutTemplates,
+    );
+    final previewBottom = formatPreviewCalloutText(
+      _bottomTemplateController.text,
+      _templateType,
+      network: widget.controller.network,
+      dateFormat: _selectedDateFormat,
+      templates: widget.controller.currentProject.calloutTemplates,
+    );
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1243,53 +1507,6 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         ),
       ],
     );
-  }
-
-  String _formatPreviewText(String template) {
-    if (template.isEmpty) return '';
-    final formattedDate = formatWeldDate('2026-09-18', _selectedDateFormat);
-    var text = template;
-    final dateRegex = RegExp(r'\{DATE(?::([A-Za-z0-9_./-]+))?\}');
-    text = text.replaceAllMapped(dateRegex, (match) {
-      final inlineFormat = match.group(1);
-      if (inlineFormat != null && inlineFormat.isNotEmpty) {
-        return formatWeldDate('2026-09-18', inlineFormat);
-      }
-      return formattedDate;
-    });
-
-    return text
-        .replaceAll('{DN}', '80')
-        .replaceAll('{DN2}', '50')
-        .replaceAll('{WALL}', '4.0')
-        .replaceAll('{S}', '4.0')
-        .replaceAll('{D_OUT}', '89')
-        .replaceAll('{OD}', '89')
-        .replaceAll('{OUTER_DIAMETER}', '89')
-        .replaceAll('{MATERIAL}', 'Сталь 20')
-        .replaceAll('{STANDARD}', 'ГОСТ 10704-91')
-        .replaceAll('{SYSTEM}', 'В1')
-        .replaceAll('{ID}', 'К-1')
-        .replaceAll('{NUM}', '1')
-        .replaceAll('{NUMBER}', '1')
-        .replaceAll('{STAMP}', 'СВ-01')
-        .replaceAll('{TYPE}', 'Задвижка')
-        .replaceAll('{NAME}', 'Задвижка 30с41нж')
-        .replaceAll('{TAG}', 'Е-1')
-        .replaceAll('{DIMENSIONS}', '1200x3000x1500')
-        .replaceAll('{EQUIPMENT}', 'Емкость Е-1')
-        .replaceAll('{EQUIPMENT_TAG}', 'Е-1')
-        .replaceAll('{FACE}', 'top')
-        .replaceAll('{SERIAL}', '48219')
-        .replaceAll('{SERIAL_NUMBER}', '48219')
-        .replaceAll('{BATCH}', 'ПЛ-530')
-        .replaceAll('{SPOOL}', 'К-1')
-        .replaceAll('{LENGTH}', '2400')
-        .replaceAll('{L}', '2400')
-        .replaceAll('{L_CUT}', '2400')
-        .replaceAll('{CUT_LENGTH}', '2400')
-        .replaceAll('{STEEL}', 'Сталь 20')
-        .replaceAll('{ELECTRODE}', 'УОНИ-13/55');
   }
 
   Map<String, String> _getPlaceholdersForType(CalloutTargetType type) {

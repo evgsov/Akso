@@ -255,5 +255,130 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets('Category dropdown switches preview and displays accurate category preview without Задвижка', (tester) async {
+      final network = PipingNetwork();
+      final controller = PipingInputController(network: network);
+
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CalloutManagerPanel(controller: controller),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Конструктор шаблонов (ГОСТ / AutoCAD)'));
+      await tester.pumpAndSettle();
+
+      // Исходно категория Труба
+      expect(find.text('ПРЕДПРОСМОТР (ТРУБА)'), findsOneWidget);
+
+      // Переключаем категорию на Сварной стык
+      await tester.tap(find.text('Труба'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Сварной стык').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ПРЕДПРОСМОТР (СВАРНОЙ СТЫК)'), findsOneWidget);
+      // Проверяем, что в предпросмотре для стыка отображается С17 и СВ-01, а не Задвижка
+      expect(find.textContaining('С17'), findsWidgets);
+      expect(find.textContaining('СВ-01'), findsWidgets);
+      expect(find.textContaining('Задвижка'), findsNothing);
+
+      controller.dispose();
+    });
+  });
+
+  group('formatPreviewCalloutText per Category (ГОСТ 2.316 Realistic Previews)', () {
+    test('weld preview shows weld type and stamp, never Задвижка or К-1', () {
+      final top = formatPreviewCalloutText('Стык №{ID}', CalloutTargetType.weld);
+      expect(top, equals('Стык №1'));
+      expect(top.contains('К-1'), isFalse);
+
+      final bottom = formatPreviewCalloutText('{TYPE} {STAMP} {DATE}', CalloutTargetType.weld, dateFormat: 'DD.MM.YYYY');
+      expect(bottom, equals('С17 СВ-01 18.09.2026'));
+      expect(bottom.contains('Задвижка'), isFalse);
+
+      final method = formatPreviewCalloutText('{METHOD}', CalloutTargetType.weld);
+      expect(method, equals('ВИК+РК'));
+    });
+
+    test('equipment preview shows equipment name, tag and type, never Задвижка', () {
+      final top = formatPreviewCalloutText('{NAME}', CalloutTargetType.equipment);
+      expect(top, equals('Емкость Е-1'));
+      expect(top.contains('Задвижка'), isFalse);
+
+      final bottom = formatPreviewCalloutText('{TYPE}', CalloutTargetType.equipment);
+      expect(bottom, equals('Горизонтальный цилиндр'));
+      expect(bottom.contains('Задвижка'), isFalse);
+
+      final tag = formatPreviewCalloutText('{TAG}', CalloutTargetType.equipment);
+      expect(tag, equals('Е-1'));
+
+      final id = formatPreviewCalloutText('{ID}', CalloutTargetType.equipment);
+      expect(id, equals('Е-1'));
+      expect(id.contains('К-1'), isFalse);
+    });
+
+    test('support preview shows support name, type and code, never Задвижка', () {
+      final top = formatPreviewCalloutText('{NAME}', CalloutTargetType.support);
+      expect(top, equals('ОП-1'));
+      expect(top.contains('Задвижка'), isFalse);
+
+      final bottom = formatPreviewCalloutText('{TYPE}', CalloutTargetType.support);
+      expect(bottom, equals('Опора подвижная'));
+      expect(bottom.contains('Задвижка'), isFalse);
+
+      final code = formatPreviewCalloutText('{CODE}', CalloutTargetType.support);
+      expect(code, equals('ОП'));
+    });
+
+    test('node preview shows node number and height mark Z', () {
+      final top = formatPreviewCalloutText('Узел {ID}', CalloutTargetType.node);
+      expect(top, equals('Узел 1'));
+      expect(top.contains('К-1'), isFalse);
+
+      final bottom = formatPreviewCalloutText('Отм. {Z}', CalloutTargetType.node);
+      expect(bottom, equals('Отм. 2400'));
+      expect(bottom.contains('{Z}'), isFalse);
+    });
+
+    test('nozzle preview shows nozzle designation, DN and equipment', () {
+      final top = formatPreviewCalloutText('Шт. {NAME} Ду{DN}', CalloutTargetType.nozzle);
+      expect(top, equals('Шт. Ш-1 Ду80'));
+      expect(top.contains('Задвижка'), isFalse);
+
+      final bottom = formatPreviewCalloutText('{EQUIPMENT}', CalloutTargetType.nozzle);
+      expect(bottom, equals('Емкость Е-1'));
+    });
+
+    test('fitting preview shows fitting name, type and GOСТ standard', () {
+      final top = formatPreviewCalloutText('{NAME}', CalloutTargetType.fitting);
+      expect(top, equals('Отвод 90° 89х4'));
+      expect(top.contains('Задвижка'), isFalse);
+
+      final type = formatPreviewCalloutText('{TYPE}', CalloutTargetType.fitting);
+      expect(type, equals('Отвод 90°'));
+      expect(type.contains('Задвижка'), isFalse);
+
+      final standard = formatPreviewCalloutText('{STANDARD}', CalloutTargetType.fitting);
+      expect(standard, equals('ГОСТ 17375-2001'));
+      expect(standard.contains('ГОСТ 10704-91'), isFalse);
+    });
+
+    test('segment preview shows spool mark and dimensions, never Задвижка', () {
+      final top = formatPreviewCalloutText('{NAME} Ду{DN} L={L}', CalloutTargetType.segment);
+      expect(top, equals('К-1 Ду80 L=2400'));
+      expect(top.contains('Задвижка'), isFalse);
+
+      final bottom = formatPreviewCalloutText('{SYSTEM}', CalloutTargetType.segment);
+      expect(bottom, equals('В1'));
+    });
   });
 }
+
