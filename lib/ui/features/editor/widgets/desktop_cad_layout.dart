@@ -5,6 +5,7 @@ import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
+import '../../../../domain/models/fitting.dart';
 import '../../../../domain/models/pipe_support.dart';
 import '../../../../core/math/snap_engine.dart';
 import '../../../../domain/models/callout.dart';
@@ -1443,6 +1444,9 @@ class DesktopCadLayout extends StatelessWidget {
     final isSpool = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedSpoolId != null;
     final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedSegmentId != null;
     final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedEquipmentId != null;
+    final selectedFit = (!isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isSegment && !isEquipment && controller.selectedNodeId != null)
+        ? controller.network.fittings[controller.selectedNodeId]
+        : null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
@@ -1476,6 +1480,33 @@ class DesktopCadLayout extends StatelessWidget {
     } else if (isEquipment) {
       title = 'Оборудование';
       icon = Icons.precision_manufacturing;
+    } else if (selectedFit != null) {
+      title = selectedFit.displayName;
+      switch (selectedFit.fittingType) {
+        case FittingType.elbow90:
+        case FittingType.elbow45:
+          icon = Icons.turn_right;
+          break;
+        case FittingType.tee:
+          icon = Icons.call_split;
+          break;
+        case FittingType.cross:
+          icon = Icons.add;
+          break;
+        case FittingType.reducerConcentric:
+        case FittingType.reducerEccentric:
+          icon = Icons.tune;
+          break;
+        case FittingType.flange:
+          icon = Icons.radio_button_checked;
+          break;
+        case FittingType.cap:
+          icon = Icons.block;
+          break;
+        case FittingType.directBranch:
+          icon = Icons.merge_type;
+          break;
+      }
     }
 
     return Card(
@@ -2028,6 +2059,14 @@ class DesktopCadLayout extends StatelessWidget {
                 final fit = controller.network.fittings[nodeId];
                 final isEndNode = connected.length == 1 && node?.equipmentId == null;
 
+                if (fit != null) {
+                  return _DesktopFittingInspector(
+                    controller: controller,
+                    nodeId: nodeId,
+                    fitting: fit,
+                  );
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2040,192 +2079,7 @@ class DesktopCadLayout extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text('Подключено труб: ${connected.length}', style: const TextStyle(fontSize: 11)),
                     const SizedBox(height: 10),
-
-                    // Если на узле уже установлен фитинг (днище, фланец и т.д.)
-                    if (fit != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.indigo.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.indigo.shade200),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  fit.fittingType == FittingType.cap
-                                      ? Icons.block
-                                      : (fit.fittingType == FittingType.flange
-                                          ? Icons.radio_button_checked
-                                          : (fit.fittingType == FittingType.directBranch
-                                              ? Icons.merge_type
-                                              : (fit.fittingType == FittingType.tee ? Icons.call_split : Icons.tune))),
-                                  size: 16,
-                                  color: Colors.indigo,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    fit.displayName,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              'Ду: ${fit.dn}  |  ${fit.standard ?? "ГОСТ"}',
-                              style: const TextStyle(fontSize: 11, color: Colors.black87),
-                            ),
-                            if (fit.fittingType == FittingType.reducerConcentric || fit.fittingType == FittingType.reducerEccentric) ...[
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Text('Длина L:', style: TextStyle(fontSize: 11, color: Colors.black87)),
-                                  const SizedBox(width: 6),
-                                  SizedBox(
-                                    width: 70,
-                                    height: 26,
-                                    child: TextField(
-                                      keyboardType: TextInputType.number,
-                                      style: const TextStyle(fontSize: 11),
-                                      decoration: const InputDecoration(
-                                        suffixText: 'мм',
-                                        suffixStyle: TextStyle(fontSize: 9),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        border: OutlineInputBorder(),
-                                        isDense: true,
-                                      ),
-                                      controller: TextEditingController(text: fit.effectiveBuildingLengthMm.round().toString()),
-                                      onSubmitted: (v) {
-                                        final l = double.tryParse(v);
-                                        if (l != null && l > 0) {
-                                          controller.network.updateFittingLength(nodeId, l);
-                                          controller.history.recordState(controller.network);
-                                          controller.refresh();
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    onPressed: () {
-                                      final nextAngle = (fit.rotationAngleDeg + 90.0) % 360.0;
-                                      controller.network.updateFittingRotation(nodeId, nextAngle);
-                                      controller.history.recordState(controller.network);
-                                      controller.refresh();
-                                    },
-                                    child: Text('Поворот ${fit.rotationAngleDeg.round()}°', style: const TextStyle(fontSize: 10)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            if (fit.fittingType == FittingType.tee || fit.fittingType == FittingType.directBranch) ...[
-                              const SizedBox(height: 8),
-                              const Text('Исполнение ответвления:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87)),
-                              const SizedBox(height: 4),
-                              SizedBox(
-                                width: double.infinity,
-                                child: SegmentedButton<FittingType>(
-                                  style: const ButtonStyle(
-                                    visualDensity: VisualDensity.compact,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: FittingType.tee,
-                                      label: Text('Тройник (3 стыка)', style: TextStyle(fontSize: 10)),
-                                      icon: Icon(Icons.call_split, size: 14),
-                                    ),
-                                    ButtonSegment(
-                                      value: FittingType.directBranch,
-                                      label: Text('Врезка У18 (1 шов)', style: TextStyle(fontSize: 10)),
-                                      icon: Icon(Icons.merge_type, size: 14),
-                                    ),
-                                  ],
-                                  selected: {fit.fittingType},
-                                  onSelectionChanged: (set) {
-                                    final newType = set.first;
-                                    if (newType == FittingType.directBranch) {
-                                      controller.network.updateFitting(
-                                        nodeId,
-                                        fit.copyWith(
-                                          fittingType: FittingType.directBranch,
-                                          name: 'Прямая врезка У18',
-                                          standard: 'ГОСТ 16037-80 У18',
-                                          weldType: WeldType.u18,
-                                          radiusMm: 0.0,
-                                          cutsMainPipe: false,
-                                        ),
-                                      );
-                                    } else {
-                                      controller.network.updateFitting(
-                                        nodeId,
-                                        fit.copyWith(
-                                          fittingType: FittingType.tee,
-                                          name: 'Тройник равнопроходный Ду${fit.dn}',
-                                          standard: 'ГОСТ 17376-2001',
-                                          weldType: WeldType.c17,
-                                          radiusMm: fit.dn * 1.0,
-                                          cutsMainPipe: true,
-                                        ),
-                                      );
-                                    }
-                                    controller.network.generateElementWeldJoints();
-                                    controller.history.recordState(controller.network);
-                                    controller.refresh();
-                                  },
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                                    onPressed: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        builder: (_) => FittingPropertiesSheet(
-                                          network: controller.network,
-                                          nodeId: nodeId,
-                                          onModified: controller.refresh,
-                                        ),
-                                      );
-                                    },
-                                    child: const Text('Свойства', style: TextStyle(fontSize: 11)),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    foregroundColor: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    controller.network.removeFitting(nodeId);
-                                    controller.history.recordState(controller.network);
-                                    controller.refresh();
-                                  },
-                                  child: const Text('Снять', style: TextStyle(fontSize: 11)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ] else if (isEndNode) ...[
+                    if (isEndNode) ...[
                       // Быстрые кнопки для концевого узла трубы
                       SizedBox(
                         width: double.infinity,
@@ -2666,6 +2520,549 @@ class DesktopCadLayout extends StatelessWidget {
           dirZ: dirZ,
         );
       },
+    );
+  }
+}
+
+class _DesktopFittingInspector extends StatefulWidget {
+  final PipingInputController controller;
+  final String nodeId;
+  final Fitting fitting;
+
+  const _DesktopFittingInspector({
+    required this.controller,
+    required this.nodeId,
+    required this.fitting,
+  });
+
+  @override
+  State<_DesktopFittingInspector> createState() => _DesktopFittingInspectorState();
+}
+
+class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
+  late TextEditingController _lengthController;
+  late TextEditingController _branchHController;
+
+  @override
+  void initState() {
+    super.initState();
+    _lengthController = TextEditingController(
+      text: widget.fitting.effectiveBuildingLengthMm.round().toString(),
+    );
+    _branchHController = TextEditingController(
+      text: widget.fitting.effectiveBranchLengthMm.round().toString(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _DesktopFittingInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fitting.id != widget.fitting.id ||
+        oldWidget.fitting.effectiveBuildingLengthMm != widget.fitting.effectiveBuildingLengthMm) {
+      _lengthController.text = widget.fitting.effectiveBuildingLengthMm.round().toString();
+    }
+    if (oldWidget.fitting.id != widget.fitting.id ||
+        oldWidget.fitting.effectiveBranchLengthMm != widget.fitting.effectiveBranchLengthMm) {
+      _branchHController.text = widget.fitting.effectiveBranchLengthMm.round().toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _lengthController.dispose();
+    _branchHController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final nodeId = widget.nodeId;
+    final fitting = widget.fitting;
+    final connected = controller.network.getConnectedSegments(nodeId);
+    const materials = ['Сталь 20', '09Г2С', '12Х18Н10Т', '10Г2', '15Х5М', '17Г1С'];
+    final currentMat = materials.contains(fitting.material) ? fitting.material : 'Сталь 20';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Узел: $nodeId', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(
+              'Ду${fitting.dn}${fitting.dnSecondary != null && fitting.dnSecondary != fitting.dn ? "х${fitting.dnSecondary}" : ""}',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _DesktopNodeElevationEditor(
+          controller: controller,
+          nodeId: nodeId,
+        ),
+        const SizedBox(height: 6),
+        if (fitting.standard != null && fitting.standard!.isNotEmpty) ...[
+          Text('Стандарт: ${fitting.standard}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+          const SizedBox(height: 6),
+        ],
+
+        // Выбор марки стали
+        Row(
+          children: [
+            const Text('Сталь:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButton<String>(
+                value: currentMat,
+                isDense: true,
+                isExpanded: true,
+                style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600),
+                items: materials.map((m) {
+                  return DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 11)));
+                }).toList(),
+                onChanged: (newMat) {
+                  if (newMat != null) {
+                    controller.network.updateFitting(nodeId, fitting.copyWith(material: newMat));
+                    controller.history.recordState(controller.network);
+                    controller.refresh();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Специфические контролы в зависимости от типа детали
+        if (fitting.fittingType == FittingType.reducerConcentric ||
+            fitting.fittingType == FittingType.reducerEccentric) ...[
+          const Text('Исполнение перехода:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<FittingType>(
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: FittingType.reducerConcentric,
+                  label: Text('Концентр.', style: TextStyle(fontSize: 10)),
+                ),
+                ButtonSegment(
+                  value: FittingType.reducerEccentric,
+                  label: Text('Эксцентр.', style: TextStyle(fontSize: 10)),
+                ),
+              ],
+              selected: {
+                fitting.fittingType == FittingType.reducerEccentric
+                    ? FittingType.reducerEccentric
+                    : FittingType.reducerConcentric
+              },
+              onSelectionChanged: (set) {
+                final newType = set.first;
+                controller.network.updateFitting(
+                  nodeId,
+                  fitting.copyWith(
+                    fittingType: newType,
+                    name: newType == FittingType.reducerEccentric
+                        ? 'Переход эксцентрический'
+                        : 'Переход концентрический',
+                  ),
+                );
+                controller.history.recordState(controller.network);
+                controller.refresh();
+              },
+            ),
+          ),
+          if (connected.length == 2) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('D1: Ду${connected[0].dn}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                const Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
+                Text('D2: Ду${connected[1].dn}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Text('Длина L:', style: TextStyle(fontSize: 11)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: SizedBox(
+                  height: 26,
+                  child: TextField(
+                    controller: _lengthController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 11),
+                    decoration: const InputDecoration(
+                      suffixText: 'мм',
+                      suffixStyle: TextStyle(fontSize: 9),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onSubmitted: (v) {
+                      final l = double.tryParse(v);
+                      if (l != null && l > 0) {
+                        controller.network.updateFittingLength(nodeId, l);
+                        controller.history.recordState(controller.network);
+                        controller.refresh();
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.rotate_right, size: 14),
+                label: Text('${fitting.rotationAngleDeg.round()}°', style: const TextStyle(fontSize: 10)),
+                onPressed: () {
+                  final next = (fitting.rotationAngleDeg + 90.0) % 360.0;
+                  controller.network.updateFittingRotation(nodeId, next);
+                  controller.history.recordState(controller.network);
+                  controller.refresh();
+                },
+              ),
+            ],
+          ),
+        ] else if (fitting.fittingType == FittingType.flange) ...[
+          Row(
+            children: [
+              const Text('Режим:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<FlangeConnectionType>(
+                  value: fitting.flangeConnectionType,
+                  isDense: true,
+                  isExpanded: true,
+                  style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                  items: FlangeConnectionType.values.map((mode) {
+                    return DropdownMenuItem(
+                      value: mode,
+                      child: Text(mode.displayName, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (newMode) {
+                    if (newMode != null) {
+                      controller.network.updateFitting(
+                        nodeId,
+                        fitting.copyWith(
+                          flangeConnectionType: newMode,
+                          isFlangePair: newMode == FlangeConnectionType.pipeToPipe,
+                        ),
+                      );
+                      controller.network.generateElementWeldJoints();
+                      controller.history.recordState(controller.network);
+                      controller.refresh();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Text('Давл. Ру:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Wrap(
+                  spacing: 4,
+                  children: [10, 16, 25, 40].map((pn) {
+                    final isSel = fitting.pressurePn == pn;
+                    return ChoiceChip(
+                      label: Text('PN $pn', style: TextStyle(fontSize: 9, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                      selected: isSel,
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      onSelected: (_) {
+                        controller.network.updateFitting(nodeId, fitting.copyWith(pressurePn: pn));
+                        controller.history.recordState(controller.network);
+                        controller.refresh();
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  icon: const Icon(Icons.flip, size: 14),
+                  label: Text(fitting.isFlipped ? 'Зеркало 180°' : 'Зеркало 0°', style: const TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    controller.network.updateFitting(nodeId, fitting.copyWith(isFlipped: !fitting.isFlipped));
+                    controller.history.recordState(controller.network);
+                    controller.refresh();
+                  },
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  icon: Icon(fitting.isFlangePair ? Icons.check_box : Icons.check_box_outline_blank, size: 14),
+                  label: Text(fitting.isFlangePair ? 'Пара' : 'Одиночный', style: const TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    controller.network.updateFitting(nodeId, fitting.copyWith(isFlangePair: !fitting.isFlangePair));
+                    controller.network.generateElementWeldJoints();
+                    controller.history.recordState(controller.network);
+                    controller.refresh();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ] else if (fitting.fittingType == FittingType.cap) ...[
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.amber.shade200),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.block, size: 16, color: Colors.amber),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    fitting.standard ?? 'ГОСТ 17379-2001 (Эллиптическая)',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else if (fitting.fittingType == FittingType.tee || fitting.fittingType == FittingType.directBranch) ...[
+          const Text('Исполнение ответвления:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<FittingType>(
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: FittingType.tee,
+                  label: Text('Тройник (3 стыка)', style: TextStyle(fontSize: 10)),
+                  icon: Icon(Icons.call_split, size: 14),
+                ),
+                ButtonSegment(
+                  value: FittingType.directBranch,
+                  label: Text('Врезка У18 (1 шов)', style: TextStyle(fontSize: 10)),
+                  icon: Icon(Icons.merge_type, size: 14),
+                ),
+              ],
+              selected: {fitting.fittingType},
+              onSelectionChanged: (set) {
+                final newType = set.first;
+                if (newType == FittingType.directBranch) {
+                  controller.network.updateFitting(
+                    nodeId,
+                    fitting.copyWith(
+                      fittingType: FittingType.directBranch,
+                      name: 'Прямая врезка У18',
+                      standard: 'ГОСТ 16037-80 У18',
+                      weldType: WeldType.u18,
+                      radiusMm: 0.0,
+                      cutsMainPipe: false,
+                    ),
+                  );
+                } else {
+                  controller.network.updateFitting(
+                    nodeId,
+                    fitting.copyWith(
+                      fittingType: FittingType.tee,
+                      name: 'Тройник равнопроходный Ду${fitting.dn}',
+                      standard: 'ГОСТ 17376-2001',
+                      weldType: WeldType.c17,
+                      radiusMm: fitting.dn * 1.0,
+                      cutsMainPipe: true,
+                    ),
+                  );
+                }
+                controller.network.generateElementWeldJoints();
+                controller.history.recordState(controller.network);
+                controller.refresh();
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Text('H:', style: TextStyle(fontSize: 11)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: SizedBox(
+                        height: 26,
+                        child: TextField(
+                          controller: _branchHController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(fontSize: 11),
+                          decoration: const InputDecoration(
+                            suffixText: 'мм',
+                            suffixStyle: TextStyle(fontSize: 9),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onSubmitted: (v) {
+                            final h = double.tryParse(v);
+                            if (h != null && h > 0) {
+                              controller.network.updateFitting(nodeId, fitting.copyWith(branchLengthMm: h));
+                              controller.history.recordState(controller.network);
+                              controller.refresh();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Row(
+                  children: [
+                    const Text('L:', style: TextStyle(fontSize: 11)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: SizedBox(
+                        height: 26,
+                        child: TextField(
+                          controller: _lengthController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(fontSize: 11),
+                          decoration: const InputDecoration(
+                            suffixText: 'мм',
+                            suffixStyle: TextStyle(fontSize: 9),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onSubmitted: (v) {
+                            final l = double.tryParse(v);
+                            if (l != null && l > 0) {
+                              controller.network.updateFittingLength(nodeId, l);
+                              controller.history.recordState(controller.network);
+                              controller.refresh();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ] else if (fitting.fittingType == FittingType.elbow90 || fitting.fittingType == FittingType.elbow45) ...[
+          Row(
+            children: [
+              const Text('Радиус R:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: SegmentedButton<double>(
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  segments: const [
+                    ButtonSegment(value: 1.5, label: Text('1.5 DN', style: TextStyle(fontSize: 10))),
+                    ButtonSegment(value: 1.0, label: Text('1.0 DN', style: TextStyle(fontSize: 10))),
+                  ],
+                  selected: {
+                    (fitting.customRadiusMm != null && (fitting.customRadiusMm! - fitting.dn * 1.0).abs() < 1.0)
+                        ? 1.0
+                        : 1.5
+                  },
+                  onSelectionChanged: (set) {
+                    final mult = set.first;
+                    controller.network.updateFitting(
+                      nodeId,
+                      fitting.copyWith(
+                        customRadiusMm: fitting.dn * mult,
+                        radiusMm: fitting.dn * mult,
+                        standard: mult == 1.5 ? 'ГОСТ 17375-2001' : 'ГОСТ 30753-2001',
+                      ),
+                    );
+                    controller.history.recordState(controller.network);
+                    controller.refresh();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        const SizedBox(height: 10),
+        // Кнопки действий: Все свойства и Снять
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => FittingPropertiesSheet(
+                      network: controller.network,
+                      nodeId: nodeId,
+                      onModified: controller.refresh,
+                    ),
+                  );
+                },
+                child: const Text('Свойства', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 6),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: Colors.red,
+                side: BorderSide(color: Colors.red.shade300),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 14),
+              label: const Text('Снять', style: TextStyle(fontSize: 11)),
+              onPressed: () {
+                controller.network.removeFitting(nodeId);
+                controller.history.recordState(controller.network);
+                controller.refresh();
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

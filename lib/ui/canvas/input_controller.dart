@@ -1056,6 +1056,7 @@ class PipingInputController extends ChangeNotifier {
           selectedNodeId = hitNodeId;
           selectedAxisId = null;
           selectedSpoolId = null;
+          selectedSegmentId = null;
           if (!selectedNodeIds.contains(hitNodeId)) {
             selectedNodeIds.clear();
             selectedSegmentIds.clear();
@@ -2516,7 +2517,7 @@ class PipingInputController extends ChangeNotifier {
       final ptN = projector.project(node);
 
       // Быстрая проверка центра узла
-      if ((ptN - screenPos).distance <= 18.0) {
+      if ((ptN - screenPos).distance <= 22.0) {
         return fit.nodeId;
       }
 
@@ -2561,7 +2562,7 @@ class PipingInputController extends ChangeNotifier {
               final cur = pOut1 * (oneMinusT * oneMinusT) +
                   ptN * (2.0 * oneMinusT * t) +
                   pOut2 * (t * t);
-              if (_distanceToLineSegment(screenPos, prev, cur) <= 15.0) {
+              if (_distanceToLineSegment(screenPos, prev, cur) <= 22.0) {
                 hit = true;
                 break;
               }
@@ -2605,7 +2606,7 @@ class PipingInputController extends ChangeNotifier {
                 node.z + uZ * effectiveArm,
               );
 
-              if (_distanceToLineSegment(screenPos, ptN, pArmScreen) <= 15.0) {
+              if (_distanceToLineSegment(screenPos, ptN, pArmScreen) <= 22.0) {
                 return fit.nodeId;
               }
             }
@@ -2631,7 +2632,7 @@ class PipingInputController extends ChangeNotifier {
               for (final wire in wireSegments) {
                 final p1 = projector.project(wire.startNode);
                 final p2 = projector.project(wire.endNode);
-                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 22.0) {
                   return fit.nodeId;
                 }
               }
@@ -2653,7 +2654,7 @@ class PipingInputController extends ChangeNotifier {
               for (final wire in wireSegments) {
                 final p1 = projector.project(wire.startNode);
                 final p2 = projector.project(wire.endNode);
-                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 22.0) {
                   return fit.nodeId;
                 }
               }
@@ -2675,7 +2676,7 @@ class PipingInputController extends ChangeNotifier {
               for (final wire in wireSegments) {
                 final p1 = projector.project(wire.startNode);
                 final p2 = projector.project(wire.endNode);
-                if (_distanceToLineSegment(screenPos, p1, p2) <= 15.0) {
+                if (_distanceToLineSegment(screenPos, p1, p2) <= 22.0) {
                   return fit.nodeId;
                 }
               }
@@ -2684,8 +2685,23 @@ class PipingInputController extends ChangeNotifier {
           break;
 
         case FittingType.directBranch:
-          if ((ptN - screenPos).distance <= 20.0) {
+          if ((ptN - screenPos).distance <= 25.0) {
             return fit.nodeId;
+          }
+          for (final seg in connected) {
+            final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+            final otherNode = network.nodes[otherId];
+            if (otherNode != null) {
+              final ptO = projector.project(otherNode);
+              final dir = ptO - ptN;
+              final len = dir.distance;
+              if (len > 0) {
+                final pArm = ptN + (dir / len) * math.min(len * 0.4, 30.0);
+                if (_distanceToLineSegment(screenPos, ptN, pArm) <= 22.0) {
+                  return fit.nodeId;
+                }
+              }
+            }
           }
           break;
       }

@@ -348,27 +348,56 @@ class Element3dGeometry {
     final strutLen = math.max(100.0, r * 2.5);
     final baseCenter = center + downDir * strutLen;
 
-    // Центральная стойка
-    lines.add(WireframeSegment3D(
-      (center + downDir * clampR).x, (center + downDir * clampR).y, (center + downDir * clampR).z,
-      baseCenter.x, baseCenter.y, baseCenter.z,
-      layer: layerSupports,
-    ));
+    if (support.type == PipeSupportType.spring) {
+      // Пружинная опора: спиральная пружина вокруг стойки
+      final springTop = center + downDir * clampR;
+      final springBottom = baseCenter - downDir * 15.0;
+      final springLen = (springBottom - springTop).length;
+      const int coils = 5;
+      const int stepsPerCoil = 8;
+      final totalSteps = coils * stepsPerCoil;
+      final springPts = <Vector3D>[];
+      for (int i = 0; i <= totalSteps; i++) {
+        final t = i / totalSteps;
+        final angle = 2.0 * math.pi * coils * t;
+        final springRadius = r * 0.7;
+        final pos = springTop + downDir * (springLen * t) +
+            basis.u * (springRadius * math.cos(angle)) +
+            basis.v * (springRadius * math.sin(angle));
+        springPts.add(pos);
+      }
+      for (int i = 0; i < springPts.length - 1; i++) {
+        lines.add(WireframeSegment3D(
+          springPts[i].x, springPts[i].y, springPts[i].z,
+          springPts[i + 1].x, springPts[i + 1].y, springPts[i + 1].z,
+          layer: layerSupports,
+        ));
+      }
+    } else {
+      // Центральная стойка
+      lines.add(WireframeSegment3D(
+        (center + downDir * clampR).x, (center + downDir * clampR).y, (center + downDir * clampR).z,
+        baseCenter.x, baseCenter.y, baseCenter.z,
+        layer: layerSupports,
+      ));
+    }
 
-    // Боковые ребра жесткости (подкосы)
+    // Боковые ребра жесткости (подкосы) только у неподвижной опоры
     final ribW = math.max(30.0, r * 0.8);
-    final ptA = center + basis.t * ribW + downDir * clampR;
-    final ptB = center - basis.t * ribW + downDir * clampR;
-    lines.add(WireframeSegment3D(
-      ptA.x, ptA.y, ptA.z,
-      baseCenter.x, baseCenter.y, baseCenter.z,
-      layer: layerSupports,
-    ));
-    lines.add(WireframeSegment3D(
-      ptB.x, ptB.y, ptB.z,
-      baseCenter.x, baseCenter.y, baseCenter.z,
-      layer: layerSupports,
-    ));
+    if (support.type == PipeSupportType.fixed) {
+      final ptA = center + basis.t * ribW + downDir * clampR;
+      final ptB = center - basis.t * ribW + downDir * clampR;
+      lines.add(WireframeSegment3D(
+        ptA.x, ptA.y, ptA.z,
+        baseCenter.x, baseCenter.y, baseCenter.z,
+        layer: layerSupports,
+      ));
+      lines.add(WireframeSegment3D(
+        ptB.x, ptB.y, ptB.z,
+        baseCenter.x, baseCenter.y, baseCenter.z,
+        layer: layerSupports,
+      ));
+    }
 
     // Опорная плита (прямоугольник в основании)
     final plateW = ribW * 1.5;
@@ -386,6 +415,19 @@ class Element3dGeometry {
     lines.add(WireframeSegment3D(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, layer: layerSupports));
     lines.add(WireframeSegment3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, layer: layerSupports));
     lines.add(WireframeSegment3D(p4.x, p4.y, p4.z, p1.x, p1.y, p1.z, layer: layerSupports));
+
+    // Направляющая опора: вертикальные направляющие бортики
+    if (support.type == PipeSupportType.guide) {
+      final guideH = plateL * 0.6;
+      final g1 = p1 - downDir * guideH;
+      final g2 = p2 - downDir * guideH;
+      final g3 = p3 - downDir * guideH;
+      final g4 = p4 - downDir * guideH;
+      lines.add(WireframeSegment3D(p1.x, p1.y, p1.z, g1.x, g1.y, g1.z, layer: layerSupports));
+      lines.add(WireframeSegment3D(p2.x, p2.y, p2.z, g2.x, g2.y, g2.z, layer: layerSupports));
+      lines.add(WireframeSegment3D(p3.x, p3.y, p3.z, g3.x, g3.y, g3.z, layer: layerSupports));
+      lines.add(WireframeSegment3D(p4.x, p4.y, p4.z, g4.x, g4.y, g4.z, layer: layerSupports));
+    }
 
     return lines;
   }

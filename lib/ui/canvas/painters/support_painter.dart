@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
+import '../../../domain/enums/projection_type.dart';
 import '../../../domain/models/pipe_support.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/services/element_3d_geometry.dart';
 
 /// Отрисовка опор и подвесок трубопровода в аксонометрии
 class SupportPainter {
@@ -40,6 +42,48 @@ class SupportPainter {
       // Предпочитаем ориентацию вниз (по гравитации), либо вправо при вертикальной трубе
       if (n.dy < -0.01 || (n.dy.abs() <= 0.01 && n.dx < 0)) {
         n = -n;
+      }
+
+      // В режиме 3D Orbit отрисовываем объемный 3D каркас опоры, вращающийся вместе со сценой
+      if (projector.projectionType == ProjectionType.orbit3d) {
+        final isSelected = support.id == selectedSupportId;
+        final wireSegments = Element3dGeometry.generateSupport3d(
+          support,
+          start,
+          end,
+          pipeOuterDiameter: seg.outerDiameterMm,
+        );
+
+        final strokePaint = Paint()
+          ..color = isSelected ? Colors.amber : const Color(0xFF263238)
+          ..strokeWidth = isSelected ? 2.5 : 1.8
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+
+        if (isSelected) {
+          final glowPaint = Paint()
+            ..color = Colors.amber.withValues(alpha: 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 6.0
+            ..strokeCap = StrokeCap.round;
+          for (final wire in wireSegments) {
+            final wp1 = projector.project(wire.startNode);
+            final wp2 = projector.project(wire.endNode);
+            canvas.drawLine(wp1, wp2, glowPaint);
+          }
+        }
+
+        for (final wire in wireSegments) {
+          final wp1 = projector.project(wire.startNode);
+          final wp2 = projector.project(wire.endNode);
+          canvas.drawLine(wp1, wp2, strokePaint);
+        }
+
+        if (support.name.isNotEmpty) {
+          _drawLabel(canvas, center, u, n, support);
+        }
+        continue;
       }
 
       if (support.id == selectedSupportId) {
