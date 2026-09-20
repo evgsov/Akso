@@ -1,5 +1,7 @@
 import '../enums/projection_type.dart';
 import 'callout.dart';
+import 'drawing_sheet.dart';
+import 'drawing_style_config.dart';
 import 'piping_network.dart';
 import 'report_template.dart';
 
@@ -20,6 +22,18 @@ class ProjectModel {
   final PipingNetwork network;
   final Map<String, String> calloutTemplates;
   final Map<String, ReportTemplate>? reportTemplates;
+  final List<DrawingSheet> sheets;
+  final String? activeSheetId;
+  final DrawingStyleConfig styleConfig;
+
+  /// Активно ли пространство модели (бесконечный 3D-холст)
+  bool get isModelSpaceActive => activeSheetId == null;
+
+  /// Активный чертежный лист (если выбран режим пространства листа)
+  DrawingSheet? get activeSheet {
+    if (activeSheetId == null || sheets.isEmpty) return null;
+    return sheets.firstWhere((s) => s.id == activeSheetId, orElse: () => sheets.first);
+  }
 
   ProjectModel({
     required this.id,
@@ -37,12 +51,16 @@ class ProjectModel {
     PipingNetwork? network,
     Map<String, String>? calloutTemplates,
     this.reportTemplates,
+    List<DrawingSheet>? sheets,
+    this.activeSheetId,
+    this.styleConfig = const DrawingStyleConfig(),
   })  : creationDate = creationDate ?? DateTime.now().toIso8601String().substring(0, 10),
         lastModifiedDate = lastModifiedDate ?? (creationDate ?? DateTime.now().toIso8601String()),
         network = network ?? PipingNetwork(),
         calloutTemplates = calloutTemplates != null
             ? Map.from(calloutTemplates)
-            : Map.from(defaultCalloutTemplates);
+            : Map.from(defaultCalloutTemplates),
+        sheets = sheets != null ? List.from(sheets) : [];
 
   ProjectModel copyWith({
     String? id,
@@ -61,6 +79,10 @@ class ProjectModel {
     Map<String, String>? calloutTemplates,
     Map<String, ReportTemplate>? reportTemplates,
     bool clearReportTemplates = false,
+    List<DrawingSheet>? sheets,
+    String? activeSheetId,
+    bool clearActiveSheet = false,
+    DrawingStyleConfig? styleConfig,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -78,6 +100,9 @@ class ProjectModel {
       network: network ?? this.network,
       calloutTemplates: calloutTemplates ?? this.calloutTemplates,
       reportTemplates: clearReportTemplates ? null : (reportTemplates ?? this.reportTemplates),
+      sheets: sheets ?? this.sheets,
+      activeSheetId: clearActiveSheet ? null : (activeSheetId ?? this.activeSheetId),
+      styleConfig: styleConfig ?? this.styleConfig,
     );
   }
 
@@ -98,6 +123,9 @@ class ProjectModel {
         'calloutTemplates': calloutTemplates,
         if (reportTemplates != null)
           'reportTemplates': reportTemplates!.map((k, v) => MapEntry(k, v.toJson())),
+        'sheets': sheets.map((s) => s.toJson()).toList(),
+        'activeSheetId': activeSheetId,
+        'styleConfig': styleConfig.toJson(),
       };
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
@@ -128,6 +156,15 @@ class ProjectModel {
               ),
             )
           : null,
+      sheets: json['sheets'] is List
+          ? (json['sheets'] as List)
+              .map((s) => DrawingSheet.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList()
+          : null,
+      activeSheetId: json['activeSheetId'] as String?,
+      styleConfig: json['styleConfig'] != null
+          ? DrawingStyleConfig.fromJson(Map<String, dynamic>.from(json['styleConfig'] as Map))
+          : const DrawingStyleConfig(),
     );
   }
 }
