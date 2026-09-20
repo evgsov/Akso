@@ -16,6 +16,9 @@ enum SnapType {
   gridAxis,
   polarAngle,
   equipmentFace,
+  extensionRay, // Продление оси трубы в створе (Ray Extension / OTRACK)
+  alignmentGuide, // Ортогональное выравнивание по ключевому узлу/штуцеру
+  smartElevationBranch, // Умная ортогональная врезка под 90° в разновысотную трубу
 }
 
 enum AngleSnapMode {
@@ -37,6 +40,12 @@ class SnapResult {
   final EquipmentFace? snappedEquipmentFace;
   final double? snappedAngleDegrees;
   final double? distanceLengthMm;
+  final bool isElevationTransition;
+  final double? elevationDeltaMm;
+  final Node3D? intermediateTurnPoint;
+  final Node3D? trackingSourcePoint;
+  final Offset? trackingRayDirection;
+  final Node3D? trackingRayWorldDir;
 
   const SnapResult({
     required this.type,
@@ -49,6 +58,12 @@ class SnapResult {
     this.snappedEquipmentFace,
     this.snappedAngleDegrees,
     this.distanceLengthMm,
+    this.isElevationTransition = false,
+    this.elevationDeltaMm,
+    this.intermediateTurnPoint,
+    this.trackingSourcePoint,
+    this.trackingRayDirection,
+    this.trackingRayWorldDir,
   });
 
   static SnapResult none(Offset screenPoint, Node3D worldPoint) {
@@ -79,6 +94,7 @@ class SnapEngine {
     Node3D? traceStartNode,
     AngleSnapMode angleMode = AngleSnapMode.ortho90,
     double customAngleStepDegrees = 15.0,
+    bool enableObjectTracking = true,
   }) {
     // 1. Дискретные точки (Endpoint узлов труб, края осей и пересечения)
     // Соревнуются по минимальному экранному расстоянию до курсора
@@ -93,12 +109,26 @@ class SnapEngine {
       if (dist <= minDiscreteDist) {
         final elevM = (node.z / 1000.0).toStringAsFixed(3);
         final sign = node.z >= 0 ? '+' : '';
+        final isElevationTrans = traceStartNode != null && (node.z - currentElevationZ).abs() >= 10.0;
+        final deltaZ = isElevationTrans ? node.z - currentElevationZ : null;
+        final intermediateTurn = isElevationTrans
+            ? Node3D(id: '', x: node.x, y: node.y, z: currentElevationZ)
+            : null;
+        final label = isElevationTrans
+            ? '🔀 Соединение со стояком [∇$sign$elevM]'
+            : 'Узел [∇$sign$elevM]';
         bestDiscreteSnap = SnapResult(
           type: SnapType.node,
           screenPoint: proj,
           worldPoint: node,
           snappedNodeId: node.id,
-          label: 'Узел [∇$sign$elevM]',
+          label: label,
+          isElevationTransition: isElevationTrans,
+          elevationDeltaMm: deltaZ,
+          intermediateTurnPoint: intermediateTurn,
+          distanceLengthMm: traceStartNode != null
+              ? math.sqrt(math.pow(node.x - traceStartNode.x, 2) + math.pow(node.y - traceStartNode.y, 2))
+              : null,
         );
         minDiscreteDist = dist;
       }
@@ -365,6 +395,7 @@ class SnapEngine {
         if (s == null || e == null) continue;
         if (s.id == traceStartNode.id || e.id == traceStartNode.id) continue;
 
+        // Векторы сегмента
         final vx = e.x - s.x;
         final vy = e.y - s.y;
         final vz = e.z - s.z;
@@ -375,31 +406,72 @@ class SnapEngine {
         final uy = traceStartNode.y - s.y;
         final uz = traceStartNode.z - s.z;
 
-        final t = (ux * vx + uy * vy + uz * vz) / vLenSq;
-        if (t > 0.02 && t < 0.98) {
+        // Если труба разновысотная относительно currentElevationZ,
+        // вычисляем проекцию в плане (XY), чтобы сопряжение под 90° было строго ортогональным!
+        final isDiffZ = (s.z - currentElevationZ).abs() >= 10.0 || (e.z - currentElevationZ).abs() >= 10.0;
+        final double t;
+        final double vPlanSq = vx * vx + vy * vy;
+        if (isDiffZ && vPlanSq >= 1.0) {
+          t = ((ux * vx + uy * vy) / vPlanSq).clamp(0.01, 0.99);
+        } else {
+          t = ((ux * vx + uy * vy + uz * vz) / vLenSq).clamp(0.01, 0.99);
+        }
+
+        if (t > 0.01 && t < 0.99) {
           final perpWorld = Node3D(
             id: '',
             x: s.x + vx * t,
             y: s.y + vy * t,
             z: s.z + vz * t,
           );
-          final dist3d = math.sqrt(
-            math.pow(perpWorld.x - traceStartNode.x, 2) +
-                math.pow(perpWorld.y - traceStartNode.y, 2) +
-                math.pow(perpWorld.z - traceStartNode.z, 2),
+          final turnPoint = Node3D(
+            id: '',
+            x: perpWorld.x,
+            y: perpWorld.y,
+            z: currentElevationZ,
           );
-          if (dist3d < 20.0) continue;
 
-          final proj = projector.project(perpWorld);
-          final dist = (proj - screenPos).distance;
+          final horizDist = math.sqrt(
+            math.pow(turnPoint.x - traceStartNode.x, 2) +
+                math.pow(turnPoint.y - traceStartNode.y, 2),
+          );
+
+          // Проверяем экранное расстояние как к точке на трубе, так и к точке проекции в плане
+          final projTarget = projector.project(perpWorld);
+          final projTurn = projector.project(turnPoint);
+          final distTarget = (projTarget - screenPos).distance;
+          final distTurn = (projTurn - screenPos).distance;
+          final dist = math.min(distTarget, distTurn);
+
           if (dist <= minFeatureDist) {
             minFeatureDist = dist;
+            final isElevationTrans = (perpWorld.z - currentElevationZ).abs() >= 10.0;
+            final deltaZ = isElevationTrans ? perpWorld.z - currentElevationZ : null;
+            final signDelta = deltaZ != null
+                ? (deltaZ >= 0 ? '+${(deltaZ / 1000.0).toStringAsFixed(3)}м' : '${(deltaZ / 1000.0).toStringAsFixed(3)}м')
+                : '';
+
+            final String label;
+            if (isElevationTrans) {
+              if (horizDist > 15.0) {
+                label = '🔀 Врезка 90° со стояком [Ду${seg.dn} | ∇$signDelta]';
+              } else {
+                label = '⬆ Стояк 90° в трубу [Ду${seg.dn} | ∇$signDelta]';
+              }
+            } else {
+              label = 'Перпендикуляр 90° [Ду${seg.dn}]';
+            }
+
             bestFeatureSnap = SnapResult(
-              type: SnapType.perpendicular,
-              screenPoint: proj,
+              type: isElevationTrans ? SnapType.smartElevationBranch : SnapType.perpendicular,
+              screenPoint: distTarget <= distTurn ? projTarget : projTurn,
               worldPoint: perpWorld,
               snappedSegmentId: seg.id,
-              label: 'Перпендикуляр 90° [Ду${seg.dn}]',
+              label: label,
+              isElevationTransition: isElevationTrans,
+              elevationDeltaMm: deltaZ,
+              intermediateTurnPoint: turnPoint,
+              distanceLengthMm: horizDist,
             );
           }
         }
@@ -472,13 +544,30 @@ class SnapEngine {
           z: s.z + (e.z - s.z) * ratio,
         );
         final snappedScreen = projector.project(snappedWorld);
+        final isElevationTrans = traceStartNode != null && (snappedWorld.z - currentElevationZ).abs() >= 10.0;
+        final deltaZ = isElevationTrans ? snappedWorld.z - currentElevationZ : null;
+        final intermediateTurn = isElevationTrans
+            ? Node3D(id: '', x: snappedWorld.x, y: snappedWorld.y, z: currentElevationZ)
+            : null;
+        final signDelta = deltaZ != null
+            ? (deltaZ >= 0 ? '+${(deltaZ / 1000.0).toStringAsFixed(3)}м' : '${(deltaZ / 1000.0).toStringAsFixed(3)}м')
+            : '';
+        final label = isElevationTrans
+            ? '🔀 Врезка со стояком [Ду${seg.dn} | ∇$signDelta]'
+            : 'Ось трубы Ду${seg.dn}';
 
         return SnapResult(
           type: SnapType.segmentAxis,
           screenPoint: snappedScreen,
           worldPoint: snappedWorld,
           snappedSegmentId: seg.id,
-          label: 'Ось трубы Ду${seg.dn}',
+          label: label,
+          isElevationTransition: isElevationTrans,
+          elevationDeltaMm: deltaZ,
+          intermediateTurnPoint: intermediateTurn,
+          distanceLengthMm: traceStartNode != null && intermediateTurn != null
+              ? math.sqrt(math.pow(intermediateTurn.x - traceStartNode.x, 2) + math.pow(intermediateTurn.y - traceStartNode.y, 2))
+              : null,
         );
       }
     }
@@ -631,6 +720,20 @@ class SnapEngine {
       }
     }
 
+    // 5. Объектное отслеживание (Object Snap Tracking / OTRACK: продление осей труб и выравнивание по узлам)
+    if (enableObjectTracking) {
+      final trackingSnap = _findObjectTrackingSnap(
+        screenPos: screenPos,
+        network: network,
+        projector: projector,
+        currentElevationZ: currentElevationZ,
+        traceStartNode: traceStartNode,
+      );
+      if (trackingSnap != null) {
+        return trackingSnap;
+      }
+    }
+
     // Если ничего не сработало, возвращаем обычные мировые координаты
     return SnapResult.none(screenPos, rawWorld);
   }
@@ -655,13 +758,150 @@ class SnapEngine {
     }
   }
 
+  /// Объектное отслеживание осей и створов (OTRACK):
+  /// 1. Продление осей существующих труб (Ray Extension).
+  /// 2. Ортогональное выравнивание по ключевым узлам сети.
+  SnapResult? _findObjectTrackingSnap({
+    required Offset screenPos,
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+    required double currentElevationZ,
+    Node3D? traceStartNode,
+  }) {
+    final rawWorld = projector.unproject(screenPos, currentElevationZ);
+    SnapResult? bestTrackingSnap;
+    double minScreenDist = 14.0;
+
+    // 1. Продление осей существующих труб (Ray Extension)
+    for (final seg in network.segments.values) {
+      final s = network.nodes[seg.startNodeId];
+      final e = network.nodes[seg.endNodeId];
+      if (s == null || e == null) continue;
+
+      // Проверяем трубы, проходящие на текущей рабочей высоте (или пересекающие её)
+      final minZ = math.min(s.z, e.z);
+      final maxZ = math.max(s.z, e.z);
+      if (currentElevationZ < minZ - 50.0 || currentElevationZ > maxZ + 50.0) continue;
+
+      final dx = e.x - s.x;
+      final dy = e.y - s.y;
+      final len = math.sqrt(dx * dx + dy * dy);
+      if (len < 30.0) continue;
+
+      final ux = dx / len;
+      final uy = dy / len;
+
+      // Проекция точки курсора на прямую трубы в плоскости XY
+      final t = (rawWorld.x - s.x) * ux + (rawWorld.y - s.y) * uy;
+
+      // Нас интересует продление ЗА пределы отрезка (вылет за начало или за конец)
+      if (t < -20.0 || t > len + 20.0) {
+        final snappedWorld = Node3D(
+          id: '',
+          x: s.x + t * ux,
+          y: s.y + t * uy,
+          z: currentElevationZ,
+        );
+        final projScreen = projector.project(snappedWorld);
+        final screenDist = (projScreen - screenPos).distance;
+
+        if (screenDist <= minScreenDist) {
+          minScreenDist = screenDist;
+          final sourceNode = t < 0 ? s : e;
+          final distFromEnd = t < 0 ? (-t) : (t - len);
+          final projSource = projector.project(sourceNode);
+          final rayDir = (projScreen - projSource);
+          final rayOffset = rayDir.distance > 0 ? rayDir / rayDir.distance : Offset(ux, uy);
+
+          bestTrackingSnap = SnapResult(
+            type: SnapType.extensionRay,
+            screenPoint: projScreen,
+            worldPoint: snappedWorld,
+            snappedSegmentId: seg.id,
+            trackingSourcePoint: sourceNode,
+            trackingRayDirection: rayOffset,
+            trackingRayWorldDir: Node3D(id: '', x: ux, y: uy, z: 0),
+            distanceLengthMm: distFromEnd,
+            label: '⤢ Створ трубы Ду${seg.dn} [+${distFromEnd.round()} мм]',
+          );
+        }
+      }
+    }
+
+    if (bestTrackingSnap != null) {
+      return bestTrackingSnap;
+    }
+
+    // 2. Ортогональное выравнивание по ключевым узлам сети (OTRACK Alignment)
+    if (traceStartNode != null) {
+      final connectedNodeIds = network
+          .getConnectedSegments(traceStartNode.id)
+          .map((s) => s.startNodeId == traceStartNode.id ? s.endNodeId : s.startNodeId)
+          .toSet();
+
+      for (final node in network.nodes.values) {
+        if (node.id == traceStartNode.id) continue;
+        if (connectedNodeIds.contains(node.id)) continue;
+        if ((node.z - currentElevationZ).abs() > 50.0) continue;
+
+        // Выравнивание по оси X (совпадение Y-координаты)
+        final ptAlignY = Node3D(id: '', x: rawWorld.x, y: node.y, z: currentElevationZ);
+        final projY = projector.project(ptAlignY);
+        final distY = (projY - screenPos).distance;
+        final spanX = (rawWorld.x - node.x).abs();
+
+        if (distY <= minScreenDist && spanX > 60.0) {
+          minScreenDist = distY;
+          final projSource = projector.project(node);
+          final dir = (projY - projSource);
+          bestTrackingSnap = SnapResult(
+            type: SnapType.alignmentGuide,
+            screenPoint: projY,
+            worldPoint: ptAlignY,
+            snappedNodeId: node.id,
+            trackingSourcePoint: node,
+            trackingRayDirection: dir.distance > 0 ? dir / dir.distance : const Offset(1, 0),
+            trackingRayWorldDir: const Node3D(id: '', x: 1, y: 0, z: 0),
+            distanceLengthMm: spanX,
+            label: '⊣ Выравнивание по створу [Y = ${node.y.round()} мм]',
+          );
+        }
+
+        // Выравнивание по оси Y (совпадение X-координаты)
+        final ptAlignX = Node3D(id: '', x: node.x, y: rawWorld.y, z: currentElevationZ);
+        final projX = projector.project(ptAlignX);
+        final distX = (projX - screenPos).distance;
+        final spanY = (rawWorld.y - node.y).abs();
+
+        if (distX <= minScreenDist && spanY > 60.0) {
+          minScreenDist = distX;
+          final projSource = projector.project(node);
+          final dir = (projX - projSource);
+          bestTrackingSnap = SnapResult(
+            type: SnapType.alignmentGuide,
+            screenPoint: projX,
+            worldPoint: ptAlignX,
+            snappedNodeId: node.id,
+            trackingSourcePoint: node,
+            trackingRayDirection: dir.distance > 0 ? dir / dir.distance : const Offset(0, 1),
+            trackingRayWorldDir: const Node3D(id: '', x: 0, y: 1, z: 0),
+            distanceLengthMm: spanY,
+            label: '⊣ Выравнивание по створу [X = ${node.x.round()} мм]',
+          );
+        }
+      }
+    }
+
+    return bestTrackingSnap;
+  }
+
   double _calcSegmentRatio(Offset a, Offset b, Offset p) {
     final len = (b - a).distance;
     if (len < 1.0) return 0.5;
     final u = (b - a) / len;
     final v = p - a;
     final proj = v.dx * u.dx + v.dy * u.dy;
-    return (proj / len).clamp(0.05, 0.95);
+    return (proj / len).clamp(0.0, 1.0);
   }
 
   double _calcAxisRatio(Offset a, Offset b, Offset p) {

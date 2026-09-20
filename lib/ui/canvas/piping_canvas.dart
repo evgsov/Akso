@@ -245,9 +245,40 @@ class PipingCanvasPainter extends CustomPainter {
         ..strokeWidth = 3.0
         ..strokeCap = StrokeCap.round;
 
-      // Пунктирная направляющая
-      canvas.drawLine(pStart, effectiveScreenEnd, tracePaint);
-      canvas.drawCircle(effectiveScreenEnd, 5.0, tracePaint);
+      // Если активна врезка под 90° в разновысотную трубу (Smart Drop/Riser):
+      if (snapResult != null &&
+          snapResult!.isElevationTransition &&
+          snapResult!.intermediateTurnPoint != null) {
+        final pTurn = projector.project(snapResult!.intermediateTurnPoint!);
+        final horizDist = (snapResult!.intermediateTurnPoint!.x - activeTraceStart!.x).abs() +
+            (snapResult!.intermediateTurnPoint!.y - activeTraceStart!.y).abs();
+
+        if (horizDist > 15.0) {
+          // 1. Горизонтальная линия на текущей отметке Z
+          canvas.drawLine(pStart, pTurn, tracePaint);
+          // Маркер угла 90° (Отвод)
+          canvas.drawCircle(pTurn, 5.0, Paint()..color = Colors.amber.shade700);
+          canvas.drawCircle(pTurn, 3.0, Paint()..color = Colors.white);
+          // 2. Вертикальный стояк/опуск к целевой трубе
+          final riserPaint = Paint()
+            ..color = Colors.amber.shade700
+            ..strokeWidth = 2.8
+            ..strokeCap = StrokeCap.round;
+          _drawDashedLine(canvas, pTurn, effectiveScreenEnd, riserPaint);
+        } else {
+          // Прямой стояк без горизонтали
+          final riserPaint = Paint()
+            ..color = Colors.amber.shade700
+            ..strokeWidth = 3.0
+            ..strokeCap = StrokeCap.round;
+          _drawDashedLine(canvas, pStart, effectiveScreenEnd, riserPaint);
+        }
+        canvas.drawCircle(effectiveScreenEnd, 6.0, Paint()..color = Colors.amber.shade800);
+      } else {
+        // Обычная направляющая
+        canvas.drawLine(pStart, effectiveScreenEnd, tracePaint);
+        canvas.drawCircle(effectiveScreenEnd, 5.0, tracePaint);
+      }
     }
 
     // 8. Интерактивная линия строительной оси
@@ -737,6 +768,103 @@ class PipingCanvasPainter extends CustomPainter {
       if (activeTraceStart == null && activeAxisStart == null) {
         _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, Colors.amber.shade900);
       }
+    } else if (snapResult!.type == SnapType.smartElevationBranch) {
+      // Маркер умной разновысотной врезки под 90° (Оранжево-янтарный перпендикуляр + стояк)
+      final branchColor = Colors.orange.shade800;
+      final branchPaint = Paint()
+        ..color = branchColor
+        ..strokeWidth = 2.4
+        ..style = PaintingStyle.stroke;
+
+      // Если есть промежуточная точка поворота (отвод 90° на текущей отметке Z)
+      if (snapResult!.intermediateTurnPoint != null) {
+        final pTurn = projector.project(snapResult!.intermediateTurnPoint!);
+        final turnPaint = Paint()
+          ..color = branchColor
+          ..strokeWidth = 1.8
+          ..style = PaintingStyle.stroke;
+        // Пунктир вертикального стояка между точкой поворота и точкой врезки в трубу
+        _drawDashedLine(canvas, pTurn, pt, turnPaint);
+        // Символ угла 90° (отвода) в точке поворота
+        canvas.drawCircle(pTurn, 5.0, Paint()..color = Colors.amber.shade600..style = PaintingStyle.fill);
+        canvas.drawCircle(pTurn, 5.0, branchPaint);
+      }
+
+      // Символ прямого угла и врезки в целевую трубу
+      final path = Path()
+        ..moveTo(pt.dx - 8, pt.dy - 8)
+        ..lineTo(pt.dx - 8, pt.dy + 8)
+        ..lineTo(pt.dx + 8, pt.dy + 8);
+      path
+        ..moveTo(pt.dx - 8, pt.dy + 2)
+        ..lineTo(pt.dx - 2, pt.dy + 2)
+        ..lineTo(pt.dx - 2, pt.dy + 8);
+      canvas.drawPath(path, branchPaint);
+      canvas.drawCircle(pt, 13.0, Paint()..color = branchColor.withValues(alpha: 0.22)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, branchColor);
+    } else if (snapResult!.type == SnapType.extensionRay) {
+      // AutoCAD OTRACK Extension: продление оси существующей трубы в створе
+      const rayColor = Color(0xFF00E5FF); // Яркий Cyan
+      final rayPaint = Paint()
+        ..color = rayColor
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+
+      if (snapResult!.trackingSourcePoint != null) {
+        final sourcePt = projector.project(snapResult!.trackingSourcePoint!);
+        // Пунктирный створ от конца трубы до текущей точки курсора
+        _drawDashedLine(canvas, sourcePt, pt, rayPaint);
+
+        // Исходный маркер OTRACK (маленький крестик в начале луча)
+        final srcPaint = Paint()
+          ..color = rayColor
+          ..strokeWidth = 2.0;
+        canvas.drawLine(sourcePt - const Offset(5, 0), sourcePt + const Offset(5, 0), srcPaint);
+        canvas.drawLine(sourcePt - const Offset(0, 5), sourcePt + const Offset(0, 5), srcPaint);
+      }
+
+      // Маркер привязки в створе (AutoCAD Extension Glyph)
+      final markerPaint = Paint()
+        ..color = rayColor
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(pt - const Offset(6, 6), pt + const Offset(6, 6), markerPaint);
+      canvas.drawLine(pt - const Offset(-6, 6), pt + const Offset(-6, 6), markerPaint);
+      canvas.drawCircle(pt, 12.0, Paint()..color = rayColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00B0FF));
+    } else if (snapResult!.type == SnapType.alignmentGuide) {
+      // AutoCAD/Revit OTRACK Alignment: ортогональная направляющая от ключевого узла
+      const alignColor = Color(0xFF00E5FF); // Яркий бирюзовый Cyan
+      final alignPaint = Paint()
+        ..color = alignColor
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke;
+
+      if (snapResult!.trackingSourcePoint != null) {
+        final sourcePt = projector.project(snapResult!.trackingSourcePoint!);
+        // Направляющая линия от узла-ориентира
+        _drawDashedLine(canvas, sourcePt, pt, alignPaint);
+
+        // Маркер захвата узла OTRACK (маленький прямой крестик +)
+        final srcPaint = Paint()
+          ..color = alignColor
+          ..strokeWidth = 2.0;
+        canvas.drawLine(sourcePt - const Offset(5, 0), sourcePt + const Offset(5, 0), srcPaint);
+        canvas.drawLine(sourcePt - const Offset(0, 5), sourcePt + const Offset(0, 5), srcPaint);
+      }
+
+      // Маркер выравнивания в точке курсора (перекрестие с точкой)
+      final markerPaint = Paint()
+        ..color = alignColor
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(pt, 6.0, markerPaint);
+      canvas.drawCircle(pt, 2.0, Paint()..color = alignColor..style = PaintingStyle.fill);
+      canvas.drawCircle(pt, 12.0, Paint()..color = alignColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00B0FF));
     }
   }
 

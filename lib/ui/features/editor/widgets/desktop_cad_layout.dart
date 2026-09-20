@@ -663,7 +663,7 @@ class DesktopCadLayout extends StatelessWidget {
             ],
             onSelected: (val) {
               if (val == 'mto') {
-                showDialog(context: context, builder: (_) => MaterialsSpecificationDialog(network: controller.network));
+                showDialog(context: context, builder: (_) => MaterialsSpecificationDialog(network: controller.network, controller: controller));
               } else if (val == 'weld') {
                 showDialog(context: context, builder: (_) => WeldJournalDialog(network: controller.network, controller: controller));
               } else if (val == 'callouts') {
@@ -1437,7 +1437,12 @@ class DesktopCadLayout extends StatelessWidget {
   Widget _buildPropertyInspector(BuildContext context) {
     final isDimension = controller.selectedDimensionId != null;
     final isAxis = !isDimension && controller.selectedAxisId != null;
-    final isMultiSelect = controller.selectedNodeIds.length > 1 || controller.selectedSegmentIds.length > 1 || controller.selectedSpoolIds.length > 1;
+    final totalSelected = controller.selectedNodeIds.length +
+        controller.selectedSegmentIds.length +
+        controller.selectedEquipmentIds.length +
+        controller.selectedAxisIds.length +
+        controller.selectedDimensionIds.length;
+    final isMultiSelect = totalSelected > 1;
     final isValve = !isDimension && !isAxis && !isMultiSelect && controller.selectedValveId != null;
     final isSupport = !isDimension && !isAxis && !isMultiSelect && !isValve && controller.selectedSupportId != null;
     final isWeld = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && controller.selectedWeldId != null;
@@ -1765,6 +1770,44 @@ class DesktopCadLayout extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            ),
+                            icon: const Icon(Icons.copy, size: 14),
+                            label: const Text('Копировать (Ctrl+C)', style: TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+                            onPressed: () {
+                              if (controller.copySelection()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Опора скопирована в буфер обмена'),
+                                    duration: Duration(seconds: 1),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            ),
+                            icon: const Icon(Icons.control_point_duplicate, size: 14),
+                            label: const Text('Дублировать (Ctrl+D)', style: TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+                            onPressed: () => controller.duplicateSelection(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -2410,9 +2453,27 @@ class DesktopCadLayout extends StatelessWidget {
             const SizedBox(width: 16),
             InkWell(
               onTap: controller.toggleSnap,
-              child: Text(
-                'SNAP: ${controller.isSnapEnabled ? "ВКЛ" : "ВЫКЛ"}',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: controller.isSnapEnabled ? Colors.green.shade800 : Colors.red.shade800),
+              child: Tooltip(
+                message: 'Объектная привязка OSNAP (клавиша F3)',
+                child: Text(
+                  'SNAP (F3): ${controller.isSnapEnabled ? "ВКЛ" : "ВЫКЛ"}',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: controller.isSnapEnabled ? Colors.green.shade800 : Colors.red.shade800),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            InkWell(
+              onTap: controller.toggleObjectTracking,
+              child: Tooltip(
+                message: 'Отслеживание осей и створов OTRACK (клавиша F11)',
+                child: Text(
+                  'ОТСЛ (F11): ${controller.isObjectTrackingEnabled ? "ВКЛ" : "ВЫКЛ"}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: controller.isObjectTrackingEnabled ? Colors.teal.shade800 : Colors.grey.shade600,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -4027,6 +4088,44 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
           ],
         ),
         const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                ),
+                icon: const Icon(Icons.copy, size: 14),
+                label: const Text('Копировать (Ctrl+C)', style: TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+                onPressed: () {
+                  if (widget.controller.copySelection()) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Арматура скопирована в буфер обмена'),
+                        duration: Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                ),
+                icon: const Icon(Icons.control_point_duplicate, size: 14),
+                label: const Text('Дублировать (Ctrl+D)', style: TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+                onPressed: () => widget.controller.duplicateSelection(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
 
         // Удалить арматуру
         SizedBox(
@@ -4772,28 +4871,149 @@ class _MultiSelectPipeControlsState extends State<_MultiSelectPipeControls> {
 
   @override
   Widget build(BuildContext context) {
-    final segCount = widget.controller.selectedSegmentIds.length;
+    final segIds = widget.controller.selectedSegmentIds;
+    final segCount = segIds.length;
     if (segCount == 0) return const SizedBox.shrink();
 
-    final systems = widget.controller.network.systems.values.toList();
+    final network = widget.controller.network;
+    final systems = network.systems.values.toList();
+
+    // Расчет суммарной длины выбранных труб
+    double totalLengthMm = 0.0;
+    for (final segId in segIds) {
+      final seg = network.segments[segId];
+      if (seg != null) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start != null && end != null) {
+          totalLengthMm += start.distanceTo(end);
+        }
+      }
+    }
+
+    final firstSeg = network.segments[segIds.first];
+    final commonDn = segIds.every((id) => network.segments[id]?.dn == firstSeg?.dn)
+        ? firstSeg?.dn
+        : null;
+    final commonMat = segIds.every((id) => network.segments[id]?.material == firstSeg?.material)
+        ? firstSeg?.material
+        : null;
+    final commonSysId = segIds.every((id) => network.segments[id]?.systemId == firstSeg?.systemId)
+        ? firstSeg?.systemId
+        : null;
+    final commonSlope = segIds.every((id) => (network.segments[id]?.slope ?? 0.0) == (firstSeg?.slope ?? 0.0))
+        ? firstSeg?.slope
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.indigo.shade50,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.indigo.shade100),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.straighten, size: 14, color: Colors.indigo),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Выбрано: $segCount труб (${(totalLengthMm / 1000).toStringAsFixed(2)} м)',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
         const Text(
-          'Массовые действия с трубами:',
+          'Массовые параметры труб:',
           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
         ),
         const SizedBox(height: 6),
-        // Смена системы для всех труб
+        // 1. Диаметр Ду
         Row(
           children: [
-            const Text('Система:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(width: 8),
+            const SizedBox(
+              width: 60,
+              child: Text('Ду:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: const [15, 20, 25, 32, 40, 50, 65, 80, 100, 125, 150, 200, 250, 300, 350, 400, 500].contains(commonDn)
+                      ? commonDn
+                      : null,
+                  hint: const Text('Сменить Ду...', style: TextStyle(fontSize: 11)),
+                  isDense: true,
+                  isExpanded: true,
+                  items: const [15, 20, 25, 32, 40, 50, 65, 80, 100, 125, 150, 200, 250, 300, 350, 400, 500].map((dn) {
+                    return DropdownMenuItem<int>(
+                      value: dn,
+                      child: Text('Ду $dn', style: const TextStyle(fontSize: 11)),
+                    );
+                  }).toList(),
+                  onChanged: (newDn) {
+                    if (newDn != null) {
+                      widget.controller.changeSelectedSegmentDn(newDn);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // 2. Марка стали
+        Row(
+          children: [
+            const SizedBox(
+              width: 60,
+              child: Text('Сталь:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ),
             Expanded(
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
+                  value: const ['Сталь 20', '09Г2С', '12Х18Н10Т', '10ХСНД', '15Х5М', '12Х1МФ'].contains(commonMat)
+                      ? commonMat
+                      : null,
+                  hint: const Text('Сменить сталь...', style: TextStyle(fontSize: 11)),
+                  isDense: true,
+                  isExpanded: true,
+                  items: const ['Сталь 20', '09Г2С', '12Х18Н10Т', '10ХСНД', '15Х5М', '12Х1МФ'].map((m) {
+                    return DropdownMenuItem<String>(
+                      value: m,
+                      child: Text(m, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (newMat) {
+                    if (newMat != null) {
+                      widget.controller.changeSelectedSegmentMaterial(newMat);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // 3. Инженерная система
+        Row(
+          children: [
+            const SizedBox(
+              width: 60,
+              child: Text('Система:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: systems.any((s) => s.id == commonSysId) ? commonSysId : null,
                   hint: const Text('Сменить систему...', style: TextStyle(fontSize: 11)),
                   isDense: true,
                   isExpanded: true,
@@ -4830,14 +5050,53 @@ class _MultiSelectPipeControlsState extends State<_MultiSelectPipeControls> {
           ],
         ),
         const SizedBox(height: 6),
-        // Массовый сдвиг отметки Z (± м)
+        // 4. Уклон i
         Row(
           children: [
-            const Text('Сдвиг Z:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(width: 8),
+            const SizedBox(
+              width: 60,
+              child: Text('Уклон i:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<double>(
+                  value: const [0.0, 0.001, 0.002, 0.003, 0.005, 0.008, 0.010, 0.020].contains(commonSlope)
+                      ? commonSlope
+                      : null,
+                  hint: const Text('Задать уклон...', style: TextStyle(fontSize: 11)),
+                  isDense: true,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 0.0, child: Text('0.0 (Без уклона)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.001, child: Text('i = 0.001 (1 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.002, child: Text('i = 0.002 (2 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.003, child: Text('i = 0.003 (3 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.005, child: Text('i = 0.005 (5 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.008, child: Text('i = 0.008 (8 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.010, child: Text('i = 0.010 (10 мм/м)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 0.020, child: Text('i = 0.020 (20 мм/м)', style: TextStyle(fontSize: 11))),
+                  ],
+                  onChanged: (newSlope) {
+                    if (newSlope != null) {
+                      widget.controller.changeSelectedSegmentsSlope(newSlope);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // 5. Массовый сдвиг отметки Z (± м)
+        Row(
+          children: [
+            const SizedBox(
+              width: 60,
+              child: Text('Сдвиг Z:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ),
             Expanded(
               child: SizedBox(
-                height: 30,
+                height: 28,
                 child: TextField(
                   controller: _shiftCtrl,
                   keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
@@ -4855,7 +5114,7 @@ class _MultiSelectPipeControlsState extends State<_MultiSelectPipeControls> {
             ),
             const SizedBox(width: 6),
             SizedBox(
-              height: 30,
+              height: 28,
               child: FilledButton.tonal(
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),

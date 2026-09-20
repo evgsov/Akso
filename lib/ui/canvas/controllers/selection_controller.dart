@@ -186,9 +186,17 @@ class SelectionController {
       }
     }
 
+    final boxedSpoolIds = <String>{};
+    for (final spool in network.spools.values) {
+      if (boxedSegmentIds.contains(spool.segmentId)) {
+        boxedSpoolIds.add(spool.id);
+      }
+    }
+
     if (boxSelectIsShift) {
       selectedNodeIds.removeAll(boxedNodeIds);
       selectedSegmentIds.removeAll(boxedSegmentIds);
+      selectedSpoolIds.removeAll(boxedSpoolIds);
       selectedEquipmentIds.removeAll(boxedEquipmentIds);
       selectedAxisIds.removeAll(boxedAxisIds);
       selectedDimensionIds.removeAll(boxedDimensionIds);
@@ -198,14 +206,24 @@ class SelectionController {
       if (selectedSegmentId != null && !selectedSegmentIds.contains(selectedSegmentId)) {
         selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
       }
+      if (selectedSpoolId != null && !selectedSpoolIds.contains(selectedSpoolId)) {
+        selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+      }
     } else if (boxSelectIsCtrl) {
       selectedNodeIds.addAll(boxedNodeIds);
       selectedSegmentIds.addAll(boxedSegmentIds);
+      selectedSpoolIds.addAll(boxedSpoolIds);
       selectedEquipmentIds.addAll(boxedEquipmentIds);
       selectedAxisIds.addAll(boxedAxisIds);
       selectedDimensionIds.addAll(boxedDimensionIds);
       if (selectedNodeId == null && selectedNodeIds.isNotEmpty) {
         selectedNodeId = selectedNodeIds.first;
+      }
+      if (selectedSegmentId == null && selectedSegmentIds.isNotEmpty) {
+        selectedSegmentId = selectedSegmentIds.first;
+      }
+      if (selectedSpoolId == null && selectedSpoolIds.isNotEmpty) {
+        selectedSpoolId = selectedSpoolIds.first;
       }
     } else {
       selectedNodeIds
@@ -214,6 +232,9 @@ class SelectionController {
       selectedSegmentIds
         ..clear()
         ..addAll(boxedSegmentIds);
+      selectedSpoolIds
+        ..clear()
+        ..addAll(boxedSpoolIds);
       selectedEquipmentIds
         ..clear()
         ..addAll(boxedEquipmentIds);
@@ -225,6 +246,7 @@ class SelectionController {
         ..addAll(boxedDimensionIds);
       selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
       selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+      selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
       selectedEquipmentId = selectedEquipmentIds.isEmpty ? null : selectedEquipmentIds.first;
       selectedAxisId = selectedAxisIds.isEmpty ? null : selectedAxisIds.first;
       selectedDimensionId = selectedDimensionIds.isEmpty ? null : selectedDimensionIds.first;

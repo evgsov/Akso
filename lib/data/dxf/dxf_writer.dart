@@ -10,6 +10,7 @@ import '../../domain/enums/weld_type.dart';
 import '../../domain/models/callout.dart';
 import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
+import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
@@ -618,6 +619,35 @@ class DxfWriter {
       _writeGostValve2d(buffer, center: Offset(vx, vy), angle: angle, type: valve.valveType);
     }
 
+    // 2b. Опоры и подвески в 2D по ГОСТ
+    for (final support in network.supports.values) {
+      final seg = network.segments[support.segmentId];
+      if (seg == null) continue;
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final p1 = _projectTo2d(projector, start);
+      final p2 = _projectTo2d(projector, end);
+
+      final ratio = support.distanceRatio.clamp(0.0, 1.0);
+      final center = Offset(
+        p1.dx + (p2.dx - p1.dx) * ratio,
+        p1.dy + (p2.dy - p1.dy) * ratio,
+      );
+
+      final dir = p2 - p1;
+      final len = dir.distance;
+      final u = len > 0.001 ? dir / len : const Offset(1, 0);
+
+      var n = Offset(-u.dy, u.dx);
+      if (n.dy < -0.01 || (n.dy.abs() <= 0.01 && n.dx < 0)) {
+        n = -n;
+      }
+
+      _writeGostSupport2d(buffer, center: center, u: u, n: n, support: support);
+    }
+
     // 3. Сварные стыки и выноски по ГОСТ (горизонтальная полочка)
     for (final weld in network.weldJoints.values) {
       final seg = network.segments[weld.segmentId];
@@ -987,7 +1017,29 @@ class DxfWriter {
 
     int itemNum = 1;
 
-    // 1. Трубы стальные (группировка по DN, толщине стенки и марке стали)
+    // 1. Технологическое оборудование (ГОСТ 21.110-2013 раздел "Оборудование")
+    final eqMap = <String, int>{};
+    for (final eq in network.equipments.values) {
+      final dims = '${eq.length.toInt()}×${eq.width.toInt()}×${eq.height.toInt()} мм';
+      final sn = eq.serialNumber != null && eq.serialNumber!.isNotEmpty
+          ? ' (зав. № ${eq.serialNumber})'
+          : '';
+      final key = '${eq.name} ($dims)|${eq.type.displayName}|—|Сталь 09Г2С|Технологическое оборудование$sn';
+      eqMap[key] = (eqMap[key] ?? 0) + 1;
+    }
+    for (final entry in eqMap.entries) {
+      final parts = entry.key.split('|');
+      final desc = parts[0];
+      final type = parts[1];
+      final std = parts[2];
+      final mat = parts[3];
+      final note = parts[4];
+      buffer.writeln(
+        '${itemNum++};$desc;$type;$std;$mat;${entry.value};шт.;$note',
+      );
+    }
+
+    // 2. Трубы стальные (группировка по DN, толщине стенки и марке стали)
     final pipeMap = <String, double>{};
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
@@ -1010,7 +1062,7 @@ class DxfWriter {
       );
     }
 
-    // 2. Фасонные детали (отводы, тройники, переходы, фланцы)
+    // 3. Фасонные детали (отводы, тройники, переходы, фланцы)
     final fittingMap = <String, int>{};
     for (final fit in network.fittings.values) {
       final key = '${fit.displayName}|${fit.standard ?? "ГОСТ"}|${fit.material}';
@@ -1027,7 +1079,7 @@ class DxfWriter {
       );
     }
 
-    // 3. Трубопроводная арматура (задвижки, затворы, краны, фильтры, КИП)
+    // 4. Трубопроводная арматура (задвижки, затворы, краны, фильтры, КИП)
     final valveMap = <String, int>{};
     for (final v in network.valves.values) {
       final key = '${v.name}|${v.valveType.displayName}|Ду${v.dn}';
@@ -1044,7 +1096,45 @@ class DxfWriter {
       );
     }
 
-    // 4. Ответные фланцы и прокладки для фланцевой арматуры
+    // 5. Опоры и подвески трубопроводов (ГОСТ 14911-82 / ОСТ 36-146-88 / ГОСТ 16127-78)
+    final supportMap = <String, int>{};
+    for (final support in network.supports.values) {
+      final seg = network.segments[support.segmentId];
+      final dn = seg?.dn ?? 50;
+      final sizeStr = seg != null ? seg.formattedSize : 'Ду$dn';
+
+      String standard;
+      switch (support.type) {
+        case PipeSupportType.fixed:
+        case PipeSupportType.sliding:
+          standard = 'ГОСТ 14911-82';
+          break;
+        case PipeSupportType.spring:
+          standard = 'ГОСТ 16127-78';
+          break;
+        case PipeSupportType.guide:
+          standard = 'ОСТ 36-146-88';
+          break;
+      }
+
+      final typeMark = support.name.isNotEmpty ? support.name : support.type.shortCode;
+      final desc = 'Опора ${support.type.displayName.toLowerCase()} для трубы $sizeStr';
+      final key = '$desc|$typeMark|$standard|Сталь 3сп5';
+      supportMap[key] = (supportMap[key] ?? 0) + 1;
+    }
+
+    for (final entry in supportMap.entries) {
+      final parts = entry.key.split('|');
+      final desc = parts[0];
+      final mark = parts[1];
+      final std = parts[2];
+      final mat = parts[3];
+      buffer.writeln(
+        '${itemNum++};$desc;$mark;$std;$mat;${entry.value};шт.;Опоры и подвески',
+      );
+    }
+
+    // 6. Ответные фланцы и прокладки для фланцевой арматуры
     final counterFlangeMap = <String, int>{};
     int totalGaskets = 0;
     for (final v in network.valves.values) {
@@ -1070,7 +1160,7 @@ class DxfWriter {
       );
     }
 
-    // 4b. Ответные фланцы и прокладки для штуцеров оборудования
+    // 6b. Ответные фланцы и прокладки для штуцеров оборудования
     final eqCounterFlangeMap = <String, int>{};
     int totalEqGaskets = 0;
     for (final eq in network.equipments.values) {
@@ -1094,7 +1184,7 @@ class DxfWriter {
       );
     }
 
-    // 5. Сварные соединения (сводка стыков по типам швов)
+    // 7. Сварные соединения (сводка стыков по типам швов)
     final weldSummary = <String, int>{};
     for (final w in network.weldJoints.values) {
       final key = '${w.weldType.gostCode} (${w.steelGrade})';
@@ -1539,6 +1629,125 @@ class DxfWriter {
       final d2 = transform(0, halfH * 1.2);
       _write2dLine(b, layer: 'АКСО_АРМАТУРА', x1: d1.dx, y1: d1.dy, x2: d2.dx, y2: d2.dy);
     }
+  }
+
+  static void _writeGostSupport2d(
+    StringBuffer b, {
+    required Offset center,
+    required Offset u,
+    required Offset n,
+    required PipeSupport support,
+  }) {
+    const layer = 'АКСО_3D_ОПОРЫ';
+    const textLayer = 'АКСО_ОПОРЫ_ТЕКСТ';
+
+    // Хомут на трубе
+    _write2dLine(
+      b,
+      layer: layer,
+      x1: center.dx - u.dx * 12.0,
+      y1: center.dy - u.dy * 12.0,
+      x2: center.dx + u.dx * 12.0,
+      y2: center.dy + u.dy * 12.0,
+    );
+
+    switch (support.type) {
+      case PipeSupportType.fixed:
+        final baseCenter = center + n * 35.0;
+        final baseLeft = baseCenter - u * 20.0;
+        final baseRight = baseCenter + u * 20.0;
+
+        // Треугольная стойка
+        _write2dLine(b, layer: layer, x1: center.dx, y1: center.dy, x2: baseLeft.dx, y2: baseLeft.dy);
+        _write2dLine(b, layer: layer, x1: center.dx, y1: center.dy, x2: baseRight.dx, y2: baseRight.dy);
+        // Опорная плита
+        final plateLeft = baseCenter - u * 26.0;
+        final plateRight = baseCenter + u * 26.0;
+        _write2dLine(b, layer: layer, x1: plateLeft.dx, y1: plateLeft.dy, x2: plateRight.dx, y2: plateRight.dy);
+        // Штриховка заделки
+        for (int i = -2; i <= 2; i++) {
+          final pBase = baseCenter + u * (i * 10.0);
+          final pEnd = pBase + n * 10.0 + u * 8.0;
+          _write2dLine(b, layer: layer, x1: pBase.dx, y1: pBase.dy, x2: pEnd.dx, y2: pEnd.dy);
+        }
+        break;
+
+      case PipeSupportType.sliding:
+        final shoeCenter = center + n * 22.0;
+        _write2dLine(b, layer: layer, x1: center.dx, y1: center.dy, x2: shoeCenter.dx, y2: shoeCenter.dy);
+        // Верхняя скользящая планка
+        final shoeLeft = shoeCenter - u * 18.0;
+        final shoeRight = shoeCenter + u * 18.0;
+        _write2dLine(b, layer: layer, x1: shoeLeft.dx, y1: shoeLeft.dy, x2: shoeRight.dx, y2: shoeRight.dy);
+        // Нижняя опорная плита
+        final baseCenter = center + n * 32.0;
+        final baseLeft = baseCenter - u * 24.0;
+        final baseRight = baseCenter + u * 24.0;
+        _write2dLine(b, layer: layer, x1: baseLeft.dx, y1: baseLeft.dy, x2: baseRight.dx, y2: baseRight.dy);
+        // Штриховка основания
+        for (int i = -2; i <= 2; i++) {
+          final pBase = baseCenter + u * (i * 9.0);
+          final pEnd = pBase + n * 9.0 + u * 7.0;
+          _write2dLine(b, layer: layer, x1: pBase.dx, y1: pBase.dy, x2: pEnd.dx, y2: pEnd.dy);
+        }
+        break;
+
+      case PipeSupportType.spring:
+        final up = -n;
+        final springStart = center + up * 15.0;
+        final springEnd = center + up * 45.0;
+        final anchor = center + up * 55.0;
+
+        _write2dLine(b, layer: layer, x1: center.dx, y1: center.dy, x2: springStart.dx, y2: springStart.dy);
+        // Зигзаг пружины
+        const coils = 4;
+        final segLen = (45.0 - 15.0) / coils;
+        var prevPt = springStart;
+        for (int i = 0; i < coils; i++) {
+          final sign = (i % 2 == 0) ? 1.0 : -1.0;
+          final mid = springStart + up * (i * segLen + segLen * 0.5) + u * (sign * 12.0);
+          final next = springStart + up * ((i + 1) * segLen);
+          _write2dLine(b, layer: layer, x1: prevPt.dx, y1: prevPt.dy, x2: mid.dx, y2: mid.dy);
+          _write2dLine(b, layer: layer, x1: mid.dx, y1: mid.dy, x2: next.dx, y2: next.dy);
+          prevPt = next;
+        }
+        _write2dLine(b, layer: layer, x1: springEnd.dx, y1: springEnd.dy, x2: anchor.dx, y2: anchor.dy);
+        // Плита подвеса
+        final plateLeft = anchor - u * 20.0;
+        final plateRight = anchor + u * 20.0;
+        _write2dLine(b, layer: layer, x1: plateLeft.dx, y1: plateLeft.dy, x2: plateRight.dx, y2: plateRight.dy);
+        break;
+
+      case PipeSupportType.guide:
+        final shoeCenter = center + n * 22.0;
+        _write2dLine(b, layer: layer, x1: center.dx, y1: center.dy, x2: shoeCenter.dx, y2: shoeCenter.dy);
+        final shoeLeft = shoeCenter - u * 18.0;
+        final shoeRight = shoeCenter + u * 18.0;
+        _write2dLine(b, layer: layer, x1: shoeLeft.dx, y1: shoeLeft.dy, x2: shoeRight.dx, y2: shoeRight.dy);
+        // Боковые упоры
+        final stopLeft = shoeLeft - n * 14.0;
+        final stopRight = shoeRight - n * 14.0;
+        _write2dLine(b, layer: layer, x1: shoeLeft.dx, y1: shoeLeft.dy, x2: stopLeft.dx, y2: stopLeft.dy);
+        _write2dLine(b, layer: layer, x1: shoeRight.dx, y1: shoeRight.dy, x2: stopRight.dx, y2: stopRight.dy);
+        // Основание
+        final baseCenter = center + n * 32.0;
+        final baseLeft = baseCenter - u * 24.0;
+        final baseRight = baseCenter + u * 24.0;
+        _write2dLine(b, layer: layer, x1: baseLeft.dx, y1: baseLeft.dy, x2: baseRight.dx, y2: baseRight.dy);
+        break;
+    }
+
+    // Текстовая маркировка опоры
+    final label = support.name.isNotEmpty ? support.name : support.type.shortCode;
+    _writeText(
+      b,
+      layer: textLayer,
+      text: label,
+      x: center.dx + n.dx * 55.0,
+      y: center.dy + n.dy * 55.0,
+      z: 0.0,
+      height: 35.0,
+    );
   }
 
   static void _writeGostReducer2d(

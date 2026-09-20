@@ -152,6 +152,16 @@ class _EditorScreenState extends State<EditorScreen> {
       }
     }
 
+    if (event.logicalKey == LogicalKeyboardKey.f3) {
+      widget.controller.toggleSnap();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.f11) {
+      widget.controller.toggleObjectTracking();
+      return KeyEventResult.handled;
+    }
+
     if (event.logicalKey == LogicalKeyboardKey.home) {
       widget.controller.zoomToFit();
       return KeyEventResult.handled;
@@ -180,6 +190,32 @@ class _EditorScreenState extends State<EditorScreen> {
     if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyD) {
       widget.controller.duplicateSelection();
       return KeyEventResult.handled;
+    }
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyC) {
+      if (widget.controller.copySelection()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Элемент скопирован в буфер обмена'),
+            duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return KeyEventResult.handled;
+      }
+    }
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyV) {
+      if (widget.controller.pasteSelection()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Элемент вставлен из буфера обмена'),
+            duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return KeyEventResult.handled;
+      }
     }
 
     if (!isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyR) {

@@ -184,5 +184,66 @@ void main() {
       expect(h1.hashCode, equals(h2.hashCode));
       expect(h1, isNot(equals(h3)));
     });
+
+    test('parseConnectionCode correctly parses hash code format', () {
+      final parsed = QuickBridgeService.parseConnectionCode('192.168.1.55:42424#1234');
+      expect(parsed, isNotNull);
+      expect(parsed!.ip, equals('192.168.1.55'));
+      expect(parsed.port, equals(42424));
+      expect(parsed.pin, equals('1234'));
+      expect(parsed.code, equals('192.168.1.55:42424#1234'));
+    });
+
+    test('parseConnectionCode parses URL format', () {
+      final parsed = QuickBridgeService.parseConnectionCode('http://192.168.0.10:8080/download?pin=9876');
+      expect(parsed, isNotNull);
+      expect(parsed!.ip, equals('192.168.0.10'));
+      expect(parsed.port, equals(8080));
+      expect(parsed.pin, equals('9876'));
+    });
+
+    test('parseConnectionCode parses JSON from QR code', () {
+      final jsonStr = jsonEncode({
+        'app': 'akso',
+        'ip': '10.0.0.4',
+        'port': 42424,
+        'pin': '5555',
+      });
+      final parsed = QuickBridgeService.parseConnectionCode(jsonStr);
+      expect(parsed, isNotNull);
+      expect(parsed!.ip, equals('10.0.0.4'));
+      expect(parsed.port, equals(42424));
+      expect(parsed.pin, equals('5555'));
+    });
+
+    test('isVirtualInterface identifies WSL, Docker, and VirtualBox adapters', () {
+      expect(QuickBridgeService.isVirtualInterface('vEthernet (WSL)'), isTrue);
+      expect(QuickBridgeService.isVirtualInterface('VirtualBox Host-Only Ethernet Adapter'), isTrue);
+      expect(QuickBridgeService.isVirtualInterface('docker0'), isTrue);
+      expect(QuickBridgeService.isVirtualInterface('Wi-Fi'), isFalse);
+      expect(QuickBridgeService.isVirtualInterface('Ethernet'), isFalse);
+      expect(QuickBridgeService.isVirtualInterface('wlan0'), isFalse);
+    });
+
+    test('isWifiInterface identifies Wi-Fi and WLAN adapters', () {
+      expect(QuickBridgeService.isWifiInterface('Wi-Fi 2'), isTrue);
+      expect(QuickBridgeService.isWifiInterface('wlan0'), isTrue);
+      expect(QuickBridgeService.isWifiInterface('Wireless Network Connection'), isTrue);
+      expect(QuickBridgeService.isWifiInterface('Ethernet'), isFalse);
+    });
+
+    test('getSubnetBroadcast calculates correct broadcast address', () {
+      expect(QuickBridgeService.getSubnetBroadcast('192.168.1.45'), equals('192.168.1.255'));
+      expect(QuickBridgeService.getSubnetBroadcast('10.0.5.12'), equals('10.0.5.255'));
+      expect(QuickBridgeService.getSubnetBroadcast('invalid'), isNull);
+    });
+
+    test('QuickBridgeSession provides connectionCode', () async {
+      session = await bridge.startSender(
+        project: sampleProject,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      expect(session!.connectionCode, equals('127.0.0.1:${session!.port}#${session!.pin}'));
+    });
   });
 }

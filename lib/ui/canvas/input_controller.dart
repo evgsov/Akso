@@ -19,11 +19,16 @@ import '../../domain/models/pipe_segment.dart';
 import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/valve.dart';
 import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
+import '../../domain/services/fitting_detector.dart';
+import '../../domain/enums/report_type.dart';
+import '../../domain/models/report_template.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recent_projects_manager.dart';
 import '../../data/repositories/recovery_repository.dart';
+import '../../data/repositories/report_template_repository.dart';
 import 'controllers/selection_controller.dart';
 import 'controllers/tracing_controller.dart';
 import 'painters/callout_painter.dart';
@@ -169,6 +174,97 @@ class PipingInputController extends ChangeNotifier {
 
   String? hoveredNodeId;
 
+  // Буфер обмена элементов (арматура, опоры)
+  Valve? _clipboardValve;
+  PipeSupport? _clipboardSupport;
+  Valve? get clipboardValve => _clipboardValve;
+  PipeSupport? get clipboardSupport => _clipboardSupport;
+
+  bool get canCopy =>
+      selectedValveId != null ||
+      selectedSupportId != null ||
+      selectedSegmentIds.isNotEmpty ||
+      selectedNodeIds.isNotEmpty;
+
+  bool get canPaste => _clipboardValve != null || _clipboardSupport != null;
+
+  /// Копирование выделенного элемента (арматура или опора) в буфер обмена
+  bool copySelection() {
+    if (selectedValveId != null) {
+      final v = network.valves[selectedValveId!];
+      if (v != null) {
+        _clipboardValve = v;
+        _clipboardSupport = null;
+        notifyListeners();
+        return true;
+      }
+    }
+    if (selectedSupportId != null) {
+      final s = network.supports[selectedSupportId!];
+      if (s != null) {
+        _clipboardSupport = s;
+        _clipboardValve = null;
+        notifyListeners();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Вставка элемента из буфера обмена на указанный сегмент
+  bool pasteSelection({String? targetSegmentId, double? ratio}) {
+    if (!canPaste) return false;
+
+    final segId = targetSegmentId ??
+        selectedSegmentId ??
+        (currentCursorScreenPos != null ? _findSegmentAtScreenPos(currentCursorScreenPos!) : null) ??
+        network.segments.keys.firstOrNull;
+
+    if (segId == null || !network.segments.containsKey(segId)) return false;
+    final targetSeg = network.segments[segId]!;
+
+    final insertRatio = ratio ??
+        (currentCursorScreenPos != null
+            ? _calcSegmentRatio(segId, currentCursorScreenPos!)
+            : 0.5);
+
+    if (_clipboardValve != null) {
+      final newId = 'valve_${_uuid.v4()}';
+      final newValve = _clipboardValve!.copyWith(
+        id: newId,
+        segmentId: segId,
+        ratio: insertRatio.clamp(0.0, 1.0),
+        dn: targetSeg.dn,
+        clearSerialNumber: true,
+      );
+      network.valves[newId] = newValve;
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+      clearSelection();
+      selectedValveId = newId;
+      history.recordState(network);
+      notifyListeners();
+      return true;
+    }
+
+    if (_clipboardSupport != null) {
+      final newId = 'sup_${_uuid.v4()}';
+      final newSupport = _clipboardSupport!.copyWith(
+        id: newId,
+        segmentId: segId,
+        distanceRatio: insertRatio.clamp(0.0, 1.0),
+      );
+      network.supports[newId] = newSupport;
+      clearSelection();
+      selectedSupportId = newId;
+      history.recordState(network);
+      notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
   // Мультиселекция и рамочный выбор
   Set<String> get selectedNodeIds => selectionController.selectedNodeIds;
   Set<String> get selectedSegmentIds => selectionController.selectedSegmentIds;
@@ -261,6 +357,7 @@ class PipingInputController extends ChangeNotifier {
   late ProjectModel currentProject;
   final IProjectRepository projectRepository;
   final RecentProjectsManager recentProjectsManager;
+  final ReportTemplateRepository reportTemplateRepository;
   String? currentFilePath;
   bool hasUnsavedChanges = false;
   bool _isInitializing = true;
@@ -274,13 +371,15 @@ class PipingInputController extends ChangeNotifier {
     IProjectRepository? projectRepository,
     IProjectRepository? repository,
     RecentProjectsManager? recentProjectsManager,
+    ReportTemplateRepository? reportTemplateRepository,
   })  : network = network ?? initialNetwork ?? PipingNetwork(),
         projector = projector ??
             const AxonometryProjector(
               projectionType: ProjectionType.gostFrontal45,
             ),
         projectRepository = repository ?? projectRepository ?? ProjectRepository(),
-        recentProjectsManager = recentProjectsManager ?? RecentProjectsManager() {
+        recentProjectsManager = recentProjectsManager ?? RecentProjectsManager(),
+        reportTemplateRepository = reportTemplateRepository ?? ReportTemplateRepository() {
     history = NetworkHistoryManager(
       maxSnapshots: 50,
       onStateRecorded: () {
@@ -711,7 +810,8 @@ class PipingInputController extends ChangeNotifier {
 
     final hitSegId = ((currentSnapResult?.type == SnapType.segmentAxis ||
                 currentSnapResult?.type == SnapType.midpoint ||
-                currentSnapResult?.type == SnapType.perpendicular) &&
+                currentSnapResult?.type == SnapType.perpendicular ||
+                currentSnapResult?.type == SnapType.smartElevationBranch) &&
             network.segments.containsKey(currentSnapResult!.snappedSegmentId))
         ? currentSnapResult!.snappedSegmentId
         : _findSegmentAtScreenPos(screenPos);
@@ -1082,8 +1182,12 @@ class PipingInputController extends ChangeNotifier {
           final segId = hitSpool.segmentId;
           if (isShift) {
             selectedSpoolIds.remove(spoolId);
+            selectedSegmentIds.remove(segId);
             if (selectedSpoolId == spoolId) {
               selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+            }
+            if (selectedSegmentId == segId) {
+              selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
             }
             notifyListeners();
             break;
@@ -1091,12 +1195,18 @@ class PipingInputController extends ChangeNotifier {
           if (isCtrl) {
             if (selectedSpoolIds.contains(spoolId)) {
               selectedSpoolIds.remove(spoolId);
+              selectedSegmentIds.remove(segId);
               if (selectedSpoolId == spoolId) {
                 selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
               }
+              if (selectedSegmentId == segId) {
+                selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+              }
             } else {
               selectedSpoolIds.add(spoolId);
+              selectedSegmentIds.add(segId);
               selectedSpoolId = spoolId;
+              selectedSegmentId = segId;
             }
             notifyListeners();
             break;
@@ -1127,12 +1237,16 @@ class PipingInputController extends ChangeNotifier {
           notifyListeners();
           break;
         } else if (hitSegId != null && (isCenterlineMode || !network.isButtJoint(hitSegId))) {
-          selectedSpoolId = null;
-          selectedSpoolIds.clear();
+          final matchingSpool = network.spools.values.where((s) => s.segmentId == hitSegId).firstOrNull;
+          final matchingSpoolId = matchingSpool?.id;
           if (isShift) {
             selectedSegmentIds.remove(hitSegId);
+            if (matchingSpoolId != null) selectedSpoolIds.remove(matchingSpoolId);
             if (selectedSegmentId == hitSegId) {
               selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+            }
+            if (matchingSpoolId != null && selectedSpoolId == matchingSpoolId) {
+              selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
             }
             notifyListeners();
             break;
@@ -1140,18 +1254,25 @@ class PipingInputController extends ChangeNotifier {
           if (isCtrl) {
             if (selectedSegmentIds.contains(hitSegId)) {
               selectedSegmentIds.remove(hitSegId);
+              if (matchingSpoolId != null) selectedSpoolIds.remove(matchingSpoolId);
               if (selectedSegmentId == hitSegId) {
                 selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
               }
+              if (matchingSpoolId != null && selectedSpoolId == matchingSpoolId) {
+                selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+              }
             } else {
               selectedSegmentIds.add(hitSegId);
+              if (matchingSpoolId != null) selectedSpoolIds.add(matchingSpoolId);
               selectedSegmentId = hitSegId;
+              if (matchingSpoolId != null) selectedSpoolId = matchingSpoolId;
             }
             notifyListeners();
             break;
           }
 
           selectedSegmentId = hitSegId;
+          selectedSpoolId = matchingSpoolId;
           selectedAxisId = null;
           if (!selectedSegmentIds.contains(hitSegId)) {
             selectedNodeIds.clear();
@@ -1161,6 +1282,7 @@ class PipingInputController extends ChangeNotifier {
             selectedAxisIds.clear();
             selectedDimensionIds.clear();
             selectedSegmentIds.add(hitSegId);
+            if (matchingSpoolId != null) selectedSpoolIds.add(matchingSpoolId);
           }
           _potentialDragSegmentId = hitSegId;
           _dragSegmentStartScreenPos = screenPos;
@@ -1790,18 +1912,27 @@ class PipingInputController extends ChangeNotifier {
     if (isDraggingValve && selectedValveId != null) {
       final valve = network.valves[selectedValveId!];
       if (valve != null) {
-        final seg = network.segments[valve.segmentId];
-        if (seg != null) {
-          final s = network.nodes[seg.startNodeId];
-          final e = network.nodes[seg.endNodeId];
+        final closestSeg = _findClosestSegment(screenPos, maxDistance: 28.0);
+        final targetSeg = closestSeg ?? network.segments[valve.segmentId];
+        if (targetSeg != null) {
+          final s = network.nodes[targetSeg.startNodeId];
+          final e = network.nodes[targetSeg.endNodeId];
           if (s != null && e != null) {
             final p1 = projector.project(s);
             final p2 = projector.project(e);
             final v = p2 - p1;
             final len2 = v.dx * v.dx + v.dy * v.dy;
             if (len2 > 0.001) {
-              final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.05, 0.95);
-              network.valves[selectedValveId!] = valve.copyWith(ratio: t);
+              final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.0, 1.0);
+              if (targetSeg.id != valve.segmentId) {
+                network.valves[selectedValveId!] = valve.copyWith(
+                  segmentId: targetSeg.id,
+                  ratio: t,
+                  dn: targetSeg.dn,
+                );
+              } else {
+                network.valves[selectedValveId!] = valve.copyWith(ratio: t);
+              }
               notifyListeners();
             }
           }
@@ -1813,10 +1944,11 @@ class PipingInputController extends ChangeNotifier {
     if (isDraggingSupport && selectedSupportId != null) {
       final support = network.supports[selectedSupportId!];
       if (support != null) {
-        final seg = network.segments[support.segmentId];
-        if (seg != null) {
-          final s = network.nodes[seg.startNodeId];
-          final e = network.nodes[seg.endNodeId];
+        final closestSeg = _findClosestSegment(screenPos, maxDistance: 28.0);
+        final targetSeg = closestSeg ?? network.segments[support.segmentId];
+        if (targetSeg != null) {
+          final s = network.nodes[targetSeg.startNodeId];
+          final e = network.nodes[targetSeg.endNodeId];
           if (s != null && e != null) {
             final p1 = projector.project(s);
             final p2 = projector.project(e);
@@ -1824,7 +1956,14 @@ class PipingInputController extends ChangeNotifier {
             final len2 = v.dx * v.dx + v.dy * v.dy;
             if (len2 > 0.001) {
               final t = (((screenPos.dx - p1.dx) * v.dx + (screenPos.dy - p1.dy) * v.dy) / len2).clamp(0.0, 1.0);
-              network.supports[selectedSupportId!] = support.copyWith(distanceRatio: t);
+              if (targetSeg.id != support.segmentId) {
+                network.supports[selectedSupportId!] = support.copyWith(
+                  segmentId: targetSeg.id,
+                  distanceRatio: t,
+                );
+              } else {
+                network.supports[selectedSupportId!] = support.copyWith(distanceRatio: t);
+              }
               notifyListeners();
             }
           }
@@ -1859,6 +1998,16 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get isObjectTrackingEnabled => tracingController.isObjectTrackingEnabled;
+
+  void toggleObjectTracking() {
+    tracingController.toggleObjectTracking();
+    if (currentCursorScreenPos != null) {
+      _updateSnap(currentCursorScreenPos!);
+    }
+    notifyListeners();
+  }
+
   void _updateSnap(Offset screenPos) {
     if (isSnapEnabled) {
       final effectiveAngleMode = isAngleLocked ? AngleSnapMode.ortho90 : angleSnapMode;
@@ -1875,6 +2024,7 @@ class PipingInputController extends ChangeNotifier {
                 : null),
         angleMode: effectiveAngleMode,
         customAngleStepDegrees: customAngleDegrees,
+        enableObjectTracking: tracingController.isObjectTrackingEnabled,
       );
     } else {
       currentSnapResult = SnapResult.none(screenPos, projector.unproject(screenPos, currentElevationZ));
@@ -1982,9 +2132,17 @@ class PipingInputController extends ChangeNotifier {
           }
         }
 
+        final boxedSpoolIds = <String>{};
+        for (final spool in network.spools.values) {
+          if (boxedSegmentIds.contains(spool.segmentId)) {
+            boxedSpoolIds.add(spool.id);
+          }
+        }
+
         if (_boxSelectIsShift) {
           selectedNodeIds.removeAll(boxedNodeIds);
           selectedSegmentIds.removeAll(boxedSegmentIds);
+          selectedSpoolIds.removeAll(boxedSpoolIds);
           selectedEquipmentIds.removeAll(boxedEquipmentIds);
           selectedAxisIds.removeAll(boxedAxisIds);
           selectedDimensionIds.removeAll(boxedDimensionIds);
@@ -1994,14 +2152,24 @@ class PipingInputController extends ChangeNotifier {
           if (selectedSegmentId != null && !selectedSegmentIds.contains(selectedSegmentId)) {
             selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
           }
+          if (selectedSpoolId != null && !selectedSpoolIds.contains(selectedSpoolId)) {
+            selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
+          }
         } else if (_boxSelectIsCtrl) {
           selectedNodeIds.addAll(boxedNodeIds);
           selectedSegmentIds.addAll(boxedSegmentIds);
+          selectedSpoolIds.addAll(boxedSpoolIds);
           selectedEquipmentIds.addAll(boxedEquipmentIds);
           selectedAxisIds.addAll(boxedAxisIds);
           selectedDimensionIds.addAll(boxedDimensionIds);
           if (selectedNodeId == null && selectedNodeIds.isNotEmpty) {
             selectedNodeId = selectedNodeIds.first;
+          }
+          if (selectedSegmentId == null && selectedSegmentIds.isNotEmpty) {
+            selectedSegmentId = selectedSegmentIds.first;
+          }
+          if (selectedSpoolId == null && selectedSpoolIds.isNotEmpty) {
+            selectedSpoolId = selectedSpoolIds.first;
           }
         } else {
           selectedNodeIds
@@ -2010,6 +2178,9 @@ class PipingInputController extends ChangeNotifier {
           selectedSegmentIds
             ..clear()
             ..addAll(boxedSegmentIds);
+          selectedSpoolIds
+            ..clear()
+            ..addAll(boxedSpoolIds);
           selectedEquipmentIds
             ..clear()
             ..addAll(boxedEquipmentIds);
@@ -2021,6 +2192,7 @@ class PipingInputController extends ChangeNotifier {
             ..addAll(boxedDimensionIds);
           selectedNodeId = selectedNodeIds.isEmpty ? null : selectedNodeIds.first;
           selectedSegmentId = selectedSegmentIds.isEmpty ? null : selectedSegmentIds.first;
+          selectedSpoolId = selectedSpoolIds.isEmpty ? null : selectedSpoolIds.first;
           selectedEquipmentId = selectedEquipmentIds.isEmpty ? null : selectedEquipmentIds.first;
           selectedAxisId = selectedAxisIds.isEmpty ? null : selectedAxisIds.first;
           selectedDimensionId = selectedDimensionIds.isEmpty ? null : selectedDimensionIds.first;
@@ -2064,6 +2236,7 @@ class PipingInputController extends ChangeNotifier {
     isDraggingSegment = false;
 
     if (isDraggingValve) {
+      network.generateElementWeldJoints();
       network.recalculateSpools();
       history.recordState(network);
       isDraggingValve = false;
@@ -2165,6 +2338,118 @@ class PipingInputController extends ChangeNotifier {
   /// Завершение трассировки сегмента
   void _finishTraceSegment(Offset endScreenPos) {
     if (traceStartNode == null) return;
+
+    // Проверка умного сопряжения под 90° в разновысотную трубу (Smart Multi-Elevation Drop/Riser)
+    final snap = currentSnapResult;
+    if (isSnapEnabled && snap != null && snap.isElevationTransition && snap.intermediateTurnPoint != null) {
+      final turnPoint = snap.intermediateTurnPoint!;
+      final targetWorld = snap.worldPoint;
+      final horizDist = math.sqrt(
+        math.pow(turnPoint.x - traceStartNode!.x, 2) +
+            math.pow(turnPoint.y - traceStartNode!.y, 2),
+      );
+
+      final dim = network.pipeCatalog.getDimension(activeDn);
+      final outerD = dim?.outerDiameterMm;
+
+      // Получаем или создаем целевой узел на целевой трубе
+      final String targetNodeId;
+      if (snap.type == SnapType.node && snap.snappedNodeId != null && network.nodes.containsKey(snap.snappedNodeId)) {
+        targetNodeId = snap.snappedNodeId!;
+      } else if (snap.snappedSegmentId != null && network.segments.containsKey(snap.snappedSegmentId)) {
+        final segId = snap.snappedSegmentId!;
+        final seg = network.segments[segId]!;
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
+        final double ratio;
+        if (s != null && e != null) {
+          final segLen = math.sqrt(math.pow(e.x - s.x, 2) + math.pow(e.y - s.y, 2) + math.pow(e.z - s.z, 2));
+          ratio = segLen > 0.001
+              ? (math.sqrt(math.pow(targetWorld.x - s.x, 2) + math.pow(targetWorld.y - s.y, 2) + math.pow(targetWorld.z - s.z, 2)) / segLen).clamp(0.01, 0.99)
+              : 0.5;
+        } else {
+          ratio = 0.5;
+        }
+        final midNode = network.splitSegmentAtRatio(segId, ratio);
+        targetNodeId = midNode?.id ?? (() {
+          final n = Node3D(id: 'node_${_uuid.v4()}', x: targetWorld.x, y: targetWorld.y, z: targetWorld.z);
+          network.nodes[n.id] = n;
+          return n.id;
+        })();
+      } else {
+        final n = Node3D(id: 'node_${_uuid.v4()}', x: targetWorld.x, y: targetWorld.y, z: targetWorld.z);
+        network.nodes[n.id] = n;
+        targetNodeId = n.id;
+      }
+
+      if (horizDist > 15.0) {
+        // Создаем промежуточный узел поворота на текущей отметке Z
+        final turnNodeId = 'node_${_uuid.v4()}';
+        final turnNode = Node3D(
+          id: turnNodeId,
+          x: turnPoint.x,
+          y: turnPoint.y,
+          z: currentElevationZ,
+        );
+        network.nodes[turnNodeId] = turnNode;
+
+        // 1. Горизонтальный участок от начального узла до точки изгиба
+        final horizSegId = 'seg_${_uuid.v4()}';
+        final horizSeg = PipeSegment(
+          id: horizSegId,
+          startNodeId: traceStartNode!.id,
+          endNodeId: turnNodeId,
+          systemId: activeSystemId,
+          dn: activeDn,
+          outerDiameterMm: outerD,
+          wallThicknessMm: activeWallThicknessMm,
+          material: activeMaterial,
+        );
+        network.addSegment(horizSeg);
+
+        // 2. Вертикальный стояк/опуск от точки изгиба до целевой трубы
+        final riserSegId = 'seg_${_uuid.v4()}';
+        final riserSeg = PipeSegment(
+          id: riserSegId,
+          startNodeId: turnNodeId,
+          endNodeId: targetNodeId,
+          systemId: activeSystemId,
+          dn: activeDn,
+          outerDiameterMm: outerD,
+          wallThicknessMm: activeWallThicknessMm,
+          material: activeMaterial,
+        );
+        network.addSegment(riserSeg);
+
+        // Детектируем фитинги: поворот под 90° получает отвод, а врезка в трубу - тройник
+        FittingDetector.autoDetectFittingsForNode(network, turnNodeId);
+        FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
+      } else {
+        // Узел уже расположен строго в створе стояка: строим только вертикальный сегмент
+        final riserSegId = 'seg_${_uuid.v4()}';
+        final riserSeg = PipeSegment(
+          id: riserSegId,
+          startNodeId: traceStartNode!.id,
+          endNodeId: targetNodeId,
+          systemId: activeSystemId,
+          dn: activeDn,
+          outerDiameterMm: outerD,
+          wallThicknessMm: activeWallThicknessMm,
+          material: activeMaterial,
+        );
+        network.addSegment(riserSeg);
+
+        FittingDetector.autoDetectFittingsForNode(network, traceStartNode!.id);
+        FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
+      }
+
+      currentElevationZ = targetWorld.z;
+      traceStartNode = network.nodes[targetNodeId];
+      selectedNodeId = targetNodeId;
+      history.recordState(network);
+      notifyListeners();
+      return;
+    }
 
     String targetNodeId;
 
@@ -2726,7 +3011,7 @@ class PipingInputController extends ChangeNotifier {
     return null;
   }
 
-  /// Поиск опоры в радиусе 16 пикселей от курсора
+  /// Поиск опоры по положению на трубе или каркасным элементам (стойка, башмак, пружина, плита)
   String? _findSupportAtScreenPos(Offset screenPos) {
     for (final support in network.supports.values) {
       final seg = network.segments[support.segmentId];
@@ -2738,6 +3023,21 @@ class PipingInputController extends ChangeNotifier {
       final p = projector.project(worldPos);
       if ((p - screenPos).distance <= 16.0) {
         return support.id;
+      }
+
+      // Проверяем пространственные каркасные отрезки стойки, башмака, тяги, пружины и плиты основания
+      final wireSegments = Element3dGeometry.generateSupportWireframe(
+        support,
+        s,
+        e,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+      for (final wire in wireSegments) {
+        final p1 = projector.project(wire.startNode);
+        final p2 = projector.project(wire.endNode);
+        if (_distanceToLineSegment(screenPos, p1, p2) <= 14.0) {
+          return support.id;
+        }
       }
     }
     return null;
@@ -2777,6 +3077,31 @@ class PipingInputController extends ChangeNotifier {
     }
     return null;
   }
+
+  /// Поиск ближайшего сегмента к позиции курсора на экране в пределах maxDistance
+  PipeSegment? _findClosestSegment(Offset screenPos, {double maxDistance = 28.0}) {
+    PipeSegment? closest;
+    double minDistance = maxDistance;
+
+    for (final seg in network.segments.values) {
+      final s = network.nodes[seg.startNodeId];
+      final e = network.nodes[seg.endNodeId];
+      if (s == null || e == null) continue;
+
+      final p1 = projector.project(s);
+      final p2 = projector.project(e);
+
+      final dist = _distanceToLineSegment(screenPos, p1, p2);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closest = seg;
+      }
+    }
+    return closest;
+  }
+
+  PipeSegment? findClosestSegment(Offset screenPos, {double maxDistance = 28.0}) =>
+      _findClosestSegment(screenPos, maxDistance: maxDistance);
 
   /// Поиск физической катушки под курсором в радиусе 14 пикселей
   PipeSpool? _findSpoolAtScreenPos(Offset screenPos) {
@@ -2872,7 +3197,7 @@ class PipingInputController extends ChangeNotifier {
     final u = (p2 - p1) / len;
     final v = screenPos - p1;
     final proj = v.dx * u.dx + v.dy * u.dy;
-    return (proj / len).clamp(0.05, 0.95);
+    return (proj / len).clamp(0.0, 1.0);
   }
 
   double _distanceToLineSegment(Offset p, Offset a, Offset b) {
@@ -3136,12 +3461,18 @@ class PipingInputController extends ChangeNotifier {
     }
   }
 
-  /// Изменение диаметра DN выбранного сегмента трубы
+  /// Изменение диаметра DN выбранного сегмента трубы или группы выбранных сегментов
   void changeSelectedSegmentDn(int newDn) {
-    if (selectedSegmentId == null || newDn <= 0) return;
-    network.updateSegmentProperties(selectedSegmentId!, dn: newDn);
-    history.recordState(network);
-    notifyListeners();
+    if (newDn <= 0) return;
+    if (selectedSegmentIds.length > 1) {
+      network.changeSegmentsDn(selectedSegmentIds, newDn);
+      history.recordState(network);
+      notifyListeners();
+    } else if (selectedSegmentId != null) {
+      network.updateSegmentProperties(selectedSegmentId!, dn: newDn);
+      history.recordState(network);
+      notifyListeners();
+    }
   }
 
   /// Изменение толщины стенки S выбранного сегмента трубы
@@ -3181,12 +3512,18 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Изменение марки стали выбранного сегмента трубы
+  /// Изменение марки стали выбранного сегмента трубы или группы выбранных сегментов
   void changeSelectedSegmentMaterial(String material) {
-    if (selectedSegmentId == null) return;
-    network.updateSegmentProperties(selectedSegmentId!, material: material);
-    history.recordState(network);
-    notifyListeners();
+    if (material.trim().isEmpty) return;
+    if (selectedSegmentIds.length > 1) {
+      network.changeSegmentsMaterial(selectedSegmentIds, material);
+      history.recordState(network);
+      notifyListeners();
+    } else if (selectedSegmentId != null) {
+      network.updateSegmentProperties(selectedSegmentId!, material: material);
+      history.recordState(network);
+      notifyListeners();
+    }
   }
 
   /// Изменение пользовательской маркировки/наименования выбранного сегмента трубы
@@ -3241,6 +3578,18 @@ class PipingInputController extends ChangeNotifier {
     if (ids.isEmpty || deltaZMeters.abs() < 0.0001) return;
 
     network.shiftSegmentsElevation(ids, deltaZMeters);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Назначение уклона (i) для группы выбранных сегментов или выбранного сегмента
+  void changeSelectedSegmentsSlope(double slope) {
+    final ids = selectedSegmentIds.isNotEmpty
+        ? selectedSegmentIds
+        : (selectedSegmentId != null ? [selectedSegmentId!] : <String>[]);
+    if (ids.isEmpty) return;
+
+    network.changeSegmentsSlope(ids, slope);
     history.recordState(network);
     notifyListeners();
   }
@@ -3342,11 +3691,11 @@ class PipingInputController extends ChangeNotifier {
     // Множественное удаление
     if (selectedNodeIds.length > 1 ||
         selectedSegmentIds.length > 1 ||
+        selectedSpoolIds.length > 1 ||
         selectedEquipmentIds.isNotEmpty ||
         selectedAxisIds.isNotEmpty ||
         selectedDimensionIds.isNotEmpty ||
         (selectedNodeIds.isNotEmpty && selectedSegmentIds.isNotEmpty)) {
-      history.recordState(network);
       for (final eqId in selectedEquipmentIds.toList()) {
         network.removeEquipment(eqId);
         network.callouts.removeWhere((_, c) => c.targetId == eqId);
@@ -3382,11 +3731,13 @@ class PipingInputController extends ChangeNotifier {
       }
       selectedNodeIds.clear();
       selectedSegmentIds.clear();
+      selectedSpoolIds.clear();
       selectedEquipmentIds.clear();
       selectedAxisIds.clear();
       selectedDimensionIds.clear();
       selectedNodeId = null;
       selectedSegmentId = null;
+      selectedSpoolId = null;
       selectedEquipmentId = null;
       selectedAxisId = null;
       selectedDimensionId = null;
@@ -3396,6 +3747,7 @@ class PipingInputController extends ChangeNotifier {
       network.autoDetectAllFittings();
       network.cleanupUnusedEquipmentNozzles();
       network.recalculateSpools();
+      history.recordState(network);
       notifyListeners();
       return;
     }
@@ -3522,13 +3874,64 @@ class PipingInputController extends ChangeNotifier {
     return true;
   }
 
-  /// Дублирование выделенного подграфа со сдвигом (dx, dy, dz)
+  /// Дублирование выделенного подграфа со сдвигом (dx, dy, dz) или одиночной арматуры/опоры
   bool duplicateSelection({
     double dx = 500.0,
     double dy = 500.0,
     double dz = 0.0,
     bool updateSelection = true,
   }) {
+    // Дублирование одиночной арматуры
+    if (selectedValveId != null) {
+      final v = network.valves[selectedValveId!];
+      if (v != null) {
+        final newId = 'valve_${_uuid.v4()}';
+        double newRatio = v.ratio + 0.1;
+        if (newRatio > 0.98) {
+          newRatio = math.max(0.0, v.ratio - 0.1);
+        }
+        final newValve = v.copyWith(
+          id: newId,
+          ratio: newRatio.clamp(0.0, 1.0),
+          clearSerialNumber: true,
+        );
+        network.valves[newId] = newValve;
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+        if (updateSelection) {
+          clearSelection();
+          selectedValveId = newId;
+        }
+        history.recordState(network);
+        notifyListeners();
+        return true;
+      }
+    }
+
+    // Дублирование одиночной опоры
+    if (selectedSupportId != null) {
+      final s = network.supports[selectedSupportId!];
+      if (s != null) {
+        final newId = 'sup_${_uuid.v4()}';
+        double newRatio = s.distanceRatio + 0.1;
+        if (newRatio > 0.98) {
+          newRatio = math.max(0.0, s.distanceRatio - 0.1);
+        }
+        final newSupport = s.copyWith(
+          id: newId,
+          distanceRatio: newRatio.clamp(0.0, 1.0),
+        );
+        network.supports[newId] = newSupport;
+        if (updateSelection) {
+          clearSelection();
+          selectedSupportId = newId;
+        }
+        history.recordState(network);
+        notifyListeners();
+        return true;
+      }
+    }
+
     final nodeIdsToCopy = <String>{...selectedNodeIds};
     for (final segId in selectedSegmentIds) {
       final seg = network.segments[segId];
@@ -4311,5 +4714,32 @@ class PipingInputController extends ChangeNotifier {
       lastModifiedDate: DateTime.now().toIso8601String(),
     );
     await projectRepository.shareProjectFile(currentProject);
+  }
+
+  /// Получение всех шаблонов (встроенные + кэш + проект) для указанного типа
+  Future<List<ReportTemplate>> getReportTemplates(ReportType type) async {
+    return reportTemplateRepository.getTemplatesForType(type, project: currentProject);
+  }
+
+  /// Сохранение шаблона отчета (в проект и в глобальный кэш)
+  Future<void> saveReportTemplate(ReportTemplate template, {bool saveGlobally = true}) async {
+    final current = Map<String, ReportTemplate>.from(currentProject.reportTemplates ?? {});
+    current[template.id] = template;
+    currentProject = currentProject.copyWith(reportTemplates: current);
+    hasUnsavedChanges = true;
+    await reportTemplateRepository.saveTemplate(template, project: currentProject, saveGlobally: saveGlobally);
+    notifyListeners();
+  }
+
+  /// Удаление шаблона отчета (из проекта и глобального кэша)
+  Future<void> deleteReportTemplate(String templateId, {bool deleteGlobally = true}) async {
+    if (currentProject.reportTemplates?.containsKey(templateId) ?? false) {
+      final current = Map<String, ReportTemplate>.from(currentProject.reportTemplates!);
+      current.remove(templateId);
+      currentProject = currentProject.copyWith(reportTemplates: current);
+      hasUnsavedChanges = true;
+    }
+    await reportTemplateRepository.deleteTemplate(templateId, project: currentProject, deleteGlobally: deleteGlobally);
+    notifyListeners();
   }
 }

@@ -10,6 +10,7 @@ import '../../../domain/models/node_3d.dart';
 class TracingController {
   AngleSnapMode angleSnapMode = AngleSnapMode.ortho90;
   double customAngleDegrees = 15.0;
+  bool isObjectTrackingEnabled = true;
 
   Node3D? traceStartNode;
   Node3D? axisStartNode;
@@ -18,6 +19,10 @@ class TracingController {
 
   void setAngleSnapMode(AngleSnapMode mode) {
     angleSnapMode = mode;
+  }
+
+  void toggleObjectTracking() {
+    isObjectTrackingEnabled = !isObjectTrackingEnabled;
   }
 
   void resetTrace() {

@@ -101,18 +101,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Быстрый обмен Wi-Fi (QuickBridge)'), findsOneWidget);
-      expect(find.text('Отправить (ПК)'), findsOneWidget);
-      expect(find.text('Принять (Планшет)'), findsOneWidget);
+      expect(find.text('Поделиться чертежом'), findsOneWidget);
+      expect(find.text('Получить чертеж'), findsOneWidget);
 
       // By default in Send mode: should display PIN code and server URL
       expect(find.text('PIN-код подключения:'), findsOneWidget);
 
       // Switch to Receive tab
-      await tester.tap(find.text('Принять (Планшет)'));
+      await tester.tap(find.text('Получить чертеж'));
       await tester.pumpAndSettle();
 
       expect(find.text('Поиск устройств в сети Wi-Fi...'), findsOneWidget);
-      expect(find.text('Подключиться вручную'), findsOneWidget);
+      expect(find.text('Быстрое подключение по коду / адресу:'), findsOneWidget);
     });
 
     testWidgets('DesktopCadLayout renders header with title, code, dirty indicator, and file menu', (tester) async {

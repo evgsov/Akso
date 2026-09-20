@@ -330,7 +330,10 @@ class EditorTopBar extends StatelessWidget {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (_) => MaterialsSpecificationDialog(network: controller.network),
+                  builder: (_) => MaterialsSpecificationDialog(
+                    network: controller.network,
+                    controller: controller,
+                  ),
                 );
               },
             ),

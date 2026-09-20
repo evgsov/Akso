@@ -302,6 +302,25 @@ class Element3dGeometry {
 
   /// Генерация 3D линий для опоры трубопровода (PipeSupport):
   /// - Хомут вокруг трубы
+  /// Генерация пространственного 3D-проволочного каркаса опоры или подвески трубопровода
+  static List<WireframeSegment3D> generateSupportWireframe(
+    PipeSupport support,
+    Node3D start,
+    Node3D end, {
+    double? pipeOuterDiameter,
+    String layer = layerSupports,
+  }) {
+    return generateSupport3d(
+      support,
+      start,
+      end,
+      pipeOuterDiameter: pipeOuterDiameter,
+      layer: layer,
+    );
+  }
+
+  /// Генерация 3D линий для опор трубопровода:
+  /// - Хомут вокруг трубы
   /// - Стойка / тяга к строительной конструкции
   /// - Опорная пластина (башмак)
   static List<WireframeSegment3D> generateSupport3d(
@@ -309,6 +328,7 @@ class Element3dGeometry {
     Node3D start,
     Node3D end, {
     double? pipeOuterDiameter,
+    String layer = layerSupports,
   }) {
     final lines = <WireframeSegment3D>[];
     final basis = PipeBasis3D.fromEndpoints(start, end);

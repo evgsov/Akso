@@ -48,6 +48,56 @@ class QuickBridgeDiscoveredHost {
   int get hashCode => ip.hashCode ^ port.hashCode;
 }
 
+/// Сетевой интерфейс для выбора адаптера передачи
+class QuickBridgeNetworkInterface {
+  final String name;
+  final String ip;
+  final bool isWifi;
+  final bool isVirtual;
+
+  QuickBridgeNetworkInterface({
+    required this.name,
+    required this.ip,
+    this.isWifi = false,
+    this.isVirtual = false,
+  });
+
+  String get displayName {
+    if (isWifi) return '$name (Wi-Fi: $ip)';
+    if (isVirtual) return '$name (Виртуальный: $ip)';
+    return '$name ($ip)';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuickBridgeNetworkInterface &&
+          runtimeType == other.runtimeType &&
+          ip == other.ip;
+
+  @override
+  int get hashCode => ip.hashCode;
+}
+
+/// Распарсенная информация для прямого подключения к хосту
+class QuickBridgeConnectionInfo {
+  final String ip;
+  final int port;
+  final String pin;
+
+  QuickBridgeConnectionInfo({
+    required this.ip,
+    required this.port,
+    required this.pin,
+  });
+
+  String get code => '$ip:$port#$pin';
+  String get url => 'http://$ip:$port/download?pin=$pin';
+
+  @override
+  String toString() => code;
+}
+
 /// Активная сессия передачи/приема проекта
 class QuickBridgeSession {
   final HttpServer? _server;
@@ -71,6 +121,9 @@ class QuickBridgeSession {
         _beaconSocket = beaconSocket,
         serverUrl = serverUrl ?? 'http://$localIp:$port';
 
+  /// Единый код быстрого подключения для планшета
+  String get connectionCode => '$localIp:$port#$pin';
+
   /// Останавливает HTTP-сервер и широковещательный маяк
   Future<void> stop() async {
     _beaconTimer?.cancel();
@@ -81,10 +134,38 @@ class QuickBridgeSession {
 
 /// Сервис автономного обмена проектами Akso через локальную сеть Wi-Fi (P2P)
 class QuickBridgeService {
+  static const int defaultPort = 42424;
   static const int beaconPort = 42425;
 
-  /// Определение локального IPv4 адреса устройства
-  Future<String> getLocalIpAddress() async {
+  static const List<String> virtualInterfacePatterns = [
+    'vethernet',
+    'wsl',
+    'virtual',
+    'vbox',
+    'vmware',
+    'docker',
+    'loopback',
+    'tailscale',
+    'zerotier',
+    'tap',
+    'tun',
+  ];
+
+  /// Проверяет, является ли интерфейс виртуальным (WSL, Docker, VPN и т.д.)
+  static bool isVirtualInterface(String name) {
+    final lower = name.toLowerCase();
+    return virtualInterfacePatterns.any((p) => lower.contains(p));
+  }
+
+  /// Проверяет, является ли интерфейс Wi-Fi / WLAN адаптером
+  static bool isWifiInterface(String name) {
+    final lower = name.toLowerCase();
+    return lower.contains('wi-fi') || lower.contains('wlan') || lower.contains('wireless');
+  }
+
+  /// Возвращает список всех доступных локальных IPv4 сетевых интерфейсов
+  Future<List<QuickBridgeNetworkInterface>> getAvailableInterfaces() async {
+    final result = <QuickBridgeNetworkInterface>[];
     try {
       final interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
@@ -93,30 +174,146 @@ class QuickBridgeService {
       for (final iface in interfaces) {
         for (final addr in iface.addresses) {
           if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
-            return addr.address;
+            final isVirt = isVirtualInterface(iface.name);
+            final isWifi = isWifiInterface(iface.name);
+            result.add(QuickBridgeNetworkInterface(
+              name: iface.name,
+              ip: addr.address,
+              isWifi: isWifi,
+              isVirtual: isVirt,
+            ));
           }
         }
       }
     } catch (_) {}
+
+    // Сортировка:
+    // 1. Физический Wi-Fi
+    // 2. Физический Ethernet с домашними адресами 192.168.x.x или 10.x.x.x
+    // 3. Прочие физические
+    // 4. Виртуальные адаптеры (в конец)
+    result.sort((a, b) {
+      if (a.isVirtual != b.isVirtual) {
+        return a.isVirtual ? 1 : -1;
+      }
+      if (a.isWifi != b.isWifi) {
+        return a.isWifi ? -1 : 1;
+      }
+      final aIsHome = a.ip.startsWith('192.168.') || a.ip.startsWith('10.');
+      final bIsHome = b.ip.startsWith('192.168.') || b.ip.startsWith('10.');
+      if (aIsHome != bIsHome) {
+        return aIsHome ? -1 : 1;
+      }
+      return a.ip.compareTo(b.ip);
+    });
+
+    return result;
+  }
+
+  /// Определение лучшего локального IPv4 адреса устройства (с приоритетом Wi-Fi)
+  Future<String> getLocalIpAddress() async {
+    final ifaces = await getAvailableInterfaces();
+    if (ifaces.isNotEmpty) {
+      return ifaces.first.ip;
+    }
     return '127.0.0.1';
+  }
+
+  /// Парсит единую строку подключения (код, ссылку или JSON) в структурированный объект
+  static QuickBridgeConnectionInfo? parseConnectionCode(String raw) {
+    var text = raw.trim();
+    if (text.isEmpty) return null;
+
+    // 1. Формат JSON из QR-кода: {"app":"akso","ip":"192.168.1.50","port":42424,"pin":"1234"}
+    if (text.startsWith('{') && text.endsWith('}')) {
+      try {
+        final map = jsonDecode(text) as Map<String, dynamic>;
+        if (map['app'] == 'akso' && map['ip'] != null) {
+          return QuickBridgeConnectionInfo(
+            ip: map['ip'] as String,
+            port: (map['port'] as num?)?.toInt() ?? defaultPort,
+            pin: map['pin']?.toString() ?? '',
+          );
+        }
+      } catch (_) {}
+    }
+
+    // 2. Формат URL: http://192.168.1.50:42424/download?pin=1234 или http://192.168.1.50:42424#1234
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      try {
+        final uri = Uri.parse(text);
+        final ip = uri.host;
+        final port = uri.port != 0 ? uri.port : defaultPort;
+        final pin = uri.queryParameters['pin'] ?? (uri.fragment.isNotEmpty ? uri.fragment : '');
+        if (ip.isNotEmpty) {
+          return QuickBridgeConnectionInfo(ip: ip, port: port, pin: pin);
+        }
+      } catch (_) {}
+    }
+
+    // 3. Формат: 192.168.1.50:42424#1234 или 192.168.1.50#1234
+    String pin = '';
+    if (text.contains('#')) {
+      final hashParts = text.split('#');
+      text = hashParts[0].trim();
+      pin = hashParts[1].trim();
+    }
+
+    String ip = text;
+    int port = defaultPort;
+    if (text.contains(':')) {
+      final colonParts = text.split(':');
+      ip = colonParts[0].trim();
+      port = int.tryParse(colonParts[1].trim()) ?? defaultPort;
+    }
+
+    if (ip.isNotEmpty) {
+      return QuickBridgeConnectionInfo(ip: ip, port: port, pin: pin);
+    }
+
+    return null;
+  }
+
+  /// Вычисляет адрес подсетевого широковещания (например, 192.168.1.255)
+  static String? getSubnetBroadcast(String ip) {
+    final parts = ip.split('.');
+    if (parts.length == 4) {
+      return '${parts[0]}.${parts[1]}.${parts[2]}.255';
+    }
+    return null;
   }
 
   /// Запуск микросервера для передачи проекта
   Future<QuickBridgeSession> startSender({
     required ProjectModel project,
     InternetAddress? bindAddress,
+    int? requestedPort,
+    String? customLocalIp,
     bool enableBeacon = true,
     Function(String clientIp)? onTransferred,
     Function(ProjectModel project)? onProjectReceived,
   }) async {
     final address = bindAddress ?? InternetAddress.anyIPv4;
-    final server = await HttpServer.bind(address, 0);
+
+    // Пытаемся занять стандартный порт 42424, либо последовательно следующие
+    HttpServer? server;
+    final startPort = requestedPort ?? (bindAddress != null ? 0 : defaultPort);
+    if (startPort > 0) {
+      for (int p = startPort; p < startPort + 5; p++) {
+        try {
+          server = await HttpServer.bind(address, p);
+          break;
+        } catch (_) {}
+      }
+    }
+    server ??= await HttpServer.bind(address, 0);
     final port = server.port;
     final pin = (1000 + Random().nextInt(9000)).toString();
 
-    final localIp = bindAddress != null
-        ? bindAddress.address
-        : await getLocalIpAddress();
+    final localIp = customLocalIp ??
+        (bindAddress != null
+            ? bindAddress.address
+            : await getLocalIpAddress());
 
     // Запуск UDP маяка для автообнаружения в локальной сети
     RawDatagramSocket? beaconSocket;
@@ -140,14 +337,23 @@ class QuickBridgeService {
           'pin': pin,
         });
         final bytes = utf8.encode(beaconData);
+        final subnetBroadcast = getSubnetBroadcast(localIp);
 
         beaconTimer = Timer.periodic(const Duration(seconds: 1), (_) {
           try {
+            // Отправляем как на глобальный broadcast, так и на широковещательный адрес подсети
             beaconSocket?.send(
               bytes,
               InternetAddress('255.255.255.255'),
               beaconPort,
             );
+            if (subnetBroadcast != null) {
+              beaconSocket?.send(
+                bytes,
+                InternetAddress(subnetBroadcast),
+                beaconPort,
+              );
+            }
           } catch (_) {}
         });
       } catch (_) {
@@ -386,5 +592,57 @@ class QuickBridgeService {
     });
 
     return controller.stream;
+  }
+
+  /// Активное сканирование локальной подсети /24 (резерв при блокировке UDP-маяка роутером)
+  Future<List<QuickBridgeDiscoveredHost>> scanSubnet({
+    String? baseIp,
+    int port = defaultPort,
+    Duration timeout = const Duration(milliseconds: 600),
+  }) async {
+    final localIp = baseIp ?? await getLocalIpAddress();
+    final parts = localIp.split('.');
+    if (parts.length != 4) return [];
+    final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
+
+    final discovered = <QuickBridgeDiscoveredHost>[];
+    final client = HttpClient();
+    client.connectionTimeout = timeout;
+
+    final myOctet = int.tryParse(parts[3]) ?? 100;
+    final hostsToScan = <int>{};
+    // Сканируем диапазон 1..35 (обычно роутер и первые клиенты)
+    for (int i = 1; i <= 35; i++) {
+      hostsToScan.add(i);
+    }
+    // Сканируем диапазон +/- 10 вокруг нашего IP
+    for (int i = max(1, myOctet - 10); i <= min(254, myOctet + 10); i++) {
+      hostsToScan.add(i);
+    }
+    hostsToScan.remove(myOctet); // Не опрашиваем себя
+
+    final futures = hostsToScan.map((octet) async {
+      final ip = '$prefix.$octet';
+      try {
+        final req = await client.getUrl(Uri.parse('http://$ip:$port/info')).timeout(timeout);
+        final resp = await req.close().timeout(timeout);
+        if (resp.statusCode == HttpStatus.ok) {
+          final body = await utf8.decodeStream(resp).timeout(timeout);
+          final map = jsonDecode(body) as Map<String, dynamic>;
+          if (map['app'] == 'akso') {
+            discovered.add(QuickBridgeDiscoveredHost(
+              hostName: map['title'] as String? ?? 'Устройство Akso ($ip)',
+              ip: ip,
+              port: port,
+              projectTitle: map['title'] as String? ?? '',
+            ));
+          }
+        }
+      } catch (_) {}
+    });
+
+    await Future.wait(futures);
+    client.close();
+    return discovered;
   }
 }

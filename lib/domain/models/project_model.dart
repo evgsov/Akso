@@ -1,6 +1,7 @@
 import '../enums/projection_type.dart';
 import 'callout.dart';
 import 'piping_network.dart';
+import 'report_template.dart';
 
 /// Корневой проект исполнительной схемы трубопроводов (.akso)
 class ProjectModel {
@@ -18,6 +19,7 @@ class ProjectModel {
   final double currentElevationZ;
   final PipingNetwork network;
   final Map<String, String> calloutTemplates;
+  final Map<String, ReportTemplate>? reportTemplates;
 
   ProjectModel({
     required this.id,
@@ -34,6 +36,7 @@ class ProjectModel {
     this.currentElevationZ = 0.0,
     PipingNetwork? network,
     Map<String, String>? calloutTemplates,
+    this.reportTemplates,
   })  : creationDate = creationDate ?? DateTime.now().toIso8601String().substring(0, 10),
         lastModifiedDate = lastModifiedDate ?? (creationDate ?? DateTime.now().toIso8601String()),
         network = network ?? PipingNetwork(),
@@ -56,6 +59,8 @@ class ProjectModel {
     double? currentElevationZ,
     PipingNetwork? network,
     Map<String, String>? calloutTemplates,
+    Map<String, ReportTemplate>? reportTemplates,
+    bool clearReportTemplates = false,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -72,6 +77,7 @@ class ProjectModel {
       currentElevationZ: currentElevationZ ?? this.currentElevationZ,
       network: network ?? this.network,
       calloutTemplates: calloutTemplates ?? this.calloutTemplates,
+      reportTemplates: clearReportTemplates ? null : (reportTemplates ?? this.reportTemplates),
     );
   }
 
@@ -90,6 +96,8 @@ class ProjectModel {
         'currentElevationZ': currentElevationZ,
         'network': network.toJson(),
         'calloutTemplates': calloutTemplates,
+        if (reportTemplates != null)
+          'reportTemplates': reportTemplates!.map((k, v) => MapEntry(k, v.toJson())),
       };
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
@@ -111,6 +119,14 @@ class ProjectModel {
       network: PipingNetwork.fromJson(Map<String, dynamic>.from(json['network'] as Map)),
       calloutTemplates: json['calloutTemplates'] != null
           ? Map<String, String>.from(json['calloutTemplates'] as Map)
+          : null,
+      reportTemplates: json['reportTemplates'] != null
+          ? (json['reportTemplates'] as Map).map(
+              (k, v) => MapEntry(
+                k.toString(),
+                ReportTemplate.fromJson(Map<String, dynamic>.from(v as Map)),
+              ),
+            )
           : null,
     );
   }

@@ -236,6 +236,35 @@ void main() {
       final picture = recorder.endRecording();
       expect(picture, isNotNull);
     });
+
+    test('Support hit-testing along wireframe base plate and strut', () {
+      final network = PipingNetwork();
+      final controller = PipingInputController(network: network);
+      controller.enableDragDelay = false;
+
+      network.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      network.nodes['n2'] = const Node3D(id: 'n2', x: 2000, y: 0, z: 0);
+      network.segments['s1'] = const PipeSegment(id: 's1', startNodeId: 'n1', endNodeId: 'n2', systemId: 'sys1', dn: 100);
+
+      final support = PipeSupport(
+        id: 'sup_test',
+        segmentId: 's1',
+        distanceRatio: 0.5,
+        type: PipeSupportType.fixed,
+        name: 'НО-1',
+      );
+      network.supports[support.id] = support;
+
+      // Pipe center point (x=1000, y=0, z=0)
+      final centerScreen = controller.projector.project(const Node3D(id: 'c', x: 1000, y: 0, z: 0));
+      expect(controller.findSupportAtScreenPos(centerScreen), equals(support.id));
+
+      // Point down on the strut / base plate (z is negative downwards, e.g. z=-100)
+      final basePoint = controller.projector.project(const Node3D(id: 'b', x: 1000, y: 0, z: -100));
+      expect(controller.findSupportAtScreenPos(basePoint), equals(support.id));
+
+      controller.dispose();
+    });
   });
 
   group('Fitting Inspector UI & DesktopCadLayout Widget Tests', () {

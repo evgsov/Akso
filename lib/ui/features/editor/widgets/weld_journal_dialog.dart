@@ -2,11 +2,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../data/dxf/dxf_writer.dart';
+import '../../../../data/repositories/report_template_repository.dart';
+import '../../../../data/services/excel_export_service.dart';
 import '../../../../domain/enums/inspection_method.dart';
+import '../../../../domain/enums/report_type.dart';
 import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/piping_network.dart';
+import '../../../../domain/models/report_template.dart';
 import '../../../canvas/input_controller.dart';
+import 'report_template_builder_widget.dart';
 
 /// Диалог «Исполнительная ведомость сети» с интерактивным массовым и инлайн-редактированием сварных стыков
 class WeldJournalDialog extends StatefulWidget {
@@ -27,6 +32,49 @@ class WeldJournalDialog extends StatefulWidget {
 
 class _WeldJournalDialogState extends State<WeldJournalDialog> {
   final Set<String> _selectedWeldIds = {};
+  ReportTemplate? _activeWeldTemplate;
+  List<ReportTemplate> _weldTemplates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWeldTemplates();
+  }
+
+  Future<void> _loadWeldTemplates() async {
+    final templates = widget.controller != null
+        ? await widget.controller!.getReportTemplates(ReportType.weldJournal)
+        : await ReportTemplateRepository().getTemplatesForType(ReportType.weldJournal);
+    if (mounted) {
+      setState(() {
+        _weldTemplates = templates;
+        if (_activeWeldTemplate == null && templates.isNotEmpty) {
+          _activeWeldTemplate = templates.first;
+        } else if (_activeWeldTemplate != null) {
+          final found = templates.where((t) => t.id == _activeWeldTemplate!.id);
+          _activeWeldTemplate = found.isNotEmpty ? found.first : templates.first;
+        }
+      });
+    }
+  }
+
+  Future<void> _exportWeldJournalExcel() async {
+    final template = _activeWeldTemplate ?? ReportTemplate.defaultWeldJournalTransneftTemplate;
+    await ExcelExportService.exportAndSaveExcel(
+      context: context,
+      template: template,
+      network: widget.network,
+    );
+  }
+
+  Future<void> _exportSpoolsExcel() async {
+    final template = ReportTemplate.defaultSpoolsCutListTemplate;
+    await ExcelExportService.exportAndSaveExcel(
+      context: context,
+      template: template,
+      network: widget.network,
+    );
+  }
 
   static const List<String> _standardSteelGrades = [
     'Сталь 20',
@@ -391,7 +439,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
     final dialogHeight = math.min(680.0, screenSize.height * 0.90);
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
@@ -423,6 +471,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                 tabs: [
                   Tab(icon: Icon(Icons.hardware), text: 'Журнал сварных стыков'),
                   Tab(icon: Icon(Icons.straighten), text: 'Ведомость катушек (заготовок)'),
+                  Tab(icon: Icon(Icons.tune), text: 'Конструктор шаблона'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -563,16 +612,48 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                 ),
                               ],
                             ),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.copy, size: 16),
-                              label: const Text('Скопировать CSV'),
-                              onPressed: () {
-                                final csv = DxfWriter.generateWeldJournalCsv(widget.network);
-                                Clipboard.setData(ClipboardData(text: csv));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Журнал сварки скопирован в буфер обмена')),
-                                );
-                              },
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                if (_weldTemplates.isNotEmpty) ...[
+                                  const Text('Шаблон:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  DropdownButton<String>(
+                                    value: _activeWeldTemplate?.id,
+                                    isDense: true,
+                                    items: _weldTemplates.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name, style: const TextStyle(fontSize: 12)))).toList(),
+                                    onChanged: (id) {
+                                      if (id != null) {
+                                        setState(() {
+                                          _activeWeldTemplate = _weldTemplates.firstWhere((t) => t.id == id);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                FilledButton.icon(
+                                  icon: const Icon(Icons.table_view, size: 16),
+                                  label: const Text('Экспорт в Excel (.xlsx)'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.teal.shade700,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  onPressed: _exportWeldJournalExcel,
+                                ),
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  label: const Text('Скопировать CSV'),
+                                  onPressed: () {
+                                    final csv = DxfWriter.generateWeldJournalCsv(widget.network);
+                                    Clipboard.setData(ClipboardData(text: csv));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Журнал сварки скопирован в буфер обмена')),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -978,6 +1059,16 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const Spacer(),
+                            FilledButton.icon(
+                              icon: const Icon(Icons.table_view, size: 16),
+                              label: const Text('Экспорт в Excel (.xlsx)'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.teal.shade700,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: _exportSpoolsExcel,
+                            ),
+                            const SizedBox(width: 8),
                             ElevatedButton.icon(
                               icon: const Icon(Icons.copy, size: 16),
                               label: const Text('Скопировать CSV'),
@@ -1025,6 +1116,23 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                                 ),
                         ),
                       ],
+                    ),
+
+                    // Вкладка 3: Конструктор шаблона
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: ReportTemplateBuilderWidget(
+                        reportType: ReportType.weldJournal,
+                        network: widget.network,
+                        controller: widget.controller,
+                        initialTemplate: _activeWeldTemplate ?? ReportTemplate.defaultWeldJournalTransneftTemplate,
+                        onTemplateChanged: (updated) {
+                          setState(() {
+                            _activeWeldTemplate = updated;
+                          });
+                          _loadWeldTemplates();
+                        },
+                      ),
                     ),
                   ],
                 ),

@@ -743,6 +743,77 @@ class PipingNetwork {
     }
   }
 
+  /// Массовое изменение номинального диаметра DN для группы сегментов
+  void changeSegmentsDn(Iterable<String> segmentIds, int newDn) {
+    if (newDn <= 0) return;
+    final dim = pipeCatalog.getDimension(newDn);
+    final resolvedOuterD = dim?.outerDiameterMm;
+    final resolvedWallS = dim?.defaultWallThicknessMm;
+
+    final affectedNodeIds = <String>{};
+    bool changed = false;
+
+    for (final id in segmentIds) {
+      final seg = segments[id];
+      if (seg != null && seg.dn != newDn) {
+        segments[id] = seg.copyWith(
+          dn: newDn,
+          outerDiameterMm: resolvedOuterD ?? seg.outerDiameterMm,
+          wallThicknessMm: resolvedWallS ?? seg.wallThicknessMm,
+        );
+        affectedNodeIds.add(seg.startNodeId);
+        affectedNodeIds.add(seg.endNodeId);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      for (final nId in affectedNodeIds) {
+        FittingDetector.autoDetectFittingsForNode(this, nId);
+      }
+      recalculateSpools();
+    }
+  }
+
+  /// Массовое изменение марки стали для группы сегментов
+  void changeSegmentsMaterial(Iterable<String> segmentIds, String newMaterial) {
+    if (newMaterial.trim().isEmpty) return;
+    bool changed = false;
+
+    for (final id in segmentIds) {
+      final seg = segments[id];
+      if (seg != null && seg.material != newMaterial) {
+        segments[id] = seg.copyWith(material: newMaterial);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      final segSet = segmentIds.toSet();
+      for (final entry in weldJoints.entries) {
+        if (segSet.contains(entry.value.segmentId)) {
+          weldJoints[entry.key] = entry.value.copyWith(steelGrade: newMaterial);
+        }
+      }
+      recalculateSpools();
+    }
+  }
+
+  /// Массовое изменение уклона (i) для группы сегментов
+  void changeSegmentsSlope(Iterable<String> segmentIds, double newSlope) {
+    bool changed = false;
+    for (final id in segmentIds) {
+      final seg = segments[id];
+      if (seg != null && (seg.slope - newSlope).abs() > 0.0001) {
+        segments[id] = seg.copyWith(slope: newSlope);
+        changed = true;
+      }
+    }
+    if (changed) {
+      recalculateSpools();
+    }
+  }
+
   /// Изменение высотной отметки (Z в метрах) для сегмента трубы
   void changeSegmentElevation(String segmentId, double newZMeters) {
     final seg = segments[segmentId];
@@ -1003,13 +1074,14 @@ class PipingNetwork {
     return true;
   }
 
-  /// Обновление параметров сегмента трубы (диаметр DN, наружный диаметр, толщина стенки, марка стали, маркировка, заводской номер/партия)
+  /// Обновление параметров сегмента трубы (диаметр DN, наружный диаметр, толщина стенки, марка стали, маркировка, заводской номер/партия, уклон)
   void updateSegmentProperties(
     String segmentId, {
     int? dn,
     double? outerDiameterMm,
     double? wallThicknessMm,
     String? material,
+    double? slope,
     String? name,
     String? serialNumber,
     bool clearName = false,
@@ -1036,6 +1108,7 @@ class PipingNetwork {
       outerDiameterMm: resolvedOuterD,
       wallThicknessMm: resolvedWallS,
       material: material ?? seg.material,
+      slope: slope ?? seg.slope,
       name: clearName ? null : (name ?? seg.name),
       serialNumber: clearSerialNumber ? null : (serialNumber ?? seg.serialNumber),
     );
@@ -1052,7 +1125,7 @@ class PipingNetwork {
   void slideValve(String valveId, double newRatio) {
     final v = valves[valveId];
     if (v == null) return;
-    final clampedRatio = newRatio.clamp(0.05, 0.95);
+    final clampedRatio = newRatio.clamp(0.0, 1.0);
     valves[valveId] = v.copyWith(ratio: clampedRatio);
     recalculateSpools();
   }
@@ -1519,6 +1592,35 @@ class PipingNetwork {
   /// Обновление параметров опоры
   void updateSupport(String supportId, PipeSupport updatedSupport) {
     supports[supportId] = updatedSupport;
+  }
+
+  /// Перенос арматуры на другой сегмент трубы со сменой DN и пересчетом катушек
+  bool transferValveToSegment(String valveId, String newSegmentId, double newRatio) {
+    final v = valves[valveId];
+    final targetSeg = segments[newSegmentId];
+    if (v == null || targetSeg == null) return false;
+
+    valves[valveId] = v.copyWith(
+      segmentId: newSegmentId,
+      ratio: newRatio.clamp(0.0, 1.0),
+      dn: targetSeg.dn,
+    );
+    generateElementWeldJoints();
+    recalculateSpools();
+    return true;
+  }
+
+  /// Перенос опоры на другой сегмент трубы
+  bool transferSupportToSegment(String supportId, String newSegmentId, double newRatio) {
+    final s = supports[supportId];
+    final targetSeg = segments[newSegmentId];
+    if (s == null || targetSeg == null) return false;
+
+    supports[supportId] = s.copyWith(
+      segmentId: newSegmentId,
+      distanceRatio: newRatio.clamp(0.0, 1.0),
+    );
+    return true;
   }
 
   /// Вычисление строительного вычета/плеча (в мм) от узла до границы сопряжения трубы с элементом
