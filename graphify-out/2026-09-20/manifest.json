@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/project_model.dart": {
-    "mtime": 1789796410.5454729,
-    "seen": 1789821728.541893,
-    "ast_hash": "f3f6fe66398ba74546e4ddb7ee1ae86c",
+    "mtime": 1789880351.4073875,
+    "seen": 1789881345.9472737,
+    "ast_hash": "e3af82d4abd88ec9b550d0aa768d8cb3",
     "semantic_hash": ""
   },
   "lib/domain/models/valve.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789878192.108111,
-    "seen": 1789878480.1520782,
-    "ast_hash": "6b9419a237937ebbb58655c7e6e602b8",
+    "mtime": 1789880390.1225433,
+    "seen": 1789881345.947288,
+    "ast_hash": "8b7f4ca3a2d7acd4eb5318c73c321d13",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -288,9 +288,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/materials_specification_dialog.dart": {
-    "mtime": 1789836407.3699467,
-    "seen": 1789836508.2163832,
-    "ast_hash": "9d75333e87fefecebc7ea7f417893f18",
+    "mtime": 1789880998.6991372,
+    "seen": 1789881345.9473133,
+    "ast_hash": "d019298bc0b915cf6a9a7e9440085d71",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/tools_panel.dart": {
@@ -300,15 +300,15 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789796410.5649736,
-    "seen": 1789821728.5419333,
-    "ast_hash": "89006ab6388466c7afd995444a5a3320",
+    "mtime": 1789880919.172259,
+    "seen": 1789881345.9473212,
+    "ast_hash": "ebc8bf9bec8879c17a9caada5f83c2a0",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
-    "mtime": 1789796410.566972,
-    "seen": 1789821728.5419364,
-    "ast_hash": "de65ef46303818d68bbf70a43a6379ba",
+    "mtime": 1789880831.6618977,
+    "seen": 1789881345.9473245,
+    "ast_hash": "a19d109813f78fc9aadbb0ae528c4933",
     "semantic_hash": ""
   },
   "linux/flutter/generated_plugin_registrant.cc": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789878470.302055,
-    "seen": 1789878480.1523008,
-    "ast_hash": "a25409341c380dae92119f0828eeb60c",
+    "mtime": 1789881543.0508027,
+    "seen": 1789881552.1946795,
+    "ast_hash": "6b8e7f562d3e47e22e638dc2f5e9eee0",
     "semantic_hash": ""
   },
   "README.md": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1789796410.5679717,
-    "seen": 1789821728.542118,
-    "ast_hash": "d77a3c8057bace31936897324fa8b824",
+    "mtime": 1789880077.202304,
+    "seen": 1789881345.9475517,
+    "ast_hash": "b7592c3ed1a1d304c48f82dfaab7b4ca",
     "semantic_hash": ""
   },
   "web/index.html": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789878161.3958318,
-    "seen": 1789878480.1520967,
-    "ast_hash": "cac17f0c580b877d360d77c5a67c2667",
+    "mtime": 1789880916.173153,
+    "seen": 1789881345.9473066,
+    "ast_hash": "d0a0893818fa63890c313b6b473714e4",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1971,6 +1971,90 @@
     "mtime": 1789878273.106336,
     "seen": 1789878480.1521962,
     "ast_hash": "23177d89ae9af40c96851930634b64ce",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/report_template_repository.dart": {
+    "mtime": 1789880356.858485,
+    "seen": 1789881345.947243,
+    "ast_hash": "4e84078ac04c797bc411431be02cce34",
+    "semantic_hash": ""
+  },
+  "lib/data/services/excel_export_service.dart": {
+    "mtime": 1789881105.4991527,
+    "seen": 1789881345.9472446,
+    "ast_hash": "d0f74ea88802d9a01fa1a0016a259449",
+    "semantic_hash": ""
+  },
+  "lib/domain/enums/report_type.dart": {
+    "mtime": 1789880108.7160745,
+    "seen": 1789881345.9472518,
+    "ast_hash": "7a002f03cae7f72b90ac29a370942392",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/report_template.dart": {
+    "mtime": 1789880122.3426175,
+    "seen": 1789881345.9472747,
+    "ast_hash": "96136e86da358bd3af32fef56ac4aeaf",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/report_token_definition.dart": {
+    "mtime": 1789880136.014172,
+    "seen": 1789881345.9472759,
+    "ast_hash": "4d2679e5809686a5a419005c1d6f0626",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/report_engine.dart": {
+    "mtime": 1789881098.622092,
+    "seen": 1789881345.9472814,
+    "ast_hash": "ea68ed121314df3cb455a3fec7095de9",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/report_template_builder_widget.dart": {
+    "mtime": 1789880876.6515758,
+    "seen": 1789881345.947319,
+    "ast_hash": "7822b3d5784ceb04960ea19467af9c42",
+    "semantic_hash": ""
+  },
+  "test/excel_export_service_test.dart": {
+    "mtime": 1789880300.5594964,
+    "seen": 1789881345.9473827,
+    "ast_hash": "d1686b392736af8ba987ae40e345fbdf",
+    "semantic_hash": ""
+  },
+  "test/report_engine_test.dart": {
+    "mtime": 1789880254.3070967,
+    "seen": 1789881345.9474106,
+    "ast_hash": "a212ce1accda6edd9050789d687451e5",
+    "semantic_hash": ""
+  },
+  "test/report_template_builder_widget_test.dart": {
+    "mtime": 1789880680.1781576,
+    "seen": 1789881345.9474118,
+    "ast_hash": "aaea309c7ffa3272c2122d680ceca833",
+    "semantic_hash": ""
+  },
+  "test/report_template_model_test.dart": {
+    "mtime": 1789880089.605321,
+    "seen": 1789881345.9474125,
+    "ast_hash": "6df1a7daf55faec909bfa24e64e82dcf",
+    "semantic_hash": ""
+  },
+  "test/report_template_repository_test.dart": {
+    "mtime": 1789880327.6484718,
+    "seen": 1789881345.9474132,
+    "ast_hash": "e350470c147ec5c85a8428937d7e8ad6",
+    "semantic_hash": ""
+  },
+  "test/weld_journal_and_specification_dialogs_test.dart": {
+    "mtime": 1789880745.9098337,
+    "seen": 1789881345.9474332,
+    "ast_hash": "b01592f44b9c3cf9a5d3a46ff807e3e2",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-20-flexible-reports-and-excel-export.md": {
+    "mtime": 1789880066.0813332,
+    "seen": 1789881345.9475408,
+    "ast_hash": "ec07b88df692f56b3d646959a92d9056",
     "semantic_hash": ""
   }
 }

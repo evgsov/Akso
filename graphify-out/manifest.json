@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
-    "mtime": 1789836295.7535386,
-    "seen": 1789836508.2163103,
-    "ast_hash": "a94727bce5af86b25c224f5d2137b1fd",
+    "mtime": 1789924326.6523623,
+    "seen": 1789924568.9480352,
+    "ast_hash": "770f3fd1efcde78414d3d0ab2c57b023",
     "semantic_hash": ""
   },
   "lib/domain/enums/fitting_type.dart": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "lib/domain/enums/inspection_method.dart": {
-    "mtime": 1789456508.2577958,
-    "seen": 1789821728.541871,
-    "ast_hash": "17ab6fb6ca3c6ce907f94128dd9a2497",
+    "mtime": 1789922171.415198,
+    "seen": 1789924568.9480486,
+    "ast_hash": "d8c0da0e356f5f2eb154fc31616fb984",
     "semantic_hash": ""
   },
   "lib/domain/enums/projection_type.dart": {
@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/project_model.dart": {
-    "mtime": 1789880351.4073875,
-    "seen": 1789881345.9472737,
-    "ast_hash": "e3af82d4abd88ec9b550d0aa768d8cb3",
+    "mtime": 1789922462.6097603,
+    "seen": 1789924568.9480755,
+    "ast_hash": "9d168c557793a470f30194c82f348914",
     "semantic_hash": ""
   },
   "lib/domain/models/valve.dart": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/weld_joint.dart": {
-    "mtime": 1789796410.546472,
-    "seen": 1789821728.541895,
-    "ast_hash": "2a18dae5abbd4662e735c85f74662813",
+    "mtime": 1789922305.6056511,
+    "seen": 1789924568.9480813,
+    "ast_hash": "066904dca251d27f070276e9c64709a0",
     "semantic_hash": ""
   },
   "lib/main.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789880390.1225433,
-    "seen": 1789881345.947288,
-    "ast_hash": "8b7f4ca3a2d7acd4eb5318c73c321d13",
+    "mtime": 1789923034.234849,
+    "seen": 1789924568.9480922,
+    "ast_hash": "2039a94483d810e42166ba65db49f0cf",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -258,15 +258,15 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/editor_screen.dart": {
-    "mtime": 1789878155.6738615,
-    "seen": 1789878480.1520932,
-    "ast_hash": "9623da219192103d6f46536eb7e30d16",
+    "mtime": 1789923008.8180873,
+    "seen": 1789924568.9481084,
+    "ast_hash": "ab0531b3443af8875fd5ba867f7875d1",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/dxf_export_dialog.dart": {
-    "mtime": 1789395859.5499866,
-    "seen": 1789821728.5419216,
-    "ast_hash": "fa7d8f0e0a32e93b022a57bf3e2cc1f5",
+    "mtime": 1789924258.88484,
+    "seen": 1789924568.9481132,
+    "ast_hash": "ac670cd9af419e3073395791ad825e09",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/elevation_panel.dart": {
@@ -300,9 +300,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/top_bar.dart": {
-    "mtime": 1789880919.172259,
-    "seen": 1789881345.9473212,
-    "ast_hash": "ebc8bf9bec8879c17a9caada5f83c2a0",
+    "mtime": 1789924287.289013,
+    "seen": 1789924568.94813,
+    "ast_hash": "56ad93a120f1fe967c91ac7e98493f4c",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
@@ -312,9 +312,9 @@
     "semantic_hash": ""
   },
   "linux/flutter/generated_plugin_registrant.cc": {
-    "mtime": 1789149321.5932603,
-    "seen": 1789821728.5419374,
-    "ast_hash": "bd6e64368e100cca8e55173215ae1bdd",
+    "mtime": 1789923574.9593785,
+    "seen": 1789924568.9481342,
+    "ast_hash": "06816069ffa0baffbe44dba3a54b7da1",
     "semantic_hash": ""
   },
   "linux/flutter/generated_plugin_registrant.h": {
@@ -342,9 +342,9 @@
     "semantic_hash": ""
   },
   "macos/Flutter/GeneratedPluginRegistrant.swift": {
-    "mtime": 1789149321.6042666,
-    "seen": 1789821728.5419426,
-    "ast_hash": "b86c770f273241573983097fb96b8c17",
+    "mtime": 1789923574.9699078,
+    "seen": 1789924568.9481392,
+    "ast_hash": "18163d6bfa776465c25ea69a2eca3f87",
     "semantic_hash": ""
   },
   "macos/RunnerTests/RunnerTests.swift": {
@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "windows/flutter/generated_plugin_registrant.cc": {
-    "mtime": 1789149321.5987594,
-    "seen": 1789821728.5420256,
-    "ast_hash": "4888d8bfaef1cd889feb447bcec35028",
+    "mtime": 1789923574.9638765,
+    "seen": 1789924568.9482436,
+    "ast_hash": "a54e64c9d237d52ec3b80c1f09dcc4c9",
     "semantic_hash": ""
   },
   "windows/flutter/generated_plugin_registrant.h": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789881543.0508027,
-    "seen": 1789881552.1946795,
-    "ast_hash": "6b8e7f562d3e47e22e638dc2f5e9eee0",
+    "mtime": 1789924551.3196638,
+    "seen": 1789924568.9483218,
+    "ast_hash": "d9a838b7ebcdb2d40ed00d29e7ce50c9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1789880077.202304,
-    "seen": 1789881345.9475517,
-    "ast_hash": "b7592c3ed1a1d304c48f82dfaab7b4ca",
+    "mtime": 1789923670.731356,
+    "seen": 1789924568.9483426,
+    "ast_hash": "f29924385897bc8c8d13818dd483945a",
     "semantic_hash": ""
   },
   "web/index.html": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789880916.173153,
-    "seen": 1789881345.9473066,
-    "ast_hash": "d0a0893818fa63890c313b6b473714e4",
+    "mtime": 1789924277.1810322,
+    "seen": 1789924568.948112,
+    "ast_hash": "74c2454463d3ed146786e1994b8eddeb",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -2004,9 +2004,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/report_engine.dart": {
-    "mtime": 1789881098.622092,
-    "seen": 1789881345.9472814,
-    "ast_hash": "ea68ed121314df3cb455a3fec7095de9",
+    "mtime": 1789922204.7786794,
+    "seen": 1789924568.9480846,
+    "ast_hash": "66b00ae26e6efccf85bf61ea78f2a264",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/report_template_builder_widget.dart": {
@@ -2055,6 +2055,132 @@
     "mtime": 1789880066.0813332,
     "seen": 1789881345.9475408,
     "ast_hash": "ec07b88df692f56b3d646959a92d9056",
+    "semantic_hash": ""
+  },
+  "lib/data/services/pdf_export_service.dart": {
+    "mtime": 1789923858.4723997,
+    "seen": 1789924568.9480438,
+    "ast_hash": "91bae8a5938f34206d78720f4c2433a7",
+    "semantic_hash": ""
+  },
+  "lib/domain/enums/sheet_format_type.dart": {
+    "mtime": 1789922400.7223084,
+    "seen": 1789924568.948052,
+    "ast_hash": "52ae1e37d33ecaa6ec82b65d14c15705",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/drawing_sheet.dart": {
+    "mtime": 1789922431.9119773,
+    "seen": 1789924568.9480588,
+    "ast_hash": "7da342ce6b3f4a91a50d397cc4318783",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/drawing_style_config.dart": {
+    "mtime": 1789922439.063571,
+    "seen": 1789924568.9480598,
+    "ast_hash": "b76ecde3d1dd9bc9412c3b1cf20f2cfc",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/sheet_format.dart": {
+    "mtime": 1789922408.3840387,
+    "seen": 1789924568.9480786,
+    "ast_hash": "00e2c6545a4b4f2d3f2df7c4f3f00ef1",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/title_block_data.dart": {
+    "mtime": 1789922421.4391007,
+    "seen": 1789924568.9480793,
+    "ast_hash": "dbdbcdc65497f8a70f155fbc781aba92",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/viewport_transform_service.dart": {
+    "mtime": 1789922543.4033377,
+    "seen": 1789924568.9480877,
+    "ast_hash": "4af9faeb89372b796276e7611cf39904",
+    "semantic_hash": ""
+  },
+  "lib/ui/canvas/sheet_canvas_painter.dart": {
+    "mtime": 1789923047.034786,
+    "seen": 1789924568.948105,
+    "ast_hash": "09e254d6dfea7a1e91ac282eaaafe5f7",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/sheet_tab_bar.dart": {
+    "mtime": 1789923341.609435,
+    "seen": 1789924568.948125,
+    "ast_hash": "39982496439945a86544b24a8b62500f",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
+    "mtime": 1789923505.3001115,
+    "seen": 1789924568.9481258,
+    "ast_hash": "5fb3bd476153de914725acde9a4f050f",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
+    "mtime": 1789923206.7481942,
+    "seen": 1789924568.9481268,
+    "ast_hash": "3cd9058ed2654c36f1b49c019e9298e1",
+    "semantic_hash": ""
+  },
+  "lib/ui/features/editor/widgets/title_block_editor_dialog.dart": {
+    "mtime": 1789923278.1883452,
+    "seen": 1789924568.9481277,
+    "ast_hash": "ed9ad1e6660e28789ed952d68c9cb3bf",
+    "semantic_hash": ""
+  },
+  "test/drawing_sheet_model_test.dart": {
+    "mtime": 1789922389.5766785,
+    "seen": 1789924568.9481673,
+    "ast_hash": "eba23bc4101583ed10d0aeb756b184b9",
+    "semantic_hash": ""
+  },
+  "test/dxf_layouts_export_test.dart": {
+    "mtime": 1789924183.7880094,
+    "seen": 1789924568.9481726,
+    "ast_hash": "9fb72cac750473f7806ff20b23bf21b0",
+    "semantic_hash": ""
+  },
+  "test/pdf_export_service_test.dart": {
+    "mtime": 1789923600.997292,
+    "seen": 1789924568.9482005,
+    "ast_hash": "833f68b6fa14635eebb8381bcfa6d196",
+    "semantic_hash": ""
+  },
+  "test/sheet_canvas_painter_test.dart": {
+    "mtime": 1789923082.3287082,
+    "seen": 1789924568.9482186,
+    "ast_hash": "9f4d447443df39f324df885490c10010",
+    "semantic_hash": ""
+  },
+  "test/sheet_ui_widgets_test.dart": {
+    "mtime": 1789923418.8234482,
+    "seen": 1789924568.9482195,
+    "ast_hash": "0a1ac30cbc6ee55a0297619678008d79",
+    "semantic_hash": ""
+  },
+  "test/viewport_transform_service_test.dart": {
+    "mtime": 1789922582.035305,
+    "seen": 1789924568.9482348,
+    "ast_hash": "b3fec88a45dd957ce052c99e0cecac31",
+    "semantic_hash": ""
+  },
+  "test/weld_composite_inspection_test.dart": {
+    "mtime": 1789922221.44531,
+    "seen": 1789924568.9482367,
+    "ast_hash": "8d03c1f2acc5d33fe029e736e47bd805",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-20-sheet-layout-spds-gost-21-101.md": {
+    "mtime": 1789922098.0123057,
+    "seen": 1789924568.9483314,
+    "ast_hash": "8ddc357faf29ceddd493580dd88758dd",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-20-sheet-layout-and-spds-gost-21-101-design.md": {
+    "mtime": 1789921814.749141,
+    "seen": 1789924568.9483373,
+    "ast_hash": "b1a283bf4ba3a054075555fc4f7ed1dd",
     "semantic_hash": ""
   }
 }
