@@ -27,6 +27,7 @@ import 'project_properties_dialog.dart';
 import 'quick_bridge_dialog.dart';
 import 'sheet_tab_bar.dart';
 import 'sheet_toolbar.dart';
+import '../../../../data/services/pdf_export_service.dart';
 
 class DesktopCadLayout extends StatelessWidget {
   final PipingInputController controller;
@@ -48,7 +49,10 @@ class DesktopCadLayout extends StatelessWidget {
         // 2. Контекстная строка параметров (Options Bar в модели ИЛИ SheetToolbar на листе)
         controller.isModelSpaceActive
             ? _buildOptionsBar(context)
-            : SheetToolbar(controller: controller),
+            : SheetToolbar(
+                controller: controller,
+                onExportPdf: () => _exportSheetPdf(context),
+              ),
 
         // 3. Центральная часть: Левый CAD-тулбар + Холст + Плавающий инспектор
         Expanded(
@@ -137,6 +141,40 @@ class DesktopCadLayout extends StatelessWidget {
         _buildStatusBar(context),
       ],
     );
+  }
+
+  Future<void> _exportSheetPdf(BuildContext context) async {
+    final sheet = controller.activeSheet;
+    if (sheet == null) return;
+    try {
+      final bytes = await PdfExportService.generateSheetPdf(
+        sheet: sheet,
+        network: controller.network,
+        projectionType: controller.projector.projectionType,
+      );
+      final fileName = '${sheet.name.replaceAll(':', '_').replaceAll(' ', '_')}.pdf';
+      final ok = await PdfExportService.savePdfFile(
+        bytes: bytes,
+        suggestedFileName: fileName,
+      );
+      if (ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Чертеж сохранен в PDF: $fileName'),
+            backgroundColor: Colors.teal.shade800,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка экспорта PDF: $e'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _confirmAndNewProject(BuildContext context) async {
