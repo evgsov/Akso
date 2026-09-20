@@ -20,8 +20,31 @@ class WeldJoint {
   /// Тип сварного шва по ГОСТ
   final WeldType weldType;
 
-  /// Метод неразрушающего контроля
-  final InspectionMethod inspectionMethod;
+  /// Составной список методов неразрушающего контроля
+  final List<InspectionMethod>? _inspectionMethods;
+  final InspectionMethod? _legacyMethod;
+
+  List<InspectionMethod> get inspectionMethods {
+    if (_inspectionMethods != null && _inspectionMethods.isNotEmpty) {
+      return _inspectionMethods;
+    }
+    if (_legacyMethod != null) {
+      return [_legacyMethod];
+    }
+    return const [InspectionMethod.vik];
+  }
+
+  /// Основной метод неразрушающего контроля (для обратной совместимости)
+  InspectionMethod get inspectionMethod {
+    final list = inspectionMethods;
+    return list.isNotEmpty ? list.first : InspectionMethod.vik;
+  }
+
+  /// Форматированная строка методов контроля (например, "ВИК, РК" или "ВИК, УЗК, ПВК")
+  String get formattedInspectionMethods {
+    final list = inspectionMethods;
+    return list.isEmpty ? '—' : list.map((m) => m.code).join(', ');
+  }
 
   /// Дата выполнения шва
   final String date;
@@ -48,14 +71,16 @@ class WeldJoint {
     required this.number,
     required this.stamp,
     this.weldType = WeldType.c17,
-    this.inspectionMethod = InspectionMethod.vik,
+    List<InspectionMethod>? inspectionMethods,
+    InspectionMethod? inspectionMethod,
     this.date = '',
     this.steelGrade = 'Сталь 20',
     this.electrodeGrade = 'УОНИ 13/55',
     this.notes = 'Годен',
     this.style,
     this.tickSizeMm,
-  });
+  })  : _inspectionMethods = inspectionMethods ?? const [InspectionMethod.vik],
+        _legacyMethod = inspectionMethod;
 
   /// Вычисление эффективного стиля отображения с учетом настройки по умолчанию
   WeldJointStyle getEffectiveStyle(WeldJointStyle defaultStyle) => style ?? defaultStyle;
@@ -83,6 +108,7 @@ class WeldJoint {
     String? stamp,
     WeldType? weldType,
     InspectionMethod? inspectionMethod,
+    List<InspectionMethod>? inspectionMethods,
     String? date,
     String? steelGrade,
     String? electrodeGrade,
@@ -99,7 +125,8 @@ class WeldJoint {
       number: number ?? this.number,
       stamp: stamp ?? this.stamp,
       weldType: weldType ?? this.weldType,
-      inspectionMethod: inspectionMethod ?? this.inspectionMethod,
+      inspectionMethods: inspectionMethods ??
+          (inspectionMethod != null ? [inspectionMethod] : this.inspectionMethods),
       date: date ?? this.date,
       steelGrade: steelGrade ?? this.steelGrade,
       electrodeGrade: electrodeGrade ?? this.electrodeGrade,
@@ -117,6 +144,7 @@ class WeldJoint {
         'stamp': stamp,
         'weldType': weldType.index,
         'inspectionMethod': inspectionMethod.index,
+        'inspectionMethods': inspectionMethods.map((m) => m.index).toList(),
         'date': date,
         'steelGrade': steelGrade,
         'electrodeGrade': electrodeGrade,
@@ -125,19 +153,32 @@ class WeldJoint {
         if (tickSizeMm != null) 'tickSizeMm': tickSizeMm,
       };
 
-  factory WeldJoint.fromJson(Map<String, dynamic> json) => WeldJoint(
-        id: json['id'] as String,
-        segmentId: json['segmentId'] as String,
-        ratio: (json['ratio'] as num).toDouble(),
-        number: json['number'] as int,
-        stamp: json['stamp'] as String,
-        weldType: WeldType.values[json['weldType'] as int? ?? 0],
-        inspectionMethod: InspectionMethod.values[json['inspectionMethod'] as int? ?? 0],
-        date: json['date'] as String? ?? '',
-        steelGrade: json['steelGrade'] as String? ?? 'Сталь 20',
-        electrodeGrade: json['electrodeGrade'] as String? ?? 'УОНИ 13/55',
-        notes: json['notes'] as String? ?? 'Годен',
-        style: json['style'] != null ? WeldJointStyle.fromString(json['style'] as String?) : null,
-        tickSizeMm: (json['tickSizeMm'] as num?)?.toDouble(),
-      );
+  factory WeldJoint.fromJson(Map<String, dynamic> json) {
+    List<InspectionMethod>? methods;
+    if (json['inspectionMethods'] is List) {
+      methods = (json['inspectionMethods'] as List)
+          .map((e) => (e is int && e >= 0 && e < InspectionMethod.values.length)
+              ? InspectionMethod.values[e]
+              : InspectionMethod.vik)
+          .toList();
+    }
+    return WeldJoint(
+      id: json['id'] as String,
+      segmentId: json['segmentId'] as String,
+      ratio: (json['ratio'] as num).toDouble(),
+      number: json['number'] as int,
+      stamp: json['stamp'] as String,
+      weldType: WeldType.values[json['weldType'] as int? ?? 0],
+      inspectionMethod: json['inspectionMethod'] != null
+          ? InspectionMethod.values[json['inspectionMethod'] as int]
+          : null,
+      inspectionMethods: methods,
+      date: json['date'] as String? ?? '',
+      steelGrade: json['steelGrade'] as String? ?? 'Сталь 20',
+      electrodeGrade: json['electrodeGrade'] as String? ?? 'УОНИ 13/55',
+      notes: json['notes'] as String? ?? 'Годен',
+      style: json['style'] != null ? WeldJointStyle.fromString(json['style'] as String?) : null,
+      tickSizeMm: (json['tickSizeMm'] as num?)?.toDouble(),
+    );
+  }
 }

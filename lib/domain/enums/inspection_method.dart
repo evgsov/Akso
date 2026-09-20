@@ -9,8 +9,17 @@ enum InspectionMethod {
   /// УЗК — Ультразвуковой контроль
   uzk,
 
-  /// ПВК / ПВТ — Капиллярный (цветной) контроль
+  /// ПВК — Капиллярный (цветной) контроль / проникающие вещества
   pvk,
+
+  /// МПК — Магнитопорошковый контроль
+  mpk,
+
+  /// ПВТ — Контроль герметичности / течеискание
+  pvt,
+
+  /// Стилоскопирование (контроль марок сталей и легирующих элементов)
+  styloscopy,
 
   /// Гидравлические испытания на прочность и герметичность
   hydro,
@@ -30,6 +39,12 @@ extension InspectionMethodExt on InspectionMethod {
         return 'УЗК';
       case InspectionMethod.pvk:
         return 'ПВК';
+      case InspectionMethod.mpk:
+        return 'МПК';
+      case InspectionMethod.pvt:
+        return 'ПВТ';
+      case InspectionMethod.styloscopy:
+        return 'Стилоск.';
       case InspectionMethod.hydro:
         return 'ГИ';
       case InspectionMethod.none:
@@ -49,6 +64,12 @@ extension InspectionMethodExt on InspectionMethod {
         return 'УЗК';
       case InspectionMethod.pvk:
         return 'ПВК';
+      case InspectionMethod.mpk:
+        return 'МПК';
+      case InspectionMethod.pvt:
+        return 'ПВТ (течеискание)';
+      case InspectionMethod.styloscopy:
+        return 'Стилоскопирование';
       case InspectionMethod.hydro:
         return 'Гидроиспытания';
       case InspectionMethod.none:

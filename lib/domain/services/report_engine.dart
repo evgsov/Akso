@@ -70,7 +70,13 @@ class ReportEngine {
     context['foreman'] = 'Морозов К.С.';
     context['welding_materials'] = weld.electrodeGrade.isNotEmpty ? weld.electrodeGrade : 'УОНИ 13/55';
     context['notes'] = weld.notes.isNotEmpty ? weld.notes : 'Годен';
-    context['ndt_method'] = weld.inspectionMethod.displayName;
+    context['weld_inspection'] = weld.formattedInspectionMethods;
+    context['ndt_method'] = weld.formattedInspectionMethods;
+    context['weld_has_vik'] = weld.inspectionMethods.contains(InspectionMethod.vik) ? 'Да' : 'Нет';
+    context['weld_has_rk'] = weld.inspectionMethods.contains(InspectionMethod.rk) ? 'Да' : 'Нет';
+    context['weld_has_uzk'] = weld.inspectionMethods.contains(InspectionMethod.uzk) ? 'Да' : 'Нет';
+    context['weld_has_pvk'] = weld.inspectionMethods.contains(InspectionMethod.pvk) ? 'Да' : 'Нет';
+    context['weld_has_mpk'] = weld.inspectionMethods.contains(InspectionMethod.mpk) ? 'Да' : 'Нет';
     context['ndt_vik'] = 'Годен';
     context['ndt_rk'] = 'Годен';
     context['ndt_uzk'] = 'Годен';
