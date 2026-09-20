@@ -11,12 +11,14 @@ import '../../../../data/dxf/dxf_writer.dart';
 import '../../../../domain/enums/dxf_callout_options.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/models/piping_network.dart';
+import '../../../../domain/models/drawing_sheet.dart';
 
 class DxfExportDialog extends StatefulWidget {
   final PipingNetwork network;
   final ProjectionType currentProjection;
   final AxonometryProjector? activeProjector;
   final Map<String, String>? calloutTemplates;
+  final List<DrawingSheet>? sheets;
 
   const DxfExportDialog({
     super.key,
@@ -24,6 +26,7 @@ class DxfExportDialog extends StatefulWidget {
     required this.currentProjection,
     this.activeProjector,
     this.calloutTemplates,
+    this.sheets,
   });
 
   @override
@@ -58,6 +61,15 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           activeProjector: widget.activeProjector,
         );
         fileName = 'akso_scheme_3d.dxf';
+      } else if (widget.sheets != null && widget.sheets!.isNotEmpty) {
+        dxfContent = DxfWriter.generate2dGostAxonometryWithLayoutsDxf(
+          network: widget.network,
+          sheets: widget.sheets!,
+          projection: selectedProjection,
+          activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
+          calloutTemplates: widget.calloutTemplates,
+        );
+        fileName = 'akso_scheme_${selectedProjection.name}_layouts.dxf';
       } else {
         dxfContent = DxfWriter.generate2dGostAxonometryDxf(
           widget.network,

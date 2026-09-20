@@ -486,6 +486,7 @@ class EditorTopBar extends StatelessWidget {
                     currentProjection: controller.projector.projectionType,
                     activeProjector: controller.projector,
                     calloutTemplates: controller.currentProject.calloutTemplates,
+                    sheets: controller.sheets,
                   ),
                 );
               },

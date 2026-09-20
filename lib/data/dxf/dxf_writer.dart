@@ -12,6 +12,8 @@ import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/drawing_sheet.dart';
+import '../../domain/models/title_block_data.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
 
@@ -522,6 +524,215 @@ class DxfWriter {
 
     buffer.writeln('  0\nSECTION\n  2\nENTITIES');
 
+    _write2dModelEntities(
+      buffer: buffer,
+      network: network,
+      projector: projector,
+      calloutBlocks: calloutBlocks,
+      exportInlineDiameters: exportInlineDiameters,
+    );
+
+    buffer.writeln('  0\nENDSEC\n  0\nEOF');
+    return buffer.toString();
+  }
+
+  /// Генерация 2D DXF с листами (Layouts / Paper Space) по ГОСТ 21.101-2020
+  static String generate2dGostAxonometryWithLayoutsDxf({
+    required PipingNetwork network,
+    required List<DrawingSheet> sheets,
+    ProjectionType projection = ProjectionType.gostFrontal45,
+    AxonometryProjector? activeProjector,
+    Map<String, String>? calloutTemplates,
+    bool exportInlineDiameters = false,
+  }) {
+    final buffer = StringBuffer();
+    final projector = activeProjector ?? AxonometryProjector(projectionType: projection, scale: 1.0);
+    final calloutBlocks = _prepareCallouts2d(network, projector, calloutTemplates ?? defaultCalloutTemplates);
+
+    // 1. HEADER (AC1015 / AutoCAD R2000 для поддержки вкладок листов Layouts)
+    buffer.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1015\n  9\n\$DWGCODEPAGE\n  3\nUTF-8\n  9\n\$HANDSEED\n  5\nFFFF\n  0\nENDSEC');
+
+    // 2. TABLES (слои, стили, типы линий)
+    _writeLayers(buffer, network, isLayouts: true);
+
+    // 3. BLOCKS
+    _writeBlocks(buffer, calloutBlocks);
+
+    // 4. OBJECTS (Регистрация вкладок листов LAYOUT в словаре ACAD_LAYOUT)
+    buffer.writeln('  0\nSECTION\n  2\nOBJECTS');
+    buffer.writeln('  0\nDICTIONARY\n  5\nC\n100\nAcDbDictionary\n281\n1\n  3\nACAD_LAYOUT\n350\nD');
+    buffer.writeln('  0\nDICTIONARY\n  5\nD\n100\nAcDbDictionary\n281\n1');
+    buffer.writeln('  3\nModel\n350\nE');
+
+    for (int i = 0; i < sheets.length; i++) {
+      final handle = (0x100 + i).toRadixString(16).toUpperCase();
+      buffer.writeln('  3\n${sheets[i].name}\n350\n$handle');
+    }
+
+    // Объект LAYOUT для Model space
+    buffer.writeln('  0\nLAYOUT\n  5\nE\n100\nAcDbPlotSettings\n100\nAcDbLayout\n  1\nModel\n 70\n1\n 71\n0');
+
+    // Объекты LAYOUT для листов
+    for (int i = 0; i < sheets.length; i++) {
+      final sh = sheets[i];
+      final handle = (0x100 + i).toRadixString(16).toUpperCase();
+      buffer.writeln('  0\nLAYOUT\n  5\n$handle\n100\nAcDbPlotSettings\n100\nAcDbLayout\n  1\n${sh.name}\n 70\n1\n 71\n${i + 1}\n 10\n0.0\n 20\n0.0\n 11\n${sh.format.widthMm}\n 21\n${sh.format.heightMm}\n 12\n0.0\n 22\n0.0\n 14\n0.0\n 24\n0.0\n 15\n${sh.format.widthMm}\n 25\n${sh.format.heightMm}');
+    }
+    buffer.writeln('  0\nENDSEC');
+
+    // 5. ENTITIES
+    buffer.writeln('  0\nSECTION\n  2\nENTITIES');
+
+    // 5.1. Все объекты модели (Model Space)
+    _write2dModelEntities(
+      buffer: buffer,
+      network: network,
+      projector: projector,
+      calloutBlocks: calloutBlocks,
+      exportInlineDiameters: exportInlineDiameters,
+    );
+
+    // 5.2. Объекты листов (Paper Space): ВЭ, Рамка, Штамп, ТТ, Приложение к акту
+    int handleCounter = 0x1000;
+    String nextHandle() => (handleCounter++).toRadixString(16).toUpperCase();
+
+    for (int i = 0; i < sheets.length; i++) {
+      final sh = sheets[i];
+      final layoutName = sh.name;
+      final w = sh.format.widthMm;
+      final h = sh.format.heightMm;
+
+      // 5.2.1. Объект VIEWPORT
+      final vp = sh.viewport;
+      final cx = vp.xMm + (vp.widthMm / 2.0);
+      final cy = h - (vp.yMm + (vp.heightMm / 2.0));
+      final viewHeightModel = vp.viewScale > 0.0001 ? vp.heightMm / vp.viewScale : 1000.0;
+
+      buffer.writeln('  0\nVIEWPORT\n  5\n${nextHandle()}\n100\nAcDbEntity\n 67\n1\n410\n$layoutName\n  8\nАКСО_ЛИСТ_ВЭ\n100\nAcDbViewport\n 10\n${cx.toStringAsFixed(3)}\n 20\n${cy.toStringAsFixed(3)}\n 30\n0.0\n 40\n${vp.widthMm.toStringAsFixed(3)}\n 41\n${vp.heightMm.toStringAsFixed(3)}\n 68\n1\n 69\n${i + 2}\n 12\n${vp.modelCenterX.toStringAsFixed(3)}\n 22\n${vp.modelCenterY.toStringAsFixed(3)}\n 45\n${viewHeightModel.toStringAsFixed(3)}');
+
+      // 5.2.2. Рамка листа (20-5-5-5 мм) на слое АКСО_ЛИСТ_РАМКА
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_РАМКА', 20.0, 5.0, w - 5.0, 5.0);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_РАМКА', w - 5.0, 5.0, w - 5.0, h - 5.0);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_РАМКА', w - 5.0, h - 5.0, 20.0, h - 5.0);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_РАМКА', 20.0, h - 5.0, 20.0, 5.0);
+
+      // 5.2.3. Штамп Форма 3 (185х55 мм) на слое АКСО_ЛИСТ_ШТАМП
+      final stampX0 = w - 5.0 - 185.0;
+      final stampY0 = 5.0;
+      final stampX1 = w - 5.0;
+      final stampY1 = 60.0;
+
+      // Внешний контур штампа
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, stampY0, stampX1, stampY0);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX1, stampY0, stampX1, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX1, stampY1, stampX0, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, stampY1, stampX0, stampY0);
+
+      // Вертикальные разделители
+      final xRole = stampX0 + 17.0;
+      final xName = stampX0 + 40.0;
+      final xSign = stampX0 + 55.0;
+      final xApprovalsEnd = stampX0 + 65.0;
+      final xCenterEnd = stampX0 + 135.0;
+
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRole, stampY0, xRole, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xName, stampY0, xName, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSign, stampY0, xSign, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, stampY0, xApprovalsEnd, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, stampY0, xCenterEnd, stampY1);
+
+      // 8 строк согласований по 5 мм снизу
+      for (int r = 1; r <= 8; r++) {
+        final yr = stampY0 + (r * 5.0);
+        _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, yr, xApprovalsEnd, yr);
+      }
+
+      // Разделители правого блока
+      final yStageValues = stampY0 + 35.0;
+      final yStageHeader = stampY0 + 50.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, yStageHeader, stampX1, yStageHeader);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, yStageValues, stampX1, yStageValues);
+
+      final xStage = xCenterEnd + 15.0;
+      final xSheet = xCenterEnd + 30.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xStage, yStageValues, xStage, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSheet, yStageValues, xSheet, stampY1);
+
+      // Разделители центрального блока
+      final yCode = stampY0 + 40.0;
+      final yObj = stampY0 + 25.0;
+      final yBldg = stampY0 + 15.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yCode, xCenterEnd, yCode);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yObj, xCenterEnd, yObj);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yBldg, xCenterEnd, yBldg);
+
+      // Тексты штампа
+      final tb = sh.titleBlockData;
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.documentCode, xApprovalsEnd + 4.0, stampY0 + 44.0, 4.5);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.projectName, xApprovalsEnd + 2.5, stampY0 + 28.0, 3.0);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.buildingName, xApprovalsEnd + 2.5, stampY0 + 18.0, 3.0);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.drawingTitle, xApprovalsEnd + 2.5, stampY0 + 6.0, 3.5);
+
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Стадия', xCenterEnd + 2.0, stampY0 + 51.5, 2.0);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Лист', xStage + 3.0, stampY0 + 51.5, 2.0);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Листов', xSheet + 4.0, stampY0 + 51.5, 2.0);
+
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.stage, xCenterEnd + 4.0, stampY0 + 42.0, 3.5);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.sheetNumber.toString(), xStage + 5.0, stampY0 + 42.0, 3.5);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.totalSheets.toString(), xSheet + 7.0, stampY0 + 42.0, 3.5);
+
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.organization, xCenterEnd + 5.0, stampY0 + 18.0, 3.2);
+
+      // Согласования
+      final roles = ['Разраб.', 'Пров.', 'Т.контр.', '', 'ГИП', 'Н.контр.', 'Утв.'];
+      for (int r = 0; r < roles.length; r++) {
+        final role = roles[r];
+        if (role.isEmpty) continue;
+        final yRow = stampY1 - ((roles.length - r) * 5.0) + 1.2;
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', role, stampX0 + 1.5, yRow, 2.2);
+
+        final app = tb.approvals.firstWhere((a) => a.role == role, orElse: () => const TitleBlockApproval(role: '', name: ''));
+        if (app.name.isNotEmpty) {
+          _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', app.name, xRole + 1.5, yRow, 2.2);
+        }
+        if (app.date.isNotEmpty) {
+          _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', app.date, xSign + 1.0, yRow, 2.0);
+        }
+      }
+
+      // 5.2.4. Технические требования (ТТ) на слое АКСО_ЛИСТ_ТТ
+      if (sh.technicalRequirements != null && sh.technicalRequirements!.text.isNotEmpty) {
+        final lines = sh.technicalRequirements!.text.split('\n');
+        double ttY = stampY1 + 5.0;
+        for (int l = lines.length - 1; l >= 0; l--) {
+          _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ТТ', lines[l], stampX0, ttY, 2.5);
+          ttY += 4.0;
+        }
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ТТ', 'Технические требования:', stampX0, ttY, 2.8);
+      }
+
+      // 5.2.5. Приложение к акту (правый верхний угол)
+      if (tb.topRightCorner.mode == TopRightCornerMode.actAttachment && tb.topRightCorner.text.isNotEmpty) {
+        final lines = tb.topRightCorner.text.split('\n');
+        double actY = h - 10.0;
+        for (final l in lines) {
+          _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', l, w - 90.0, actY, 2.5);
+          actY -= 4.0;
+        }
+      }
+    }
+
+    buffer.writeln('  0\nENDSEC\n  0\nEOF');
+    return buffer.toString();
+  }
+
+  static void _write2dModelEntities({
+    required StringBuffer buffer,
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+    required List<_DxfCalloutBlockDef> calloutBlocks,
+    bool exportInlineDiameters = false,
+  }) {
     // 0. Осевая трасса в 2D проекции ГОСТ (Centerline skeleton)
     for (final seg in network.segments.values) {
       final start = network.nodes[seg.startNodeId];
@@ -975,9 +1186,35 @@ class DxfWriter {
 
     // 9. Умные выноски (Callouts) в 2D проекции (AutoCAD BLOCKS + INSERT + ATTRIB)
     _writeCalloutEntities(buffer, calloutBlocks);
+  }
 
-    buffer.writeln('  0\nENDSEC\n  0\nEOF');
-    return buffer.toString();
+  static void _writeDxfPaperLine(
+    StringBuffer b,
+    String handle,
+    String layoutName,
+    String layer,
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+  ) {
+    b.writeln('  0\nLINE\n  5\n$handle\n100\nAcDbEntity\n 67\n1\n410\n$layoutName\n  8\n$layer\n100\nAcDbLine\n 10\n${x1.toStringAsFixed(3)}\n 20\n${y1.toStringAsFixed(3)}\n 30\n0.0\n 11\n${x2.toStringAsFixed(3)}\n 21\n${y2.toStringAsFixed(3)}\n 31\n0.0');
+  }
+
+  static void _writeDxfPaperText(
+    StringBuffer b,
+    String handle,
+    String layoutName,
+    String layer,
+    String text,
+    double x,
+    double y,
+    double height, {
+    int align = 0,
+    double rotation = 0.0,
+  }) {
+    if (text.isEmpty) return;
+    b.writeln('  0\nTEXT\n  5\n$handle\n100\nAcDbEntity\n 67\n1\n410\n$layoutName\n  8\n$layer\n100\nAcDbText\n 10\n${x.toStringAsFixed(3)}\n 20\n${y.toStringAsFixed(3)}\n 30\n0.0\n 40\n${height.toStringAsFixed(2)}\n  1\n$text\n 72\n$align\n 11\n${x.toStringAsFixed(3)}\n 21\n${y.toStringAsFixed(3)}\n 31\n0.0${rotation != 0.0 ? '\n 50\n$rotation' : ''}');
   }
 
   /// Формирование текста Сварочного журнала (CSV)
@@ -1223,7 +1460,7 @@ class DxfWriter {
     b.writeln('  0\nSECTION\n  2\nHEADER\n  9\n\$ACADVER\n  1\nAC1009\n  0\nENDSEC');
   }
 
-  static void _writeLayers(StringBuffer b, PipingNetwork net) {
+  static void _writeLayers(StringBuffer b, PipingNetwork net, {bool isLayouts = false}) {
     b.writeln('  0\nSECTION\n  2\nTABLES');
 
     // Таблица типов линий (LTYPE)
@@ -1275,6 +1512,10 @@ class DxfWriter {
       const _LayerDef('АКСО_ЗАГЛУШКИ_ТЕКСТ', 7),
       const _LayerDef('АКСО_ОБОРУДОВАНИЕ', 4),
       const _LayerDef('АКСО_ОБОРУДОВАНИЕ_ТЕКСТ', 7),
+      const _LayerDef('АКСО_ЛИСТ_РАМКА', 7),
+      const _LayerDef('АКСО_ЛИСТ_ШТАМП', 7),
+      const _LayerDef('АКСО_ЛИСТ_ТТ', 7),
+      const _LayerDef('АКСО_ЛИСТ_ВЭ', 4),
     ];
 
     for (final sys in net.systems.values) {
@@ -1288,14 +1529,15 @@ class DxfWriter {
 
     b.writeln('  0\nTABLE\n  2\nLAYER\n 70\n${uniqueLayers.length}');
     for (final l in uniqueLayers.values) {
-      _writeLayerEntry(b, l.name, l.aciColor, l.linetype);
+      _writeLayerEntry(b, l.name, l.aciColor, l.linetype, isLayouts);
     }
 
     b.writeln('  0\nENDTAB\n  0\nENDSEC');
   }
 
-  static void _writeLayerEntry(StringBuffer b, String name, int aciColor, [String linetype = 'CONTINUOUS']) {
-    b.writeln('  0\nLAYER\n  2\n${toAutoCadString(name)}\n 70\n0\n 62\n$aciColor\n  6\n$linetype');
+  static void _writeLayerEntry(StringBuffer b, String name, int aciColor, [String linetype = 'CONTINUOUS', bool isLayouts = false]) {
+    final layerNameStr = isLayouts ? name : toAutoCadString(name);
+    b.writeln('  0\nLAYER\n  2\n$layerNameStr\n 70\n0\n 62\n$aciColor\n  6\n$linetype');
   }
 
   static void _writeBlocks(StringBuffer b, [List<_DxfCalloutBlockDef> blocks = const []]) {
