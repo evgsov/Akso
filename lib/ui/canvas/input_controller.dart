@@ -24,7 +24,12 @@ import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/fitting_detector.dart';
 import '../../domain/enums/report_type.dart';
+import '../../domain/enums/sheet_format_type.dart';
+import '../../domain/models/drawing_sheet.dart';
+import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
+import '../../domain/models/title_block_data.dart';
+import '../../domain/services/viewport_transform_service.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recent_projects_manager.dart';
 import '../../data/repositories/recovery_repository.dart';
@@ -3216,6 +3221,24 @@ class PipingInputController extends ChangeNotifier {
 
   /// Панорамирование сцены
   void pan(Offset delta) {
+    if (!isModelSpaceActive) {
+      if (isViewportFocused && activeSheet != null) {
+        // Панорамирование модели внутри видового экрана
+        final vp = activeSheet!.viewport;
+        final scale = vp.viewScale * sheetZoom;
+        if (scale > 0) {
+          final updatedVp = vp.copyWith(
+            modelCenterX: vp.modelCenterX - delta.dx / scale,
+            modelCenterY: vp.modelCenterY + delta.dy / scale,
+          );
+          updateSheet(activeSheet!.copyWith(viewport: updatedVp));
+        }
+      } else {
+        sheetPan += delta;
+        notifyListeners();
+      }
+      return;
+    }
     projector = projector.copyWith(panOffset: projector.panOffset + delta);
     notifyListeners();
   }
@@ -3309,6 +3332,24 @@ class PipingInputController extends ChangeNotifier {
   /// Масштабирование сцены с удержанием точки focalPoint под курсором/пальцами
   void zoom(double factor, Offset focalPoint) {
     if (factor.isNaN || factor <= 0.0) return;
+    if (!isModelSpaceActive) {
+      if (isViewportFocused && activeSheet != null) {
+        // Масштабирование видового экрана
+        final vp = activeSheet!.viewport;
+        final newScale = (vp.viewScale * factor).clamp(0.0005, 1.0);
+        final updatedVp = vp.copyWith(viewScale: newScale);
+        updateSheet(activeSheet!.copyWith(viewport: updatedVp));
+      } else {
+        final oldZoom = sheetZoom;
+        final newZoom = (oldZoom * factor).clamp(0.2, 10.0);
+        if ((newZoom - oldZoom).abs() < 1e-6) return;
+        final ratio = newZoom / oldZoom;
+        sheetPan = focalPoint - (focalPoint - sheetPan) * ratio;
+        sheetZoom = newZoom;
+        notifyListeners();
+      }
+      return;
+    }
     final oldScale = projector.scale;
     // Диапазон: от 0.002 (1м = 2px, крупный генплан) до 10.0 (1мм = 10px, детальные стыки)
     final newScale = (oldScale * factor).clamp(0.002, 10.0);
@@ -4740,6 +4781,172 @@ class PipingInputController extends ChangeNotifier {
       hasUnsavedChanges = true;
     }
     await reportTemplateRepository.deleteTemplate(templateId, project: currentProject, deleteGlobally: deleteGlobally);
+    notifyListeners();
+  }
+
+  // ===========================================================================
+  // --- Управление чертежными листами и оформлением СПДС (ГОСТ 21.101-2020) ---
+  // ===========================================================================
+
+  double sheetZoom = 1.0;
+  Offset sheetPan = const Offset(40, 40);
+  bool isViewportFocused = false;
+
+  bool get isModelSpaceActive => currentProject.isModelSpaceActive;
+  String? get activeSheetId => currentProject.activeSheetId;
+  List<DrawingSheet> get sheets => currentProject.sheets;
+  DrawingSheet? get activeSheet => currentProject.activeSheet;
+  DrawingStyleConfig get styleConfig => currentProject.styleConfig;
+
+  void selectModelSpace() {
+    if (isModelSpaceActive) return;
+    currentProject = currentProject.copyWith(clearActiveSheet: true);
+    isViewportFocused = false;
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  void selectSheet(String sheetId) {
+    if (activeSheetId == sheetId && !isModelSpaceActive) return;
+    final exists = currentProject.sheets.any((s) => s.id == sheetId);
+    if (!exists) return;
+    currentProject = currentProject.copyWith(activeSheetId: sheetId);
+    isViewportFocused = false;
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  DrawingSheet addSheet({
+    String? name,
+    SheetFormatType formatType = SheetFormatType.a3,
+    SheetOrientation orientation = SheetOrientation.landscape,
+  }) {
+    final nextNumber = currentProject.sheets.length + 1;
+    final sheetName = name ?? 'Лист $nextNumber';
+    final id = _uuid.v4();
+    final newSheet = DrawingSheet.createDefault(
+      id: id,
+      name: sheetName,
+      sheetNumber: nextNumber,
+      formatType: formatType,
+      orientation: orientation,
+    ).copyWith(
+      titleBlockData: currentProject.sheets.isNotEmpty
+          ? currentProject.sheets.last.titleBlockData.copyWith(
+              sheetNumber: nextNumber,
+              totalSheets: nextNumber,
+            )
+          : TitleBlockData(
+              projectName: currentProject.title,
+              documentCode: currentProject.projectCode,
+              sheetNumber: nextNumber,
+              totalSheets: nextNumber,
+            ),
+    );
+
+    final updatedSheets = currentProject.sheets.map((s) {
+      return s.copyWith(
+        titleBlockData: s.titleBlockData.copyWith(totalSheets: nextNumber),
+      );
+    }).toList();
+    updatedSheets.add(newSheet);
+
+    currentProject = currentProject.copyWith(
+      sheets: updatedSheets,
+      activeSheetId: id,
+    );
+    isViewportFocused = false;
+    hasUnsavedChanges = true;
+    notifyListeners();
+    return newSheet;
+  }
+
+  void updateSheet(DrawingSheet updatedSheet) {
+    final index = currentProject.sheets.indexWhere((s) => s.id == updatedSheet.id);
+    if (index == -1) return;
+    final updatedList = List<DrawingSheet>.from(currentProject.sheets);
+    updatedList[index] = updatedSheet;
+    currentProject = currentProject.copyWith(sheets: updatedList);
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  void removeSheet(String sheetId) {
+    final updatedList = currentProject.sheets.where((s) => s.id != sheetId).toList();
+    String? nextActiveId = activeSheetId;
+    if (activeSheetId == sheetId) {
+      nextActiveId = updatedList.isNotEmpty ? updatedList.first.id : null;
+    }
+    currentProject = currentProject.copyWith(
+      sheets: updatedList,
+      activeSheetId: nextActiveId,
+      clearActiveSheet: nextActiveId == null,
+    );
+    isViewportFocused = false;
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  void toggleViewportFocus() {
+    isViewportFocused = !isViewportFocused;
+    notifyListeners();
+  }
+
+  void setViewportFocus(bool focused) {
+    if (isViewportFocused == focused) return;
+    isViewportFocused = focused;
+    notifyListeners();
+  }
+
+  void autoFitActiveSheetViewport() {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    final autoFit = ViewportTransformService.calculateAutoFit(
+      network: network,
+      projectionType: projector.projectionType,
+      viewport: sheet.viewport,
+      visibleSystemIds: sheet.viewport.visibleSystemIds,
+    );
+    final updatedVp = sheet.viewport.copyWith(
+      modelCenterX: autoFit.centerX,
+      modelCenterY: autoFit.centerY,
+      viewScale: autoFit.scale,
+    );
+    updateSheet(sheet.copyWith(viewport: updatedVp));
+  }
+
+  void updateActiveSheetTitleBlock(TitleBlockData titleBlockData) {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    updateSheet(sheet.copyWith(titleBlockData: titleBlockData));
+  }
+
+  void updateActiveSheetTechnicalRequirements(TechnicalRequirements? tr) {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    updateSheet(sheet.copyWith(technicalRequirements: tr));
+  }
+
+  void updateDrawingStyleConfig(DrawingStyleConfig styleConfig) {
+    currentProject = currentProject.copyWith(styleConfig: styleConfig);
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  void setSheetZoom(double zoom) {
+    sheetZoom = zoom.clamp(0.2, 10.0);
+    notifyListeners();
+  }
+
+  void panSheet(Offset delta) {
+    sheetPan += delta;
+    notifyListeners();
+  }
+
+  void resetSheetView() {
+    sheetZoom = 1.0;
+    sheetPan = const Offset(40, 40);
+    isViewportFocused = false;
     notifyListeners();
   }
 }
