@@ -25,6 +25,8 @@ import 'weld_journal_dialog.dart';
 import 'touch_distance_entry_dialog.dart';
 import 'project_properties_dialog.dart';
 import 'quick_bridge_dialog.dart';
+import 'sheet_tab_bar.dart';
+import 'sheet_toolbar.dart';
 
 class DesktopCadLayout extends StatelessWidget {
   final PipingInputController controller;
@@ -43,8 +45,10 @@ class DesktopCadLayout extends StatelessWidget {
         // 1. Верхняя командная строка (Header)
         _buildHeader(context),
 
-        // 2. Контекстная строка параметров инструмента (Options Bar)
-        _buildOptionsBar(context),
+        // 2. Контекстная строка параметров (Options Bar в модели ИЛИ SheetToolbar на листе)
+        controller.isModelSpaceActive
+            ? _buildOptionsBar(context)
+            : SheetToolbar(controller: controller),
 
         // 3. Центральная часть: Левый CAD-тулбар + Холст + Плавающий инспектор
         Expanded(
@@ -126,7 +130,10 @@ class DesktopCadLayout extends StatelessWidget {
           ),
         ),
 
-        // 4. Нижняя строка состояния (Status Bar)
+        // 4. Панель вкладок чертежных листов (AutoCAD / СПДС)
+        SheetTabBar(controller: controller),
+
+        // 5. Нижняя строка состояния (Status Bar)
         _buildStatusBar(context),
       ],
     );
