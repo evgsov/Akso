@@ -630,6 +630,88 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     );
   }
 
+  Widget _buildAutoLayoutButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.teal.shade700,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: 'Умная авто-расстановка выносок без перекрытий полочек и труб (ГОСТ)',
+            child: TextButton.icon(
+              key: const Key('auto_layout_callouts_button'),
+              onPressed: () {
+                final updated = widget.controller.autoLayoutCallouts(onlyUnpinned: true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      updated > 0
+                          ? 'Авто-расстановка выполнена для $updated выносок'
+                          : 'Все выноски уже расположены оптимально',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_fix_high, size: 18, color: Colors.white),
+              label: const Text('Авто-расстановка', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.only(left: 14, right: 6),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Опции авто-расстановки',
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+            padding: EdgeInsets.zero,
+            color: const Color(0xFF1E293B),
+            onSelected: (val) {
+              final onlyUnpinned = val == 'unpinned';
+              final updated = widget.controller.autoLayoutCallouts(onlyUnpinned: onlyUnpinned);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    updated > 0
+                        ? 'Авто-расстановка выполнена для $updated выносок'
+                        : 'Все выноски уже расположены оптимально',
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'unpinned',
+                child: Row(
+                  children: [
+                    Icon(Icons.push_pin_outlined, size: 18, color: Colors.white70),
+                    SizedBox(width: 8),
+                    Text('Расставить незакрепленные', style: TextStyle(color: Colors.white, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'all',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 18, color: Colors.white70),
+                    SizedBox(width: 8),
+                    Text('Пересчитать все с чистого листа', style: TextStyle(color: Colors.white, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
   Widget _buildWeldsButton(BuildContext context) {
     return Tooltip(
       message: 'Сгенерировать технологические стыки на элементах и выноски для них',
@@ -771,6 +853,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _buildGenerateAllButton(context),
+                  _buildAutoLayoutButton(context),
                   _buildWeldsButton(context),
                   _buildElementsButton(context),
                   _buildElevationsButton(context),
@@ -785,6 +868,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         return Row(
           children: [
             _buildGenerateAllButton(context),
+            const SizedBox(width: 8),
+            _buildAutoLayoutButton(context),
             const SizedBox(width: 8),
             _buildWeldsButton(context),
             const SizedBox(width: 8),
@@ -803,30 +888,36 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
 
   Widget _buildEmptyState(bool isCompletelyEmpty) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isCompletelyEmpty ? Icons.post_add_outlined : Icons.filter_alt_off_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isCompletelyEmpty ? Icons.post_add_outlined : Icons.filter_alt_off_outlined,
+                size: 48,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isCompletelyEmpty
+                    ? 'В проекте пока нет выносок'
+                    : 'Нет выносок, соответствующих фильтру',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isCompletelyEmpty
+                    ? 'Нажмите «Сгенерировать недостающие», чтобы создать выноски по умолчанию для труб, арматуры и стыков'
+                    : 'Попробуйте сбросить фильтры или строку поиска',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            isCompletelyEmpty
-                ? 'В проекте пока нет выносок'
-                : 'Нет выносок, соответствующих фильтру',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isCompletelyEmpty
-                ? 'Нажмите «Сгенерировать недостающие», чтобы создать выноски по умолчанию для труб, арматуры и стыков'
-                : 'Попробуйте сбросить фильтры или строку поиска',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -967,9 +1058,21 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         ),
         // 5. Смещение
         DataCell(
-          Text(
-            '${callout.screenOffsetX.round()}, ${callout.screenOffsetY.round()}',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${callout.screenOffsetX.round()}, ${callout.screenOffsetY.round()}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              if (callout.isPinned) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: 'Позиция зафиксирована вручную',
+                  child: Icon(Icons.push_pin, size: 14, color: Colors.amber.shade800),
+                ),
+              ],
+            ],
           ),
         ),
         // 6. Действия
@@ -977,6 +1080,19 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                icon: Icon(
+                  callout.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  size: 20,
+                  color: callout.isPinned ? Colors.amber.shade800 : Colors.grey.shade500,
+                ),
+                tooltip: callout.isPinned
+                    ? 'Позиция зафиксирована (нажмите, чтобы открепить)'
+                    : 'Закрепить позицию выноски',
+                onPressed: () {
+                  widget.controller.toggleCalloutPinning(callout.id);
+                },
+              ),
               if (callout.isCustom)
                 IconButton(
                   icon: const Icon(Icons.edit_note, size: 20, color: Colors.indigo),

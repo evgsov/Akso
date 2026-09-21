@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/viewport_layout_preset.dart';
+import '../../../../domain/models/drawing_legend.dart';
 import '../../../../domain/models/drawing_sheet.dart';
 import '../../../../domain/services/viewport_transform_service.dart';
 import '../../../canvas/input_controller.dart';
+import 'drawing_legend_dialog.dart';
+import 'drawing_style_dialog.dart';
 import 'technical_requirements_dialog.dart';
 import 'title_block_editor_dialog.dart';
 
@@ -221,6 +224,70 @@ class SheetToolbar extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Кнопка Условные обозначения
+                  TextButton.icon(
+                    key: const Key('sheet_legend_button'),
+                    icon: const Icon(Icons.list_alt, size: 16, color: Colors.amberAccent),
+                    label: const Text('Обозначения', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    onPressed: () {
+                      final currentLeg = sheet.legend ??
+                          DrawingLegend.createDefault(
+                            xMm: sheet.format.widthMm - sheet.format.frameRightMm - 185.0,
+                            yMm: sheet.format.heightMm - sheet.format.frameBottomMm - 55.0 - 55.0 - 50.0,
+                          );
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => DrawingLegendDialog(
+                          legend: currentLeg,
+                          onSave: (updated) {
+                            controller.updateSheet(sheet.copyWith(legend: updated));
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 6),
+
+                  // Кнопка Толщины линий ГОСТ
+                  IconButton(
+                    key: const Key('sheet_style_button'),
+                    icon: const Icon(Icons.line_weight, size: 16, color: Colors.cyanAccent),
+                    tooltip: 'Толщины линий и шрифты ГОСТ (ГОСТ 2.303 / 2.304)',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => DrawingStyleDialog(
+                          initialConfig: controller.styleConfig,
+                          onSave: (newCfg) {
+                            controller.updateDrawingStyleConfig(newCfg);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 6),
+
+                  // Кнопка Авто-расстановка выносок (ГОСТ)
+                  IconButton(
+                    key: const Key('sheet_auto_layout_callouts_button'),
+                    icon: const Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
+                    tooltip: 'Авто-расстановка выносок (ГОСТ)',
+                    onPressed: () {
+                      final updated = controller.autoLayoutCallouts();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            updated > 0
+                                ? 'Авто-расстановка выполнена для $updated выносок'
+                                : 'Все выноски уже расположены оптимально',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 6),
+
                   // Кнопка ТТ (Технические требования)
                   TextButton.icon(
                     key: const Key('sheet_tt_button'),

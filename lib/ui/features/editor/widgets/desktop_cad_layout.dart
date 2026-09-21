@@ -683,15 +683,34 @@ class DesktopCadLayout extends StatelessWidget {
 
           // Выноски
           Tooltip(
-            message: 'Умные выноски и аннотации',
-            child: TextButton.icon(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.label_outline, size: 16, color: Colors.amberAccent),
-              label: const Text('Выноски', style: TextStyle(color: Colors.white, fontSize: 12)),
+            message: 'Умные выноски и аннотации (Менеджер)',
+            child: IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.label_outline, size: 18, color: Colors.amberAccent),
               onPressed: () => CalloutManagerPanel.show(context, controller: controller),
+            ),
+          ),
+
+          // Авто-расстановка выносок
+          Tooltip(
+            message: 'Авто-расстановка выносок (ГОСТ)',
+            child: IconButton(
+              key: const Key('cad_auto_layout_callouts_button'),
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.auto_fix_high, size: 18, color: Colors.tealAccent),
+              onPressed: () {
+                final updated = controller.autoLayoutCallouts();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      updated > 0
+                          ? 'Авто-расстановка выполнена для $updated выносок'
+                          : 'Все выноски уже расположены оптимально',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(width: 4),
