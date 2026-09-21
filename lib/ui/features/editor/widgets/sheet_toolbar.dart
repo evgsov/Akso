@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../domain/enums/viewport_layout_preset.dart';
 import '../../../../domain/models/drawing_sheet.dart';
 import '../../../../domain/services/viewport_transform_service.dart';
 import '../../../canvas/input_controller.dart';
@@ -139,6 +140,76 @@ class SheetToolbar extends StatelessWidget {
                         ),
                         backgroundColor: const Color(0xFF334155),
                         onPressed: () => _showSystemFilterDialog(context, sheet),
+                      ),
+                      const SizedBox(width: 8),
+
+                      Container(width: 1, height: 20, color: const Color(0xFF334155)),
+                      const SizedBox(width: 8),
+
+                      // Быстрые пресеты компоновки ВЭ (AutoCAD-стиль)
+                      PopupMenuButton<ViewportLayoutPreset>(
+                        key: const Key('viewport_preset_menu'),
+                        tooltip: 'Пресеты формы видового экрана',
+                        color: const Color(0xFF1E293B),
+                        icon: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.dashboard_customize_outlined, size: 16, color: Colors.cyanAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              'Форма ВЭ',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        onSelected: (preset) => controller.applyViewportPreset(preset),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: ViewportLayoutPreset.wideAboveStamp,
+                            child: Row(
+                              children: [
+                                Icon(Icons.table_rows_outlined, size: 18, color: Colors.cyanAccent),
+                                SizedBox(width: 8),
+                                Text('Над штампом (391×224 мм) - стандарт', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: ViewportLayoutPreset.fullSheet,
+                            child: Row(
+                              children: [
+                                Icon(Icons.crop_landscape, size: 18, color: Colors.lightBlueAccent),
+                                SizedBox(width: 8),
+                                Text('Во весь лист (391×283 мм)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: ViewportLayoutPreset.leftColumn,
+                            child: Row(
+                              children: [
+                                Icon(Icons.view_sidebar_outlined, size: 18, color: Colors.amberAccent),
+                                SizedBox(width: 8),
+                                Text('Слева от штампа (202×283 мм)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 6),
+
+                      // Индикатор физических размеров ВЭ
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: Text(
+                          'ВЭ: ${vp.widthMm.round()}×${vp.heightMm.round()} мм',
+                          style: const TextStyle(color: Colors.white60, fontSize: 11, fontFamily: 'monospace'),
+                        ),
                       ),
                     ],
                   ),

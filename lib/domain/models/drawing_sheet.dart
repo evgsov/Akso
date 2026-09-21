@@ -1,4 +1,5 @@
 import '../enums/sheet_format_type.dart';
+import '../enums/viewport_layout_preset.dart';
 import 'sheet_format.dart';
 import 'title_block_data.dart';
 
@@ -226,7 +227,78 @@ class DrawingSheet {
     this.technicalRequirements,
   });
 
-  /// Создание листа со стандартными настройками СПДС
+  /// Расчет координат и габаритов видового экрана по выбранному пресету
+  static SheetViewport calculatePresetViewport(
+    SheetFormat fmt,
+    ViewportLayoutPreset preset, {
+    Set<String>? visibleSystemIds,
+  }) {
+    const stampWidth = 185.0;
+    const stampHeight = 55.0;
+
+    switch (preset) {
+      case ViewportLayoutPreset.wideAboveStamp:
+        final x = fmt.frameLeftMm + 2.0;
+        final y = fmt.frameTopMm + 2.0;
+        final w = fmt.printableWidthMm - 4.0;
+        final h = fmt.printableHeightMm - stampHeight - 8.0;
+        return SheetViewport(
+          xMm: x,
+          yMm: y,
+          widthMm: w > 50 ? w : fmt.printableWidthMm,
+          heightMm: h > 50 ? h : fmt.printableHeightMm,
+          autoFit: true,
+          visibleSystemIds: visibleSystemIds,
+        );
+
+      case ViewportLayoutPreset.fullSheet:
+        final x = fmt.frameLeftMm + 2.0;
+        final y = fmt.frameTopMm + 2.0;
+        final w = fmt.printableWidthMm - 4.0;
+        final h = fmt.printableHeightMm - 4.0;
+        return SheetViewport(
+          xMm: x,
+          yMm: y,
+          widthMm: w > 50 ? w : fmt.printableWidthMm,
+          heightMm: h > 50 ? h : fmt.printableHeightMm,
+          autoFit: true,
+          visibleSystemIds: visibleSystemIds,
+        );
+
+      case ViewportLayoutPreset.leftColumn:
+        final x = fmt.frameLeftMm + 2.0;
+        final y = fmt.frameTopMm + 2.0;
+        final w = fmt.printableWidthMm - stampWidth - 8.0;
+        final h = fmt.printableHeightMm - 4.0;
+        return SheetViewport(
+          xMm: x,
+          yMm: y,
+          widthMm: w > 50 ? w : fmt.printableWidthMm,
+          heightMm: h > 50 ? h : fmt.printableHeightMm,
+          autoFit: true,
+          visibleSystemIds: visibleSystemIds,
+        );
+    }
+  }
+
+  /// Расчет координат и габаритов видового экрана по выбранному пресету для текущего листа
+  SheetViewport getPresetViewport(ViewportLayoutPreset preset) =>
+      calculatePresetViewport(format, preset, visibleSystemIds: viewport.visibleSystemIds);
+
+  /// Применение пресета компоновки к текущему листу с сохранением центра модели и масштаба
+  DrawingSheet applyViewportPreset(ViewportLayoutPreset preset) {
+    final newVp = calculatePresetViewport(format, preset, visibleSystemIds: viewport.visibleSystemIds).copyWith(
+      modelCenterX: viewport.modelCenterX,
+      modelCenterY: viewport.modelCenterY,
+      modelCenterZ: viewport.modelCenterZ,
+      viewScale: viewport.viewScale,
+      autoFit: viewport.autoFit,
+      ghostInactiveSystems: viewport.ghostInactiveSystems,
+    );
+    return copyWith(viewport: newVp);
+  }
+
+  /// Создание листа со стандартными настройками СПДС (ВЭ во всю ширину листа над штампом)
   factory DrawingSheet.createDefault({
     required String id,
     required String name,
@@ -236,12 +308,6 @@ class DrawingSheet {
     Set<String>? visibleSystemIds,
   }) {
     final fmt = SheetFormat(type: formatType, orientation: orientation);
-    final stampWidth = 185.0;
-    final stampHeight = 55.0;
-
-    // Видовой экран по умолчанию занимает свободную область слева от штампа
-    final vpWidth = fmt.printableWidthMm - (fmt.widthMm > 300 ? stampWidth + 10.0 : 0.0);
-    final vpHeight = fmt.printableHeightMm - 10.0;
 
     return DrawingSheet(
       id: id,
@@ -253,12 +319,9 @@ class DrawingSheet {
         sheetNumber: sheetNumber,
         drawingTitle: 'Исполнительная схема трубопроводов $name',
       ),
-      viewport: SheetViewport(
-        xMm: fmt.frameLeftMm + 5.0,
-        yMm: fmt.frameTopMm + 5.0,
-        widthMm: vpWidth > 100 ? vpWidth : fmt.printableWidthMm,
-        heightMm: vpHeight > 100 ? vpHeight : fmt.printableHeightMm - stampHeight - 10.0,
-        autoFit: true,
+      viewport: calculatePresetViewport(
+        fmt,
+        ViewportLayoutPreset.wideAboveStamp,
         visibleSystemIds: visibleSystemIds,
       ),
     );

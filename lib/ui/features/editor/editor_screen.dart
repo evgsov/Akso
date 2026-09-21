@@ -6,6 +6,7 @@ import '../../canvas/input_controller.dart';
 import '../../canvas/piping_canvas.dart';
 import '../../canvas/sheet_canvas_painter.dart';
 import 'widgets/desktop_cad_layout.dart';
+import 'widgets/title_block_editor_dialog.dart';
 import 'widgets/trace_length_input.dart';
 
 class EditorScreen extends StatefulWidget {
@@ -39,6 +40,12 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void initState() {
     super.initState();
+    widget.controller.onTitleBlockTapped = () {
+      final sheet = widget.controller.activeSheet;
+      if (sheet != null && mounted) {
+        TitleBlockEditorDialog.show(context, controller: widget.controller, sheet: sheet);
+      }
+    };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _focusNode.requestFocus();
@@ -48,6 +55,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   void dispose() {
+    widget.controller.onTitleBlockTapped = null;
     _lengthTextController.dispose();
     _lengthFocusNode.dispose();
     _focusNode.dispose();
@@ -351,7 +359,16 @@ class _EditorScreenState extends State<EditorScreen> {
                     now.difference(_lastPrimaryClickTime!).inMilliseconds < 350 &&
                     _lastPrimaryClickPos != null &&
                     (event.localPosition - _lastPrimaryClickPos!).distance < 10.0) {
-                  controller.zoomToFit();
+                  if (!controller.isModelSpaceActive && controller.activeSheet != null) {
+                    final hitVp = controller.hitTestSheetViewport(event.localPosition);
+                    if (hitVp) {
+                      controller.setViewportFocus(true);
+                    } else {
+                      controller.setViewportFocus(false);
+                    }
+                  } else {
+                    controller.zoomToFit();
+                  }
                   _lastPrimaryClickTime = null;
                   _lastPrimaryClickPos = null;
                 } else {
@@ -493,6 +510,8 @@ class _EditorScreenState extends State<EditorScreen> {
                         sheetZoom: controller.sheetZoom,
                         sheetPan: controller.sheetPan,
                         isViewportFocused: controller.isViewportFocused,
+                        isViewportSelected: controller.isViewportSelected,
+                        activeGrip: controller.activeViewportGrip,
                         projectionType: controller.projector.projectionType,
                         styleConfig: controller.styleConfig,
                       ),

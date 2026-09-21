@@ -628,76 +628,150 @@ class DxfWriter {
       _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX1, stampY1, stampX0, stampY1);
       _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, stampY1, stampX0, stampY0);
 
-      // Вертикальные разделители
+      // Основной вертикальный разделитель: 65 мм слева
+      final xApprovalsEnd = stampX0 + 65.0;
+      final xCenterEnd = stampX0 + 135.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, stampY0, xApprovalsEnd, stampY1);
+
+      // --- ЛЕВЫЙ БЛОК (0..65 мм) ---
+      // 1. Верхняя строка: Таблица регистрации изменений (5 мм сверху, y: 55..60)
+      final yRevHeader = stampY1 - 5.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, yRevHeader, xApprovalsEnd, yRevHeader);
+
+      final xRevIzm = stampX0 + 10.0;
+      final xRevKol = stampX0 + 20.0;
+      final xRevList = stampX0 + 30.0;
+      final xRevDoc = stampX0 + 45.0;
+      final xRevSign = stampX0 + 55.0;
+
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRevIzm, yRevHeader, xRevIzm, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRevKol, yRevHeader, xRevKol, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRevList, yRevHeader, xRevList, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRevDoc, yRevHeader, xRevDoc, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRevSign, yRevHeader, xRevSign, stampY1);
+
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Изм.', stampX0 + 1.5, yRevHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Кол.уч', xRevIzm + 1.0, yRevHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Лист', xRevKol + 1.5, yRevHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', '№ док.', xRevList + 1.5, yRevHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Подп.', xRevDoc + 1.5, yRevHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Дата', xRevSign + 1.5, yRevHeader + 1.5, 1.8);
+
+      // 2. Строки согласований (y: 5..55, 10 строк по 5 мм)
       final xRole = stampX0 + 17.0;
       final xName = stampX0 + 40.0;
       final xSign = stampX0 + 55.0;
-      final xApprovalsEnd = stampX0 + 65.0;
-      final xCenterEnd = stampX0 + 135.0;
 
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRole, stampY0, xRole, stampY1);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xName, stampY0, xName, stampY1);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSign, stampY0, xSign, stampY1);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, stampY0, xApprovalsEnd, stampY1);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, stampY0, xCenterEnd, stampY1);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xRole, stampY0, xRole, yRevHeader);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xName, stampY0, xName, yRevHeader);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSign, stampY0, xSign, yRevHeader);
 
-      // 8 строк согласований по 5 мм снизу
-      for (int r = 1; r <= 8; r++) {
+      for (int r = 1; r <= 9; r++) {
         final yr = stampY0 + (r * 5.0);
         _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', stampX0, yr, xApprovalsEnd, yr);
       }
 
-      // Разделители правого блока
-      final yStageValues = stampY0 + 35.0;
-      final yStageHeader = stampY0 + 50.0;
+      // --- ПРАВЫЙ БЛОК (65..185 мм, ширина 120 мм) ---
+      // Строка 1: Графа 4 (Шифр, 15 мм сверху, y: 45..60)
+      final yRow1 = stampY1 - 15.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yRow1, stampX1, yRow1);
+
+      // Строка 2: Графа 1 (Объект, 15 мм, y: 30..45)
+      final yRow2 = stampY1 - 30.0;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yRow2, stampX1, yRow2);
+
+      // Разделитель между 70 мм и 50 мм справа (y: 5..30)
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, stampY0, xCenterEnd, yRow2);
+
+      // Строка 3 и 4 разделитель (y: 17.5 = 5.0 + 12.5)
+      final yRow3 = stampY0 + 12.5;
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yRow3, stampX1, yRow3);
+
+      // Шапка Стадия | Лист | Листов в строке 3 (y: 25.0)
+      final yStageHeader = stampY0 + 20.0;
       _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, yStageHeader, stampX1, yStageHeader);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xCenterEnd, yStageValues, stampX1, yStageValues);
 
       final xStage = xCenterEnd + 15.0;
       final xSheet = xCenterEnd + 30.0;
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xStage, yStageValues, xStage, stampY1);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSheet, yStageValues, xSheet, stampY1);
-
-      // Разделители центрального блока
-      final yCode = stampY0 + 40.0;
-      final yObj = stampY0 + 25.0;
-      final yBldg = stampY0 + 15.0;
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yCode, xCenterEnd, yCode);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yObj, xCenterEnd, yObj);
-      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xApprovalsEnd, yBldg, xCenterEnd, yBldg);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xStage, yRow3, xStage, yRow2);
+      _writeDxfPaperLine(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', xSheet, yRow3, xSheet, yRow2);
 
       // Тексты штампа
       final tb = sh.titleBlockData;
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.documentCode, xApprovalsEnd + 4.0, stampY0 + 44.0, 4.5);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.projectName, xApprovalsEnd + 2.5, stampY0 + 28.0, 3.0);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.buildingName, xApprovalsEnd + 2.5, stampY0 + 18.0, 3.0);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.drawingTitle, xApprovalsEnd + 2.5, stampY0 + 6.0, 3.5);
+      if (tb.documentCode.isNotEmpty) {
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.documentCode, xApprovalsEnd + 30.0, yRow1 + 5.0, 4.5);
+      }
+      if (tb.projectName.isNotEmpty) {
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.projectName, xApprovalsEnd + 2.5, yRow2 + 6.0, 2.8);
+      }
+      if (tb.buildingName.isNotEmpty) {
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.buildingName, xApprovalsEnd + 2.5, yRow3 + 4.5, 2.8);
+      }
+      if (tb.drawingTitle.isNotEmpty) {
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.drawingTitle, xApprovalsEnd + 2.5, stampY0 + 4.5, 3.2);
+      }
 
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Стадия', xCenterEnd + 2.0, stampY0 + 51.5, 2.0);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Лист', xStage + 3.0, stampY0 + 51.5, 2.0);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Листов', xSheet + 4.0, stampY0 + 51.5, 2.0);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Стадия', xCenterEnd + 2.0, yStageHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Лист', xStage + 3.0, yStageHeader + 1.5, 1.8);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', 'Листов', xSheet + 4.0, yStageHeader + 1.5, 1.8);
 
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.stage, xCenterEnd + 4.0, stampY0 + 42.0, 3.5);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.sheetNumber.toString(), xStage + 5.0, stampY0 + 42.0, 3.5);
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.totalSheets.toString(), xSheet + 7.0, stampY0 + 42.0, 3.5);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.stage, xCenterEnd + 4.0, yRow3 + 3.0, 3.2);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.sheetNumber.toString(), xStage + 5.0, yRow3 + 3.0, 3.2);
+      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.totalSheets.toString(), xSheet + 7.0, yRow3 + 3.0, 3.2);
 
-      _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.organization, xCenterEnd + 5.0, stampY0 + 18.0, 3.2);
+      if (tb.organization.isNotEmpty) {
+        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', tb.organization, xCenterEnd + 5.0, stampY0 + 4.5, 3.2);
+      }
 
       // Согласования
-      final roles = ['Разраб.', 'Пров.', 'Т.контр.', '', 'ГИП', 'Н.контр.', 'Утв.'];
-      for (int r = 0; r < roles.length; r++) {
-        final role = roles[r];
-        if (role.isEmpty) continue;
-        final yRow = stampY1 - ((roles.length - r) * 5.0) + 1.2;
-        _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', role, stampX0 + 1.5, yRow, 2.2);
+      final approvals = tb.approvals.isNotEmpty
+          ? tb.approvals
+          : const [
+              TitleBlockApproval(role: 'Геодезист', name: ''),
+              TitleBlockApproval(role: 'Исп. директор', name: ''),
+              TitleBlockApproval(role: 'Разраб.', name: ''),
+              TitleBlockApproval(role: 'Пров.', name: ''),
+              TitleBlockApproval(role: 'ГИП', name: ''),
+            ];
 
-        final app = tb.approvals.firstWhere((a) => a.role == role, orElse: () => const TitleBlockApproval(role: '', name: ''));
+      for (int r = 0; r < approvals.length && r < 10; r++) {
+        final app = approvals[r];
+        final yRow = yRevHeader - ((r + 1) * 5.0) + 1.2;
+        if (app.role.isNotEmpty) {
+          _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', app.role, stampX0 + 1.5, yRow, 2.2);
+        }
         if (app.name.isNotEmpty) {
           _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', app.name, xRole + 1.5, yRow, 2.2);
         }
         if (app.date.isNotEmpty) {
           _writeDxfPaperText(buffer, nextHandle(), layoutName, 'АКСО_ЛИСТ_ШТАМП', app.date, xSign + 1.0, yRow, 2.0);
         }
+      }
+
+      // Надпись формата листа под штампом
+      _writeDxfPaperText(
+        buffer,
+        nextHandle(),
+        layoutName,
+        'АКСО_ЛИСТ_ШТАМП',
+        'Формат ${sh.format.type.name.toUpperCase()}',
+        stampX1 - 25.0,
+        stampY0 - 3.5,
+        2.0,
+      );
+
+      // Заголовок схемы вверху листа
+      if (tb.drawingTitle.isNotEmpty) {
+        _writeDxfPaperText(
+          buffer,
+          nextHandle(),
+          layoutName,
+          'АКСО_ЛИСТ_ШТАМП',
+          tb.drawingTitle,
+          25.0,
+          h - 8.0,
+          4.0,
+        );
       }
 
       // 5.2.4. Технические требования (ТТ) на слое АКСО_ЛИСТ_ТТ

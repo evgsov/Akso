@@ -25,6 +25,7 @@ import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/fitting_detector.dart';
 import '../../domain/enums/report_type.dart';
 import '../../domain/enums/sheet_format_type.dart';
+import '../../domain/enums/viewport_layout_preset.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
@@ -755,6 +756,56 @@ class PipingInputController extends ChangeNotifier {
 
   /// Обработка нажатия на холст
   void handlePointerDown(Offset screenPos, {bool isShift = false, bool isCtrl = false}) {
+    if (!isModelSpaceActive && activeSheet != null) {
+      currentCursorScreenPos = screenPos;
+      if (!isViewportFocused) {
+        // Режим пространства листа (PSPACE):
+        if (isViewportSelected) {
+          final grip = hitTestViewportGrip(screenPos);
+          if (grip != null) {
+            activeViewportGrip = grip;
+            _viewportDragStartRectMm = Rect.fromLTWH(
+              activeSheet!.viewport.xMm,
+              activeSheet!.viewport.yMm,
+              activeSheet!.viewport.widthMm,
+              activeSheet!.viewport.heightMm,
+            );
+            _viewportDragStartScreenPos = screenPos;
+            notifyListeners();
+            return;
+          }
+        }
+
+        if (hitTestSheetStamp(screenPos)) {
+          isViewportSelected = false;
+          activeViewportGrip = null;
+          onTitleBlockTapped?.call();
+          notifyListeners();
+          return;
+        }
+
+        if (hitTestSheetViewport(screenPos)) {
+          isViewportSelected = true;
+          activeViewportGrip = null;
+          notifyListeners();
+          return;
+        }
+
+        // Клик в пустое место листа: сброс выделения ВЭ
+        isViewportSelected = false;
+        activeViewportGrip = null;
+        notifyListeners();
+        return;
+      } else {
+        // Режим фокуса на модели внутри ВЭ (MSPACE):
+        if (!hitTestSheetViewport(screenPos)) {
+          isViewportFocused = false;
+          notifyListeners();
+          return;
+        }
+      }
+    }
+
     _longPressTimer?.cancel();
     if (!enableDragDelay) {
       _canDragElement = true;
@@ -1678,6 +1729,50 @@ class PipingInputController extends ChangeNotifier {
   void handlePointerMove(Offset screenPos, {Offset delta = Offset.zero}) {
     currentCursorScreenPos = screenPos;
 
+    if (!isModelSpaceActive && activeSheet != null) {
+      if (activeViewportGrip != null && _viewportDragStartRectMm != null && _viewportDragStartScreenPos != null) {
+        final deltaMm = (screenPos - _viewportDragStartScreenPos!) / sheetZoom;
+        final start = _viewportDragStartRectMm!;
+        final sheet = activeSheet!;
+
+        final frameLeft = sheet.format.frameLeftMm;
+        final frameTop = sheet.format.frameTopMm;
+        final frameRight = sheet.format.widthMm - sheet.format.frameRightMm;
+        final frameBottom = sheet.format.heightMm - sheet.format.frameBottomMm;
+
+        double left = start.left;
+        double top = start.top;
+        double right = start.right;
+        double bottom = start.bottom;
+
+        final grip = activeViewportGrip!;
+        if (grip.contains('w')) {
+          left = (start.left + deltaMm.dx).clamp(frameLeft, right - 50.0);
+        }
+        if (grip.contains('e')) {
+          right = (start.right + deltaMm.dx).clamp(left + 50.0, frameRight);
+        }
+        if (grip.contains('n')) {
+          top = (start.top + deltaMm.dy).clamp(frameTop, bottom - 50.0);
+        }
+        if (grip.contains('s')) {
+          bottom = (start.bottom + deltaMm.dy).clamp(top + 50.0, frameBottom);
+        }
+
+        final updatedVp = sheet.viewport.copyWith(
+          xMm: left,
+          yMm: top,
+          widthMm: right - left,
+          heightMm: bottom - top,
+        );
+        updateSheet(sheet.copyWith(viewport: updatedVp));
+        return;
+      }
+      if (!isViewportFocused) {
+        return;
+      }
+    }
+
     if (currentTool == CanvasTool.pan) {
       pan(delta);
       return;
@@ -2040,6 +2135,20 @@ class PipingInputController extends ChangeNotifier {
   void handlePointerUp() {
     _longPressTimer?.cancel();
     _canDragElement = false;
+
+    if (!isModelSpaceActive && activeSheet != null) {
+      if (activeViewportGrip != null) {
+        activeViewportGrip = null;
+        _viewportDragStartRectMm = null;
+        _viewportDragStartScreenPos = null;
+        notifyListeners();
+        return;
+      }
+      if (!isViewportFocused) {
+        return;
+      }
+    }
+
     if (activeGripAxisId != null || activeGripNodeId != null) {
       // В режиме Grip Edit отпускание кнопки мыши не фиксирует элемент (фиксация по следующему клику ЛКМ)
       return;
@@ -4791,6 +4900,11 @@ class PipingInputController extends ChangeNotifier {
   double sheetZoom = 1.0;
   Offset sheetPan = const Offset(40, 40);
   bool isViewportFocused = false;
+  bool isViewportSelected = false;
+  String? activeViewportGrip;
+  Rect? _viewportDragStartRectMm;
+  Offset? _viewportDragStartScreenPos;
+  VoidCallback? onTitleBlockTapped;
 
   bool get isModelSpaceActive => currentProject.isModelSpaceActive;
   String? get activeSheetId => currentProject.activeSheetId;
@@ -4798,10 +4912,101 @@ class PipingInputController extends ChangeNotifier {
   DrawingSheet? get activeSheet => currentProject.activeSheet;
   DrawingStyleConfig get styleConfig => currentProject.styleConfig;
 
+  Rect? getActiveSheetPaperRect() {
+    final sheet = activeSheet;
+    if (sheet == null) return null;
+    final paperW = sheet.format.widthMm * sheetZoom;
+    final paperH = sheet.format.heightMm * sheetZoom;
+    return Rect.fromLTWH(sheetPan.dx, sheetPan.dy, paperW, paperH);
+  }
+
+  Rect? getActiveSheetFrameRect() {
+    final sheet = activeSheet;
+    final paper = getActiveSheetPaperRect();
+    if (sheet == null || paper == null) return null;
+    return Rect.fromLTRB(
+      paper.left + (sheet.format.frameLeftMm * sheetZoom),
+      paper.top + (sheet.format.frameTopMm * sheetZoom),
+      paper.right - (sheet.format.frameRightMm * sheetZoom),
+      paper.bottom - (sheet.format.frameBottomMm * sheetZoom),
+    );
+  }
+
+  Rect? getActiveSheetStampRect() {
+    final frame = getActiveSheetFrameRect();
+    if (frame == null) return null;
+    final stampW = 185.0 * sheetZoom;
+    final stampH = 55.0 * sheetZoom;
+    return Rect.fromLTWH(
+      frame.right - stampW,
+      frame.bottom - stampH,
+      stampW,
+      stampH,
+    );
+  }
+
+  Rect? getActiveSheetViewportScreenRect() {
+    final sheet = activeSheet;
+    final paper = getActiveSheetPaperRect();
+    if (sheet == null || paper == null) return null;
+    final vp = sheet.viewport;
+    return Rect.fromLTWH(
+      paper.left + (vp.xMm * sheetZoom),
+      paper.top + (vp.yMm * sheetZoom),
+      vp.widthMm * sheetZoom,
+      vp.heightMm * sheetZoom,
+    );
+  }
+
+  Map<String, Offset> getActiveSheetViewportGrips() {
+    final vpRect = getActiveSheetViewportScreenRect();
+    if (vpRect == null) return const {};
+    return {
+      'nw': vpRect.topLeft,
+      'n': Offset(vpRect.center.dx, vpRect.top),
+      'ne': vpRect.topRight,
+      'e': Offset(vpRect.right, vpRect.center.dy),
+      'se': vpRect.bottomRight,
+      's': Offset(vpRect.center.dx, vpRect.bottom),
+      'sw': vpRect.bottomLeft,
+      'w': Offset(vpRect.left, vpRect.center.dy),
+    };
+  }
+
+  String? hitTestViewportGrip(Offset screenPos, [double hitRadius = 12.0]) {
+    final grips = getActiveSheetViewportGrips();
+    for (final entry in grips.entries) {
+      if ((entry.value - screenPos).distance <= hitRadius) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  bool hitTestSheetStamp(Offset screenPos) {
+    final stamp = getActiveSheetStampRect();
+    if (stamp == null) return false;
+    return stamp.contains(screenPos);
+  }
+
+  bool hitTestSheetViewport(Offset screenPos) {
+    final vp = getActiveSheetViewportScreenRect();
+    if (vp == null) return false;
+    return vp.contains(screenPos);
+  }
+
+  void applyViewportPreset(ViewportLayoutPreset preset) {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    updateSheet(sheet.applyViewportPreset(preset));
+  }
+
   void selectModelSpace() {
     if (isModelSpaceActive) return;
     currentProject = currentProject.copyWith(clearActiveSheet: true);
     isViewportFocused = false;
+    isViewportSelected = false;
+    activeViewportGrip = null;
     hasUnsavedChanges = true;
     notifyListeners();
   }
@@ -4812,6 +5017,8 @@ class PipingInputController extends ChangeNotifier {
     if (!exists) return;
     currentProject = currentProject.copyWith(activeSheetId: sheetId);
     isViewportFocused = false;
+    isViewportSelected = false;
+    activeViewportGrip = null;
     hasUnsavedChanges = true;
     notifyListeners();
   }
@@ -4947,6 +5154,8 @@ class PipingInputController extends ChangeNotifier {
     sheetZoom = 1.0;
     sheetPan = const Offset(40, 40);
     isViewportFocused = false;
+    isViewportSelected = false;
+    activeViewportGrip = null;
     notifyListeners();
   }
 }

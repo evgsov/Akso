@@ -46,7 +46,18 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
   // Согласования
   final Map<String, TextEditingController> _approvalNames = {};
   final Map<String, TextEditingController> _approvalDates = {};
-  final List<String> _standardRoles = ['Разраб.', 'Пров.', 'Т.контр.', 'ГИП', 'Н.контр.', 'Утв.'];
+  final List<String> _standardRoles = [
+    'Геодезист',
+    'Исп. директор',
+    'Мастер / Прораб',
+    'Нач. участка',
+    'ПТО',
+    'Разраб.',
+    'Пров.',
+    'ГИП',
+    'Н.контр.',
+    'Утв.',
+  ];
 
   // Правый верхний угол (Приложение к акту / Графа 26)
   late TopRightCornerMode _cornerMode;
@@ -73,7 +84,14 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
     _sheetNumber = tb.sheetNumber;
     _totalSheets = tb.totalSheets;
 
-    for (final role in _standardRoles) {
+    final allRoles = List<String>.from(_standardRoles);
+    for (final a in tb.approvals) {
+      if (a.role.isNotEmpty && !allRoles.contains(a.role)) {
+        allRoles.add(a.role);
+      }
+    }
+
+    for (final role in allRoles) {
       final app = tb.approvals.firstWhere((a) => a.role == role, orElse: () => TitleBlockApproval(role: role, name: ''));
       _approvalNames[role] = TextEditingController(text: app.name);
       _approvalDates[role] = TextEditingController(text: app.date);
@@ -112,7 +130,7 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
 
   void _save() {
     final approvals = <TitleBlockApproval>[];
-    for (final role in _standardRoles) {
+    for (final role in _approvalNames.keys) {
       final name = _approvalNames[role]?.text.trim() ?? '';
       final date = _approvalDates[role]?.text.trim() ?? '';
       if (name.isNotEmpty || date.isNotEmpty) {
@@ -317,7 +335,7 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 16),
-          for (final role in _standardRoles) ...[
+          for (final role in _approvalNames.keys) ...[
             Row(
               children: [
                 SizedBox(
