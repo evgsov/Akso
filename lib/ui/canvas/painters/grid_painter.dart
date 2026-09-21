@@ -73,9 +73,11 @@ class GridPainter {
     // Стили линий сетки
     final regularPaint = Paint()
       ..color = Colors.blueGrey.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     final majorPaint = Paint()
       ..color = Colors.blueGrey.withValues(alpha: 0.28)
+      ..style = PaintingStyle.stroke
       ..strokeWidth = 1.3;
     final axisXPaint = Paint()
       ..color = const Color(0xFFEF5350).withValues(alpha: 0.55)
@@ -84,17 +86,26 @@ class GridPainter {
       ..color = const Color(0xFF66BB6A).withValues(alpha: 0.55)
       ..strokeWidth = 1.6; // Ось Y (зеленая)
 
+    // Пакетная оптимизация (Draw Call Batching): объединяем линии в Path,
+    // чтобы сократить количество вызовов GPU со ~160 до 2 на каждом кадре.
+    final regularPath = Path();
+    final majorPath = Path();
+
     // 1. Линии сетки, параллельные оси Y (постоянный X)
     for (double x = startX; x <= endX + 1e-4; x += stepMm) {
       final p1 = projector.projectCoordinates(x, startY, currentElevationZ);
       final p2 = projector.projectCoordinates(x, endY, currentElevationZ);
 
       final index = (x / stepMm).round();
-      final isAxis = index == 0;
-      final isMajor = index % 5 == 0;
-
-      final paint = isAxis ? axisYPaint : (isMajor ? majorPaint : regularPaint);
-      canvas.drawLine(p1, p2, paint);
+      if (index == 0) {
+        canvas.drawLine(p1, p2, axisYPaint);
+      } else if (index % 5 == 0) {
+        majorPath.moveTo(p1.dx, p1.dy);
+        majorPath.lineTo(p2.dx, p2.dy);
+      } else {
+        regularPath.moveTo(p1.dx, p1.dy);
+        regularPath.lineTo(p2.dx, p2.dy);
+      }
     }
 
     // 2. Линии сетки, параллельные оси X (постоянный Y)
@@ -103,12 +114,19 @@ class GridPainter {
       final p2 = projector.projectCoordinates(endX, y, currentElevationZ);
 
       final index = (y / stepMm).round();
-      final isAxis = index == 0;
-      final isMajor = index % 5 == 0;
-
-      final paint = isAxis ? axisXPaint : (isMajor ? majorPaint : regularPaint);
-      canvas.drawLine(p1, p2, paint);
+      if (index == 0) {
+        canvas.drawLine(p1, p2, axisXPaint);
+      } else if (index % 5 == 0) {
+        majorPath.moveTo(p1.dx, p1.dy);
+        majorPath.lineTo(p2.dx, p2.dy);
+      } else {
+        regularPath.moveTo(p1.dx, p1.dy);
+        regularPath.lineTo(p2.dx, p2.dy);
+      }
     }
+
+    canvas.drawPath(regularPath, regularPaint);
+    canvas.drawPath(majorPath, majorPaint);
 
     // 3. Маркер мирового центра координат (0, 0, Z)
     final origin = projector.projectCoordinates(0, 0, currentElevationZ);

@@ -5,7 +5,10 @@ import 'package:flutter/services.dart';
 import '../../canvas/input_controller.dart';
 import '../../canvas/piping_canvas.dart';
 import '../../canvas/sheet_canvas_painter.dart';
+import '../../../domain/models/drawing_legend.dart';
 import 'widgets/desktop_cad_layout.dart';
+import 'widgets/drawing_legend_dialog.dart';
+import 'widgets/technical_requirements_dialog.dart';
 import 'widgets/title_block_editor_dialog.dart';
 import 'widgets/trace_length_input.dart';
 
@@ -46,6 +49,37 @@ class _EditorScreenState extends State<EditorScreen> {
         TitleBlockEditorDialog.show(context, controller: widget.controller, sheet: sheet);
       }
     };
+    widget.controller.onTechnicalRequirementsTapped = () {
+      final sheet = widget.controller.activeSheet;
+      if (sheet != null && mounted) {
+        TechnicalRequirementsDialog.show(context, controller: widget.controller, sheet: sheet);
+      }
+    };
+    widget.controller.onActAttachmentTapped = () {
+      final sheet = widget.controller.activeSheet;
+      if (sheet != null && mounted) {
+        TitleBlockEditorDialog.show(context, controller: widget.controller, sheet: sheet, initialTabIndex: 2);
+      }
+    };
+    widget.controller.onLegendTapped = () {
+      final sheet = widget.controller.activeSheet;
+      if (sheet != null && mounted) {
+        final currentLeg = sheet.legend ??
+            DrawingLegend.createDefault(
+              xMm: sheet.format.widthMm - sheet.format.frameRightMm - 185.0,
+              yMm: sheet.format.heightMm - sheet.format.frameBottomMm - 55.0 - 55.0 - 50.0,
+            );
+        showDialog(
+          context: context,
+          builder: (ctx) => DrawingLegendDialog(
+            legend: currentLeg,
+            onSave: (updated) {
+              widget.controller.updateActiveSheetLegend(updated);
+            },
+          ),
+        );
+      }
+    };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _focusNode.requestFocus();
@@ -56,6 +90,9 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     widget.controller.onTitleBlockTapped = null;
+    widget.controller.onTechnicalRequirementsTapped = null;
+    widget.controller.onActAttachmentTapped = null;
+    widget.controller.onLegendTapped = null;
     _lengthTextController.dispose();
     _lengthFocusNode.dispose();
     _focusNode.dispose();
@@ -465,56 +502,59 @@ class _EditorScreenState extends State<EditorScreen> {
                 _lastFocalPoint = null;
                 _baseScale = 1.0;
               },
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: controller.isModelSpaceActive || controller.activeSheet == null
-                    ? PipingCanvasPainter(
-                        network: controller.network,
-                        projector: controller.projector,
-                        selectedNodeId: controller.selectedNodeId,
-                        selectedSegmentId: controller.selectedSegmentId,
-                        selectedEquipmentId: controller.selectedEquipmentId,
-                        selectedCalloutId: controller.selectedCalloutId,
-                        selectedValveId: controller.selectedValveId,
-                        selectedSupportId: controller.selectedSupportId,
-                        selectedWeldId: controller.selectedWeldId,
-                        selectedDimensionId: controller.selectedDimensionId,
-                        selectedAxisId: controller.selectedAxisId,
-                        previewDimension: controller.previewDimension,
-                        selectedNodeIds: controller.selectedNodeIds,
-                        selectedSegmentIds: controller.selectedSegmentIds,
-                        selectedEquipmentIds: controller.selectedEquipmentIds,
-                        selectedAxisIds: controller.selectedAxisIds,
-                        selectedDimensionIds: controller.selectedDimensionIds,
-                        modifyBasePointWorld: controller.modifyBasePointWorld,
-                        modifyCurrentPointScreen: controller.modifyCurrentPointScreen,
-                        currentTool: controller.currentTool,
-                        selectionBoxRect: controller.selectionBoxRect,
-                        isCrossingSelection: controller.isCrossingSelection,
-                        calloutTemplates: controller.currentProject.calloutTemplates,
-                        activeSystemId: controller.activeSystemId,
-                        activeTraceStart: controller.traceStartNode,
-                        isVolumeMode: controller.isVolumeMode,
-                        isCenterlineMode: controller.isCenterlineMode,
-                        selectedSpoolId: controller.selectedSpoolId,
-                        selectedSpoolIds: controller.selectedSpoolIds,
-                        activeTraceEnd: controller.currentCursorScreenPos,
-                        activeAxisStart: controller.axisStartNode,
-                        snapResult: controller.currentSnapResult,
-                        currentElevationZ: controller.currentElevationZ,
-                        showGrid: controller.showGrid,
-                      )
-                    : SheetCanvasPainter(
-                        sheet: controller.activeSheet!,
-                        network: controller.network,
-                        sheetZoom: controller.sheetZoom,
-                        sheetPan: controller.sheetPan,
-                        isViewportFocused: controller.isViewportFocused,
-                        isViewportSelected: controller.isViewportSelected,
-                        activeGrip: controller.activeViewportGrip,
-                        projectionType: controller.projector.projectionType,
-                        styleConfig: controller.styleConfig,
-                      ),
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: controller.isModelSpaceActive || controller.activeSheet == null
+                      ? PipingCanvasPainter(
+                          network: controller.network,
+                          projector: controller.projector,
+                          selectedNodeId: controller.selectedNodeId,
+                          selectedSegmentId: controller.selectedSegmentId,
+                          selectedEquipmentId: controller.selectedEquipmentId,
+                          selectedCalloutId: controller.selectedCalloutId,
+                          selectedValveId: controller.selectedValveId,
+                          selectedSupportId: controller.selectedSupportId,
+                          selectedWeldId: controller.selectedWeldId,
+                          selectedDimensionId: controller.selectedDimensionId,
+                          selectedAxisId: controller.selectedAxisId,
+                          previewDimension: controller.previewDimension,
+                          selectedNodeIds: controller.selectedNodeIds,
+                          selectedSegmentIds: controller.selectedSegmentIds,
+                          selectedEquipmentIds: controller.selectedEquipmentIds,
+                          selectedAxisIds: controller.selectedAxisIds,
+                          selectedDimensionIds: controller.selectedDimensionIds,
+                          modifyBasePointWorld: controller.modifyBasePointWorld,
+                          modifyCurrentPointScreen: controller.modifyCurrentPointScreen,
+                          currentTool: controller.currentTool,
+                          selectionBoxRect: controller.selectionBoxRect,
+                          isCrossingSelection: controller.isCrossingSelection,
+                          calloutTemplates: controller.currentProject.calloutTemplates,
+                          activeSystemId: controller.activeSystemId,
+                          activeTraceStart: controller.traceStartNode,
+                          isVolumeMode: controller.isVolumeMode,
+                          isCenterlineMode: controller.isCenterlineMode,
+                          selectedSpoolId: controller.selectedSpoolId,
+                          selectedSpoolIds: controller.selectedSpoolIds,
+                          activeTraceEnd: controller.currentCursorScreenPos,
+                          activeAxisStart: controller.axisStartNode,
+                          snapResult: controller.currentSnapResult,
+                          currentElevationZ: controller.currentElevationZ,
+                          showGrid: controller.showGrid,
+                        )
+                      : SheetCanvasPainter(
+                          sheet: controller.activeSheet!,
+                          network: controller.network,
+                          sheetZoom: controller.sheetZoom,
+                          sheetPan: controller.sheetPan,
+                          isViewportFocused: controller.isViewportFocused,
+                          isViewportSelected: controller.isViewportSelected,
+                          selectedSheetBlock: controller.selectedSheetBlock,
+                          activeGrip: controller.activeViewportGrip,
+                          projectionType: controller.projector.projectionType,
+                          styleConfig: controller.styleConfig,
+                        ),
+                ),
               ),
             ),
           ),

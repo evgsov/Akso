@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
+import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/title_block_data.dart';
 import '../../domain/services/viewport_transform_service.dart';
+import 'painters/callout_painter.dart';
+import 'painters/dimension_painter.dart';
 
 /// Интерактивный CustomPainter для отображения листа бумаги по ГОСТ 21.101-2020,
 /// рамок 20-5-5-5 мм, штампа 185х55 мм, примечаний ТТ и клиппированного видового экрана
@@ -17,6 +19,7 @@ class SheetCanvasPainter extends CustomPainter {
   final Offset sheetPan;
   final bool isViewportFocused;
   final bool isViewportSelected;
+  final String? selectedSheetBlock; // 'viewport', 'notes', 'act', 'legend'
   final String? activeGrip;
   final ProjectionType projectionType;
   final DrawingStyleConfig styleConfig;
@@ -28,6 +31,7 @@ class SheetCanvasPainter extends CustomPainter {
     required this.sheetPan,
     this.isViewportFocused = false,
     this.isViewportSelected = false,
+    this.selectedSheetBlock,
     this.activeGrip,
     this.projectionType = ProjectionType.gostFrontal45,
     this.styleConfig = const DrawingStyleConfig(),
@@ -61,14 +65,19 @@ class SheetCanvasPainter extends CustomPainter {
     _drawSheetHeaderTitle(canvas, frameRect);
 
     // 6. Правый верхний угол (Приложение к акту в рамке)
-    _drawTopRightCorner(canvas, frameRect);
+    _drawTopRightCorner(canvas, frameRect, paperRect);
 
     // 7. Поле подшивки слева (Инв. № подл., Взам. инв. №)
     _drawArchiveField(canvas, paperRect, frameRect);
 
-    // 8. Блок Технических требований (ТТ) над штампом
+    // 8. Блок Технических требований (ТТ)
     if (sheet.technicalRequirements != null && sheet.technicalRequirements!.text.isNotEmpty) {
-      _drawTechnicalRequirements(canvas, frameRect);
+      _drawTechnicalRequirements(canvas, frameRect, paperRect);
+    }
+
+    // 8.1. Блок Условных обозначений
+    if (sheet.legend != null && sheet.legend!.isVisible) {
+      _drawLegend(canvas, frameRect, paperRect);
     }
 
     // 9. Основная надпись (штамп 185х55 мм в правом нижнем углу с непрозрачной белой подложкой)
@@ -77,18 +86,16 @@ class SheetCanvasPainter extends CustomPainter {
     // 10. Подпись формата листа за пределами рамки (напр. "Формат А3")
     _drawSheetFormatLabel(canvas, frameRect, paperRect);
 
-    // 11. Интерактивные CAD-ручки (AutoCAD Grips) видового экрана в пространстве листа
+    // 11. Интерактивные CAD-ручки (AutoCAD Grips) активного элемента в пространстве листа
     if (!isViewportFocused) {
-      _drawViewportGrips(canvas, paperRect);
+      _drawActiveElementGrips(canvas, paperRect, frameRect);
     }
   }
 
   void _drawPaperWithShadow(Canvas canvas, Rect paperRect) {
-    // Тень листа
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawRect(paperRect.shift(const Offset(4, 6)), shadowPaint);
+    // Тень листа (аппаратно-ускоренная тень через drawShadow без дорогого программного MaskFilter.blur)
+    final shadowPath = Path()..addRect(paperRect);
+    canvas.drawShadow(shadowPath, Colors.black.withValues(alpha: 0.45), 8.0, false);
 
     // Белый лист бумаги
     final paperPaint = Paint()..color = Colors.white;
@@ -128,77 +135,352 @@ class SheetCanvasPainter extends CustomPainter {
     _drawText(canvas, label, offset, 2.4 * sheetZoom);
   }
 
-  void _drawTopRightCorner(Canvas canvas, Rect frameRect) {
+  // =========================================================================
+  // --- Статические хелперы для вычисления экранных координат блоков листа ---
+  // =========================================================================
+
+  static Rect getViewportScreenRect({
+    required DrawingSheet sheet,
+    required Rect paperRect,
+    required double sheetZoom,
+  }) {
+    final vp = sheet.viewport;
+    return Rect.fromLTWH(
+      paperRect.left + (vp.xMm * sheetZoom),
+      paperRect.top + (vp.yMm * sheetZoom),
+      vp.widthMm * sheetZoom,
+      vp.heightMm * sheetZoom,
+    );
+  }
+
+  static Rect getStampScreenRect({
+    required Rect frameRect,
+    required double sheetZoom,
+  }) {
+    final stampW = 185.0 * sheetZoom;
+    final stampH = 55.0 * sheetZoom;
+    return Rect.fromLTWH(
+      frameRect.right - stampW,
+      frameRect.bottom - stampH,
+      stampW,
+      stampH,
+    );
+  }
+
+  static Rect getActAttachmentScreenRect({
+    required DrawingSheet sheet,
+    required Rect paperRect,
+    required Rect frameRect,
+    required double sheetZoom,
+  }) {
+    final tr = sheet.titleBlockData.topRightCorner;
+    final wMm = tr.widthMm;
+    final hMm = tr.heightMm;
+
+    if (tr.xMm != null && tr.yMm != null) {
+      return Rect.fromLTWH(
+        paperRect.left + (tr.xMm! * sheetZoom),
+        paperRect.top + (tr.yMm! * sheetZoom),
+        wMm * sheetZoom,
+        hMm * sheetZoom,
+      );
+    }
+    return Rect.fromLTWH(
+      frameRect.right - (wMm * sheetZoom),
+      frameRect.top,
+      wMm * sheetZoom,
+      hMm * sheetZoom,
+    );
+  }
+
+  static Rect getTechnicalRequirementsScreenRect({
+    required DrawingSheet sheet,
+    required Rect paperRect,
+    required Rect frameRect,
+    required double sheetZoom,
+  }) {
+    final tt = sheet.technicalRequirements;
+    final wMm = tt?.widthMm ?? 185.0;
+    final hMm = tt?.heightMm ?? 55.0;
+
+    if (tt != null) {
+      return Rect.fromLTWH(
+        paperRect.left + (tt.xMm * sheetZoom),
+        paperRect.top + (tt.yMm * sheetZoom),
+        wMm * sheetZoom,
+        hMm * sheetZoom,
+      );
+    }
+    final stampH = 55.0 * sheetZoom;
+    final ttHeight = hMm * sheetZoom;
+    return Rect.fromLTWH(
+      frameRect.right - (wMm * sheetZoom),
+      frameRect.bottom - stampH - ttHeight - (4.0 * sheetZoom),
+      wMm * sheetZoom,
+      ttHeight,
+    );
+  }
+
+  static Rect getLegendScreenRect({
+    required DrawingSheet sheet,
+    required Rect paperRect,
+    required Rect frameRect,
+    required double sheetZoom,
+  }) {
+    final leg = sheet.legend ?? DrawingLegend.createDefault();
+    return Rect.fromLTWH(
+      paperRect.left + (leg.xMm * sheetZoom),
+      paperRect.top + (leg.yMm * sheetZoom),
+      leg.widthMm * sheetZoom,
+      leg.heightMm * sheetZoom,
+    );
+  }
+
+  void _drawTopRightCorner(Canvas canvas, Rect frameRect, Rect paperRect) {
     final tr = sheet.titleBlockData.topRightCorner;
     final text = tr.formattedText;
-    if (text.isEmpty) return;
+    if (text.isEmpty || tr.mode == TopRightCornerMode.none) return;
 
-    final lines = text.split('\n');
-    final lineH = 3.6 * sheetZoom;
-    final boxH = (lines.length * lineH) + (4.0 * sheetZoom);
-    final maxLen = lines.fold<int>(0, (prev, line) => math.max(prev, line.length));
-    final boxW = math.max(60.0 * sheetZoom, (maxLen * 2.2 * sheetZoom) + (10.0 * sheetZoom));
-
-    final boxRect = Rect.fromLTWH(
-      frameRect.right - boxW,
-      frameRect.top,
-      boxW,
-      boxH,
+    final boxRect = getActAttachmentScreenRect(
+      sheet: sheet,
+      paperRect: paperRect,
+      frameRect: frameRect,
+      sheetZoom: sheetZoom,
     );
 
     // Белая подложка
     canvas.drawRect(boxRect, Paint()..color = Colors.white);
 
-    // Рамка по контуру
-    final borderPaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(0.5, styleConfig.thinLineWidthMm * sheetZoom);
-    canvas.drawRect(boxRect, borderPaint);
+    // Рамка по контуру (если включена)
+    if (tr.hasBorder) {
+      final borderPaint = Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.5, styleConfig.thinLineWidthMm * sheetZoom);
+      canvas.drawRect(boxRect, borderPaint);
+    }
 
-    double curY = boxRect.top + (2.0 * sheetZoom);
+    final lines = text.split('\n');
+    final lineH = 3.6 * sheetZoom;
+    double curY = boxRect.top + math.max(2.0 * sheetZoom, (boxRect.height - (lines.length * lineH)) / 2.0);
     for (final line in lines) {
       _drawCenteredText(canvas, line, Rect.fromLTWH(boxRect.left, curY, boxRect.width, lineH), 2.2 * sheetZoom);
       curY += lineH;
     }
   }
 
-  void _drawTechnicalRequirements(Canvas canvas, Rect frameRect) {
-    final tt = sheet.technicalRequirements!;
-    final stampW = 185.0 * sheetZoom;
-    final stampH = 55.0 * sheetZoom;
-    final ttBottom = frameRect.bottom - stampH - (5.0 * sheetZoom);
+  void _drawTechnicalRequirements(Canvas canvas, Rect frameRect, Rect paperRect) {
+    final tt = sheet.technicalRequirements;
+    if (tt == null || tt.text.isEmpty) return;
 
-    final lines = tt.text.split('\n');
-    final startY = ttBottom - (lines.length * 4.2 * sheetZoom) - (6.0 * sheetZoom);
-
-    // Непрозрачная белая подложка под ТТ
-    final bgRect = Rect.fromLTRB(
-      frameRect.right - stampW,
-      startY - (2.0 * sheetZoom),
-      frameRect.right,
-      ttBottom,
+    final rect = getTechnicalRequirementsScreenRect(
+      sheet: sheet,
+      paperRect: paperRect,
+      frameRect: frameRect,
+      sheetZoom: sheetZoom,
     );
-    canvas.drawRect(bgRect, Paint()..color = Colors.white);
 
+    // 1. Белая подложка
+    canvas.drawRect(rect, Paint()..color = Colors.white);
+
+    // 2. Рамка (если включена)
+    if (tt.hasBorder) {
+      final borderPaint = Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.6, styleConfig.thinLineWidthMm * sheetZoom);
+      canvas.drawRect(rect, borderPaint);
+    }
+
+    // 3. Заголовок
+    final title = tt.title.isNotEmpty ? tt.title : 'Технические требования:';
     _drawText(
       canvas,
-      'Технические требования:',
-      Offset(frameRect.right - stampW + (2.0 * sheetZoom), startY),
+      title,
+      Offset(rect.left + (4.0 * sheetZoom), rect.top + (3.0 * sheetZoom)),
       2.8 * sheetZoom,
       isBold: true,
     );
 
-    double y = startY + (4.5 * sheetZoom);
+    // 4. Текст строк
+    final lines = tt.text.split('\n');
+    double y = rect.top + (7.5 * sheetZoom);
+    final lineStep = 4.0 * sheetZoom;
     for (final line in lines) {
+      if (y + lineStep > rect.bottom + 2.0) break;
       _drawText(
         canvas,
         line,
-        Offset(frameRect.right - stampW + (2.0 * sheetZoom), y),
+        Offset(rect.left + (4.0 * sheetZoom), y),
         2.5 * sheetZoom,
       );
-      y += 3.8 * sheetZoom;
+      y += lineStep;
     }
+  }
+
+  void _drawLegend(Canvas canvas, Rect frameRect, Rect paperRect) {
+    final leg = sheet.legend;
+    if (leg == null || !leg.isVisible) return;
+
+    final rect = getLegendScreenRect(
+      sheet: sheet,
+      paperRect: paperRect,
+      frameRect: frameRect,
+      sheetZoom: sheetZoom,
+    );
+
+    // 1. Белая подложка
+    canvas.drawRect(rect, Paint()..color = Colors.white);
+
+    // 2. Рамка (если включена)
+    if (leg.hasBorder) {
+      final borderPaint = Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.6, styleConfig.thinLineWidthMm * sheetZoom);
+      canvas.drawRect(rect, borderPaint);
+    }
+
+    // 3. Заголовок
+    final title = leg.title.isNotEmpty ? leg.title : 'Условные обозначения:';
+    _drawText(
+      canvas,
+      title,
+      Offset(rect.left + 4.0 * sheetZoom, rect.top + 3.0 * sheetZoom),
+      3.0 * sheetZoom,
+      isBold: true,
+    );
+
+    // 4. Элементы легенды
+    double curY = rect.top + (9.0 * sheetZoom);
+    final rowH = (rect.height - (10.0 * sheetZoom)) / math.max(1, leg.items.length);
+    final itemH = math.max(5.0 * sheetZoom, rowH);
+
+    for (final item in leg.items) {
+      if (curY + itemH > rect.bottom + 2.0) break;
+      _drawLegendItem(
+        canvas,
+        item,
+        Rect.fromLTWH(rect.left + 4.0 * sheetZoom, curY, rect.width - 8.0 * sheetZoom, itemH),
+      );
+      curY += itemH;
+    }
+  }
+
+  void _drawLegendItem(Canvas canvas, LegendItem item, Rect rowRect) {
+    final iconW = 26.0 * sheetZoom;
+    final iconRect = Rect.fromLTWH(rowRect.left, rowRect.top, iconW, rowRect.height);
+    final midY = iconRect.center.dy;
+
+    switch (item.type) {
+      case LegendItemType.dimension:
+        final p1 = Offset(iconRect.left + 2.0 * sheetZoom, midY);
+        final p2 = Offset(iconRect.right - 2.0 * sheetZoom, midY);
+        final linePaint = Paint()
+          ..color = const Color(0xFF37474F)
+          ..strokeWidth = math.max(0.6, styleConfig.thinLineWidthMm * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(p1, p2, linePaint);
+        final tickLen = 2.5 * sheetZoom;
+        canvas.drawLine(p1.translate(-tickLen, tickLen), p1.translate(tickLen, -tickLen), linePaint);
+        canvas.drawLine(p2.translate(-tickLen, tickLen), p2.translate(tickLen, -tickLen), linePaint);
+        _drawCenteredText(canvas, '1000', Rect.fromLTWH(iconRect.left, midY - 4.5 * sheetZoom, iconW, 4.0 * sheetZoom), 1.8 * sheetZoom);
+        _drawCenteredText(canvas, '1005', Rect.fromLTWH(iconRect.left, midY + 1.0 * sheetZoom, iconW, 4.0 * sheetZoom), 1.8 * sheetZoom);
+        break;
+
+      case LegendItemType.elevation:
+        final flagH = 4.0 * sheetZoom;
+        final flagW = 3.0 * sheetZoom;
+        final tip = Offset(iconRect.left + 5.0 * sheetZoom, midY + 2.0 * sheetZoom);
+        final flagBaseY = tip.dy - flagH;
+        final flagPath = Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo(tip.dx - flagW, flagBaseY)
+          ..lineTo(tip.dx + flagW, flagBaseY)
+          ..close();
+        final markPaint = Paint()
+          ..color = const Color(0xFF1976D2)
+          ..strokeWidth = math.max(0.6, styleConfig.thinLineWidthMm * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        canvas.drawPath(flagPath, markPaint);
+        canvas.drawLine(Offset(tip.dx, flagBaseY), Offset(tip.dx, tip.dy - 6.0 * sheetZoom), markPaint);
+        canvas.drawLine(Offset(tip.dx, tip.dy - 6.0 * sheetZoom), Offset(iconRect.right - 2.0 * sheetZoom, tip.dy - 6.0 * sheetZoom), markPaint);
+        _drawText(canvas, '+2.450', Offset(tip.dx + 2.0 * sheetZoom, tip.dy - 10.0 * sheetZoom), 1.8 * sheetZoom, color: const Color(0xFF1976D2));
+        break;
+
+      case LegendItemType.pipeSystem:
+        final p1 = Offset(iconRect.left + 2.0 * sheetZoom, midY);
+        final p2 = Offset(iconRect.right - 2.0 * sheetZoom, midY);
+        final pSysId = item.systemId ?? item.systemCode;
+        final pipeColor = pSysId != null && network.systems.containsKey(pSysId)
+            ? Color(network.systems[pSysId]!.colorValue)
+            : const Color(0xFF1976D2);
+        final pipePaint = Paint()
+          ..color = pipeColor
+          ..strokeWidth = math.max(1.2, styleConfig.pipeLineWidthMm * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(p1, p2, pipePaint);
+        break;
+
+      case LegendItemType.weldJoint:
+        final p1 = Offset(iconRect.left + 2.0 * sheetZoom, midY);
+        final p2 = Offset(iconRect.right - 2.0 * sheetZoom, midY);
+        final pipePaint = Paint()
+          ..color = const Color(0xFF455A64)
+          ..strokeWidth = math.max(1.0, styleConfig.pipeLineWidthMm * 0.7 * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(p1, p2, pipePaint);
+        final dotPaint = Paint()
+          ..color = const Color(0xFFE53935)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(Offset(iconRect.center.dx, midY), 2.2 * sheetZoom, dotPaint);
+        break;
+
+      case LegendItemType.valve:
+        final vMid = iconRect.center;
+        final vPaint = Paint()
+          ..color = const Color(0xFF1976D2)
+          ..strokeWidth = math.max(0.6, styleConfig.thinLineWidthMm * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        final vPath = Path()
+          ..moveTo(vMid.dx - 6.0 * sheetZoom, vMid.dy - 3.0 * sheetZoom)
+          ..lineTo(vMid.dx, vMid.dy)
+          ..lineTo(vMid.dx - 6.0 * sheetZoom, vMid.dy + 3.0 * sheetZoom)
+          ..close()
+          ..moveTo(vMid.dx + 6.0 * sheetZoom, vMid.dy - 3.0 * sheetZoom)
+          ..lineTo(vMid.dx, vMid.dy)
+          ..lineTo(vMid.dx + 6.0 * sheetZoom, vMid.dy + 3.0 * sheetZoom)
+          ..close();
+        canvas.drawPath(vPath, vPaint);
+        break;
+
+      case LegendItemType.fitting:
+        final fMid = iconRect.center;
+        final fPaint = Paint()
+          ..color = const Color(0xFF5E35B1)
+          ..strokeWidth = math.max(1.0, styleConfig.pipeLineWidthMm * 0.8 * sheetZoom)
+          ..style = PaintingStyle.stroke;
+        final fPath = Path()
+          ..moveTo(fMid.dx - 5.0 * sheetZoom, fMid.dy + 3.0 * sheetZoom)
+          ..lineTo(fMid.dx, fMid.dy)
+          ..lineTo(fMid.dx + 5.0 * sheetZoom, fMid.dy - 3.0 * sheetZoom);
+        canvas.drawPath(fPath, fPaint);
+        break;
+
+      case LegendItemType.custom:
+        final ptPaint = Paint()..color = Colors.black;
+        canvas.drawCircle(Offset(iconRect.center.dx, midY), 2.0 * sheetZoom, ptPaint);
+        break;
+    }
+
+    final textX = rowRect.left + iconW + 4.0 * sheetZoom;
+    final textRect = Rect.fromLTRB(textX, rowRect.top, rowRect.right, rowRect.bottom);
+    _drawMultilineText(
+      canvas,
+      item.label,
+      textRect,
+      2.4 * sheetZoom,
+    );
   }
 
   void _drawTitleBlock(Canvas canvas, Rect frameRect) {
@@ -211,7 +493,7 @@ class SheetCanvasPainter extends CustomPainter {
       stampH,
     );
 
-    // Непрозрачная белая подложка штампа (чтобы линии модели не просвечивали)
+    // Непрозрачная белая подложка штампа
     final bgPaint = Paint()..color = Colors.white;
     canvas.drawRect(stampRect, bgPaint);
 
@@ -232,10 +514,17 @@ class SheetCanvasPainter extends CustomPainter {
     final xApprovalsEnd = stampRect.left + (65.0 * sheetZoom);
     canvas.drawLine(Offset(xApprovalsEnd, stampRect.top), Offset(xApprovalsEnd, stampRect.bottom), borderPaint);
 
-    // --- ЛЕВЫЙ БЛОК (0..65 мм) ---
-    // 1. Верхняя строка: Таблица регистрации изменений (Изм. | Кол.уч | Лист | № док. | Подп. | Дата)
-    final yRevHeader = stampRect.top + (5.0 * sheetZoom);
-    canvas.drawLine(Offset(stampRect.left, yRevHeader), Offset(xApprovalsEnd, yRevHeader), borderPaint);
+    // --- ЛЕВЫЙ БЛОК (0..65 мм, высота 55 мм = 11 строк по 5 мм) ---
+    // Строки 1, 2, 3 (y: 0..15 мм): 3 строки для регистрации изменений (по 5 мм)
+    for (int i = 1; i <= 3; i++) {
+      final y = stampRect.top + (i * 5.0 * sheetZoom);
+      canvas.drawLine(Offset(stampRect.left, y), Offset(xApprovalsEnd, y), i == 3 ? borderPaint : gridPaint);
+    }
+
+    // Строка 4 (y: 15..20 мм, h = 5 мм): Шапка таблицы изменений
+    final yRevHeaderTop = stampRect.top + (15.0 * sheetZoom);
+    final yRevHeaderBottom = stampRect.top + (20.0 * sheetZoom);
+    canvas.drawLine(Offset(stampRect.left, yRevHeaderBottom), Offset(xApprovalsEnd, yRevHeaderBottom), borderPaint);
 
     final xRevIzm = stampRect.left + (10.0 * sheetZoom);
     final xRevKol = stampRect.left + (20.0 * sheetZoom);
@@ -243,30 +532,30 @@ class SheetCanvasPainter extends CustomPainter {
     final xRevDoc = stampRect.left + (45.0 * sheetZoom);
     final xRevSign = stampRect.left + (55.0 * sheetZoom);
 
-    canvas.drawLine(Offset(xRevIzm, stampRect.top), Offset(xRevIzm, yRevHeader), gridPaint);
-    canvas.drawLine(Offset(xRevKol, stampRect.top), Offset(xRevKol, yRevHeader), gridPaint);
-    canvas.drawLine(Offset(xRevList, stampRect.top), Offset(xRevList, yRevHeader), gridPaint);
-    canvas.drawLine(Offset(xRevDoc, stampRect.top), Offset(xRevDoc, yRevHeader), gridPaint);
-    canvas.drawLine(Offset(xRevSign, stampRect.top), Offset(xRevSign, yRevHeader), gridPaint);
+    canvas.drawLine(Offset(xRevIzm, stampRect.top), Offset(xRevIzm, yRevHeaderBottom), gridPaint);
+    canvas.drawLine(Offset(xRevKol, stampRect.top), Offset(xRevKol, yRevHeaderBottom), gridPaint);
+    canvas.drawLine(Offset(xRevList, stampRect.top), Offset(xRevList, yRevHeaderBottom), gridPaint);
+    canvas.drawLine(Offset(xRevDoc, stampRect.top), Offset(xRevDoc, yRevHeaderBottom), gridPaint);
+    canvas.drawLine(Offset(xRevSign, stampRect.top), Offset(xRevSign, yRevHeaderBottom), gridPaint);
 
-    _drawCenteredText(canvas, 'Изм.', Rect.fromLTRB(stampRect.left, stampRect.top, xRevIzm, yRevHeader), 1.8 * sheetZoom);
-    _drawCenteredText(canvas, 'Кол.уч', Rect.fromLTRB(xRevIzm, stampRect.top, xRevKol, yRevHeader), 1.8 * sheetZoom);
-    _drawCenteredText(canvas, 'Лист', Rect.fromLTRB(xRevKol, stampRect.top, xRevList, yRevHeader), 1.8 * sheetZoom);
-    _drawCenteredText(canvas, '№ док.', Rect.fromLTRB(xRevList, stampRect.top, xRevDoc, yRevHeader), 1.8 * sheetZoom);
-    _drawCenteredText(canvas, 'Подп.', Rect.fromLTRB(xRevDoc, stampRect.top, xRevSign, yRevHeader), 1.8 * sheetZoom);
-    _drawCenteredText(canvas, 'Дата', Rect.fromLTRB(xRevSign, stampRect.top, xApprovalsEnd, yRevHeader), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, 'Изм.', Rect.fromLTRB(stampRect.left, yRevHeaderTop, xRevIzm, yRevHeaderBottom), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, 'Кол.уч', Rect.fromLTRB(xRevIzm, yRevHeaderTop, xRevKol, yRevHeaderBottom), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, 'Лист', Rect.fromLTRB(xRevKol, yRevHeaderTop, xRevList, yRevHeaderBottom), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, '№ док.', Rect.fromLTRB(xRevList, yRevHeaderTop, xRevDoc, yRevHeaderBottom), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, 'Подп.', Rect.fromLTRB(xRevDoc, yRevHeaderTop, xRevSign, yRevHeaderBottom), 1.8 * sheetZoom);
+    _drawCenteredText(canvas, 'Дата', Rect.fromLTRB(xRevSign, yRevHeaderTop, xApprovalsEnd, yRevHeaderBottom), 1.8 * sheetZoom);
 
-    // 2. Строки согласований (от yRevHeader до низа штампа, 10 строк по 5 мм)
+    // Строки 5..11 (y: 20..55 мм, 7 строк по 5 мм): согласования
     final xRole = stampRect.left + (17.0 * sheetZoom);
     final xName = stampRect.left + (40.0 * sheetZoom);
     final xSign = stampRect.left + (55.0 * sheetZoom);
 
-    canvas.drawLine(Offset(xRole, yRevHeader), Offset(xRole, stampRect.bottom), gridPaint);
-    canvas.drawLine(Offset(xName, yRevHeader), Offset(xName, stampRect.bottom), gridPaint);
-    canvas.drawLine(Offset(xSign, yRevHeader), Offset(xSign, stampRect.bottom), gridPaint);
+    canvas.drawLine(Offset(xRole, yRevHeaderBottom), Offset(xRole, stampRect.bottom), gridPaint);
+    canvas.drawLine(Offset(xName, yRevHeaderBottom), Offset(xName, stampRect.bottom), gridPaint);
+    canvas.drawLine(Offset(xSign, yRevHeaderBottom), Offset(xSign, stampRect.bottom), gridPaint);
 
-    for (int i = 1; i <= 9; i++) {
-      final y = yRevHeader + (i * 5.0 * sheetZoom);
+    for (int i = 1; i <= 6; i++) {
+      final y = yRevHeaderBottom + (i * 5.0 * sheetZoom);
       canvas.drawLine(Offset(stampRect.left, y), Offset(xApprovalsEnd, y), gridPaint);
     }
 
@@ -282,9 +571,9 @@ class SheetCanvasPainter extends CustomPainter {
             TitleBlockApproval(role: 'ГИП', name: ''),
           ];
 
-    for (int i = 0; i < approvals.length && i < 10; i++) {
+    for (int i = 0; i < approvals.length && i < 7; i++) {
       final app = approvals[i];
-      final y = yRevHeader + (i * 5.0 * sheetZoom) + (1.2 * sheetZoom);
+      final y = yRevHeaderBottom + (i * 5.0 * sheetZoom) + (1.2 * sheetZoom);
       if (app.role.isNotEmpty) {
         _drawText(canvas, app.role, Offset(stampRect.left + 1.5 * sheetZoom, y), 2.2 * sheetZoom);
       }
@@ -297,8 +586,7 @@ class SheetCanvasPainter extends CustomPainter {
     }
 
     // --- ПРАВЫЙ БЛОК (65..185 мм, ширина 120 мм) ---
-    // Строка 1: Графа 4 (Шифр проекта / Обозначение документа, напр. 09/2025-НВК)
-    // Высота 15 мм, на ВСЮ ширину 120 мм от 65 до 185 мм
+    // Строка 1: Графа 4 (Шифр проекта, y: 0..15 мм)
     final yRow1 = stampRect.top + (15.0 * sheetZoom);
     canvas.drawLine(Offset(xApprovalsEnd, yRow1), Offset(stampRect.right, yRow1), borderPaint);
 
@@ -312,8 +600,7 @@ class SheetCanvasPainter extends CustomPainter {
       );
     }
 
-    // Строка 2: Графа 1 (Наименование объекта строительства)
-    // Высота 15 мм, на ВСЮ ширину 120 мм от 65 до 185 мм (y: 15..30 мм)
+    // Строка 2: Графа 1 (Наименование объекта, y: 15..30 мм)
     final yRow2 = stampRect.top + (30.0 * sheetZoom);
     canvas.drawLine(Offset(xApprovalsEnd, yRow2), Offset(stampRect.right, yRow2), borderPaint);
 
@@ -326,16 +613,16 @@ class SheetCanvasPainter extends CustomPainter {
       );
     }
 
-    // Разделитель центральной части (70 мм) и правого столбца (50 мм):
-    // От yRow2 (30 мм) до низа штампа (55 мм)
+    // Разделитель между левой (70 мм) и правой (50 мм) частями:
+    // от yRow2 (30 мм) до низа штампа (55 мм)
     final xCenterEnd = stampRect.left + (135.0 * sheetZoom);
     canvas.drawLine(Offset(xCenterEnd, yRow2), Offset(xCenterEnd, stampRect.bottom), borderPaint);
 
-    // Горизонтальный разделитель строк 3 и 4 при Y = 42.5 мм
-    final yRow3 = stampRect.top + (42.5 * sheetZoom);
+    // Горизонтальный разделитель строк 3 и 4 при Y = 40.0 мм (ГОСТ Форма 3)
+    final yRow3 = stampRect.top + (40.0 * sheetZoom);
     canvas.drawLine(Offset(xApprovalsEnd, yRow3), Offset(stampRect.right, yRow3), borderPaint);
 
-    // Строка 3 Слева: Графа 2 (Наименование здания / сооружения / этап)
+    // Строка 3 Слева: Графа 2 (Наименование здания / сооружения / этап, y: 30..40 мм)
     if (tb.buildingName.isNotEmpty) {
       _drawMultilineText(
         canvas,
@@ -345,8 +632,7 @@ class SheetCanvasPainter extends CustomPainter {
       );
     }
 
-    // Строка 3 Справа: Стадия | Лист | Листов (50 мм)
-    // Шапка 5 мм
+    // Строка 3 Справа: Стадия | Лист | Листов (y: 30..40 мм)
     final yStageHeader = yRow2 + (5.0 * sheetZoom);
     canvas.drawLine(Offset(xCenterEnd, yStageHeader), Offset(stampRect.right, yStageHeader), gridPaint);
 
@@ -363,7 +649,7 @@ class SheetCanvasPainter extends CustomPainter {
     _drawCenteredText(canvas, tb.sheetNumber.toString(), Rect.fromLTRB(xStage, yStageHeader, xSheet, yRow3), 3.2 * sheetZoom, isBold: true);
     _drawCenteredText(canvas, tb.totalSheets.toString(), Rect.fromLTRB(xSheet, yStageHeader, stampRect.right, yRow3), 3.2 * sheetZoom, isBold: true);
 
-    // Строка 4 Слева: Графа 3 (Наименование схемы / чертежа)
+    // Строка 4 Слева: Графа 3 (Наименование схемы / чертежа, y: 40..55 мм)
     if (tb.drawingTitle.isNotEmpty) {
       _drawMultilineText(
         canvas,
@@ -374,7 +660,7 @@ class SheetCanvasPainter extends CustomPainter {
       );
     }
 
-    // Строка 4 Справа: Графа 5 (Организация, напр. ООО "СтарКом")
+    // Строка 4 Справа: Графа 5 (Организация, y: 40..55 мм)
     if (tb.organization.isNotEmpty) {
       _drawCenteredText(
         canvas,
@@ -386,33 +672,48 @@ class SheetCanvasPainter extends CustomPainter {
     }
   }
 
-  void _drawViewportGrips(Canvas canvas, Rect paperRect) {
-    if (!isViewportSelected && activeGrip == null) return;
+  void _drawActiveElementGrips(Canvas canvas, Rect paperRect, Rect frameRect) {
+    Rect? targetRect;
+    String? blockTitle;
 
-    final vp = sheet.viewport;
-    final vpRectScreen = Rect.fromLTWH(
-      paperRect.left + (vp.xMm * sheetZoom),
-      paperRect.top + (vp.yMm * sheetZoom),
-      vp.widthMm * sheetZoom,
-      vp.heightMm * sheetZoom,
-    );
+    if (isViewportSelected || selectedSheetBlock == 'viewport') {
+      targetRect = getViewportScreenRect(sheet: sheet, paperRect: paperRect, sheetZoom: sheetZoom);
+      blockTitle = 'ВЭ: ${sheet.viewport.widthMm.round()} × ${sheet.viewport.heightMm.round()} мм';
+    } else if (selectedSheetBlock == 'notes' && sheet.technicalRequirements != null) {
+      targetRect = getTechnicalRequirementsScreenRect(sheet: sheet, paperRect: paperRect, frameRect: frameRect, sheetZoom: sheetZoom);
+      final tt = sheet.technicalRequirements!;
+      final w = tt.widthMm;
+      final h = tt.heightMm;
+      blockTitle = 'ТТ: ${w.round()} × ${h.round()} мм';
+    } else if (selectedSheetBlock == 'act') {
+      targetRect = getActAttachmentScreenRect(sheet: sheet, paperRect: paperRect, frameRect: frameRect, sheetZoom: sheetZoom);
+      final tr = sheet.titleBlockData.topRightCorner;
+      final w = tr.widthMm;
+      final h = tr.heightMm;
+      blockTitle = 'Акт: ${w.round()} × ${h.round()} мм';
+    } else if (selectedSheetBlock == 'legend' && sheet.legend != null && sheet.legend!.isVisible) {
+      targetRect = getLegendScreenRect(sheet: sheet, paperRect: paperRect, frameRect: frameRect, sheetZoom: sheetZoom);
+      final leg = sheet.legend!;
+      blockTitle = 'Обозначения: ${leg.widthMm.round()} × ${leg.heightMm.round()} мм';
+    }
 
-    // Тонкая синяя пунктирная/сплошная рамка вокруг выбранного ВЭ в пространстве листа
+    if (targetRect == null) return;
+
     final selBorderPaint = Paint()
-      ..color = const Color(0xFF1976D2).withValues(alpha: 0.8)
+      ..color = const Color(0xFF1976D2).withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
-    canvas.drawRect(vpRectScreen, selBorderPaint);
+    canvas.drawRect(targetRect, selBorderPaint);
 
     final grips = {
-      'nw': vpRectScreen.topLeft,
-      'n': Offset(vpRectScreen.center.dx, vpRectScreen.top),
-      'ne': vpRectScreen.topRight,
-      'e': Offset(vpRectScreen.right, vpRectScreen.center.dy),
-      'se': vpRectScreen.bottomRight,
-      's': Offset(vpRectScreen.center.dx, vpRectScreen.bottom),
-      'sw': vpRectScreen.bottomLeft,
-      'w': Offset(vpRectScreen.left, vpRectScreen.center.dy),
+      'nw': targetRect.topLeft,
+      'n': Offset(targetRect.center.dx, targetRect.top),
+      'ne': targetRect.topRight,
+      'e': Offset(targetRect.right, targetRect.center.dy),
+      'se': targetRect.bottomRight,
+      's': Offset(targetRect.center.dx, targetRect.bottom),
+      'sw': targetRect.bottomLeft,
+      'w': Offset(targetRect.left, targetRect.center.dy),
     };
 
     const gripSize = 8.0;
@@ -434,10 +735,8 @@ class SheetCanvasPainter extends CustomPainter {
       canvas.drawRect(gripRect, strokePaint);
     }
 
-    // Если активен drag ручки или выделен ВЭ — бейдж с физическими размерами
-    if (activeGrip != null) {
-      final dimBadge = 'ВЭ: ${vp.widthMm.round()} × ${vp.heightMm.round()} мм';
-      _drawBadge(canvas, dimBadge, vpRectScreen.topCenter.translate(-60, -26));
+    if (activeGrip != null && blockTitle != null) {
+      _drawBadge(canvas, blockTitle, targetRect.topCenter.translate(-60, -26));
     }
   }
 
@@ -501,7 +800,12 @@ class SheetCanvasPainter extends CustomPainter {
   }
 
   void _paintNetworkInViewport(Canvas canvas, SheetViewport vp) {
-    final projector = AxonometryProjector(projectionType: projectionType);
+    final vpProjector = ViewportTransformService.createViewportProjector(
+      viewport: vp,
+      sheetPanPx: sheetPan,
+      sheetZoom: sheetZoom,
+      projectionType: projectionType,
+    );
 
     for (final seg in network.segments.values) {
       final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
@@ -513,8 +817,8 @@ class SheetCanvasPainter extends CustomPainter {
       final n2 = network.nodes[seg.endNodeId];
       if (n1 == null || n2 == null) continue;
 
-      final raw1 = projector.projectRaw(n1.x, n1.y, n1.z);
-      final raw2 = projector.projectRaw(n2.x, n2.y, n2.z);
+      final raw1 = vpProjector.projectRaw(n1.x, n1.y, n1.z);
+      final raw2 = vpProjector.projectRaw(n2.x, n2.y, n2.z);
 
       final p1SheetMm = ViewportTransformService.model2dToSheetMm(raw1, vp);
       final p2SheetMm = ViewportTransformService.model2dToSheetMm(raw2, vp);
@@ -558,7 +862,7 @@ class SheetCanvasPainter extends CustomPainter {
       if (n1 == null || n2 == null) continue;
 
       final pos = joint.calculatePosition(n1, n2);
-      final raw = projector.projectRaw(pos.x, pos.y, pos.z);
+      final raw = vpProjector.projectRaw(pos.x, pos.y, pos.z);
       final pSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
       final pScreen = ViewportTransformService.sheetMmToScreen(pSheetMm, sheetPan, sheetZoom);
 
@@ -568,6 +872,23 @@ class SheetCanvasPainter extends CustomPainter {
         ..strokeWidth = math.max(1.0, styleConfig.thinLineWidthMm * sheetZoom);
       canvas.drawCircle(pScreen, 2.5 * sheetZoom, weldPaint);
     }
+
+    // Отрисовка умных выносок (Callout) и отметок уровня на видовом экране
+    CalloutPainter.paint(
+      canvas,
+      vpProjector,
+      network,
+      templates: null,
+      annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
+    );
+
+    // Отрисовка линейных размеров по ГОСТ 2.307
+    DimensionPainter.paint(
+      canvas,
+      vpProjector,
+      network,
+      annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
+    );
   }
 
   void _drawText(
@@ -677,7 +998,9 @@ class SheetCanvasPainter extends CustomPainter {
         oldDelegate.sheetPan != sheetPan ||
         oldDelegate.isViewportFocused != isViewportFocused ||
         oldDelegate.isViewportSelected != isViewportSelected ||
+        oldDelegate.selectedSheetBlock != selectedSheetBlock ||
         oldDelegate.activeGrip != activeGrip ||
-        oldDelegate.projectionType != projectionType;
+        oldDelegate.projectionType != projectionType ||
+        oldDelegate.styleConfig != styleConfig;
   }
 }

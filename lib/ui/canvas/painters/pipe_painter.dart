@@ -6,6 +6,7 @@ import '../../../domain/enums/projection_type.dart';
 import '../../../domain/models/fitting.dart';
 import '../../../domain/models/node_3d.dart';
 import '../../../domain/models/pipe_segment.dart';
+import '../../../domain/models/pipe_spool.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/enums/valve_type.dart';
 import '../smart_callout.dart';
@@ -82,22 +83,21 @@ class PipePainter {
     // 2D СПДС / ГОСТ режим
     if (network.spools.isNotEmpty) {
       // Сортировка катушек по глубине (Painter's algorithm)
-      final sortedSpools = network.spools.values.toList()
-        ..sort((a, b) {
-          final startA = a.startPoint ?? network.nodes[network.segments[a.segmentId]?.startNodeId ?? ''];
-          final endA = a.endPoint ?? network.nodes[network.segments[a.segmentId]?.endNodeId ?? ''];
-          final depthA = (startA != null && endA != null)
-              ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
-              : 0.0;
-          final startB = b.startPoint ?? network.nodes[network.segments[b.segmentId]?.startNodeId ?? ''];
-          final endB = b.endPoint ?? network.nodes[network.segments[b.segmentId]?.endNodeId ?? ''];
-          final depthB = (startB != null && endB != null)
-              ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
-              : 0.0;
-          return depthB.compareTo(depthA);
-        });
+      // Оптимизация O(N): вычисляем глубину каждого элемента один раз перед сортировкой
+      final spoolEntries = <({PipeSpool spool, double depth})>[];
+      for (final spool in network.spools.values) {
+        final seg = network.segments[spool.segmentId];
+        final start = spool.startPoint ?? (seg != null ? network.nodes[seg.startNodeId] : null);
+        final end = spool.endPoint ?? (seg != null ? network.nodes[seg.endNodeId] : null);
+        final depth = (start != null && end != null)
+            ? projector.computeDepth((start.x + end.x) / 2, (start.y + end.y) / 2, (start.z + end.z) / 2)
+            : 0.0;
+        spoolEntries.add((spool: spool, depth: depth));
+      }
+      spoolEntries.sort((a, b) => b.depth.compareTo(a.depth));
 
-      for (final spool in sortedSpools) {
+      for (final entry in spoolEntries) {
+        final spool = entry.spool;
         final seg = network.segments[spool.segmentId];
         if (seg == null) continue;
         if (network.isButtJoint(seg.id)) continue;
@@ -187,22 +187,20 @@ class PipePainter {
       }
     } else {
       // Fallback на прямолинейные сегменты (до расчета катушек)
-      final sortedSegments = network.segments.values.toList()
-        ..sort((a, b) {
-          final startA = network.nodes[a.startNodeId];
-          final endA = network.nodes[a.endNodeId];
-          final depthA = (startA != null && endA != null)
-              ? projector.computeDepth((startA.x + endA.x) / 2, (startA.y + endA.y) / 2, (startA.z + endA.z) / 2)
-              : 0.0;
-          final startB = network.nodes[b.startNodeId];
-          final endB = network.nodes[b.endNodeId];
-          final depthB = (startB != null && endB != null)
-              ? projector.computeDepth((startB.x + endB.x) / 2, (startB.y + endB.y) / 2, (startB.z + endB.z) / 2)
-              : 0.0;
-          return depthB.compareTo(depthA);
-        });
+      // Оптимизация O(N): вычисляем глубину каждого сегмента один раз перед сортировкой
+      final segmentEntries = <({PipeSegment segment, double depth})>[];
+      for (final seg in network.segments.values) {
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        final depth = (start != null && end != null)
+            ? projector.computeDepth((start.x + end.x) / 2, (start.y + end.y) / 2, (start.z + end.z) / 2)
+            : 0.0;
+        segmentEntries.add((segment: seg, depth: depth));
+      }
+      segmentEntries.sort((a, b) => b.depth.compareTo(a.depth));
 
-      for (final seg in sortedSegments) {
+      for (final entry in segmentEntries) {
+        final seg = entry.segment;
         final start = network.nodes[seg.startNodeId];
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
