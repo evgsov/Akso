@@ -541,27 +541,21 @@ class PipePainter {
 
     double trimPx = 0.0;
 
+    if (network.isButtJoint(seg.id)) {
+      final d1 = network.getFittingDeduction(nodeId, seg.id);
+      final d2 = network.getFittingDeduction(otherNodeId, seg.id);
+      final sumD = d1 + d2;
+      final ratio = sumD > 0 ? (d1 / sumD).clamp(0.0, 1.0) : 0.5;
+      trimPx = screenDist * ratio;
+      return Offset(nodeScreen.dx + dirX * trimPx, nodeScreen.dy + dirY * trimPx);
+    }
+
     if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
       final t3d = calcElbowTangentLength(network, nodeId, fit);
-      if (network.isElbowToElbowSegment(seg.id)) {
-        final targetLen = network.getElbowToElbowTargetLength(seg.id) ?? (t3d * 2.0);
-        final otherT3d = network.getElbowTangentMm(otherNodeId);
-        if (dist3d <= targetLen + 1.0) {
-          // Стык встык: точка обрезки трубы находится строго в точке контакта отводов
-          final sumT = t3d + otherT3d;
-          final ratio = sumT > 0 ? (t3d / sumT).clamp(0.0, 1.0) : 0.5;
-          trimPx = screenDist * ratio;
-        } else {
-          // Сегмент длиннее стыка встык: честное плечо t3d
-          final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
-          trimPx = screenDist * frac3d;
-        }
-      } else {
-        // Обычный отвод: жесткое плечо t3d
-        final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
-        final physicalPx = screenDist * frac3d;
-        trimPx = math.min(screenDist * 0.95, physicalPx);
-      }
+      // Обычный отвод: жесткое плечо t3d
+      final frac3d = dist3d > 0 ? (t3d / dist3d) : 0.0;
+      final physicalPx = screenDist * frac3d;
+      trimPx = math.min(screenDist * 0.95, physicalPx);
     } else if (fit.fittingType == FittingType.tee) {
       if (fit.cutsMainPipe) {
         // Тройник врезан в разрыв трубы (ГОСТ 17376)

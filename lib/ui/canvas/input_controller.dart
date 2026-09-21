@@ -3479,7 +3479,7 @@ class PipingInputController extends ChangeNotifier {
     for (final spool in network.spools.values) {
       final seg = network.segments[spool.segmentId];
       if (seg == null) continue;
-      if (network.isElbowToElbowSegment(seg.id)) continue;
+      if (network.isButtJoint(seg.id)) continue;
 
       final start = spool.startPoint ?? network.nodes[seg.startNodeId];
       final end = spool.endPoint ?? network.nodes[seg.endNodeId];
@@ -3839,28 +3839,53 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Активный идентификатор сегмента (из выбранного сегмента либо из выбранной катушки)
+  String? get activeSegmentId {
+    if (selectedSegmentId != null) return selectedSegmentId;
+    if (selectedSpoolId != null) return network.spools[selectedSpoolId!]?.segmentId;
+    return null;
+  }
+
   /// Проверка, соединяет ли выбранный сегмент два отвода
   bool get isSelectedSegmentElbowToElbow {
-    if (selectedSegmentId == null) return false;
-    return network.isElbowToElbowSegment(selectedSegmentId!);
+    final segId = activeSegmentId;
+    if (segId == null) return false;
+    return network.isElbowToElbowSegment(segId);
   }
 
-  /// Проверка, соединены ли отводы выбранного сегмента встык
+  /// Проверка, соединяет ли выбранный сегмент два смежных фитинга/элемента
+  bool get isSelectedSegmentConnectingFittings {
+    final segId = activeSegmentId;
+    if (segId == null) return false;
+    return network.isConnectingFittingsSegment(segId);
+  }
+
+  /// Проверка, соединены ли элементы выбранного сегмента встык
   bool get isSelectedSegmentButtJoint {
-    if (selectedSegmentId == null) return false;
-    return network.isButtJoint(selectedSegmentId!);
+    final segId = activeSegmentId;
+    if (segId == null) return false;
+    return network.isButtJoint(segId);
   }
 
-  /// Рекомендуемая длина для стыковки встык (T1 + T2) для выбранного сегмента
+  /// Рекомендуемая длина для стыковки встык (D1 + D2 + L_арматуры) для выбранного сегмента
   double? get selectedSegmentButtJointLength {
-    if (selectedSegmentId == null) return null;
-    return network.getElbowToElbowTargetLength(selectedSegmentId!);
+    final segId = activeSegmentId;
+    if (segId == null) return null;
+    return network.getButtJointTargetLength(segId);
   }
 
-  /// Схлопнуть зазор между отводами выбранного сегмента встык в 1 клик
+  /// Название сопряжения элементов встык (например, "Отвод 90° – Тройник")
+  String? get selectedSegmentButtJointLabel {
+    final segId = activeSegmentId;
+    if (segId == null) return null;
+    return network.getButtJointLabel(segId);
+  }
+
+  /// Схлопнуть зазор между элементами выбранного сегмента встык в 1 клик
   void collapseSelectedSegmentToButtJoint() {
-    if (selectedSegmentId == null) return;
-    final changed = network.collapseElbowToElbow(selectedSegmentId!);
+    final segId = activeSegmentId;
+    if (segId == null) return;
+    final changed = network.collapseSegmentToButtJoint(segId);
     if (changed) {
       history.recordState(network);
       notifyListeners();

@@ -157,12 +157,9 @@ class SpoolCalculator {
             .toList()
           ..sort((a, b) => a.ratio.compareTo(b.ratio));
 
-        if (network.isElbowToElbowSegment(seg.id)) {
-          final targetLen = network.getElbowToElbowTargetLength(seg.id) ?? (startDeduction + endDeduction);
-          if (totalLen <= targetLen + 1.0) {
-            // Стык отвод-отвод встык: между отводами физической трубы нет!
-            continue;
-          }
+        if (network.isButtJoint(seg.id)) {
+          // Стык элементов встык: между элементами физической трубы (катушки) нет!
+          continue;
         }
 
         if (segWelds.isEmpty && segValves.isEmpty) {
@@ -281,6 +278,12 @@ class SpoolCalculator {
           : fit.dn * 1.0;
     }
 
+    if (fit.fittingType == FittingType.flange) {
+      if (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0) {
+        return fit.buildingLengthMm!;
+      }
+      return fit.effectiveBuildingLengthMm;
+    }
     if (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0) {
       return fit.buildingLengthMm! / 2.0;
     }

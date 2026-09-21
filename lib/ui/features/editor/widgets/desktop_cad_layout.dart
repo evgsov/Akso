@@ -2127,6 +2127,29 @@ class DesktopCadLayout extends StatelessWidget {
                         Text('${(weld.ratio * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
                       ],
                     ),
+                    if (controller.network.isButtJoint(weld.segmentId)) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.link, size: 14, color: Colors.blue.shade700),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Стык встык: ${controller.network.getButtJointLabel(weld.segmentId)}',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
@@ -3677,8 +3700,8 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
             ),
           ],
         ),
-        // Сопряжение отвод-отвод: статус или кнопка стягивания в 1 клик
-        if (widget.controller.network.isElbowToElbowSegment(widget.segmentId)) ...[
+        // Сопряжение элементов: статус или кнопка стягивания в 1 клик
+        if (widget.controller.network.isConnectingFittingsSegment(widget.segmentId)) ...[
           const SizedBox(height: 8),
           if (widget.controller.network.isButtJoint(widget.segmentId))
             Container(
@@ -3695,7 +3718,7 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Стык отвод-отвод (встык)',
+                      'Стык ${widget.controller.network.getButtJointLabel(widget.segmentId)} (встык)',
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade900),
                     ),
                   ),
@@ -3705,7 +3728,8 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
           else ...[
             Builder(
               builder: (context) {
-                final targetLen = widget.controller.network.getElbowToElbowTargetLength(widget.segmentId) ?? 0.0;
+                final targetLen = widget.controller.network.getButtJointTargetLength(widget.segmentId) ?? 0.0;
+                final label = widget.controller.network.getButtJointLabel(widget.segmentId);
                 return SizedBox(
                   width: double.infinity,
                   child: FilledButton.tonalIcon(
@@ -3716,7 +3740,7 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
                     ),
                     icon: const Icon(Icons.link, size: 16),
                     label: Text(
-                      '🔗 Стянуть встык (${targetLen.round()} мм)',
+                      '🔗 Стянуть встык [$label] (${targetLen.round()} мм)',
                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                     onPressed: () {
@@ -4473,6 +4497,62 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
             ),
           ],
         ),
+        // Сопряжение элементов: статус или кнопка стягивания в 1 клик
+        if (seg != null && widget.controller.network.isConnectingFittingsSegment(seg.id)) ...[
+          const SizedBox(height: 8),
+          if (widget.controller.network.isButtJoint(seg.id))
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.green.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Стык ${widget.controller.network.getButtJointLabel(seg.id)} (встык)',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            Builder(
+              builder: (context) {
+                final targetLen = widget.controller.network.getButtJointTargetLength(seg.id) ?? 0.0;
+                final label = widget.controller.network.getButtJointLabel(seg.id);
+                return SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.indigo.shade50,
+                      foregroundColor: Colors.indigo.shade800,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.link, size: 16),
+                    label: Text(
+                      '🔗 Стянуть встык [$label] (${targetLen.round()} мм)',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      widget.controller.collapseSelectedSegmentToButtJoint();
+                      final updatedSpool = widget.controller.network.spools[widget.spoolId];
+                      if (updatedSpool != null) {
+                        _lengthController.text = updatedSpool.cutLengthMm.round().toString();
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
         const SizedBox(height: 8),
 
         // Наименование / Маркировка

@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "lib/core/math/axonometry_projector.dart": {
-    "mtime": 1789464488.3559651,
-    "seen": 1789970656.7878487,
-    "ast_hash": "1a47b2cdd6faaed0d9632050c28a695f",
+    "mtime": 1789995114.8587294,
+    "seen": 1789995829.1413023,
+    "ast_hash": "88b2c5e93eec2bc6c438e654af9e899d",
     "semantic_hash": ""
   },
   "lib/data/dxf/dxf_writer.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789985421.3278987,
-    "seen": 1789986785.4980187,
-    "ast_hash": "bf2f4c05ac8a74aa23f72c1e002e462b",
+    "mtime": 1789995632.7933571,
+    "seen": 1789995829.1413844,
+    "ast_hash": "edea6f3525270708ed969fd6afb6d7f3",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789986769.5070333,
-    "seen": 1789986785.4984965,
-    "ast_hash": "bada21591430e26a049689e376db1361",
+    "mtime": 1789995812.866012,
+    "seen": 1789995829.1416712,
+    "ast_hash": "90e6d428d24af96ab6a9f231338633ac",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2253,6 +2253,12 @@
     "mtime": 1789984466.9497507,
     "seen": 1789986785.498527,
     "ast_hash": "36bc92202f567bb600a9d4ee9bebaac0",
+    "semantic_hash": ""
+  },
+  "test/node_pipe_connection_test.dart": {
+    "mtime": 1789995690.423183,
+    "seen": 1789995829.1415226,
+    "ast_hash": "1a6c477ba5e9f4f08b5696d890c5392b",
     "semantic_hash": ""
   }
 }
