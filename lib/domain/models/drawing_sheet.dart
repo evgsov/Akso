@@ -1,5 +1,6 @@
 import '../enums/sheet_format_type.dart';
 import '../enums/viewport_layout_preset.dart';
+import 'drawing_legend.dart';
 import 'sheet_format.dart';
 import 'title_block_data.dart';
 
@@ -160,18 +161,24 @@ class SheetTableItem {
       );
 }
 
-/// Блок технических требований (ТТ) над штампом
+/// Блок технических требований (ТТ) / примечаний над штампом
 class TechnicalRequirements {
   final String text;
   final double xMm;
   final double yMm;
   final double widthMm;
+  final double heightMm;
+  final bool hasBorder;
+  final String title;
 
   const TechnicalRequirements({
     required this.text,
     this.xMm = 230.0,
     this.yMm = 180.0,
     this.widthMm = 185.0,
+    this.heightMm = 55.0,
+    this.hasBorder = false,
+    this.title = 'Примечание:',
   });
 
   Map<String, dynamic> toJson() => {
@@ -179,6 +186,9 @@ class TechnicalRequirements {
         'xMm': xMm,
         'yMm': yMm,
         'widthMm': widthMm,
+        'heightMm': heightMm,
+        'hasBorder': hasBorder,
+        'title': title,
       };
 
   factory TechnicalRequirements.fromJson(Map<String, dynamic> json) => TechnicalRequirements(
@@ -186,6 +196,9 @@ class TechnicalRequirements {
         xMm: (json['xMm'] as num?)?.toDouble() ?? 230.0,
         yMm: (json['yMm'] as num?)?.toDouble() ?? 180.0,
         widthMm: (json['widthMm'] as num?)?.toDouble() ?? 185.0,
+        heightMm: (json['heightMm'] as num?)?.toDouble() ?? 55.0,
+        hasBorder: json['hasBorder'] as bool? ?? false,
+        title: json['title'] as String? ?? 'Примечание:',
       );
 
   TechnicalRequirements copyWith({
@@ -193,12 +206,18 @@ class TechnicalRequirements {
     double? xMm,
     double? yMm,
     double? widthMm,
+    double? heightMm,
+    bool? hasBorder,
+    String? title,
   }) {
     return TechnicalRequirements(
       text: text ?? this.text,
       xMm: xMm ?? this.xMm,
       yMm: yMm ?? this.yMm,
       widthMm: widthMm ?? this.widthMm,
+      heightMm: heightMm ?? this.heightMm,
+      hasBorder: hasBorder ?? this.hasBorder,
+      title: title ?? this.title,
     );
   }
 }
@@ -214,6 +233,7 @@ class DrawingSheet {
   final SheetViewport viewport;
   final List<SheetTableItem> tables;
   final TechnicalRequirements? technicalRequirements;
+  final DrawingLegend? legend;
 
   const DrawingSheet({
     required this.id,
@@ -225,6 +245,7 @@ class DrawingSheet {
     this.viewport = const SheetViewport(),
     this.tables = const [],
     this.technicalRequirements,
+    this.legend,
   });
 
   /// Расчет координат и габаритов видового экрана по выбранному пресету
@@ -324,6 +345,12 @@ class DrawingSheet {
         ViewportLayoutPreset.wideAboveStamp,
         visibleSystemIds: visibleSystemIds,
       ),
+      legend: DrawingLegend.createDefault(
+        xMm: fmt.widthMm - fmt.frameRightMm - 185.0,
+        yMm: fmt.heightMm - fmt.frameBottomMm - 55.0 - 55.0 - 50.0, // Над примечаниями
+        widthMm: 185.0,
+        heightMm: 45.0,
+      ),
     );
   }
 
@@ -337,6 +364,7 @@ class DrawingSheet {
         'viewport': viewport.toJson(),
         'tables': tables.map((t) => t.toJson()).toList(),
         if (technicalRequirements != null) 'technicalRequirements': technicalRequirements!.toJson(),
+        if (legend != null) 'legend': legend!.toJson(),
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -364,6 +392,9 @@ class DrawingSheet {
         technicalRequirements: json['technicalRequirements'] != null
             ? TechnicalRequirements.fromJson(json['technicalRequirements'] as Map<String, dynamic>)
             : null,
+        legend: json['legend'] != null
+            ? DrawingLegend.fromJson(json['legend'] as Map<String, dynamic>)
+            : null,
       );
 
   DrawingSheet copyWith({
@@ -377,6 +408,8 @@ class DrawingSheet {
     List<SheetTableItem>? tables,
     TechnicalRequirements? technicalRequirements,
     bool clearTechnicalRequirements = false,
+    DrawingLegend? legend,
+    bool clearLegend = false,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -390,6 +423,7 @@ class DrawingSheet {
       technicalRequirements: clearTechnicalRequirements
           ? null
           : (technicalRequirements ?? this.technicalRequirements),
+      legend: clearLegend ? null : (legend ?? this.legend),
     );
   }
 }

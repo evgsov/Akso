@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/domain/enums/sheet_format_type.dart';
 import 'package:akso/domain/models/sheet_format.dart';
 import 'package:akso/domain/models/title_block_data.dart';
+import 'package:akso/domain/models/drawing_legend.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/models/drawing_style_config.dart';
 import 'package:akso/domain/models/project_model.dart';
@@ -129,6 +130,56 @@ void main() {
       expect(restored.sheets.length, equals(1));
       expect(restored.activeSheetId, equals('sh_1'));
       expect(restored.styleConfig.textHeightRegularMm, equals(3.5));
+    });
+    test('DrawingLegend serialization and default factory', () {
+      final legend = DrawingLegend.createDefault(xMm: 220.0, yMm: 120.0);
+      expect(legend.isVisible, isTrue);
+      expect(legend.xMm, equals(220.0));
+      expect(legend.yMm, equals(120.0));
+      expect(legend.title, equals('Условные обозначения:'));
+      expect(legend.items.length, greaterThanOrEqualTo(4));
+
+      final json = legend.toJson();
+      final restored = DrawingLegend.fromJson(json);
+      expect(restored.isVisible, equals(legend.isVisible));
+      expect(restored.xMm, equals(220.0));
+      expect(restored.items.length, equals(legend.items.length));
+      expect(restored.items.first.type, equals(LegendItemType.dimension));
+      expect(restored.items.first.label, contains('проектный'));
+    });
+
+    test('TopRightCornerBlock and TechnicalRequirements have configurable boundaries', () {
+      const corner = TopRightCornerBlock(
+        mode: TopRightCornerMode.actAttachment,
+        xMm: 330.0,
+        yMm: 10.0,
+        widthMm: 85.0,
+        heightMm: 20.0,
+        hasBorder: true,
+        actNumber: '42',
+        actDate: '21.09.2026',
+      );
+      expect(corner.xMm, equals(330.0));
+      expect(corner.yMm, equals(10.0));
+      expect(corner.widthMm, equals(85.0));
+      expect(corner.heightMm, equals(20.0));
+      expect(corner.hasBorder, isTrue);
+
+      const tt = TechnicalRequirements(
+        text: 'Тестовые примечания',
+        xMm: 210.0,
+        yMm: 150.0,
+        widthMm: 195.0,
+        heightMm: 60.0,
+        hasBorder: true,
+        title: 'Примечания:',
+      );
+      expect(tt.xMm, equals(210.0));
+      expect(tt.yMm, equals(150.0));
+      expect(tt.widthMm, equals(195.0));
+      expect(tt.heightMm, equals(60.0));
+      expect(tt.hasBorder, isTrue);
+      expect(tt.title, equals('Примечания:'));
     });
   });
 }

@@ -15,15 +15,16 @@ class DimensionPainter {
     LinearDimension? previewDimension,
     String? selectedDimensionId,
     Set<String>? selectedDimensionIds,
+    double annotationScale = 1.0,
   }) {
     for (final dim in network.dimensions.values) {
       final isSelected = dim.id == selectedDimensionId ||
           (selectedDimensionIds != null && selectedDimensionIds.contains(dim.id));
-      _paintDimension(canvas, projector, dim, isSelected: isSelected);
+      _paintDimension(canvas, projector, dim, isSelected: isSelected, annotationScale: annotationScale);
     }
 
     if (previewDimension != null) {
-      _paintDimension(canvas, projector, previewDimension, isPreview: true);
+      _paintDimension(canvas, projector, previewDimension, isPreview: true, annotationScale: annotationScale);
     }
   }
 
@@ -33,6 +34,7 @@ class DimensionPainter {
     LinearDimension dim, {
     bool isSelected = false,
     bool isPreview = false,
+    double annotationScale = 1.0,
   }) {
     final p1 = projector.project(dim.startPoint);
     final p2 = projector.project(dim.endPoint);
@@ -46,7 +48,7 @@ class DimensionPainter {
     // Нормаль к отрезку (повернута на 90 градусов против часовой стрелки)
     final n = Offset(-u.dy, u.dx);
 
-    final offsetDist = dim.offsetDistance == 0.0 ? 35.0 : dim.offsetDistance;
+    final offsetDist = (dim.offsetDistance == 0.0 ? 35.0 : dim.offsetDistance) * annotationScale;
     final offsetVec = n * offsetDist;
 
     // Точки размерной линии
@@ -54,7 +56,7 @@ class DimensionPainter {
     final d2 = p2 + offsetVec;
 
     // Вылет выносных линий за размерную линию
-    final overshoot = (offsetDist >= 0 ? 4.0 : -4.0);
+    final overshoot = (offsetDist >= 0 ? 4.0 : -4.0) * annotationScale;
     final ext1End = d1 + n * overshoot;
     final ext2End = d2 + n * overshoot;
 
@@ -64,12 +66,12 @@ class DimensionPainter {
 
     final linePaint = Paint()
       ..color = lineColor.withValues(alpha: isPreview ? 0.75 : 0.9)
-      ..strokeWidth = isSelected ? 1.5 : 1.0
+      ..strokeWidth = (isSelected ? 1.5 : 1.0) * annotationScale
       ..style = PaintingStyle.stroke;
 
     final tickPaint = Paint()
       ..color = lineColor
-      ..strokeWidth = isSelected ? 2.2 : 1.8
+      ..strokeWidth = (isSelected ? 2.2 : 1.8) * annotationScale
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
@@ -82,7 +84,7 @@ class DimensionPainter {
 
     // 3. Строительные засечки ГОСТ под углом 45°
     // Засечка направлена под 45° к размерной линии
-    const tickLen = 6.0;
+    final tickLen = 6.0 * annotationScale;
     final tickDir = (u + n) / math.sqrt(2) * tickLen;
 
     canvas.drawLine(d1 - tickDir, d1 + tickDir, tickPaint);
@@ -95,7 +97,7 @@ class DimensionPainter {
         text: text,
         style: TextStyle(
           color: lineColor,
-          fontSize: 11.5,
+          fontSize: 11.5 * annotationScale,
           fontWeight: FontWeight.w600,
           fontFamily: 'Roboto',
         ),
@@ -119,8 +121,8 @@ class DimensionPainter {
     canvas.rotate(angle);
 
     // Подложка под текст, чтобы размерная линия не пересекала число
-    const padH = 4.0;
-    const padV = 2.0;
+    final padH = 4.0 * annotationScale;
+    final padV = 2.0 * annotationScale;
     final bgRect = Rect.fromCenter(
       center: Offset.zero,
       width: tp.width + padH * 2,
@@ -136,7 +138,7 @@ class DimensionPainter {
         RRect.fromRectAndRadius(bgRect, const Radius.circular(2)),
         Paint()
           ..color = Colors.amber
-          ..strokeWidth = 1.0
+          ..strokeWidth = 1.0 * annotationScale
           ..style = PaintingStyle.stroke,
       );
     }

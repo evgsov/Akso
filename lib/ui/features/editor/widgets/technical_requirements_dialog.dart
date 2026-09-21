@@ -29,6 +29,12 @@ class TechnicalRequirementsDialog extends StatefulWidget {
 
 class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialog> {
   late TextEditingController _textController;
+  late TextEditingController _titleController;
+  late TextEditingController _widthController;
+  late TextEditingController _heightController;
+  late bool _hasBorder;
+  double? _xMm;
+  double? _yMm;
 
   static const List<String> _standardTemplates = [
     '1. Сварные соединения трубопроводов выполнить по ГОСТ 16037-80.',
@@ -42,13 +48,22 @@ class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialo
   @override
   void initState() {
     super.initState();
-    final currentText = widget.sheet.technicalRequirements?.text ?? '';
-    _textController = TextEditingController(text: currentText);
+    final tr = widget.sheet.technicalRequirements;
+    _textController = TextEditingController(text: tr?.text ?? '');
+    _titleController = TextEditingController(text: tr?.title ?? 'Технические требования');
+    _widthController = TextEditingController(text: (tr?.widthMm ?? 185.0).toStringAsFixed(0));
+    _heightController = TextEditingController(text: (tr?.heightMm ?? 40.0).toStringAsFixed(0));
+    _hasBorder = tr?.hasBorder ?? false;
+    _xMm = tr?.xMm;
+    _yMm = tr?.yMm;
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _titleController.dispose();
+    _widthController.dispose();
+    _heightController.dispose();
     super.dispose();
   }
 
@@ -65,8 +80,17 @@ class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialo
     if (text.isEmpty) {
       widget.controller.updateActiveSheetTechnicalRequirements(null);
     } else {
+      final width = double.tryParse(_widthController.text.trim()) ?? 185.0;
+      final height = double.tryParse(_heightController.text.trim()) ?? 40.0;
+      final title = _titleController.text.trim();
       final tr = (widget.sheet.technicalRequirements ?? const TechnicalRequirements(text: '')).copyWith(
         text: text,
+        title: title.isEmpty ? null : title,
+        widthMm: width,
+        heightMm: height,
+        hasBorder: _hasBorder,
+        xMm: _xMm,
+        yMm: _yMm,
       );
       widget.controller.updateActiveSheetTechnicalRequirements(tr);
     }
@@ -79,8 +103,8 @@ class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialo
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: SizedBox(
-        width: 650,
-        height: 550,
+        width: 700,
+        height: 620,
         child: Column(
           children: [
             // Заголовок
@@ -114,11 +138,78 @@ class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialo
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Настройки заголовка и границ
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: _titleController,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Заголовок блока',
+                              labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                              isDense: true,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 80,
+                          child: TextField(
+                            controller: _widthController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Шир. (мм)',
+                              labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                              isDense: true,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 80,
+                          child: TextField(
+                            controller: _heightController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Выс. (мм)',
+                              labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                              isDense: true,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        FilterChip(
+                          label: const Text('Рамка', style: TextStyle(fontSize: 12)),
+                          selected: _hasBorder,
+                          selectedColor: Colors.cyan.shade800,
+                          onSelected: (val) => setState(() => _hasBorder = val),
+                        ),
+                        if (_xMm != null || _yMm != null) ...[
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.restore, size: 18, color: Colors.amberAccent),
+                            tooltip: 'Сбросить положение (над штампом)',
+                            onPressed: () => setState(() {
+                              _xMm = null;
+                              _yMm = null;
+                            }),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     const Text(
-                      'Текст примечаний (размещается над основной надписью шириной 185 мм):',
+                      'Текст примечаний:',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Expanded(
                       child: TextField(
                         controller: _textController,
@@ -134,9 +225,9 @@ class _TechnicalRequirementsDialogState extends State<TechnicalRequirementsDialo
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     const Text('Быстрые пункты из библиотеки:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,

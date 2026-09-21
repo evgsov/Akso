@@ -32,13 +32,23 @@ class TopRightCornerBlock {
   final String actNumber;
   final String actDate;
   final String actType;
+  final double? xMm;
+  final double? yMm;
+  final double widthMm;
+  final double heightMm;
+  final bool hasBorder;
 
   const TopRightCornerBlock({
     this.mode = TopRightCornerMode.actAttachment,
-    this.text = 'Приложение №__ к Акту освидетельствования скрытых работ №__',
+    this.text = 'Приложение к акту №{act_number}\nот {act_date} г.',
     this.actNumber = '',
     this.actDate = '',
     this.actType = 'АОСР',
+    this.xMm,
+    this.yMm,
+    this.widthMm = 80.0,
+    this.heightMm = 14.0,
+    this.hasBorder = true,
   });
 
   /// Формирование итоговой строки для вывода на лист
@@ -71,6 +81,11 @@ class TopRightCornerBlock {
         'actNumber': actNumber,
         'actDate': actDate,
         'actType': actType,
+        if (xMm != null) 'xMm': xMm,
+        if (yMm != null) 'yMm': yMm,
+        'widthMm': widthMm,
+        'heightMm': heightMm,
+        'hasBorder': hasBorder,
       };
 
   factory TopRightCornerBlock.fromJson(Map<String, dynamic> json) => TopRightCornerBlock(
@@ -78,10 +93,15 @@ class TopRightCornerBlock {
           (e) => e.name == json['mode'],
           orElse: () => TopRightCornerMode.actAttachment,
         ),
-        text: json['text'] as String? ?? '',
+        text: json['text'] as String? ?? 'Приложение к акту №{act_number}\nот {act_date} г.',
         actNumber: json['actNumber'] as String? ?? '',
         actDate: json['actDate'] as String? ?? '',
         actType: json['actType'] as String? ?? 'АОСР',
+        xMm: (json['xMm'] as num?)?.toDouble(),
+        yMm: (json['yMm'] as num?)?.toDouble(),
+        widthMm: (json['widthMm'] as num?)?.toDouble() ?? 80.0,
+        heightMm: (json['heightMm'] as num?)?.toDouble() ?? 14.0,
+        hasBorder: json['hasBorder'] as bool? ?? true,
       );
 
   TopRightCornerBlock copyWith({
@@ -90,6 +110,11 @@ class TopRightCornerBlock {
     String? actNumber,
     String? actDate,
     String? actType,
+    double? xMm,
+    double? yMm,
+    double? widthMm,
+    double? heightMm,
+    bool? hasBorder,
   }) {
     return TopRightCornerBlock(
       mode: mode ?? this.mode,
@@ -97,6 +122,11 @@ class TopRightCornerBlock {
       actNumber: actNumber ?? this.actNumber,
       actDate: actDate ?? this.actDate,
       actType: actType ?? this.actType,
+      xMm: xMm ?? this.xMm,
+      yMm: yMm ?? this.yMm,
+      widthMm: widthMm ?? this.widthMm,
+      heightMm: heightMm ?? this.heightMm,
+      hasBorder: hasBorder ?? this.hasBorder,
     );
   }
 }

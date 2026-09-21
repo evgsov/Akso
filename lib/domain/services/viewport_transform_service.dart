@@ -64,6 +64,28 @@ class ViewportTransformService {
     );
   }
 
+  /// Создает проектор AxonometryProjector, настроенный для прямого рендеринга модели
+  /// и ее аннотаций (выносок, отметок) на экранные пиксели видового экрана листа
+  static AxonometryProjector createViewportProjector({
+    required SheetViewport viewport,
+    required Offset sheetPanPx,
+    required double sheetZoom,
+    required ProjectionType projectionType,
+  }) {
+    final vpCenterX = viewport.xMm + (viewport.widthMm / 2.0);
+    final vpCenterY = viewport.yMm + (viewport.heightMm / 2.0);
+
+    final totalScale = viewport.viewScale * sheetZoom;
+    final panX = sheetPanPx.dx + (vpCenterX - (viewport.modelCenterX * viewport.viewScale)) * sheetZoom;
+    final panY = sheetPanPx.dy + (vpCenterY + (viewport.modelCenterY * viewport.viewScale)) * sheetZoom;
+
+    return AxonometryProjector(
+      projectionType: projectionType,
+      scale: totalScale,
+      panOffset: Offset(panX, panY),
+    );
+  }
+
   /// Преобразование экранных пикселей Flutter в миллиметры листа бумаги
   static Offset screenToSheetMm(Offset screenPx, Offset sheetPanPx, double sheetZoomPxPerMm) {
     if (sheetZoomPxPerMm <= 0) return Offset.zero;

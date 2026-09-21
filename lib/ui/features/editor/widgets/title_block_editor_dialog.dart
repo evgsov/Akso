@@ -7,21 +7,24 @@ import '../../../canvas/input_controller.dart';
 class TitleBlockEditorDialog extends StatefulWidget {
   final PipingInputController controller;
   final DrawingSheet sheet;
+  final int initialTabIndex;
 
   const TitleBlockEditorDialog({
     super.key,
     required this.controller,
     required this.sheet,
+    this.initialTabIndex = 0,
   });
 
   static Future<void> show(BuildContext context, {
     required PipingInputController controller,
     required DrawingSheet sheet,
+    int initialTabIndex = 0,
   }) async {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => TitleBlockEditorDialog(controller: controller, sheet: sheet),
+      builder: (ctx) => TitleBlockEditorDialog(controller: controller, sheet: sheet, initialTabIndex: initialTabIndex),
     );
   }
 
@@ -62,6 +65,11 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
   // Правый верхний угол (Приложение к акту / Графа 26)
   late TopRightCornerMode _cornerMode;
   late TextEditingController _cornerTextController;
+  late TextEditingController _cornerWidthController;
+  late TextEditingController _cornerHeightController;
+  late bool _cornerHasBorder;
+  double? _cornerX;
+  double? _cornerY;
 
   // Архивные графы
   late TextEditingController _invPrimaryController;
@@ -71,7 +79,7 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialTabIndex);
     final tb = widget.sheet.titleBlockData;
 
     _projectNameController = TextEditingController(text: tb.projectName);
@@ -99,6 +107,11 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
 
     _cornerMode = tb.topRightCorner.mode;
     _cornerTextController = TextEditingController(text: tb.topRightCorner.text);
+    _cornerWidthController = TextEditingController(text: tb.topRightCorner.widthMm.toStringAsFixed(0));
+    _cornerHeightController = TextEditingController(text: tb.topRightCorner.heightMm.toStringAsFixed(0));
+    _cornerHasBorder = tb.topRightCorner.hasBorder;
+    _cornerX = tb.topRightCorner.xMm;
+    _cornerY = tb.topRightCorner.yMm;
 
     _invPrimaryController = TextEditingController(text: tb.archive.invNumberPrimary);
     _invDatePrimaryController = TextEditingController(text: tb.archive.invDatePrimary);
@@ -122,6 +135,8 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
       c.dispose();
     }
     _cornerTextController.dispose();
+    _cornerWidthController.dispose();
+    _cornerHeightController.dispose();
     _invPrimaryController.dispose();
     _invDatePrimaryController.dispose();
     _invReplacedController.dispose();
@@ -138,6 +153,9 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
       }
     }
 
+    final cornerW = double.tryParse(_cornerWidthController.text.trim()) ?? 75.0;
+    final cornerH = double.tryParse(_cornerHeightController.text.trim()) ?? 30.0;
+
     final updatedTb = widget.sheet.titleBlockData.copyWith(
       projectName: _projectNameController.text.trim(),
       buildingName: _buildingNameController.text.trim(),
@@ -149,9 +167,14 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
       sheetNumber: _sheetNumber,
       totalSheets: _totalSheets,
       approvals: approvals,
-      topRightCorner: TopRightCornerBlock(
+      topRightCorner: widget.sheet.titleBlockData.topRightCorner.copyWith(
         mode: _cornerMode,
         text: _cornerTextController.text.trim(),
+        widthMm: cornerW,
+        heightMm: cornerH,
+        hasBorder: _cornerHasBorder,
+        xMm: _cornerX,
+        yMm: _cornerY,
       ),
       archive: TitleBlockArchive(
         invNumberPrimary: _invPrimaryController.text.trim(),
@@ -429,6 +452,58 @@ class _TitleBlockEditorDialogState extends State<TitleBlockEditorDialog> with Si
           ),
           const SizedBox(height: 16),
           if (_cornerMode != TopRightCornerMode.none) ...[
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: _cornerWidthController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Ширина (мм)',
+                      labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: _cornerHeightController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Высота (мм)',
+                      labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilterChip(
+                  label: const Text('Рамка вокруг блока', style: TextStyle(fontSize: 12)),
+                  selected: _cornerHasBorder,
+                  selectedColor: Colors.cyan.shade800,
+                  onSelected: (val) => setState(() => _cornerHasBorder = val),
+                ),
+                if (_cornerX != null || _cornerY != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.restore, size: 18, color: Colors.amberAccent),
+                    tooltip: 'Сбросить положение (в правый верхний угол)',
+                    onPressed: () => setState(() {
+                      _cornerX = null;
+                      _cornerY = null;
+                    }),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
             TextField(
               controller: _cornerTextController,
               maxLines: 4,

@@ -44,6 +44,7 @@ class CalloutPainter {
     ProjectModel? project,
     Map<String, String>? templates,
     String? selectedCalloutId,
+    double annotationScale = 1.0,
   }) {
     if (network.callouts.isEmpty) return;
 
@@ -63,6 +64,7 @@ class CalloutPainter {
         anchorScreen,
         effectiveTemplates,
         isSelected,
+        annotationScale: annotationScale,
       );
     }
   }
@@ -353,11 +355,14 @@ class CalloutPainter {
     Callout callout,
     Offset anchorScreen,
     Map<String, String> templates,
-    bool isSelected,
-  ) {
+    bool isSelected, {
+    double annotationScale = 1.0,
+  }) {
+    final scaledOffsetX = callout.screenOffsetX * annotationScale;
+    final scaledOffsetY = callout.screenOffsetY * annotationScale;
     final textPos = Offset(
-      anchorScreen.dx + callout.screenOffsetX,
-      anchorScreen.dy + callout.screenOffsetY,
+      anchorScreen.dx + scaledOffsetX,
+      anchorScreen.dy + scaledOffsetY,
     );
 
     final topText = network.generateCalloutText(callout, templates);
@@ -366,13 +371,13 @@ class CalloutPainter {
         ? true
         : (callout.shelfDirection == ShelfDirection.left
             ? false
-            : callout.screenOffsetX >= 0);
+            : scaledOffsetX >= 0);
 
     final primaryColor = isSelected ? const Color(0xFF2563EB) : Color(callout.textColor);
 
     final linePaint = Paint()
       ..color = primaryColor
-      ..strokeWidth = isSelected ? 2.0 : 1.2
+      ..strokeWidth = (isSelected ? 2.0 : 1.2) * annotationScale
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.square
       ..strokeJoin = StrokeJoin.miter;
@@ -382,7 +387,7 @@ class CalloutPainter {
         text: topText,
         style: TextStyle(
           color: primaryColor,
-          fontSize: callout.textHeight,
+          fontSize: callout.textHeight * annotationScale,
           fontFamily: 'monospace',
           fontWeight: FontWeight.w600,
         ),
@@ -397,7 +402,7 @@ class CalloutPainter {
           text: bottomText,
           style: TextStyle(
             color: primaryColor.withValues(alpha: 0.9),
-            fontSize: callout.textHeight * 0.9,
+            fontSize: callout.textHeight * 0.9 * annotationScale,
             fontFamily: 'monospace',
             fontWeight: FontWeight.w500,
           ),
@@ -418,13 +423,13 @@ class CalloutPainter {
       final defaultStyle = ElevationMarkStyleExt.fromString(styleName, fallback: ElevationMarkStyle.gostOutline);
       final effectiveStyle = callout.elevationStyle ?? defaultStyle;
 
-      const flagSize = 8.0;
+      final flagSize = 8.0 * annotationScale;
       final flagH = flagSize * 1.3;
       final flagW = flagSize * 0.75;
 
       if (callout.arrowOnNode) {
         // --- РЕЖИМ 1: Стрелка знака отметки установлена строго на узле (по ГОСТ 21.101) ---
-        final shelfY = anchorScreen.dy + callout.screenOffsetY;
+        final shelfY = anchorScreen.dy + scaledOffsetY;
         final isAbove = shelfY <= anchorScreen.dy;
         final flagBaseY = isAbove ? anchorScreen.dy - flagH : anchorScreen.dy + flagH;
 
@@ -456,17 +461,17 @@ class CalloutPainter {
           case ElevationMarkStyle.compactFlag:
             canvas.drawLine(anchorScreen, Offset(anchorScreen.dx, shelfY), linePaint);
             canvas.drawLine(
-              Offset(anchorScreen.dx - 3.5, anchorScreen.dy + 3.5),
-              Offset(anchorScreen.dx + 3.5, anchorScreen.dy - 3.5),
+              Offset(anchorScreen.dx - 3.5 * annotationScale, anchorScreen.dy + 3.5 * annotationScale),
+              Offset(anchorScreen.dx + 3.5 * annotationScale, anchorScreen.dy - 3.5 * annotationScale),
               linePaint,
             );
             break;
 
           case ElevationMarkStyle.isoCircle:
-            const circleR = 4.5;
+            final circleR = 4.5 * annotationScale;
             final circlePaint = Paint()
               ..color = primaryColor
-              ..strokeWidth = isSelected ? 2.0 : 1.2
+              ..strokeWidth = (isSelected ? 2.0 : 1.2) * annotationScale
               ..style = PaintingStyle.stroke;
             canvas.drawCircle(anchorScreen, circleR, circlePaint);
             canvas.drawLine(Offset(anchorScreen.dx - circleR, anchorScreen.dy), Offset(anchorScreen.dx + circleR, anchorScreen.dy), linePaint);
@@ -643,7 +648,7 @@ class CalloutPainter {
     final dotPaint = Paint()
       ..color = primaryColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(anchorScreen, 3.0, dotPaint);
+    canvas.drawCircle(anchorScreen, 3.0 * annotationScale, dotPaint);
 
     // 2. Наклонная линия-ножка от объекта до излома (textPos)
     canvas.drawLine(anchorScreen, textPos, linePaint);

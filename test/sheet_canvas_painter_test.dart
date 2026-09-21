@@ -4,6 +4,9 @@ import 'package:akso/domain/enums/sheet_format_type.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/models/title_block_data.dart';
 import 'package:akso/domain/models/piping_network.dart';
+import 'package:akso/domain/models/callout.dart';
+import 'package:akso/domain/models/drawing_legend.dart';
+import 'package:akso/domain/models/linear_dimension.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
@@ -85,6 +88,53 @@ void main() {
       final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 1000, 800));
       expect(() => painter.paint(canvas, const Size(1000, 800)), returnsNormally);
       recorder.endRecording();
+    });
+
+    test('renders callouts, dimensions, legend, and active block grips without throwing', () {
+      final network = PipingNetwork();
+      final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      final n2 = Node3D(id: 'n2', x: 2000, y: 0, z: 0);
+      network.nodes[n1.id] = n1;
+      network.nodes[n2.id] = n2;
+      network.segments['s1'] = PipeSegment(
+        id: 's1',
+        startNodeId: 'n1',
+        endNodeId: 'n2',
+        dn: 50,
+        systemId: 'sys_b1',
+      );
+      network.callouts['c1'] = const Callout(
+        id: 'c1',
+        targetId: 's1',
+        targetType: CalloutTargetType.segment,
+        customText: 'В1 ⌀57х3.5',
+      );
+      network.dimensions['d1'] = LinearDimension(
+        id: 'd1',
+        startPoint: n1,
+        endPoint: n2,
+      );
+
+      final sheet = DrawingSheet.createDefault(id: 's3', name: 'Лист 3', sheetNumber: 3).copyWith(
+        legend: DrawingLegend.createDefault(),
+        technicalRequirements: const TechnicalRequirements(text: '1. ТТ тест.'),
+      );
+
+      for (final block in ['viewport', 'notes', 'act', 'legend']) {
+        final painter = SheetCanvasPainter(
+          sheet: sheet,
+          network: network,
+          sheetZoom: 1.0,
+          sheetPan: Offset.zero,
+          isViewportFocused: false,
+          selectedSheetBlock: block,
+        );
+
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 1000, 800));
+        expect(() => painter.paint(canvas, const Size(1000, 800)), returnsNormally);
+        recorder.endRecording();
+      }
     });
 
     test('PipingInputController manages sheets, viewport focus, and auto-fit', () {
