@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1789979050.6734135,
-    "seen": 1789979898.9042811,
-    "ast_hash": "187ff33f28ade07cbbc5366dd1b22b62",
+    "mtime": 1789985421.3278987,
+    "seen": 1789986785.4980187,
+    "ast_hash": "bf2f4c05ac8a74aa23f72c1e002e462b",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1789979931.3423183,
-    "seen": 1789982616.5109923,
-    "ast_hash": "6acb4a61b5fe8dc8598ca1682eb2cede",
+    "mtime": 1789986769.5070333,
+    "seen": 1789986785.4984965,
+    "ast_hash": "bada21591430e26a049689e376db1361",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1789959553.4663117,
-    "seen": 1789970656.7879329,
-    "ast_hash": "74c2454463d3ed146786e1994b8eddeb",
+    "mtime": 1789986147.4386802,
+    "seen": 1789986785.4980567,
+    "ast_hash": "e958c4e62c8e730f5bd622fcca36b887",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1404,15 +1404,15 @@
     "semantic_hash": ""
   },
   "lib/domain/models/callout.dart": {
-    "mtime": 1789724715.3013203,
-    "seen": 1789970656.7878776,
-    "ast_hash": "a5b3cbfb74c34b279a579d3eb8a0aeea",
+    "mtime": 1789984648.8057685,
+    "seen": 1789986785.4979548,
+    "ast_hash": "441a8876ac9cd99ea21934a138db4cb6",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/callout_manager_panel.dart": {
-    "mtime": 1789726203.2914767,
-    "seen": 1789970656.7879307,
-    "ast_hash": "755dd8273a5eac0c51a815141f8f3d02",
+    "mtime": 1789986493.9983923,
+    "seen": 1789986785.4980528,
+    "ast_hash": "c66ed89b30ed9501000ce7b61f266b46",
     "semantic_hash": ""
   },
   "test/callout_test.dart": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
-    "mtime": 1789976033.2253728,
-    "seen": 1789979898.9043658,
-    "ast_hash": "7bb7c03fbd62c7fbfb4cb14126bab13e",
+    "mtime": 1789985718.2406273,
+    "seen": 1789986785.498083,
+    "ast_hash": "11ec3ac285d52eafcc970358dd8aa319",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
@@ -2211,6 +2211,48 @@
     "mtime": 1789975943.2666974,
     "seen": 1789979898.9043345,
     "ast_hash": "34c108ae6f554a1e3b7fadd6e0427393",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/callout_layout_engine.dart": {
+    "mtime": 1789985276.5846558,
+    "seen": 1789986785.4980004,
+    "ast_hash": "becb03a5bd53cb916cf0961d0b0e652a",
+    "semantic_hash": ""
+  },
+  "test/callout_layout_engine_test.dart": {
+    "mtime": 1789985114.8685453,
+    "seen": 1789986785.4981291,
+    "ast_hash": "62fe9155ea28995fcf5730c126e5a0a5",
+    "semantic_hash": ""
+  },
+  "test/callout_layout_integration_test.dart": {
+    "mtime": 1789985362.9058704,
+    "seen": 1789986785.4981308,
+    "ast_hash": "902b112189e27989903bf7b5c8922f16",
+    "semantic_hash": ""
+  },
+  "test/callout_pinning_test.dart": {
+    "mtime": 1789984590.832656,
+    "seen": 1789986785.498132,
+    "ast_hash": "14aec0e093f2a6c7a3df86a04288f072",
+    "semantic_hash": ""
+  },
+  "test/callout_ui_actions_test.dart": {
+    "mtime": 1789985940.5766773,
+    "seen": 1789986785.4981365,
+    "ast_hash": "a17c36e1968657cf1d6dc7b1481be6e9",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-21-smart-callout-layout-engine.md": {
+    "mtime": 1789984530.3454316,
+    "seen": 1789986785.4985144,
+    "ast_hash": "796f79a37c772a778fc87f824d579d8a",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-21-smart-callout-layout-engine-design.md": {
+    "mtime": 1789984466.9497507,
+    "seen": 1789986785.498527,
+    "ast_hash": "36bc92202f567bb600a9d4ee9bebaac0",
     "semantic_hash": ""
   }
 }

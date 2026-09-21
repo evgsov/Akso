@@ -163,6 +163,42 @@ class AxonometryProjector {
     return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
+  /// Обратное преобразование: вычисление высотной отметки Z (мм) по координатам экрана
+  /// для фиксированных мировых координат (X, Y).
+  /// Используется при вертикальном перетаскивании стояков (risers) и опусков.
+  double unprojectElevation(Offset screenPoint, double fixedWorldX, double fixedWorldY) {
+    final rawY2d = -(screenPoint.dy - panOffset.dy) / scale;
+
+    switch (projectionType) {
+      case ProjectionType.gostFrontal45:
+        const sin45 = 0.70710678118;
+        return rawY2d + (fixedWorldX * 0.5 * sin45);
+
+      case ProjectionType.gostMirrored45:
+        const sin45 = 0.70710678118;
+        return rawY2d + (fixedWorldX * 0.5 * sin45);
+
+      case ProjectionType.iso30:
+        const sin30 = 0.5;
+        return rawY2d - (fixedWorldX + fixedWorldY) * sin30;
+
+      case ProjectionType.topPlan2d:
+        return 0.0;
+
+      case ProjectionType.orbit3d:
+        final dx = fixedWorldX - targetCenter.x;
+        final dy = fixedWorldY - targetCenter.y;
+        final cosA = math.cos(orbitAzimuth);
+        final sinA = math.sin(orbitAzimuth);
+        final y1 = dx * sinA + dy * cosA;
+
+        final cosE = math.cos(orbitElevation);
+        final sinE = math.sin(orbitElevation);
+        final safeCosE = cosE.abs() < 1e-4 ? (cosE >= 0 ? 1e-4 : -1e-4) : cosE;
+        return targetCenter.z + (rawY2d - y1 * sinE) / safeCosE;
+    }
+  }
+
   /// Обратное преобразование: из координат экрана планшета в 3D координаты (X, Y)
   /// на заданной высотной отметке Z (мм)
   Node3D unproject(Offset screenPoint, double currentElevationZ) {

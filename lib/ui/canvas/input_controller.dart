@@ -916,11 +916,35 @@ class PipingInputController extends ChangeNotifier {
 
     // 1. Завершение Grip-переноса узла кликом ЛКМ
     if (activeGripNodeId != null) {
-      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
-          ? currentSnapResult!.worldPoint
-          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
-      network.moveNode(activeGripNodeId!, snapWorld.x, snapWorld.y, snapWorld.z);
-      _checkAndMergeOpenNodes();
+      final gripId = activeGripNodeId!;
+      final Node3D snapWorld;
+      if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
+        snapWorld = currentSnapResult!.worldPoint;
+      } else {
+        final targetNode = network.nodes[gripId];
+        final conns = network.getConnectedSegments(gripId);
+        Node3D? baseNode;
+        if (conns.length == 1) {
+          final seg = conns.first;
+          final baseId = seg.startNodeId == gripId ? seg.endNodeId : seg.startNodeId;
+          baseNode = network.nodes[baseId];
+        }
+        final isRiser = baseNode != null &&
+            targetNode != null &&
+            (baseNode.x - targetNode.x).abs() < 0.5 &&
+            (baseNode.y - targetNode.y).abs() < 0.5;
+
+        if (isRiser) {
+          final unprojZ = projector.unprojectElevation(screenPos, baseNode.x, baseNode.y);
+          final z = isSnapEnabled ? (unprojZ / 10.0).round() * 10.0 : unprojZ;
+          snapWorld = Node3D(id: gripId, x: baseNode.x, y: baseNode.y, z: z);
+        } else {
+          snapWorld = _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+        }
+      }
+      network.moveNode(gripId, snapWorld.x, snapWorld.y, snapWorld.z);
+      _checkAndMergeOpenNodes([gripId]);
+      _checkAndConnectToSegments([gripId]);
       history.recordState(network);
       activeGripNodeId = null;
       _gripOriginalNodePosition = null;
@@ -1987,9 +2011,31 @@ class PipingInputController extends ChangeNotifier {
 
     // Активное перемещение узла в Grip Mode
     if (activeGripNodeId != null) {
-      final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
-          ? currentSnapResult!.worldPoint
-          : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+      final Node3D snapWorld;
+      if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
+        snapWorld = currentSnapResult!.worldPoint;
+      } else {
+        final targetNode = network.nodes[activeGripNodeId!];
+        final conns = network.getConnectedSegments(activeGripNodeId!);
+        Node3D? baseNode;
+        if (conns.length == 1) {
+          final seg = conns.first;
+          final baseId = seg.startNodeId == activeGripNodeId ? seg.endNodeId : seg.startNodeId;
+          baseNode = network.nodes[baseId];
+        }
+        final isRiser = baseNode != null &&
+            targetNode != null &&
+            (baseNode.x - targetNode.x).abs() < 0.5 &&
+            (baseNode.y - targetNode.y).abs() < 0.5;
+
+        if (isRiser) {
+          final unprojZ = projector.unprojectElevation(screenPos, baseNode.x, baseNode.y);
+          final z = isSnapEnabled ? (unprojZ / 10.0).round() * 10.0 : unprojZ;
+          snapWorld = Node3D(id: activeGripNodeId!, x: baseNode.x, y: baseNode.y, z: z);
+        } else {
+          snapWorld = _snapToGrid(projector.unproject(screenPos, currentElevationZ));
+        }
+      }
       network.moveNode(activeGripNodeId!, snapWorld.x, snapWorld.y, snapWorld.z);
       notifyListeners();
       return;
@@ -2123,8 +2169,33 @@ class PipingInputController extends ChangeNotifier {
     }
 
     if (isDraggingNode && selectedNodeId != null) {
-      final unproj = projector.unproject(screenPos, currentElevationZ);
-      final snapped = _snapToGrid(unproj);
+      final Node3D snapped;
+      if (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none) {
+        snapped = currentSnapResult!.worldPoint;
+      } else {
+        final targetNode = network.nodes[selectedNodeId!];
+        final conns = network.getConnectedSegments(selectedNodeId!);
+        Node3D? baseNode;
+        if (conns.length == 1) {
+          final seg = conns.first;
+          final baseId = seg.startNodeId == selectedNodeId ? seg.endNodeId : seg.startNodeId;
+          baseNode = network.nodes[baseId];
+        }
+        final isRiser = baseNode != null &&
+            targetNode != null &&
+            (baseNode.x - targetNode.x).abs() < 0.5 &&
+            (baseNode.y - targetNode.y).abs() < 0.5;
+
+        if (isRiser) {
+          final unprojZ = projector.unprojectElevation(screenPos, baseNode.x, baseNode.y);
+          final z = isSnapEnabled ? (unprojZ / 10.0).round() * 10.0 : unprojZ;
+          snapped = Node3D(id: selectedNodeId!, x: baseNode.x, y: baseNode.y, z: z);
+        } else {
+          final unproj = projector.unproject(screenPos, currentElevationZ);
+          snapped = _snapToGrid(unproj);
+        }
+      }
+
       final targetNode = network.nodes[selectedNodeId!];
       if (targetNode != null) {
         final dx = snapped.x - targetNode.x;
@@ -2263,17 +2334,37 @@ class PipingInputController extends ChangeNotifier {
   void _updateSnap(Offset screenPos) {
     if (isSnapEnabled) {
       final effectiveAngleMode = isAngleLocked ? AngleSnapMode.ortho90 : angleSnapMode;
+
+      // Determine if an open node is being dragged or manipulated via grip
+      Node3D? dragBaseNode;
+      final draggedId = activeGripNodeId ?? (isDraggingNode ? selectedNodeId : null);
+      if (draggedId != null) {
+        final conns = network.getConnectedSegments(draggedId);
+        if (conns.length == 1) {
+          final seg = conns.first;
+          final baseId = seg.startNodeId == draggedId ? seg.endNodeId : seg.startNodeId;
+          dragBaseNode = network.nodes[baseId];
+        }
+      }
+
+      final effectiveStartNode = traceStartNode ??
+          axisStartNode ??
+          dimensionStartNode ??
+          dragBaseNode ??
+          (modifyBasePointWorld != null
+              ? Node3D(id: 'base_point', x: modifyBasePointWorld!.x, y: modifyBasePointWorld!.y, z: modifyBasePointWorld!.z)
+              : null);
+
+      final effectiveElevationZ = (traceStartNode == null && dragBaseNode != null)
+          ? dragBaseNode.z
+          : currentElevationZ;
+
       currentSnapResult = snapEngine.findSnap(
         screenPos: screenPos,
         network: network,
         projector: projector,
-        currentElevationZ: currentElevationZ,
-        traceStartNode: traceStartNode ??
-            axisStartNode ??
-            dimensionStartNode ??
-            (modifyBasePointWorld != null
-                ? Node3D(id: 'base_point', x: modifyBasePointWorld!.x, y: modifyBasePointWorld!.y, z: modifyBasePointWorld!.z)
-                : null),
+        currentElevationZ: effectiveElevationZ,
+        traceStartNode: effectiveStartNode,
         angleMode: effectiveAngleMode,
         customAngleStepDegrees: customAngleDegrees,
         enableObjectTracking: tracingController.isObjectTrackingEnabled,
@@ -2495,6 +2586,7 @@ class PipingInputController extends ChangeNotifier {
 
     if (isDraggingSegment) {
       _checkAndMergeOpenNodes();
+      _checkAndConnectToSegments();
       history.recordState(network);
       isDraggingSegment = false;
       notifyListeners();
@@ -2544,6 +2636,7 @@ class PipingInputController extends ChangeNotifier {
 
     if (isDraggingNode) {
       _checkAndMergeOpenNodes();
+      _checkAndConnectToSegments();
       history.recordState(network);
       isDraggingNode = false;
       notifyListeners();
@@ -2856,6 +2949,11 @@ class PipingInputController extends ChangeNotifier {
       material: activeMaterial,
     );
     network.addSegment(seg);
+
+    FittingDetector.autoDetectFittingsForNode(network, traceStartNode!.id);
+    FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
+    network.generateElementWeldJoints();
+    network.recalculateSpools();
 
     history.recordState(network);
     traceStartNode = network.nodes[targetNodeId];
@@ -3482,7 +3580,8 @@ class PipingInputController extends ChangeNotifier {
   Node3D _snapToGrid(Node3D node, [double step = 100.0]) {
     final sx = (node.x / step).round() * step;
     final sy = (node.y / step).round() * step;
-    return node.copyWith(x: sx, y: sy);
+    final sz = (node.z / step).round() * step;
+    return node.copyWith(x: sx, y: sy, z: sz);
   }
 
   /// Панорамирование сцены
@@ -4590,9 +4689,10 @@ class PipingInputController extends ChangeNotifier {
   bool _segmentIntersectsRect(Offset p1, Offset p2, Rect rect) =>
       SelectionController.segmentIntersectsRect(p1, p2, rect);
 
-  void _checkAndMergeOpenNodes() {
-    if (selectedNodeId == null) return;
-    final movedNodes = selectedNodeIds.isNotEmpty ? selectedNodeIds.toList() : [selectedNodeId!];
+  void _checkAndMergeOpenNodes([List<String>? candidateNodeIds]) {
+    final movedNodes = candidateNodeIds ??
+        (selectedNodeIds.isNotEmpty ? selectedNodeIds.toList() : (selectedNodeId != null ? [selectedNodeId!] : <String>[]));
+    if (movedNodes.isEmpty) return;
     for (final mId in movedNodes) {
       final nodeA = network.nodes[mId];
       if (nodeA == null) continue;
@@ -4602,7 +4702,7 @@ class PipingInputController extends ChangeNotifier {
       for (final otherNode in network.nodes.values) {
         if (movedNodes.contains(otherNode.id)) continue;
         final connsOther = network.getConnectedSegments(otherNode.id);
-        if (connsOther.length != 1) continue;
+        if (connsOther.isEmpty || connsOther.length > 2) continue;
 
         if (nodeA.distanceTo(otherNode) <= 35.0) {
           final seg = connsA.first;
@@ -4616,7 +4716,92 @@ class PipingInputController extends ChangeNotifier {
           selectedNodeIds.remove(mId);
           selectedNodeIds.add(otherNode.id);
           if (selectedNodeId == mId) selectedNodeId = otherNode.id;
-          network.autoDetectAllFittings();
+          FittingDetector.autoDetectFittingsForNode(network, otherNode.id);
+          network.generateElementWeldJoints();
+          network.recalculateSpools();
+          break;
+        }
+      }
+    }
+  }
+
+  void _checkAndConnectToSegments([List<String>? candidateNodeIds]) {
+    final targetNodeIds = candidateNodeIds ??
+        (selectedNodeIds.isNotEmpty
+            ? selectedNodeIds.toList()
+            : (selectedNodeId != null ? [selectedNodeId!] : <String>[]));
+    if (targetNodeIds.isEmpty) return;
+
+    for (final mId in targetNodeIds) {
+      final nodeA = network.nodes[mId];
+      if (nodeA == null) continue;
+      final connsA = network.getConnectedSegments(mId);
+      if (connsA.length != 1) continue;
+      final branchSeg = connsA.first;
+
+      PipeSegment? bestSeg;
+      double bestDist = 50.0;
+      double bestRatio = 0.5;
+      Node3D? bestProjPoint;
+
+      for (final seg in network.segments.values) {
+        if (seg.id == branchSeg.id) continue;
+        if (seg.startNodeId == mId || seg.endNodeId == mId) continue;
+
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
+        if (s == null || e == null) continue;
+
+        final vx = e.x - s.x;
+        final vy = e.y - s.y;
+        final vz = e.z - s.z;
+        final segLenSq = vx * vx + vy * vy + vz * vz;
+        if (segLenSq < 1.0) continue;
+
+        final ux = nodeA.x - s.x;
+        final uy = nodeA.y - s.y;
+        final uz = nodeA.z - s.z;
+
+        final t = ((ux * vx + uy * vy + uz * vz) / segLenSq).clamp(0.0, 1.0);
+        if (t < 0.01 || t > 0.99) continue;
+
+        final projX = s.x + vx * t;
+        final projY = s.y + vy * t;
+        final projZ = s.z + vz * t;
+
+        final dist = math.sqrt(
+          math.pow(nodeA.x - projX, 2) +
+          math.pow(nodeA.y - projY, 2) +
+          math.pow(nodeA.z - projZ, 2),
+        );
+
+        if (dist <= bestDist) {
+          bestDist = dist;
+          bestRatio = t;
+          bestSeg = seg;
+          bestProjPoint = Node3D(id: mId, x: projX, y: projY, z: projZ);
+        }
+      }
+
+      if (bestSeg != null && bestProjPoint != null) {
+        network.moveNode(mId, bestProjPoint.x, bestProjPoint.y, bestProjPoint.z);
+
+        final midNode = network.splitSegmentAtRatio(bestSeg.id, bestRatio);
+        if (midNode != null) {
+          final seg1Id = '${bestSeg.id}_a';
+          final seg2Id = '${bestSeg.id}_b';
+          final s1 = network.segments[seg1Id];
+          final s2 = network.segments[seg2Id];
+          if (s1 != null) {
+            network.segments[seg1Id] = s1.copyWith(endNodeId: mId);
+          }
+          if (s2 != null) {
+            network.segments[seg2Id] = s2.copyWith(startNodeId: mId);
+          }
+          network.nodes.remove(midNode.id);
+
+          FittingDetector.autoDetectFittingsForNode(network, mId);
+          network.generateElementWeldJoints();
           network.recalculateSpools();
           break;
         }
