@@ -22,15 +22,18 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
+import '../../domain/services/callout_layout_engine.dart';
 import '../../domain/services/fitting_detector.dart';
 import '../../domain/enums/report_type.dart';
 import '../../domain/enums/sheet_format_type.dart';
 import '../../domain/enums/viewport_layout_preset.dart';
+import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
 import '../../domain/models/title_block_data.dart';
 import '../../domain/services/viewport_transform_service.dart';
+import 'sheet_canvas_painter.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/recent_projects_manager.dart';
 import '../../data/repositories/recovery_repository.dart';
@@ -760,23 +763,69 @@ class PipingInputController extends ChangeNotifier {
       currentCursorScreenPos = screenPos;
       if (!isViewportFocused) {
         // Режим пространства листа (PSPACE):
-        if (isViewportSelected) {
-          final grip = hitTestViewportGrip(screenPos);
-          if (grip != null) {
-            activeViewportGrip = grip;
-            _viewportDragStartRectMm = Rect.fromLTWH(
-              activeSheet!.viewport.xMm,
-              activeSheet!.viewport.yMm,
-              activeSheet!.viewport.widthMm,
-              activeSheet!.viewport.heightMm,
-            );
-            _viewportDragStartScreenPos = screenPos;
-            notifyListeners();
-            return;
+        // 1. Проверяем клик по grip текущего активного блока
+        if (selectedSheetBlock != null || isViewportSelected) {
+          final block = selectedSheetBlock ?? (isViewportSelected ? 'viewport' : null);
+          Rect? activeRect;
+          if (block == 'viewport') {
+            activeRect = getActiveSheetViewportScreenRect();
+          } else if (block == 'notes') {
+            activeRect = getActiveSheetNotesScreenRect();
+          } else if (block == 'act') {
+            activeRect = getActiveSheetActScreenRect();
+          } else if (block == 'legend') {
+            activeRect = getActiveSheetLegendScreenRect();
+          }
+
+          if (activeRect != null) {
+            final grip = hitTestRectGrip(activeRect, screenPos);
+            if (grip != null) {
+              activeViewportGrip = grip;
+              final sheet = activeSheet!;
+              if (block == 'viewport') {
+                _viewportDragStartRectMm = Rect.fromLTWH(
+                  sheet.viewport.xMm,
+                  sheet.viewport.yMm,
+                  sheet.viewport.widthMm,
+                  sheet.viewport.heightMm,
+                );
+              } else if (block == 'notes') {
+                final req = sheet.technicalRequirements!;
+                _sheetBlockDragStartRectMm = Rect.fromLTWH(
+                  req.xMm,
+                  req.yMm,
+                  req.widthMm,
+                  req.heightMm,
+                );
+              } else if (block == 'act') {
+                final act = sheet.titleBlockData.topRightCorner;
+                final defaultX = sheet.format.widthMm - sheet.format.frameRightMm - act.widthMm;
+                final defaultY = sheet.format.frameTopMm;
+                _sheetBlockDragStartRectMm = Rect.fromLTWH(
+                  act.xMm ?? defaultX,
+                  act.yMm ?? defaultY,
+                  act.widthMm,
+                  act.heightMm,
+                );
+              } else if (block == 'legend') {
+                final leg = sheet.legend!;
+                _sheetBlockDragStartRectMm = Rect.fromLTWH(
+                  leg.xMm,
+                  leg.yMm,
+                  leg.widthMm,
+                  leg.heightMm,
+                );
+              }
+              _viewportDragStartScreenPos = screenPos;
+              notifyListeners();
+              return;
+            }
           }
         }
 
+        // 2. Клик по штампу (Основная надпись)
         if (hitTestSheetStamp(screenPos)) {
+          selectedSheetBlock = null;
           isViewportSelected = false;
           activeViewportGrip = null;
           onTitleBlockTapped?.call();
@@ -784,14 +833,56 @@ class PipingInputController extends ChangeNotifier {
           return;
         }
 
+        // 3. Клик по Приложению к акту
+        if (hitTestSheetAct(screenPos)) {
+          final wasSelected = selectedSheetBlock == 'act';
+          selectedSheetBlock = 'act';
+          isViewportSelected = false;
+          activeViewportGrip = null;
+          if (wasSelected) {
+            onActAttachmentTapped?.call();
+          }
+          notifyListeners();
+          return;
+        }
+
+        // 4. Клик по Техническим требованиям (Примечания)
+        if (hitTestSheetNotes(screenPos)) {
+          final wasSelected = selectedSheetBlock == 'notes';
+          selectedSheetBlock = 'notes';
+          isViewportSelected = false;
+          activeViewportGrip = null;
+          if (wasSelected) {
+            onTechnicalRequirementsTapped?.call();
+          }
+          notifyListeners();
+          return;
+        }
+
+        // 5. Клик по Условным обозначениям (Легенда)
+        if (hitTestSheetLegend(screenPos)) {
+          final wasSelected = selectedSheetBlock == 'legend';
+          selectedSheetBlock = 'legend';
+          isViewportSelected = false;
+          activeViewportGrip = null;
+          if (wasSelected) {
+            onLegendTapped?.call();
+          }
+          notifyListeners();
+          return;
+        }
+
+        // 6. Клик по Видовому экрану
         if (hitTestSheetViewport(screenPos)) {
+          selectedSheetBlock = 'viewport';
           isViewportSelected = true;
           activeViewportGrip = null;
           notifyListeners();
           return;
         }
 
-        // Клик в пустое место листа: сброс выделения ВЭ
+        // Клик в пустое место листа: сброс выделения
+        selectedSheetBlock = null;
         isViewportSelected = false;
         activeViewportGrip = null;
         notifyListeners();
@@ -1730,43 +1821,104 @@ class PipingInputController extends ChangeNotifier {
     currentCursorScreenPos = screenPos;
 
     if (!isModelSpaceActive && activeSheet != null) {
-      if (activeViewportGrip != null && _viewportDragStartRectMm != null && _viewportDragStartScreenPos != null) {
+      if (activeViewportGrip != null && _viewportDragStartScreenPos != null) {
         final deltaMm = (screenPos - _viewportDragStartScreenPos!) / sheetZoom;
-        final start = _viewportDragStartRectMm!;
         final sheet = activeSheet!;
+        final block = selectedSheetBlock ?? (isViewportSelected ? 'viewport' : null);
 
-        final frameLeft = sheet.format.frameLeftMm;
-        final frameTop = sheet.format.frameTopMm;
-        final frameRight = sheet.format.widthMm - sheet.format.frameRightMm;
-        final frameBottom = sheet.format.heightMm - sheet.format.frameBottomMm;
+        if (block == 'viewport' && _viewportDragStartRectMm != null) {
+          final start = _viewportDragStartRectMm!;
+          final frameLeft = sheet.format.frameLeftMm;
+          final frameTop = sheet.format.frameTopMm;
+          final frameRight = sheet.format.widthMm - sheet.format.frameRightMm;
+          final frameBottom = sheet.format.heightMm - sheet.format.frameBottomMm;
 
-        double left = start.left;
-        double top = start.top;
-        double right = start.right;
-        double bottom = start.bottom;
+          double left = start.left;
+          double top = start.top;
+          double right = start.right;
+          double bottom = start.bottom;
 
-        final grip = activeViewportGrip!;
-        if (grip.contains('w')) {
-          left = (start.left + deltaMm.dx).clamp(frameLeft, right - 50.0);
-        }
-        if (grip.contains('e')) {
-          right = (start.right + deltaMm.dx).clamp(left + 50.0, frameRight);
-        }
-        if (grip.contains('n')) {
-          top = (start.top + deltaMm.dy).clamp(frameTop, bottom - 50.0);
-        }
-        if (grip.contains('s')) {
-          bottom = (start.bottom + deltaMm.dy).clamp(top + 50.0, frameBottom);
-        }
+          final grip = activeViewportGrip!;
+          if (grip.contains('w')) {
+            left = (start.left + deltaMm.dx).clamp(frameLeft, right - 50.0);
+          }
+          if (grip.contains('e')) {
+            right = (start.right + deltaMm.dx).clamp(left + 50.0, frameRight);
+          }
+          if (grip.contains('n')) {
+            top = (start.top + deltaMm.dy).clamp(frameTop, bottom - 50.0);
+          }
+          if (grip.contains('s')) {
+            bottom = (start.bottom + deltaMm.dy).clamp(top + 50.0, frameBottom);
+          }
 
-        final updatedVp = sheet.viewport.copyWith(
-          xMm: left,
-          yMm: top,
-          widthMm: right - left,
-          heightMm: bottom - top,
-        );
-        updateSheet(sheet.copyWith(viewport: updatedVp));
-        return;
+          final updatedVp = sheet.viewport.copyWith(
+            xMm: left,
+            yMm: top,
+            widthMm: right - left,
+            heightMm: bottom - top,
+          );
+          updateSheet(sheet.copyWith(viewport: updatedVp));
+          return;
+        } else if (_sheetBlockDragStartRectMm != null) {
+          final start = _sheetBlockDragStartRectMm!;
+          final frameLeft = sheet.format.frameLeftMm;
+          final frameTop = sheet.format.frameTopMm;
+          final frameRight = sheet.format.widthMm - sheet.format.frameRightMm;
+          final frameBottom = sheet.format.heightMm - sheet.format.frameBottomMm;
+
+          double left = start.left;
+          double top = start.top;
+          double right = start.right;
+          double bottom = start.bottom;
+
+          final grip = activeViewportGrip!;
+          if (grip.contains('w')) {
+            left = (start.left + deltaMm.dx).clamp(frameLeft, right - 20.0);
+          }
+          if (grip.contains('e')) {
+            right = (start.right + deltaMm.dx).clamp(left + 20.0, frameRight);
+          }
+          if (grip.contains('n')) {
+            top = (start.top + deltaMm.dy).clamp(frameTop, bottom - 10.0);
+          }
+          if (grip.contains('s')) {
+            bottom = (start.bottom + deltaMm.dy).clamp(top + 10.0, frameBottom);
+          }
+
+          final width = right - left;
+          final height = bottom - top;
+
+          if (block == 'notes') {
+            final tr = (sheet.technicalRequirements ?? const TechnicalRequirements(text: '')).copyWith(
+              xMm: left,
+              yMm: top,
+              widthMm: width,
+              heightMm: height,
+            );
+            updateSheet(sheet.copyWith(technicalRequirements: tr));
+            return;
+          } else if (block == 'act') {
+            final act = sheet.titleBlockData.topRightCorner.copyWith(
+              xMm: left,
+              yMm: top,
+              widthMm: width,
+              heightMm: height,
+            );
+            final tb = sheet.titleBlockData.copyWith(topRightCorner: act);
+            updateSheet(sheet.copyWith(titleBlockData: tb));
+            return;
+          } else if (block == 'legend' && sheet.legend != null) {
+            final leg = sheet.legend!.copyWith(
+              xMm: left,
+              yMm: top,
+              widthMm: width,
+              heightMm: height,
+            );
+            updateSheet(sheet.copyWith(legend: leg));
+            return;
+          }
+        }
       }
       if (!isViewportFocused) {
         return;
@@ -2140,6 +2292,7 @@ class PipingInputController extends ChangeNotifier {
       if (activeViewportGrip != null) {
         activeViewportGrip = null;
         _viewportDragStartRectMm = null;
+        _sheetBlockDragStartRectMm = null;
         _viewportDragStartScreenPos = null;
         notifyListeners();
         return;
@@ -2377,6 +2530,10 @@ class PipingInputController extends ChangeNotifier {
     isDraggingWeld = false;
 
     if (isDraggingCallout) {
+      if (selectedCalloutId != null && network.callouts.containsKey(selectedCalloutId)) {
+        final c = network.callouts[selectedCalloutId]!;
+        network.callouts[selectedCalloutId!] = c.copyWith(isPinned: true);
+      }
       history.recordState(network);
       isDraggingCallout = false;
       _dragCalloutStartScreenPos = null;
@@ -4633,6 +4790,64 @@ class PipingInputController extends ChangeNotifier {
     }
   }
 
+  /// Автоматическая интеллектуальная расстановка выносок для предотвращения
+  /// наложения полочек, текста и пересечения стрелок с трубами.
+  /// По умолчанию [onlyUnpinned] = true (не перемещает выноски, зафиксированные пользователем вручную).
+  int autoLayoutCallouts({bool onlyUnpinned = true}) {
+    if (network.callouts.isEmpty) return 0;
+
+    final newOffsets = CalloutLayoutEngine.calculateLayout(
+      network: network,
+      projector: projector,
+      onlyUnpinned: onlyUnpinned,
+    );
+
+    int updatedCount = 0;
+    for (final entry in newOffsets.entries) {
+      final callout = network.callouts[entry.key];
+      if (callout == null) continue;
+      final off = entry.value;
+      if ((callout.screenOffsetX - off.dx).abs() > 0.01 ||
+          (callout.screenOffsetY - off.dy).abs() > 0.01) {
+        network.callouts[callout.id] = callout.copyWith(
+          screenOffsetX: off.dx,
+          screenOffsetY: off.dy,
+        );
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updatedCount;
+  }
+
+  /// Переключение состояния фиксации (isPinned) выноски
+  void toggleCalloutPinning(String calloutId) {
+    final callout = network.callouts[calloutId];
+    if (callout == null) return;
+    network.callouts[calloutId] = callout.copyWith(isPinned: !callout.isPinned);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Снятие фиксации со всех выносок чертежа
+  void unpinAllCallouts() {
+    bool changed = false;
+    for (final entry in network.callouts.entries.toList()) {
+      if (entry.value.isPinned) {
+        network.callouts[entry.key] = entry.value.copyWith(isPinned: false);
+        changed = true;
+      }
+    }
+    if (changed) {
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
   /// Переключение выноски между режимом "по шаблону" и "свой текст"
   void toggleCalloutMode(String id, bool isCustom) {
     final callout = network.callouts[id];
@@ -4901,10 +5116,15 @@ class PipingInputController extends ChangeNotifier {
   Offset sheetPan = const Offset(40, 40);
   bool isViewportFocused = false;
   bool isViewportSelected = false;
+  String? selectedSheetBlock; // null, 'viewport', 'notes', 'act', 'legend'
   String? activeViewportGrip;
   Rect? _viewportDragStartRectMm;
+  Rect? _sheetBlockDragStartRectMm;
   Offset? _viewportDragStartScreenPos;
   VoidCallback? onTitleBlockTapped;
+  VoidCallback? onTechnicalRequirementsTapped;
+  VoidCallback? onActAttachmentTapped;
+  VoidCallback? onLegendTapped;
 
   bool get isModelSpaceActive => currentProject.isModelSpaceActive;
   String? get activeSheetId => currentProject.activeSheetId;
@@ -4935,52 +5155,91 @@ class PipingInputController extends ChangeNotifier {
   Rect? getActiveSheetStampRect() {
     final frame = getActiveSheetFrameRect();
     if (frame == null) return null;
-    final stampW = 185.0 * sheetZoom;
-    final stampH = 55.0 * sheetZoom;
-    return Rect.fromLTWH(
-      frame.right - stampW,
-      frame.bottom - stampH,
-      stampW,
-      stampH,
-    );
+    return SheetCanvasPainter.getStampScreenRect(frameRect: frame, sheetZoom: sheetZoom);
   }
 
   Rect? getActiveSheetViewportScreenRect() {
     final sheet = activeSheet;
     final paper = getActiveSheetPaperRect();
     if (sheet == null || paper == null) return null;
-    final vp = sheet.viewport;
-    return Rect.fromLTWH(
-      paper.left + (vp.xMm * sheetZoom),
-      paper.top + (vp.yMm * sheetZoom),
-      vp.widthMm * sheetZoom,
-      vp.heightMm * sheetZoom,
+    return SheetCanvasPainter.getViewportScreenRect(sheet: sheet, paperRect: paper, sheetZoom: sheetZoom);
+  }
+
+  Rect? getActiveSheetNotesScreenRect() {
+    final sheet = activeSheet;
+    final paper = getActiveSheetPaperRect();
+    final frame = getActiveSheetFrameRect();
+    if (sheet == null || paper == null || frame == null) return null;
+    if (sheet.technicalRequirements == null || sheet.technicalRequirements!.text.isEmpty) return null;
+    return SheetCanvasPainter.getTechnicalRequirementsScreenRect(
+      sheet: sheet,
+      paperRect: paper,
+      frameRect: frame,
+      sheetZoom: sheetZoom,
     );
   }
 
-  Map<String, Offset> getActiveSheetViewportGrips() {
-    final vpRect = getActiveSheetViewportScreenRect();
-    if (vpRect == null) return const {};
+  Rect? getActiveSheetActScreenRect() {
+    final sheet = activeSheet;
+    final paper = getActiveSheetPaperRect();
+    final frame = getActiveSheetFrameRect();
+    if (sheet == null || paper == null || frame == null) return null;
+    if (sheet.titleBlockData.topRightCorner.mode == TopRightCornerMode.none) return null;
+    return SheetCanvasPainter.getActAttachmentScreenRect(
+      sheet: sheet,
+      paperRect: paper,
+      frameRect: frame,
+      sheetZoom: sheetZoom,
+    );
+  }
+
+  Rect? getActiveSheetLegendScreenRect() {
+    final sheet = activeSheet;
+    final paper = getActiveSheetPaperRect();
+    final frame = getActiveSheetFrameRect();
+    if (sheet == null || paper == null || frame == null) return null;
+    if (sheet.legend == null || !sheet.legend!.isVisible) return null;
+    return SheetCanvasPainter.getLegendScreenRect(
+      sheet: sheet,
+      paperRect: paper,
+      frameRect: frame,
+      sheetZoom: sheetZoom,
+    );
+  }
+
+  Map<String, Offset> getGripsForRect(Rect rect) {
     return {
-      'nw': vpRect.topLeft,
-      'n': Offset(vpRect.center.dx, vpRect.top),
-      'ne': vpRect.topRight,
-      'e': Offset(vpRect.right, vpRect.center.dy),
-      'se': vpRect.bottomRight,
-      's': Offset(vpRect.center.dx, vpRect.bottom),
-      'sw': vpRect.bottomLeft,
-      'w': Offset(vpRect.left, vpRect.center.dy),
+      'nw': rect.topLeft,
+      'n': Offset(rect.center.dx, rect.top),
+      'ne': rect.topRight,
+      'e': Offset(rect.right, rect.center.dy),
+      'se': rect.bottomRight,
+      's': Offset(rect.center.dx, rect.bottom),
+      'sw': rect.bottomLeft,
+      'w': Offset(rect.left, rect.center.dy),
     };
   }
 
-  String? hitTestViewportGrip(Offset screenPos, [double hitRadius = 12.0]) {
-    final grips = getActiveSheetViewportGrips();
+  String? hitTestRectGrip(Rect rect, Offset screenPos, [double hitRadius = 12.0]) {
+    final grips = getGripsForRect(rect);
     for (final entry in grips.entries) {
       if ((entry.value - screenPos).distance <= hitRadius) {
         return entry.key;
       }
     }
     return null;
+  }
+
+  Map<String, Offset> getActiveSheetViewportGrips() {
+    final vpRect = getActiveSheetViewportScreenRect();
+    if (vpRect == null) return const {};
+    return getGripsForRect(vpRect);
+  }
+
+  String? hitTestViewportGrip(Offset screenPos, [double hitRadius = 12.0]) {
+    final vpRect = getActiveSheetViewportScreenRect();
+    if (vpRect == null) return null;
+    return hitTestRectGrip(vpRect, screenPos, hitRadius);
   }
 
   bool hitTestSheetStamp(Offset screenPos) {
@@ -4995,6 +5254,24 @@ class PipingInputController extends ChangeNotifier {
     return vp.contains(screenPos);
   }
 
+  bool hitTestSheetNotes(Offset screenPos) {
+    final rect = getActiveSheetNotesScreenRect();
+    if (rect == null) return false;
+    return rect.contains(screenPos);
+  }
+
+  bool hitTestSheetAct(Offset screenPos) {
+    final rect = getActiveSheetActScreenRect();
+    if (rect == null) return false;
+    return rect.contains(screenPos);
+  }
+
+  bool hitTestSheetLegend(Offset screenPos) {
+    final rect = getActiveSheetLegendScreenRect();
+    if (rect == null) return false;
+    return rect.contains(screenPos);
+  }
+
   void applyViewportPreset(ViewportLayoutPreset preset) {
     final sheet = activeSheet;
     if (sheet == null) return;
@@ -5006,6 +5283,7 @@ class PipingInputController extends ChangeNotifier {
     currentProject = currentProject.copyWith(clearActiveSheet: true);
     isViewportFocused = false;
     isViewportSelected = false;
+    selectedSheetBlock = null;
     activeViewportGrip = null;
     hasUnsavedChanges = true;
     notifyListeners();
@@ -5018,6 +5296,7 @@ class PipingInputController extends ChangeNotifier {
     currentProject = currentProject.copyWith(activeSheetId: sheetId);
     isViewportFocused = false;
     isViewportSelected = false;
+    selectedSheetBlock = null;
     activeViewportGrip = null;
     hasUnsavedChanges = true;
     notifyListeners();
@@ -5134,6 +5413,12 @@ class PipingInputController extends ChangeNotifier {
     updateSheet(sheet.copyWith(technicalRequirements: tr));
   }
 
+  void updateActiveSheetLegend(DrawingLegend? legend) {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    updateSheet(sheet.copyWith(legend: legend));
+  }
+
   void updateDrawingStyleConfig(DrawingStyleConfig styleConfig) {
     currentProject = currentProject.copyWith(styleConfig: styleConfig);
     hasUnsavedChanges = true;
@@ -5155,6 +5440,7 @@ class PipingInputController extends ChangeNotifier {
     sheetPan = const Offset(40, 40);
     isViewportFocused = false;
     isViewportSelected = false;
+    selectedSheetBlock = null;
     activeViewportGrip = null;
     notifyListeners();
   }
