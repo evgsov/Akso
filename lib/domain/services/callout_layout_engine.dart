@@ -1,5 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:akso/domain/models/piping_network.dart';
+import 'package:akso/domain/models/callout.dart';
+import 'package:akso/domain/models/node_3d.dart';
+import 'package:akso/core/math/axonometry_projector.dart';
 
 /// Прямоугольное препятствие (полочка выноски, оборудование и т.д.)
 class RectObstacle {
@@ -186,6 +190,142 @@ class CalloutLayoutEngine {
   static const double distancePenaltyWeight = 1.5;
   static const double columnAlignmentReward = 150.0;
 
+  /// Вычисляет 3D узел привязки для выноски любого типа
+  static Node3D? computeAnchorNode(Callout callout, PipingNetwork network) {
+    switch (callout.targetType) {
+      case CalloutTargetType.segment:
+        final spool = network.spools[callout.targetId];
+        if (spool != null && spool.startPoint != null && spool.endPoint != null) {
+          return Node3D(
+            id: 'anchor_${callout.id}',
+            x: (spool.startPoint!.x + spool.endPoint!.x) / 2.0,
+            y: (spool.startPoint!.y + spool.endPoint!.y) / 2.0,
+            z: (spool.startPoint!.z + spool.endPoint!.z) / 2.0,
+          );
+        }
+
+        final seg = network.segments[callout.targetId];
+        if (seg == null) return null;
+
+        final segSpools = network.spools.values.where((s) => s.segmentId == seg.id).toList();
+        if (segSpools.length == 1 &&
+            segSpools.first.startPoint != null &&
+            segSpools.first.endPoint != null) {
+          final s = segSpools.first;
+          return Node3D(
+            id: 'anchor_${callout.id}',
+            x: (s.startPoint!.x + s.endPoint!.x) / 2.0,
+            y: (s.startPoint!.y + s.endPoint!.y) / 2.0,
+            z: (s.startPoint!.z + s.endPoint!.z) / 2.0,
+          );
+        }
+
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) return null;
+        return Node3D(
+          id: 'anchor_${callout.id}',
+          x: (start.x + end.x) / 2.0,
+          y: (start.y + end.y) / 2.0,
+          z: (start.z + end.z) / 2.0,
+        );
+
+      case CalloutTargetType.node:
+        return network.nodes[callout.targetId];
+
+      case CalloutTargetType.valve:
+        final valve = network.valves[callout.targetId];
+        if (valve == null) return null;
+        final seg = network.segments[valve.segmentId];
+        if (seg == null) return null;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) return null;
+        return Node3D(
+          id: 'anchor_${callout.id}',
+          x: start.x + (end.x - start.x) * valve.ratio,
+          y: start.y + (end.y - start.y) * valve.ratio,
+          z: start.z + (end.z - start.z) * valve.ratio,
+        );
+
+      case CalloutTargetType.weld:
+        final weld = network.weldJoints[callout.targetId];
+        if (weld == null) return null;
+        final seg = network.segments[weld.segmentId];
+        if (seg == null) return null;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) return null;
+        return Node3D(
+          id: 'anchor_${callout.id}',
+          x: start.x + (end.x - start.x) * weld.ratio,
+          y: start.y + (end.y - start.y) * weld.ratio,
+          z: start.z + (end.z - start.z) * weld.ratio,
+        );
+
+      case CalloutTargetType.support:
+        final sup = network.supports[callout.targetId];
+        if (sup == null) return null;
+        final seg = network.segments[sup.segmentId];
+        if (seg == null) return null;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) return null;
+        final r = sup.distanceRatio.clamp(0.0, 1.0);
+        return Node3D(
+          id: 'anchor_${callout.id}',
+          x: start.x + (end.x - start.x) * r,
+          y: start.y + (end.y - start.y) * r,
+          z: start.z + (end.z - start.z) * r,
+        );
+
+      case CalloutTargetType.equipment:
+        final eq = network.equipments[callout.targetId];
+        if (eq == null) return null;
+        return Node3D(
+          id: 'anchor_${callout.id}',
+          x: eq.x,
+          y: eq.y,
+          z: eq.z + eq.height / 2.0,
+        );
+
+      case CalloutTargetType.nozzle:
+        final node = network.nodes[callout.targetId];
+        if (node != null) return node;
+        for (final eq in network.equipments.values) {
+          for (final noz in eq.nozzles) {
+            if (noz.id == callout.targetId) {
+              final rad = eq.rotationAngleDeg * math.pi / 180.0;
+              final cosA = math.cos(rad);
+              final sinA = math.sin(rad);
+              final wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+              final wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+              final wz = eq.z + noz.localZ;
+              return Node3D(id: 'anchor_${callout.id}', x: wx, y: wy, z: wz);
+            }
+          }
+        }
+        return null;
+
+      case CalloutTargetType.fitting:
+        final fit = network.fittings[callout.targetId] ??
+            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
+        if (fit == null) return null;
+        return network.nodes[fit.nodeId];
+    }
+  }
+
+  /// Вычисляет экранную точку привязки (анкер) для выноски любого типа
+  static Offset? computeAnchorScreen(
+    Callout callout,
+    PipingNetwork network,
+    AxonometryProjector projector,
+  ) {
+    final anchorNode = computeAnchorNode(callout, network);
+    if (anchorNode == null) return null;
+    return projector.project(anchorNode);
+  }
+
   /// Оценивает и находит наилучшее смещение (dx, dy) для выноски вокруг точки anchor
   static Offset? evaluateBestOffset({
     required Offset anchor,
@@ -310,4 +450,180 @@ class CalloutLayoutEngine {
 
     return bestCandidate;
   }
+
+  /// Выполняет комплексную авто-расстановку выносок с обходом препятствий и
+  /// формированием гребенок (колонок)
+  static Map<String, Offset> calculateLayout({
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+    bool onlyUnpinned = true,
+    double minRadius = 35.0,
+    double maxRadius = 150.0,
+    double textWidth = 60.0,
+    double textHeight = 12.0,
+  }) {
+    final result = <String, Offset>{};
+    final obstacleMap = CalloutObstacleMap();
+
+    // 1. Регистрируем препятствия трубопроводов
+    for (final seg in network.segments.values) {
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final p1 = projector.project(start);
+      final p2 = projector.project(end);
+      final radiusPx = math.max(4.0, seg.outerDiameterMm * 0.05 + 4.0);
+      obstacleMap.addPipe(p1, p2, radiusPx, seg.id);
+    }
+
+    // 2. Регистрируем закрепленные (isPinned) выноски
+    final unpinnedCallouts = <Callout>[];
+    final anchorMap = <String, Offset>{};
+
+    for (final callout in network.callouts.values) {
+      final anchor = computeAnchorScreen(callout, network, projector);
+      if (anchor == null) continue;
+      anchorMap[callout.id] = anchor;
+
+      if (onlyUnpinned && callout.isPinned) {
+        final offset = Offset(callout.screenOffsetX, callout.screenOffsetY);
+        result[callout.id] = offset;
+        final shelfStart = anchor + offset;
+        final shelfRect = Rect.fromLTWH(
+          shelfStart.dx,
+          shelfStart.dy - textHeight - 4.0,
+          textWidth + 10.0,
+          textHeight + 8.0,
+        );
+        obstacleMap.addRect(shelfRect, callout.id);
+        obstacleMap.addLeaderLine(anchor, shelfStart, callout.id);
+      } else {
+        unpinnedCallouts.add(callout);
+      }
+    }
+
+    if (unpinnedCallouts.isEmpty) {
+      return result;
+    }
+
+    // 3. Сортируем незакрепленные выноски по локальной плотности анкеров
+    // (наиболее стесненные/плотные узлы обрабатываются первыми)
+    unpinnedCallouts.sort((a, b) {
+      final anchA = anchorMap[a.id]!;
+      final anchB = anchorMap[b.id]!;
+      int countNearA = 0;
+      int countNearB = 0;
+      for (final other in anchorMap.values) {
+        if ((other - anchA).distance < 160.0) countNearA++;
+        if ((other - anchB).distance < 160.0) countNearB++;
+      }
+      return countNearB.compareTo(countNearA);
+    });
+
+    // 4. Пасс 1: Индивидуальное оптимальное размещение
+    final placedShelfX = <double>[];
+    final placedInfo = <_PlacedCalloutInfo>[];
+
+    for (final callout in unpinnedCallouts) {
+      final anchor = anchorMap[callout.id]!;
+      final candidate = findBestCandidate(
+        anchor: anchor,
+        textWidth: textWidth,
+        textHeight: textHeight,
+        obstacleMap: obstacleMap,
+        existingShelfXPositions: placedShelfX,
+        minRadius: minRadius,
+        maxRadius: maxRadius,
+      );
+
+      final offset = candidate?.offset ?? const Offset(45.0, -35.0);
+      result[callout.id] = offset;
+
+      final shelfStart = anchor + offset;
+      final bounds = candidate?.shelfBounds ??
+          Rect.fromLTWH(
+            shelfStart.dx,
+            shelfStart.dy - textHeight - 4.0,
+            textWidth + 10.0,
+            textHeight + 8.0,
+          );
+
+      obstacleMap.addRect(bounds, callout.id);
+      obstacleMap.addLeaderLine(anchor, shelfStart, callout.id);
+      placedShelfX.add(shelfStart.dx);
+
+      placedInfo.add(_PlacedCalloutInfo(
+        callout: callout,
+        anchor: anchor,
+        shelfStart: shelfStart,
+        bounds: bounds,
+      ));
+    }
+
+    // 5. Пасс 2: Фаза выравнивания в вертикальные гребенки (Column Stacking)
+    final stepY = textHeight + 8.0; // минимальный шаг между полочками по вертикали
+    final processedIds = <String>{};
+
+    for (int i = 0; i < placedInfo.length; i++) {
+      final infoA = placedInfo[i];
+      if (processedIds.contains(infoA.callout.id)) continue;
+
+      final cluster = <_PlacedCalloutInfo>[infoA];
+
+      for (int j = i + 1; j < placedInfo.length; j++) {
+        final infoB = placedInfo[j];
+        if (processedIds.contains(infoB.callout.id)) continue;
+
+        // Если полочки близки по горизонтали и точки привязки находятся в разумной близости
+        if ((infoA.shelfStart.dx - infoB.shelfStart.dx).abs() <= 35.0 &&
+            (infoA.anchor.dx - infoB.anchor.dx).abs() <= 180.0) {
+          cluster.add(infoB);
+        }
+      }
+
+      if (cluster.length >= 2) {
+        // Найдена группа для гребенки: выравниваем по средней оси X
+        final avgX = cluster.map((c) => c.shelfStart.dx).reduce((a, b) => a + b) / cluster.length;
+        cluster.sort((a, b) => a.shelfStart.dy.compareTo(b.shelfStart.dy));
+
+        double currentY = cluster.first.shelfStart.dy;
+        for (int k = 0; k < cluster.length; k++) {
+          final item = cluster[k];
+          processedIds.add(item.callout.id);
+
+          final targetY = k == 0 ? item.shelfStart.dy : math.max(item.shelfStart.dy, currentY + stepY);
+          currentY = targetY;
+
+          final candidateRect = Rect.fromLTWH(
+            avgX,
+            targetY - textHeight - 4.0,
+            textWidth + 10.0,
+            textHeight + 8.0,
+          );
+
+          // Применяем выравнивание, если полочка не падает на трубу
+          if (!obstacleMap.testShelfPipeCollision(candidateRect)) {
+            result[item.callout.id] = Offset(avgX - item.anchor.dx, targetY - item.anchor.dy);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+}
+
+class _PlacedCalloutInfo {
+  final Callout callout;
+  final Offset anchor;
+  Offset shelfStart;
+  Rect bounds;
+
+  _PlacedCalloutInfo({
+    required this.callout,
+    required this.anchor,
+    required this.shelfStart,
+    required this.bounds,
+  });
 }
