@@ -37,22 +37,30 @@ class CalloutObstacleMap {
     leaderLines.add(SegmentObstacle(start, end, radius: 0.0, id: id));
   }
 
-  /// Проверяет, пересекается ли прямоугольник полочки с другими выносками
-  /// или коридорами трубопроводов
-  bool testShelfCollision(Rect shelfRect) {
+  /// Проверяет пересечение полочки с другими прямоугольниками выносок
+  bool testShelfRectOverlap(Rect shelfRect) {
     for (final r in rects) {
       if (r.rect.overlaps(shelfRect)) {
         return true;
       }
     }
+    return false;
+  }
 
+  /// Проверяет пересечение полочки с коридорами трубопроводов
+  bool testShelfPipeCollision(Rect shelfRect) {
     for (final pipe in pipes) {
       if (_rectCollidesWithSegment(shelfRect, pipe.p1, pipe.p2, pipe.radius)) {
         return true;
       }
     }
-
     return false;
+  }
+
+  /// Проверяет, пересекается ли прямоугольник полочки с другими выносками
+  /// или коридорами трубопроводов
+  bool testShelfCollision(Rect shelfRect) {
+    return testShelfRectOverlap(shelfRect) || testShelfPipeCollision(shelfRect);
   }
 
   /// Подсчитывает количество пересечений стрелки-выноски с чужими трубами
@@ -154,5 +162,152 @@ class CalloutObstacleMap {
     final u = ((b1.dx - a1.dx) * day - (b1.dy - a1.dy) * dax) / denom;
 
     return t >= tolerance && t <= (1.0 - tolerance) && u >= 0.0 && u <= 1.0;
+  }
+}
+
+/// Кандидат расположения выноски с рассчитанной стоимостью (штрафом)
+class CalloutCandidate {
+  final Offset offset;
+  final Rect shelfBounds;
+  final double cost;
+
+  const CalloutCandidate({
+    required this.offset,
+    required this.shelfBounds,
+    required this.cost,
+  });
+}
+
+/// Движок интеллектуального размещения и предотвращения коллизий выносок
+class CalloutLayoutEngine {
+  static const double shelfTextOverlapPenalty = 10000.0;
+  static const double shelfPipeOverlapPenalty = 5000.0;
+  static const double leaderCrossPenalty = 800.0;
+  static const double distancePenaltyWeight = 1.5;
+  static const double columnAlignmentReward = 150.0;
+
+  /// Оценивает и находит наилучшее смещение (dx, dy) для выноски вокруг точки anchor
+  static Offset? evaluateBestOffset({
+    required Offset anchor,
+    required double textWidth,
+    required double textHeight,
+    required CalloutObstacleMap obstacleMap,
+    List<double>? existingShelfXPositions,
+    double minRadius = 35.0,
+    double maxRadius = 150.0,
+  }) {
+    final candidate = findBestCandidate(
+      anchor: anchor,
+      textWidth: textWidth,
+      textHeight: textHeight,
+      obstacleMap: obstacleMap,
+      existingShelfXPositions: existingShelfXPositions,
+      minRadius: minRadius,
+      maxRadius: maxRadius,
+    );
+    return candidate?.offset;
+  }
+
+  /// Генерирует веер кандидатов и выбирает кандидата с минимальной стоимостью
+  static CalloutCandidate? findBestCandidate({
+    required Offset anchor,
+    required double textWidth,
+    required double textHeight,
+    required CalloutObstacleMap obstacleMap,
+    List<double>? existingShelfXPositions,
+    double minRadius = 35.0,
+    double maxRadius = 150.0,
+  }) {
+    final shelfWidth = textWidth + 10.0;
+    final totalHeight = textHeight + 8.0;
+
+    // Секторы углов (в градусах). В экранной системе Y направлен вниз.
+    // Отрицательные углы соответствуют направлению вверх.
+    final angleDegrees = <double>[
+      // Квадрант I: Вверх-вправо (приоритет по ГОСТ)
+      -45.0, -30.0, -60.0, -15.0, -75.0,
+      // Квадрант IV: Вниз-вправо
+      45.0, 30.0, 60.0, 15.0, 75.0,
+      // Квадрант II: Вверх-влево
+      -135.0, -150.0, -120.0, -165.0, -105.0,
+      // Квадрант III: Вниз-влево
+      135.0, 150.0, 120.0, 165.0, 105.0,
+    ];
+
+    // Динамические радиусы отступа от точки привязки
+    final radii = <double>[
+      minRadius,
+      minRadius + 15.0,
+      minRadius + 30.0,
+      minRadius + 50.0,
+      minRadius + 75.0,
+      maxRadius,
+    ];
+
+    CalloutCandidate? bestCandidate;
+    double lowestCost = double.infinity;
+
+    for (final r in radii) {
+      for (final deg in angleDegrees) {
+        final rad = deg * math.pi / 180.0;
+        final dx = r * math.cos(rad);
+        final dy = r * math.sin(rad);
+        final offset = Offset(dx, dy);
+
+        final shelfStart = anchor + offset;
+        final bounds = Rect.fromLTWH(
+          shelfStart.dx,
+          shelfStart.dy - textHeight - 4.0,
+          shelfWidth,
+          totalHeight,
+        );
+
+        double cost = 0.0;
+
+        // 1. Штраф за перекрытие текста/других полочек
+        if (obstacleMap.testShelfRectOverlap(bounds)) {
+          cost += shelfTextOverlapPenalty;
+        }
+
+        // 2. Штраф за перекрытие трубы полочкой
+        if (obstacleMap.testShelfPipeCollision(bounds)) {
+          cost += shelfPipeOverlapPenalty;
+        }
+
+        // 3. Штраф за пересечение стрелки-выноски с чужими объектами
+        final crosses = obstacleMap.countLeaderLineIntersections(anchor, shelfStart);
+        cost += crosses * leaderCrossPenalty;
+
+        // 4. Штраф за удаленность от объекта
+        cost += (r / minRadius) * distancePenaltyWeight;
+
+        // 5. Небольшой приоритет естественного чертежного направления (вверх-вправо)
+        if (dy > 0) cost += 30.0; // вниз
+        if (dx < 0) cost += 25.0; // влево
+
+        // 6. Бонус за выравнивание полочки в общую вертикальную колонку ("гребенка")
+        if (existingShelfXPositions != null && existingShelfXPositions.isNotEmpty) {
+          for (final colX in existingShelfXPositions) {
+            if ((shelfStart.dx - colX).abs() <= 6.0) {
+              cost -= columnAlignmentReward;
+              break;
+            }
+          }
+        }
+
+        final candidate = CalloutCandidate(
+          offset: offset,
+          shelfBounds: bounds,
+          cost: cost,
+        );
+
+        if (cost < lowestCost) {
+          lowestCost = cost;
+          bestCandidate = candidate;
+        }
+      }
+    }
+
+    return bestCandidate;
   }
 }

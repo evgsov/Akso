@@ -38,4 +38,35 @@ void main() {
       expect(count2, equals(0));
     });
   });
+
+  group('CalloutLayoutEngine', () {
+    test('findBestCandidate avoids obstacles and chooses clear quadrant', () {
+      final map = CalloutObstacleMap();
+      // Block top-right quadrant with a pipe and obstacle
+      map.addRect(const Rect.fromLTWH(110, 80, 100, 40));
+      map.addPipe(const Offset(100, 100), const Offset(200, 50), 8.0);
+
+      const anchor = Offset(100, 100);
+      const textWidth = 60.0;
+      const textHeight = 12.0;
+
+      final best = CalloutLayoutEngine.evaluateBestOffset(
+        anchor: anchor,
+        textWidth: textWidth,
+        textHeight: textHeight,
+        obstacleMap: map,
+      );
+
+      expect(best, isNotNull);
+      // The chosen shelf rect must not collide with the obstacle
+      final chosenBounds = Rect.fromLTWH(
+        anchor.dx + best!.dx,
+        anchor.dy + best.dy - textHeight - 4.0,
+        textWidth + 10.0,
+        textHeight + 8.0,
+      );
+      expect(map.testShelfCollision(chosenBounds), isFalse);
+    });
+  });
 }
+
