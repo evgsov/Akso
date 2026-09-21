@@ -187,6 +187,7 @@ class Callout {
   final ElevationMarkStyle? elevationStyle;
   final ShelfDirection shelfDirection;
   final bool arrowOnNode;
+  final bool isPinned;
 
   const Callout({
     required this.id,
@@ -201,6 +202,7 @@ class Callout {
     this.elevationStyle,
     this.shelfDirection = ShelfDirection.auto,
     this.arrowOnNode = true,
+    this.isPinned = false,
   });
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
@@ -224,6 +226,7 @@ class Callout {
     bool clearElevationStyle = false,
     ShelfDirection? shelfDirection,
     bool? arrowOnNode,
+    bool? isPinned,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -238,6 +241,7 @@ class Callout {
       elevationStyle: clearElevationStyle ? null : (elevationStyle ?? this.elevationStyle),
       shelfDirection: shelfDirection ?? this.shelfDirection,
       arrowOnNode: arrowOnNode ?? this.arrowOnNode,
+      isPinned: isPinned ?? this.isPinned,
     );
   }
 
@@ -254,6 +258,7 @@ class Callout {
         if (elevationStyle != null) 'elevationStyle': elevationStyle!.name,
         'shelfDirection': shelfDirection.name,
         'arrowOnNode': arrowOnNode,
+        'isPinned': isPinned,
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -287,6 +292,7 @@ class Callout {
 
     final rawArrowOnNode = json['arrowOnNode'] ?? json['arrow_on_node'];
     final parsedArrowOnNode = rawArrowOnNode is bool ? rawArrowOnNode : true;
+    final parsedIsPinned = (json['isPinned'] as bool?) ?? false;
 
     return Callout(
       id: json['id'] as String,
@@ -301,6 +307,7 @@ class Callout {
       elevationStyle: parsedElevStyle,
       shelfDirection: parsedShelfDir,
       arrowOnNode: parsedArrowOnNode,
+      isPinned: parsedIsPinned,
     );
   }
 
@@ -320,7 +327,8 @@ class Callout {
           textColor == other.textColor &&
           elevationStyle == other.elevationStyle &&
           shelfDirection == other.shelfDirection &&
-          arrowOnNode == other.arrowOnNode;
+          arrowOnNode == other.arrowOnNode &&
+          isPinned == other.isPinned;
 
   @override
   int get hashCode => Object.hash(
@@ -336,9 +344,10 @@ class Callout {
         elevationStyle,
         shelfDirection,
         arrowOnNode,
+        isPinned,
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode)';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned)';
 }
