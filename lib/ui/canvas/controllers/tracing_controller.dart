@@ -1,16 +1,28 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/math/axonometry_projector.dart';
+import '../../../core/math/drafting_settings.dart';
 import '../../../core/math/snap_engine.dart';
+import '../../../domain/models/acquired_tracking_point.dart';
 import '../../../domain/models/node_3d.dart';
 
 /// Контроллер трассировки трубопроводов и разбивочных осей:
 /// Режимы угловой привязки (Орто, Изометрия, шаг углов),
-/// расчет векторов направления и конечных точек.
+/// расчет векторов направления и конечных точек,
+/// объектное отслеживание (OTRACK) и параметры черчения (DraftingSettings).
 class TracingController {
   AngleSnapMode angleSnapMode = AngleSnapMode.ortho90;
   double customAngleDegrees = 15.0;
-  bool isObjectTrackingEnabled = true;
+  bool get isObjectTrackingEnabled => draftingSettings.enableOtrack;
+  set isObjectTrackingEnabled(bool val) {
+    draftingSettings = draftingSettings.copyWith(enableOtrack: val);
+  }
+
+  DraftingSettings draftingSettings = const DraftingSettings();
+  final List<AcquiredTrackingPoint> acquiredPoints = [];
+  Timer? _hoverDwellTimer;
+  String? _pendingDwellNodeId;
 
   Node3D? traceStartNode;
   Node3D? axisStartNode;
@@ -22,15 +34,75 @@ class TracingController {
   }
 
   void toggleObjectTracking() {
-    isObjectTrackingEnabled = !isObjectTrackingEnabled;
+    draftingSettings = draftingSettings.copyWith(enableOtrack: !draftingSettings.enableOtrack);
+    if (!draftingSettings.enableOtrack) {
+      clearAcquiredPoints();
+    }
+  }
+
+  void updateDraftingSettings(DraftingSettings newSettings) {
+    draftingSettings = newSettings;
+    if (!draftingSettings.enableOtrack) {
+      clearAcquiredPoints();
+    }
+  }
+
+  /// Обработка удержания курсора над узлом для захвата точки (Hover-to-Acquire OTRACK)
+  void processHoverDwell({
+    required Offset screenPos,
+    Node3D? candidateNode,
+    required VoidCallback onAcquired,
+  }) {
+    if (candidateNode == null || !draftingSettings.enableOtrack) {
+      _hoverDwellTimer?.cancel();
+      _hoverDwellTimer = null;
+      _pendingDwellNodeId = null;
+      return;
+    }
+
+    if (_pendingDwellNodeId == candidateNode.id) {
+      // Курсор уже на этом узле, таймер продолжает тикать
+      return;
+    }
+
+    _hoverDwellTimer?.cancel();
+    _pendingDwellNodeId = candidateNode.id;
+
+    _hoverDwellTimer = Timer(const Duration(milliseconds: 350), () {
+      final existingIndex = acquiredPoints.indexWhere((p) => p.nodeId == candidateNode.id);
+      if (existingIndex >= 0) {
+        // Повторный навод и удержание снимает захват точки
+        acquiredPoints.removeAt(existingIndex);
+      } else {
+        if (acquiredPoints.length >= 2) {
+          acquiredPoints.removeAt(0);
+        }
+        acquiredPoints.add(AcquiredTrackingPoint(
+          worldPoint: candidateNode,
+          screenPoint: screenPos,
+          nodeId: candidateNode.id,
+          acquiredAt: DateTime.now(),
+        ));
+      }
+      onAcquired();
+    });
+  }
+
+  void clearAcquiredPoints() {
+    _hoverDwellTimer?.cancel();
+    _hoverDwellTimer = null;
+    _pendingDwellNodeId = null;
+    acquiredPoints.clear();
   }
 
   void resetTrace() {
     traceStartNode = null;
+    clearAcquiredPoints();
   }
 
   void resetAxis() {
     axisStartNode = null;
+    clearAcquiredPoints();
   }
 
   /// Расчет единичного вектора направления (dirX, dirY, dirZ) от начального узла

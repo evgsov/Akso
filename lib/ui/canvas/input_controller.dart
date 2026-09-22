@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/math/axonometry_projector.dart';
+import '../../core/math/drafting_settings.dart';
 import '../../core/math/snap_engine.dart';
 import '../../domain/enums/fitting_type.dart';
 import '../../domain/enums/projection_type.dart';
@@ -2331,7 +2332,56 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  DraftingSettings get draftingSettings => tracingController.draftingSettings;
+
+  void updateDraftingSettings(DraftingSettings newSettings) {
+    tracingController.updateDraftingSettings(newSettings);
+    if (currentCursorScreenPos != null) {
+      _updateSnap(currentCursorScreenPos!);
+    }
+    notifyListeners();
+  }
+
+  void toggleZLock() {
+    updateDraftingSettings(draftingSettings.copyWith(isZLocked: !draftingSettings.isZLocked));
+  }
+
+  void toggleZGrid() {
+    updateDraftingSettings(draftingSettings.copyWith(showZPlaneGrid: !draftingSettings.showZPlaneGrid));
+  }
+
   void _updateSnap(Offset screenPos) {
+    // Hover-to-Acquire OTRACK: удержание курсора над узлом для захвата точки
+    if (isSnapEnabled && draftingSettings.enableOtrack) {
+      Node3D? candidateHoverNode;
+      double minNodeDist = 18.0;
+      for (final node in network.nodes.values) {
+        if (traceStartNode != null && node.id == traceStartNode!.id) continue;
+        final proj = projector.project(node);
+        final d = (proj - screenPos).distance;
+        if (d <= minNodeDist) {
+          minNodeDist = d;
+          candidateHoverNode = node;
+        }
+      }
+      tracingController.processHoverDwell(
+        screenPos: screenPos,
+        candidateNode: candidateHoverNode,
+        onAcquired: () {
+          if (currentCursorScreenPos != null) {
+            _updateSnap(currentCursorScreenPos!);
+          }
+          notifyListeners();
+        },
+      );
+    } else {
+      tracingController.processHoverDwell(
+        screenPos: screenPos,
+        candidateNode: null,
+        onAcquired: () {},
+      );
+    }
+
     if (isSnapEnabled) {
       final effectiveAngleMode = isAngleLocked ? AngleSnapMode.ortho90 : angleSnapMode;
 
