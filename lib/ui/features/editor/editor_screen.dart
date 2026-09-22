@@ -541,6 +541,9 @@ class _EditorScreenState extends State<EditorScreen> {
                           snapResult: controller.currentSnapResult,
                           currentElevationZ: controller.currentElevationZ,
                           showGrid: controller.showGrid,
+                          acquiredPoints: controller.tracingController.acquiredPoints,
+                          isZLocked: controller.draftingSettings.isZLocked,
+                          showZPlaneGrid: controller.draftingSettings.showZPlaneGrid,
                         )
                       : SheetCanvasPainter(
                           sheet: controller.activeSheet!,

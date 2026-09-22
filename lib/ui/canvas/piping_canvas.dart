@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../core/math/snap_engine.dart';
+import '../../domain/models/acquired_tracking_point.dart';
 import '../../domain/models/node_3d.dart';
 
 import '../../domain/models/linear_dimension.dart';
@@ -70,6 +71,9 @@ class PipingCanvasPainter extends CustomPainter {
   final CanvasTool? currentTool;
   final Rect? selectionBoxRect;
   final bool isCrossingSelection;
+  final List<AcquiredTrackingPoint>? acquiredPoints;
+  final bool isZLocked;
+  final bool showZPlaneGrid;
 
   PipingCanvasPainter({
     required this.network,
@@ -108,6 +112,9 @@ class PipingCanvasPainter extends CustomPainter {
     this.selectedSpoolId,
     this.selectedSpoolIds,
     this.currentElevationZ = 0.0,
+    this.acquiredPoints,
+    this.isZLocked = false,
+    this.showZPlaneGrid = false,
   });
 
   @override
@@ -115,6 +122,11 @@ class PipingCanvasPainter extends CustomPainter {
     // 1. Сетка фона
     if (showGrid) {
       GridPainter.paint(canvas, size, projector, currentElevationZ);
+    }
+
+    // 1.1. Координатная сетка активной плоскости Z (Z-Plane Grid)
+    if (showZPlaneGrid) {
+      _drawZPlaneGrid(canvas, size);
     }
 
     // Строительные оси здания
@@ -153,6 +165,8 @@ class PipingCanvasPainter extends CustomPainter {
       isCenterlineMode,
       selectedSpoolId,
       selectedSpoolIds,
+      isZLocked,
+      currentElevationZ,
     );
 
     // 4. Отрисовка арматуры
@@ -293,6 +307,9 @@ class PipingCanvasPainter extends CustomPainter {
       _drawDashedLine(canvas, pAxisStart, effectiveScreenEnd, axisPreviewPaint);
       canvas.drawCircle(effectiveScreenEnd, 5.0, axisPreviewPaint);
     }
+
+    // 8.1. Захваченные опорные точки отслеживания AutoCAD OTRACK (+)
+    _drawAcquiredTrackingPoints(canvas);
 
     // 9. Индикатор магнитной привязки и полярных углов
     _drawSnapIndicator(canvas);
@@ -804,16 +821,17 @@ class PipingCanvasPainter extends CustomPainter {
 
       _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, branchColor);
     } else if (snapResult!.type == SnapType.extensionRay) {
-      // AutoCAD OTRACK Extension: продление оси существующей трубы в створе
-      const rayColor = Color(0xFF00E5FF); // Яркий Cyan
+      // AutoCAD OTRACK Extension: продление оси существующей трубы в створе или вертикальный стояк
+      final isVerticalRiser = snapResult!.isElevationTransition;
+      final rayColor = isVerticalRiser ? Colors.amber.shade700 : const Color(0xFF00E5FF);
       final rayPaint = Paint()
         ..color = rayColor
-        ..strokeWidth = 1.5
+        ..strokeWidth = isVerticalRiser ? 2.0 : 1.5
         ..style = PaintingStyle.stroke;
 
       if (snapResult!.trackingSourcePoint != null) {
         final sourcePt = projector.project(snapResult!.trackingSourcePoint!);
-        // Пунктирный створ от конца трубы до текущей точки курсора
+        // Пунктирный створ от узла-источника до текущей точки курсора
         _drawDashedLine(canvas, sourcePt, pt, rayPaint);
 
         // Исходный маркер OTRACK (маленький крестик в начале луча)
@@ -824,16 +842,36 @@ class PipingCanvasPainter extends CustomPainter {
         canvas.drawLine(sourcePt - const Offset(0, 5), sourcePt + const Offset(0, 5), srcPaint);
       }
 
-      // Маркер привязки в створе (AutoCAD Extension Glyph)
+      // Маркер привязки в створе (AutoCAD Extension Glyph или Vertical Riser Glyph)
       final markerPaint = Paint()
         ..color = rayColor
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(pt - const Offset(6, 6), pt + const Offset(6, 6), markerPaint);
-      canvas.drawLine(pt - const Offset(-6, 6), pt + const Offset(-6, 6), markerPaint);
-      canvas.drawCircle(pt, 12.0, Paint()..color = rayColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
 
-      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, const Color(0xFF00B0FF));
+      if (isVerticalRiser) {
+        canvas.drawCircle(pt, 7.0, markerPaint);
+        canvas.drawCircle(pt, 13.0, Paint()..color = rayColor.withValues(alpha: 0.2)..style = PaintingStyle.fill);
+        // Стрелка направления стояка (вверх или вниз)
+        final isUp = (snapResult!.elevationDeltaMm ?? 0.0) >= 0;
+        final arrowPath = Path();
+        if (isUp) {
+          arrowPath.moveTo(pt.dx, pt.dy - 4);
+          arrowPath.lineTo(pt.dx - 3, pt.dy + 2);
+          arrowPath.lineTo(pt.dx + 3, pt.dy + 2);
+        } else {
+          arrowPath.moveTo(pt.dx, pt.dy + 4);
+          arrowPath.lineTo(pt.dx - 3, pt.dy - 2);
+          arrowPath.lineTo(pt.dx + 3, pt.dy - 2);
+        }
+        arrowPath.close();
+        canvas.drawPath(arrowPath, Paint()..color = rayColor..style = PaintingStyle.fill);
+      } else {
+        canvas.drawLine(pt - const Offset(6, 6), pt + const Offset(6, 6), markerPaint);
+        canvas.drawLine(pt - const Offset(-6, 6), pt + const Offset(-6, 6), markerPaint);
+        canvas.drawCircle(pt, 12.0, Paint()..color = rayColor.withValues(alpha: 0.18)..style = PaintingStyle.fill);
+      }
+
+      _drawSnapBadge(canvas, pt + const Offset(14, -14), snapResult!.label, rayColor);
     } else if (snapResult!.type == SnapType.alignmentGuide) {
       // AutoCAD/Revit OTRACK Alignment: ортогональная направляющая от ключевого узла
       const alignColor = Color(0xFF00E5FF); // Яркий бирюзовый Cyan
@@ -999,6 +1037,110 @@ class PipingCanvasPainter extends CustomPainter {
     );
     canvas.drawRRect(bgRect, Paint()..color = accentColor);
     tp.paint(canvas, pos);
+  }
+
+  void _drawAcquiredTrackingPoints(Canvas canvas) {
+    if (acquiredPoints == null || acquiredPoints!.isEmpty) return;
+
+    final crossPaint = Paint()
+      ..color = Colors.amber.shade700
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+
+    final bgGlow = Paint()
+      ..color = Colors.amber.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    for (final acq in acquiredPoints!) {
+      final pt = projector.project(acq.worldPoint);
+      canvas.drawCircle(pt, 9.0, bgGlow);
+      // Прямой крестик CAD (+) с центральным разрывом
+      canvas.drawLine(pt - const Offset(7, 0), pt - const Offset(2, 0), crossPaint);
+      canvas.drawLine(pt + const Offset(2, 0), pt + const Offset(7, 0), crossPaint);
+      canvas.drawLine(pt - const Offset(0, 7), pt - const Offset(0, 2), crossPaint);
+      canvas.drawLine(pt + const Offset(0, 2), pt + const Offset(0, 7), crossPaint);
+    }
+  }
+
+  void _drawZPlaneGrid(Canvas canvas, Size size) {
+    final pCenter = projector.unproject(Offset(size.width / 2, size.height / 2), currentElevationZ);
+    final spanMm = (size.longestSide / projector.scale) * 0.9;
+    const stepMm = 1000.0;
+
+    final minX = ((pCenter.x - spanMm) / stepMm).floor() * stepMm;
+    final maxX = ((pCenter.x + spanMm) / stepMm).ceil() * stepMm;
+    final minY = ((pCenter.y - spanMm) / stepMm).floor() * stepMm;
+    final maxY = ((pCenter.y + spanMm) / stepMm).ceil() * stepMm;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.12)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final borderPaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.40)
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+
+    final gridPath = Path();
+    for (double x = minX; x <= maxX + 1e-4; x += stepMm) {
+      final p1 = projector.projectCoordinates(x, minY, currentElevationZ);
+      final p2 = projector.projectCoordinates(x, maxY, currentElevationZ);
+      gridPath.moveTo(p1.dx, p1.dy);
+      gridPath.lineTo(p2.dx, p2.dy);
+    }
+    for (double y = minY; y <= maxY + 1e-4; y += stepMm) {
+      final p1 = projector.projectCoordinates(minX, y, currentElevationZ);
+      final p2 = projector.projectCoordinates(maxX, y, currentElevationZ);
+      gridPath.moveTo(p1.dx, p1.dy);
+      gridPath.lineTo(p2.dx, p2.dy);
+    }
+    canvas.drawPath(gridPath, gridPaint);
+
+    // Внешняя рамка активной рабочей плоскости
+    final c1 = projector.projectCoordinates(minX, minY, currentElevationZ);
+    final c2 = projector.projectCoordinates(maxX, minY, currentElevationZ);
+    final c3 = projector.projectCoordinates(maxX, maxY, currentElevationZ);
+    final c4 = projector.projectCoordinates(minX, maxY, currentElevationZ);
+    final borderPath = Path()
+      ..moveTo(c1.dx, c1.dy)
+      ..lineTo(c2.dx, c2.dy)
+      ..lineTo(c3.dx, c3.dy)
+      ..lineTo(c4.dx, c4.dy)
+      ..close();
+    canvas.drawPath(borderPath, borderPaint);
+
+    // Информационный бейдж рабочей плоскости
+    final elevM = (currentElevationZ / 1000.0).toStringAsFixed(3);
+    final sign = currentElevationZ >= 0 ? '+' : '';
+    final label = 'Рабочая плоскость Z: ∇$sign$elevM м';
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          color: Color(0xFF00E5FF),
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.4,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final badgePos = c1 + const Offset(12, 12);
+    final badgeRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(badgePos.dx - 6, badgePos.dy - 3, tp.width + 12, tp.height + 6),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(badgeRect, Paint()..color = const Color(0xCC002B36));
+    canvas.drawRRect(
+      badgeRect,
+      Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
+    tp.paint(canvas, badgePos);
   }
 
   @override

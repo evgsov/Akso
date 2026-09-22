@@ -27,6 +27,8 @@ class PipePainter {
     bool isCenterlineMode = false,
     String? selectedSpoolId,
     Set<String>? selectedSpoolIds,
+    bool isZLocked = false,
+    double activeElevationZ = 0.0,
   ]) {
     if (isVolumeMode) {
       // Честная 3D твердотельная модель с полигональными цилиндрами, Z-сортировкой и направленным освещением
@@ -116,7 +118,11 @@ class PipePainter {
         final isSelected = isSpoolSelected || isSegmentSelected;
 
         final sys = network.systems[seg.systemId];
-        final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+        final baseColor = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+        final isOutOfPlane = isZLocked &&
+            (start.z - activeElevationZ).abs() > 15.0 &&
+            (end.z - activeElevationZ).abs() > 15.0;
+        final color = isOutOfPlane ? baseColor.withValues(alpha: 0.40) : baseColor;
 
         final strokeWidth = calcStrokeWidth(spool.dn);
 
@@ -211,7 +217,11 @@ class PipePainter {
         final isSelected = seg.id == selectedSegmentId ||
             (selectedSegmentIds != null && selectedSegmentIds.contains(seg.id));
         final sys = network.systems[seg.systemId];
-        final color = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+        final baseColor = sys != null ? Color(sys.colorValue) : Colors.blueGrey;
+        final isOutOfPlane = isZLocked &&
+            (start.z - activeElevationZ).abs() > 15.0 &&
+            (end.z - activeElevationZ).abs() > 15.0;
+        final color = isOutOfPlane ? baseColor.withValues(alpha: 0.40) : baseColor;
 
         final strokeWidth = calcStrokeWidth(seg.dn);
 
