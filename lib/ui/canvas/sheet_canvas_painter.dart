@@ -1,14 +1,30 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
+import '../../domain/models/linear_dimension.dart';
+import '../../domain/models/node_3d.dart';
+import '../../domain/models/pipe_segment.dart';
+import '../../domain/models/pipe_spool.dart';
+import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/piping_system.dart';
 import '../../domain/models/title_block_data.dart';
+import '../../domain/models/valve.dart';
+import '../../domain/models/weld_joint.dart';
+import '../../domain/models/fitting.dart';
 import '../../domain/services/viewport_transform_service.dart';
+import 'painters/annotation_painter.dart';
 import 'painters/callout_painter.dart';
 import 'painters/dimension_painter.dart';
+import 'painters/equipment_painter.dart';
+import 'painters/fitting_painter.dart';
+import 'painters/pipe_painter.dart';
+import 'painters/support_painter.dart';
+import 'painters/valve_painter.dart';
 
 /// Интерактивный CustomPainter для отображения листа бумаги по ГОСТ 21.101-2020,
 /// рамок 20-5-5-5 мм, штампа 185х55 мм, примечаний ТТ и клиппированного видового экрана
@@ -24,6 +40,31 @@ class SheetCanvasPainter extends CustomPainter {
   final ProjectionType projectionType;
   final DrawingStyleConfig styleConfig;
 
+  // Полноценные свойства отображения модели внутри видового экрана
+  final bool isVolumeMode;
+  final bool isCenterlineMode;
+  final bool showWelds;
+  final bool showCallouts;
+  final Map<String, String>? calloutTemplates;
+  final String? selectedNodeId;
+  final Set<String>? selectedNodeIds;
+  final String? selectedSegmentId;
+  final Set<String>? selectedSegmentIds;
+  final String? selectedEquipmentId;
+  final Set<String>? selectedEquipmentIds;
+  final String? selectedValveId;
+  final String? selectedSupportId;
+  final String? selectedWeldId;
+  final String? selectedSpoolId;
+  final Set<String>? selectedSpoolIds;
+  final String? selectedDimensionId;
+  final Set<String>? selectedDimensionIds;
+  final LinearDimension? previewDimension;
+  final String? selectedCalloutId;
+  final double orbitAzimuth;
+  final double orbitElevation;
+  final Node3D targetCenter;
+
   SheetCanvasPainter({
     required this.sheet,
     required this.network,
@@ -35,6 +76,29 @@ class SheetCanvasPainter extends CustomPainter {
     this.activeGrip,
     this.projectionType = ProjectionType.gostFrontal45,
     this.styleConfig = const DrawingStyleConfig(),
+    this.isVolumeMode = false,
+    this.isCenterlineMode = false,
+    this.showWelds = true,
+    this.showCallouts = true,
+    this.calloutTemplates,
+    this.selectedNodeId,
+    this.selectedNodeIds,
+    this.selectedSegmentId,
+    this.selectedSegmentIds,
+    this.selectedEquipmentId,
+    this.selectedEquipmentIds,
+    this.selectedValveId,
+    this.selectedSupportId,
+    this.selectedWeldId,
+    this.selectedSpoolId,
+    this.selectedSpoolIds,
+    this.selectedDimensionId,
+    this.selectedDimensionIds,
+    this.previewDimension,
+    this.selectedCalloutId,
+    this.orbitAzimuth = -math.pi / 4,
+    this.orbitElevation = math.pi / 6,
+    this.targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
   });
 
   @override
@@ -819,102 +883,365 @@ class SheetCanvasPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(vpRectScreen);
 
-    // Отрисовка трубопроводной сети внутри видового экрана
-    _paintNetworkInViewport(canvas, vp);
+    // Отрисовка трубопроводной сети внутри видового экрана с полным графическим соответствием модели
+    _paintNetworkInViewport(canvas, vp, vpRectScreen.size);
 
     canvas.restore();
   }
 
-  void _paintNetworkInViewport(Canvas canvas, SheetViewport vp) {
+  void _paintNetworkInViewport(Canvas canvas, SheetViewport vp, Size vpSize) {
     final vpProjector = ViewportTransformService.createViewportProjector(
       viewport: vp,
       sheetPanPx: sheetPan,
       sheetZoom: sheetZoom,
       projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
     );
 
-    for (final seg in network.segments.values) {
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible && !vp.ghostInactiveSystems) {
-        continue;
-      }
+    final effectiveNetwork = _getEffectiveNetwork(network, vp);
 
-      final n1 = network.nodes[seg.startNodeId];
-      final n2 = network.nodes[seg.endNodeId];
-      if (n1 == null || n2 == null) continue;
-
-      final raw1 = vpProjector.projectRaw(n1.x, n1.y, n1.z);
-      final raw2 = vpProjector.projectRaw(n2.x, n2.y, n2.z);
-
-      final p1SheetMm = ViewportTransformService.model2dToSheetMm(raw1, vp);
-      final p2SheetMm = ViewportTransformService.model2dToSheetMm(raw2, vp);
-
-      final p1Screen = ViewportTransformService.sheetMmToScreen(p1SheetMm, sheetPan, sheetZoom);
-      final p2Screen = ViewportTransformService.sheetMmToScreen(p2SheetMm, sheetPan, sheetZoom);
-
-      final sys = network.systems[seg.systemId];
-      final baseColor = sys != null ? Color(sys.colorValue) : const Color(0xFF1976D2);
-      final strokeColor = isVisible ? baseColor : const Color(0xFFB0BEC5).withValues(alpha: 0.5);
-
-      final pipePaint = Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(1.0, (isVisible ? styleConfig.pipeLineWidthMm : styleConfig.thinLineWidthMm) * sheetZoom);
-
-      canvas.drawLine(p1Screen, p2Screen, pipePaint);
-
-      // Подпись диаметра трубы
-      if (isVisible) {
-        final mid = Offset((p1Screen.dx + p2Screen.dx) / 2.0, (p1Screen.dy + p2Screen.dy) / 2.0);
-        _drawText(
-          canvas,
-          'Ду${seg.dn}',
-          mid.translate(0, -5.0 * sheetZoom),
-          styleConfig.textHeightSmallMm * sheetZoom,
-          color: strokeColor,
-        );
-      }
+    // 1. Призрак неактивных систем (если включено vp.ghostInactiveSystems и задан фильтр систем)
+    if (vp.ghostInactiveSystems && vp.visibleSystemIds != null && vp.visibleSystemIds!.isNotEmpty) {
+      _paintGhostInactiveSystems(canvas, vpSize, vpProjector, vp);
     }
 
-    // Отрисовка сварных стыков
-    for (final joint in network.weldJoints.values) {
-      final seg = network.segments[joint.segmentId];
-      if (seg == null) continue;
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible) continue;
+    // 2. Строительные оси здания
+    _drawConstructionAxesInViewport(canvas, vpProjector, effectiveNetwork);
 
-      final n1 = network.nodes[seg.startNodeId];
-      final n2 = network.nodes[seg.endNodeId];
-      if (n1 == null || n2 == null) continue;
-
-      final pos = joint.calculatePosition(n1, n2);
-      final raw = vpProjector.projectRaw(pos.x, pos.y, pos.z);
-      final pSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
-      final pScreen = ViewportTransformService.sheetMmToScreen(pSheetMm, sheetPan, sheetZoom);
-
-      // Засечка сварного стыка
-      final weldPaint = Paint()
-        ..color = const Color(0xFFE53935)
-        ..strokeWidth = math.max(1.0, styleConfig.thinLineWidthMm * sheetZoom);
-      canvas.drawCircle(pScreen, 2.5 * sheetZoom, weldPaint);
-    }
-
-    // Отрисовка умных выносок (Callout) и отметок уровня на видовом экране
-    CalloutPainter.paint(
+    // 3. Технологическое оборудование и штуцеры
+    EquipmentPainter.paint(
       canvas,
       vpProjector,
-      network,
-      templates: null,
-      annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
+      effectiveNetwork,
+      selectedEquipmentId: isViewportFocused ? selectedEquipmentId : null,
+      selectedEquipmentIds: isViewportFocused ? selectedEquipmentIds : null,
+      selectedNodeId: isViewportFocused ? selectedNodeId : null,
     );
 
-    // Отрисовка линейных размеров по ГОСТ 2.307
+    // 4. Отрисовка труб (сегментов)
+    final screenPoints = <String, Offset>{};
+    for (final node in effectiveNetwork.nodes.values) {
+      screenPoints[node.id] = vpProjector.project(node);
+    }
+
+    PipePainter.paint(
+      canvas,
+      vpSize,
+      vpProjector,
+      effectiveNetwork,
+      isViewportFocused ? selectedSegmentId : null,
+      null,
+      screenPoints,
+      showCallouts,
+      isVolumeMode,
+      isViewportFocused ? selectedSegmentIds : null,
+      isCenterlineMode,
+      isViewportFocused ? selectedSpoolId : null,
+      isViewportFocused ? selectedSpoolIds : null,
+      false,
+      0.0,
+      styleConfig,
+      sheetZoom,
+    );
+
+    // 5. Отрисовка арматуры
+    ValvePainter.paint(
+      canvas,
+      vpProjector,
+      effectiveNetwork,
+      isVolumeMode: isVolumeMode,
+      selectedValveId: isViewportFocused ? selectedValveId : null,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+
+    // 6. Отрисовка опор и подвесок
+    SupportPainter.paint(
+      canvas,
+      vpProjector,
+      effectiveNetwork,
+      isVolumeMode: isVolumeMode,
+      selectedSupportId: isViewportFocused ? selectedSupportId : null,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+
+    // 7. Отрисовка фасонных деталей (отводы, тройники, переходы, фланцы, заглушки)
+    FittingPainter.paint(
+      canvas,
+      vpProjector,
+      effectiveNetwork,
+      isViewportFocused ? selectedNodeId : null,
+      showCallouts,
+      isVolumeMode: isVolumeMode,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+
+    // 8. Отрисовка сварных стыков по ГОСТ и отметок
+    AnnotationPainter.paint(
+      canvas,
+      vpProjector,
+      effectiveNetwork,
+      isViewportFocused ? selectedNodeId : null,
+      showWelds,
+      showCallouts,
+      selectedWeldId: isViewportFocused ? selectedWeldId : null,
+    );
+
+    // 9. Отрисовка умных выносок (Callout)
+    if (showCallouts) {
+      CalloutPainter.paint(
+        canvas,
+        vpProjector,
+        effectiveNetwork,
+        templates: calloutTemplates,
+        selectedCalloutId: isViewportFocused ? selectedCalloutId : null,
+        annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
+      );
+    }
+
+    // 10. Отрисовка линейных размеров по ГОСТ 2.307
     DimensionPainter.paint(
       canvas,
       vpProjector,
-      network,
+      effectiveNetwork,
+      previewDimension: isViewportFocused ? previewDimension : null,
+      selectedDimensionId: isViewportFocused ? selectedDimensionId : null,
+      selectedDimensionIds: isViewportFocused ? selectedDimensionIds : null,
       annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
     );
+
+    // 11. Подсветка группы выбранных элементов в активном видовом экране
+    if (isViewportFocused && selectedNodeIds != null && selectedNodeIds!.length > 1) {
+      final multiGlow = Paint()
+        ..color = Colors.amber.withValues(alpha: 0.25)
+        ..style = PaintingStyle.fill;
+      final multiRing = Paint()
+        ..color = Colors.amber.shade700
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+      for (final nId in selectedNodeIds!) {
+        final n = effectiveNetwork.nodes[nId];
+        if (n != null) {
+          final pt = vpProjector.project(n);
+          canvas.drawCircle(pt, 8.0, multiGlow);
+          canvas.drawCircle(pt, 5.0, multiRing);
+        }
+      }
+    }
+  }
+
+  PipingNetwork _getEffectiveNetwork(PipingNetwork baseNetwork, SheetViewport vp) {
+    if (vp.visibleSystemIds == null) return baseNetwork;
+    final visibleSys = vp.visibleSystemIds!;
+    final visibleSegs = Map<String, PipeSegment>.fromEntries(
+      baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
+    );
+    final visibleSegIds = visibleSegs.keys.toSet();
+    final visibleValves = Map<String, Valve>.fromEntries(
+      baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+    );
+    final visibleSupports = Map<String, PipeSupport>.fromEntries(
+      baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+    );
+    final visibleWelds = Map<String, WeldJoint>.fromEntries(
+      baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+    );
+    final visibleSpools = Map<String, PipeSpool>.fromEntries(
+      baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+    );
+    final visibleFittings = Map<String, Fitting>.fromEntries(
+      baseNetwork.fittings.entries.where((e) => baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id))),
+    );
+
+    return baseNetwork.copyWith(
+      segments: visibleSegs,
+      valves: visibleValves,
+      supports: visibleSupports,
+      weldJoints: visibleWelds,
+      spools: visibleSpools,
+      fittings: visibleFittings,
+    );
+  }
+
+  void _paintGhostInactiveSystems(
+    Canvas canvas,
+    Size vpSize,
+    AxonometryProjector vpProjector,
+    SheetViewport vp,
+  ) {
+    final visibleSys = vp.visibleSystemIds!;
+    final inactiveSegs = Map<String, PipeSegment>.fromEntries(
+      network.segments.entries.where((e) => !visibleSys.contains(e.value.systemId)),
+    );
+    if (inactiveSegs.isEmpty) return;
+
+    final inactiveSegIds = inactiveSegs.keys.toSet();
+    final inactiveValves = Map<String, Valve>.fromEntries(
+      network.valves.entries.where((e) => inactiveSegIds.contains(e.value.segmentId)),
+    );
+    final inactiveSupports = Map<String, PipeSupport>.fromEntries(
+      network.supports.entries.where((e) => inactiveSegIds.contains(e.value.segmentId)),
+    );
+    final inactiveFittings = Map<String, Fitting>.fromEntries(
+      network.fittings.entries.where((e) => network.getConnectedSegments(e.value.nodeId).any((s) => inactiveSegIds.contains(s.id))),
+    );
+
+    const ghostSystem = PipingSystem(
+      id: '__ghost__',
+      code: 'GHOST',
+      name: 'Ghost',
+      colorValue: 0x4090A4AE,
+      dxfAciColor: 8,
+    );
+    final ghostSystems = <String, PipingSystem>{
+      for (final sId in network.systems.keys)
+        sId: const PipingSystem(
+          id: '__ghost__',
+          code: 'GHOST',
+          name: 'Ghost',
+          colorValue: 0x4090A4AE,
+          dxfAciColor: 8,
+        ),
+      '__ghost__': ghostSystem,
+    };
+
+    final ghostNetwork = network.copyWith(
+      segments: inactiveSegs,
+      valves: inactiveValves,
+      supports: inactiveSupports,
+      fittings: inactiveFittings,
+      systems: ghostSystems,
+      weldJoints: {},
+      spools: {},
+    );
+
+    final ghostScreenPoints = <String, Offset>{};
+    for (final node in ghostNetwork.nodes.values) {
+      ghostScreenPoints[node.id] = vpProjector.project(node);
+    }
+
+    PipePainter.paint(
+      canvas,
+      vpSize,
+      vpProjector,
+      ghostNetwork,
+      null,
+      null,
+      ghostScreenPoints,
+      false,
+      false,
+      null,
+      false,
+      null,
+      null,
+      false,
+      0.0,
+      styleConfig,
+      sheetZoom,
+    );
+
+    ValvePainter.paint(
+      canvas,
+      vpProjector,
+      ghostNetwork,
+      isVolumeMode: false,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+
+    SupportPainter.paint(
+      canvas,
+      vpProjector,
+      ghostNetwork,
+      isVolumeMode: false,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+
+    FittingPainter.paint(
+      canvas,
+      vpProjector,
+      ghostNetwork,
+      null,
+      false,
+      isVolumeMode: false,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
+  }
+
+  void _drawConstructionAxesInViewport(
+    Canvas canvas,
+    AxonometryProjector vpProjector,
+    PipingNetwork net,
+  ) {
+    if (net.axes.isEmpty) return;
+    final scale = (sheetZoom * 0.85).clamp(0.6, 2.0);
+
+    for (final axis in net.axes.values) {
+      final p1 = vpProjector.project(axis.startPoint);
+      final p2 = vpProjector.project(axis.endPoint);
+
+      final axisPaint = Paint()
+        ..color = const Color(0xFF78909C)
+        ..strokeWidth = math.max(0.5, styleConfig.axisLineWidthMm * sheetZoom)
+        ..style = PaintingStyle.stroke;
+
+      _drawDashedLine(canvas, p1, p2, axisPaint);
+
+      if (axis.isBuildingGrid && axis.label.isNotEmpty) {
+        _drawGridBubble(canvas, p1, axis.label, scale: scale);
+        _drawGridBubble(canvas, p2, axis.label, scale: scale);
+      }
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
+    final dist = (p2 - p1).distance;
+    if (dist <= 0) return;
+    final unit = (p2 - p1) / dist;
+    double current = 0.0;
+    bool draw = true;
+    while (current < dist) {
+      final step = draw ? 12.0 : 6.0;
+      final next = math.min(current + step, dist);
+      if (draw) {
+        canvas.drawLine(p1 + unit * current, p1 + unit * next, paint);
+      }
+      current = next;
+      draw = !draw;
+    }
+  }
+
+  void _drawGridBubble(Canvas canvas, Offset center, String label, {double scale = 1.0}) {
+    final r = 12.0 * scale;
+    canvas.drawCircle(center, r, Paint()..color = Colors.white..style = PaintingStyle.fill);
+    canvas.drawCircle(
+      center,
+      r,
+      Paint()
+        ..color = const Color(0xFF546E7A)
+        ..strokeWidth = math.max(1.0, 1.4 * scale)
+        ..style = PaintingStyle.stroke,
+    );
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: const Color(0xFF37474F),
+          fontSize: math.max(6.0, 10.0 * scale),
+          fontWeight: FontWeight.bold,
+          fontFamily: styleConfig.fontFamily == 'Roboto' ? 'Roboto' : null,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
   }
 
   void _drawText(
@@ -1032,6 +1359,29 @@ class SheetCanvasPainter extends CustomPainter {
         oldDelegate.selectedSheetBlock != selectedSheetBlock ||
         oldDelegate.activeGrip != activeGrip ||
         oldDelegate.projectionType != projectionType ||
-        oldDelegate.styleConfig != styleConfig;
+        oldDelegate.styleConfig != styleConfig ||
+        oldDelegate.isVolumeMode != isVolumeMode ||
+        oldDelegate.isCenterlineMode != isCenterlineMode ||
+        oldDelegate.showWelds != showWelds ||
+        oldDelegate.showCallouts != showCallouts ||
+        oldDelegate.calloutTemplates != calloutTemplates ||
+        oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.selectedNodeIds != selectedNodeIds ||
+        oldDelegate.selectedSegmentId != selectedSegmentId ||
+        oldDelegate.selectedSegmentIds != selectedSegmentIds ||
+        oldDelegate.selectedEquipmentId != selectedEquipmentId ||
+        oldDelegate.selectedEquipmentIds != selectedEquipmentIds ||
+        oldDelegate.selectedValveId != selectedValveId ||
+        oldDelegate.selectedSupportId != selectedSupportId ||
+        oldDelegate.selectedWeldId != selectedWeldId ||
+        oldDelegate.selectedSpoolId != selectedSpoolId ||
+        oldDelegate.selectedSpoolIds != selectedSpoolIds ||
+        oldDelegate.selectedDimensionId != selectedDimensionId ||
+        oldDelegate.selectedDimensionIds != selectedDimensionIds ||
+        oldDelegate.previewDimension != previewDimension ||
+        oldDelegate.selectedCalloutId != selectedCalloutId ||
+        oldDelegate.orbitAzimuth != orbitAzimuth ||
+        oldDelegate.orbitElevation != orbitElevation ||
+        oldDelegate.targetCenter != targetCenter;
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/projection_type.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/models/fitting.dart';
 import '../../../domain/models/node_3d.dart';
 import '../../../domain/models/pipe_segment.dart';
@@ -29,6 +30,8 @@ class PipePainter {
     Set<String>? selectedSpoolIds,
     bool isZLocked = false,
     double activeElevationZ = 0.0,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   ]) {
     if (isVolumeMode) {
       // Честная 3D твердотельная модель с полигональными цилиндрами, Z-сортировкой и направленным освещением
@@ -124,7 +127,7 @@ class PipePainter {
             (end.z - activeElevationZ).abs() > 15.0;
         final color = isOutOfPlane ? baseColor.withValues(alpha: 0.40) : baseColor;
 
-        final strokeWidth = calcStrokeWidth(spool.dn);
+        final strokeWidth = calcStrokeWidth(spool.dn, styleConfig: styleConfig, sheetZoom: sheetZoom);
 
         // Свечение/выделение, если катушка или сегмент выбраны
         if (isSelected) {
@@ -223,7 +226,7 @@ class PipePainter {
             (end.z - activeElevationZ).abs() > 15.0;
         final color = isOutOfPlane ? baseColor.withValues(alpha: 0.40) : baseColor;
 
-        final strokeWidth = calcStrokeWidth(seg.dn);
+        final strokeWidth = calcStrokeWidth(seg.dn, styleConfig: styleConfig, sheetZoom: sheetZoom);
 
         // Отступы на концах труб, если в узлах установлены отводы / тройники / фитинги
         final drawP1 = calcPipeTrimmedPoint(
@@ -517,13 +520,35 @@ class PipePainter {
     return result.isEmpty ? [(drawP1, drawP2)] : result;
   }
 
-  static double calcStrokeWidth(int dn) {
-    if (dn <= 20) return 2.8;
-    if (dn <= 32) return 3.6;
-    if (dn <= 50) return 4.6;
-    if (dn <= 80) return 5.8;
-    if (dn <= 100) return 7.0;
-    return 8.5;
+  static double calcStrokeWidth(int dn, {DrawingStyleConfig? styleConfig, double? sheetZoom}) {
+    if (styleConfig != null && sheetZoom != null) {
+      final strokeMm = styleConfig.getPipeStrokeWidthMm(dn);
+      return math.max(0.75, strokeMm * sheetZoom);
+    } else if (styleConfig != null) {
+      final baseFactor = styleConfig.pipeLineWidthMm / 0.8;
+      final double baseW;
+      if (dn <= 20) {
+        baseW = 2.8;
+      } else if (dn <= 32) {
+        baseW = 3.6;
+      } else if (dn <= 50) {
+        baseW = 4.6;
+      } else if (dn <= 80) {
+        baseW = 5.8;
+      } else if (dn <= 100) {
+        baseW = 7.0;
+      } else {
+        baseW = 8.5;
+      }
+      return math.max(1.0, baseW * baseFactor);
+    } else {
+      if (dn <= 20) return 2.8;
+      if (dn <= 32) return 3.6;
+      if (dn <= 50) return 4.6;
+      if (dn <= 80) return 5.8;
+      if (dn <= 100) return 7.0;
+      return 8.5;
+    }
   }
 
   static Offset calcPipeTrimmedPoint({

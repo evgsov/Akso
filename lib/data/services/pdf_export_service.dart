@@ -8,12 +8,16 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../core/math/axonometry_projector.dart';
+import '../../domain/enums/fitting_type.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/models/callout.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
+import '../../domain/models/equipment.dart';
+import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/title_block_data.dart';
+import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
 
@@ -27,6 +31,9 @@ class PdfExportService {
     required PipingNetwork network,
     DrawingStyleConfig styleConfig = const DrawingStyleConfig(),
     ProjectionType projectionType = ProjectionType.gostFrontal45,
+    double orbitAzimuth = -math.pi / 4,
+    double orbitElevation = math.pi / 6,
+    Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
   }) async {
     final pdf = pw.Document(
       title: sheet.name,
@@ -62,6 +69,9 @@ class PdfExportService {
                     network: network,
                     projectionType: projectionType,
                     styleConfig: styleConfig,
+                    orbitAzimuth: orbitAzimuth,
+                    orbitElevation: orbitElevation,
+                    targetCenter: targetCenter,
                     heightMm: heightMm,
                     mm: mm,
                   );
@@ -74,6 +84,9 @@ class PdfExportService {
                 sheet: sheet,
                 network: network,
                 projectionType: projectionType,
+                orbitAzimuth: orbitAzimuth,
+                orbitElevation: orbitElevation,
+                targetCenter: targetCenter,
                 fontRegular: fontRegular,
                 fontBold: fontBold,
                 heightMm: heightMm,
@@ -268,11 +281,19 @@ class PdfExportService {
     required PipingNetwork network,
     required ProjectionType projectionType,
     required DrawingStyleConfig styleConfig,
+    required double orbitAzimuth,
+    required double orbitElevation,
+    required Node3D targetCenter,
     required double heightMm,
     required double mm,
   }) {
     final vp = sheet.viewport;
-    final projector = AxonometryProjector(projectionType: projectionType);
+    final projector = AxonometryProjector(
+      projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
+    );
 
     // Координаты видового экрана в PDF (PDF y снизу)
     final vpXPt = vp.xMm * mm;
@@ -291,18 +312,22 @@ class PdfExportService {
     canvas.drawRect(vpXPt, vpYPt, vpWPt, vpHPt);
     canvas.clipPath();
 
-    // Трассы трубопроводов
-    for (final seg in network.segments.values) {
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible && !vp.ghostInactiveSystems) continue;
+    // Вспомогательная функция рисования 3D отрезка каркаса в PDF
+    void drawWireSegment(WireframeSegment3D wire, PdfColor color, double strokeWidth) {
+      final raw1 = projector.projectRaw(wire.x1, wire.y1, wire.z1);
+      final raw2 = projector.projectRaw(wire.x2, wire.y2, wire.z2);
+      final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+      final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+      canvas.setStrokeColor(color);
+      canvas.setLineWidth(strokeWidth);
+      canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
+      canvas.strokePath();
+    }
 
-      final n1 = network.nodes[seg.startNodeId];
-      final n2 = network.nodes[seg.endNodeId];
-      if (n1 == null || n2 == null) continue;
-
-      final raw1 = projector.projectRaw(n1.x, n1.y, n1.z);
-      final raw2 = projector.projectRaw(n2.x, n2.y, n2.z);
-
+    // 1. Строительные оси здания
+    for (final axis in network.axes.values) {
+      final raw1 = projector.projectRaw(axis.startPoint.x, axis.startPoint.y, axis.startPoint.z);
+      final raw2 = projector.projectRaw(axis.endPoint.x, axis.endPoint.y, axis.endPoint.z);
       final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
       final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
 
@@ -311,18 +336,418 @@ class PdfExportService {
       final x2Pt = p2Mm.dx * mm;
       final y2Pt = (heightMm - p2Mm.dy) * mm;
 
-      if (isVisible) {
-        final sys = network.systems[seg.systemId];
-        final pdfColor = sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black;
-        canvas.setStrokeColor(pdfColor);
-        canvas.setLineWidth(styleConfig.pipeLineWidthMm * mm);
-      } else {
-        canvas.setStrokeColor(PdfColors.grey400);
-        canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
+      canvas.setStrokeColor(PdfColors.blueGrey300);
+      canvas.setLineWidth(styleConfig.axisLineWidthMm * mm);
+
+      final dist = math.sqrt(math.pow(x2Pt - x1Pt, 2) + math.pow(y2Pt - y1Pt, 2));
+      if (dist > 0) {
+        final dx = (x2Pt - x1Pt) / dist;
+        final dy = (y2Pt - y1Pt) / dist;
+        double cur = 0;
+        bool draw = true;
+        while (cur < dist) {
+          final step = (draw ? 4.0 : 2.0) * mm;
+          final next = math.min(cur + step, dist);
+          if (draw) {
+            canvas.drawLine(x1Pt + dx * cur, y1Pt + dy * cur, x1Pt + dx * next, y1Pt + dy * next);
+          }
+          cur = next;
+          draw = !draw;
+        }
+        canvas.strokePath();
       }
 
-      canvas.drawLine(x1Pt, y1Pt, x2Pt, y2Pt);
-      canvas.strokePath();
+      if (axis.isBuildingGrid && axis.label.isNotEmpty) {
+        final r = 3.5 * mm;
+        canvas.setStrokeColor(PdfColors.blueGrey600);
+        canvas.setLineWidth(0.35 * mm);
+        canvas.setFillColor(PdfColors.white);
+        canvas.drawEllipse(x1Pt, y1Pt, r, r);
+        canvas.fillAndStrokePath();
+        canvas.drawEllipse(x2Pt, y2Pt, r, r);
+        canvas.fillAndStrokePath();
+      }
+    }
+
+    // 2. Технологическое оборудование
+    for (final eq in network.equipments.values) {
+      canvas.setStrokeColor(PdfColors.blue800);
+      canvas.setLineWidth(styleConfig.fittingLineWidthMm * mm);
+
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      Offset rot(double lx, double ly) {
+        return Offset(
+          eq.x + lx * cosA - ly * sinA,
+          eq.y + lx * sinA + ly * cosA,
+        );
+      }
+
+      if (eq.type == EquipmentType.box) {
+        final halfW = eq.width / 2.0;
+        final halfL = eq.length / 2.0;
+        final c = [
+          rot(-halfW, -halfL),
+          rot(halfW, -halfL),
+          rot(halfW, halfL),
+          rot(-halfW, halfL),
+        ];
+        final z1 = eq.z;
+        final z2 = eq.z + eq.height;
+
+        void drawEdge(double x1, double y1, double z1, double x2, double y2, double z2) {
+          final r1 = projector.projectRaw(x1, y1, z1);
+          final r2 = projector.projectRaw(x2, y2, z2);
+          final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
+          final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
+          canvas.drawLine(p1.dx * mm, (heightMm - p1.dy) * mm, p2.dx * mm, (heightMm - p2.dy) * mm);
+        }
+
+        for (int i = 0; i < 4; i++) {
+          final next = (i + 1) % 4;
+          drawEdge(c[i].dx, c[i].dy, z1, c[next].dx, c[next].dy, z1);
+          drawEdge(c[i].dx, c[i].dy, z2, c[next].dx, c[next].dy, z2);
+          drawEdge(c[i].dx, c[i].dy, z1, c[i].dx, c[i].dy, z2);
+        }
+        canvas.strokePath();
+      } else {
+        final r = eq.width / 2.0;
+        final z1 = eq.z;
+        final z2 = eq.z + eq.height;
+        const n = 12;
+        final pts = <Offset>[];
+        for (int i = 0; i < n; i++) {
+          final a = i * 2.0 * math.pi / n;
+          pts.add(rot(r * math.cos(a), r * math.sin(a)));
+        }
+
+        void drawEdge(double x1, double y1, double z1, double x2, double y2, double z2) {
+          final r1 = projector.projectRaw(x1, y1, z1);
+          final r2 = projector.projectRaw(x2, y2, z2);
+          final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
+          final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
+          canvas.drawLine(p1.dx * mm, (heightMm - p1.dy) * mm, p2.dx * mm, (heightMm - p2.dy) * mm);
+        }
+
+        for (int i = 0; i < n; i++) {
+          final next = (i + 1) % n;
+          drawEdge(pts[i].dx, pts[i].dy, z1, pts[next].dx, pts[next].dy, z1);
+          drawEdge(pts[i].dx, pts[i].dy, z2, pts[next].dx, pts[next].dy, z2);
+          drawEdge(pts[i].dx, pts[i].dy, z1, pts[i].dx, pts[i].dy, z2);
+        }
+        canvas.strokePath();
+      }
+    }
+
+    // 3. Трассы трубопроводов (с вычетами фитингов и прорезями под арматуру)
+    if (network.spools.isNotEmpty) {
+      for (final spool in network.spools.values) {
+        final seg = network.segments[spool.segmentId];
+        if (seg == null) continue;
+        if (network.isButtJoint(seg.id)) continue;
+
+        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
+        if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+        final start = spool.startPoint ?? network.nodes[seg.startNodeId];
+        final end = spool.endPoint ?? network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final sys = network.systems[seg.systemId];
+        final pdfColor = isVisible
+            ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
+            : PdfColors.grey400;
+        final strokeW = isVisible
+            ? styleConfig.getPipeStrokeWidthMm(spool.dn) * mm
+            : styleConfig.thinLineWidthMm * mm;
+
+        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+        final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
+
+        for (final interval in intervals) {
+          final raw1 = projector.projectRaw(interval.$1.x, interval.$1.y, interval.$1.z);
+          final raw2 = projector.projectRaw(interval.$2.x, interval.$2.y, interval.$2.z);
+          final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+          final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+          canvas.setStrokeColor(pdfColor);
+          canvas.setLineWidth(strokeW);
+          canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
+          canvas.strokePath();
+        }
+      }
+    } else {
+      // Fallback: отрисовка сегментов
+      for (final seg in network.segments.values) {
+        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
+        if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+        final n1 = network.nodes[seg.startNodeId];
+        final n2 = network.nodes[seg.endNodeId];
+        if (n1 == null || n2 == null) continue;
+
+        final sys = network.systems[seg.systemId];
+        final pdfColor = isVisible
+            ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
+            : PdfColors.grey400;
+        final strokeW = isVisible
+            ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
+            : styleConfig.thinLineWidthMm * mm;
+
+        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+        final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(n1, n2, segValves);
+
+        for (final interval in intervals) {
+          final raw1 = projector.projectRaw(interval.$1.x, interval.$1.y, interval.$1.z);
+          final raw2 = projector.projectRaw(interval.$2.x, interval.$2.y, interval.$2.z);
+          final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+          final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+          canvas.setStrokeColor(pdfColor);
+          canvas.setLineWidth(strokeW);
+          canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
+          canvas.strokePath();
+        }
+      }
+    }
+
+    // 4. Фасонные детали (отводы, тройники, переходы, фланцы, заглушки, врезки)
+    for (final fit in network.fittings.values) {
+      final node = network.nodes[fit.nodeId];
+      if (node == null) continue;
+      final connected = network.getConnectedSegments(fit.nodeId);
+      if (connected.isEmpty) continue;
+
+      final isVisible = vp.visibleSystemIds == null ||
+          connected.any((s) => vp.visibleSystemIds!.contains(s.systemId));
+      if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+      final s1 = connected[0];
+      final fitSys = network.systems[s1.systemId];
+      final fitColor = isVisible
+          ? (fitSys != null ? PdfColor.fromInt(fitSys.colorValue) : PdfColors.black)
+          : PdfColors.grey400;
+
+      if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
+        if (connected.length == 2) {
+          final s2 = connected[1];
+          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+          if (other1 != null && other2 != null) {
+            final wires = Element3dGeometry.generateElbowWireframe(
+              fit,
+              node,
+              other1,
+              other2,
+              pipeOuterDiameter: s1.outerDiameterMm,
+            );
+            final strokeW = isVisible
+                ? styleConfig.getPipeStrokeWidthMm(fit.dn) * mm
+                : styleConfig.thinLineWidthMm * mm;
+            for (final wire in wires) {
+              drawWireSegment(wire, fitColor, strokeW);
+            }
+          }
+        }
+      } else if (fit.fittingType == FittingType.tee) {
+        if (connected.length >= 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
+          final rawN = projector.projectRaw(node.x, node.y, node.z);
+          final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
+
+          for (int i = 0; i < 3; i++) {
+            final seg = connected[i];
+            final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
+            final otherNode = network.nodes[otherId];
+            if (otherNode == null) continue;
+
+            final isBranch = seg.id == branchSeg?.id;
+            final armLenMm = isBranch
+                ? fit.effectiveBranchLengthMm
+                : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                    ? fit.buildingLengthMm! / 2.0
+                    : fit.dn * 1.0);
+
+            final vx = otherNode.x - node.x;
+            final vy = otherNode.y - node.y;
+            final vz = otherNode.z - node.z;
+            final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+            final uX = dist3d > 0 ? vx / dist3d : 0.0;
+            final uY = dist3d > 0 ? vy / dist3d : 0.0;
+            final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+            final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+            final rawArm = projector.projectRaw(
+              node.x + uX * effectiveArm,
+              node.y + uY * effectiveArm,
+              node.z + uZ * effectiveArm,
+            );
+            final pArmMm = ViewportTransformService.model2dToSheetMm(rawArm, vp);
+
+            final segSys = network.systems[seg.systemId];
+            final armColor = isVisible
+                ? (segSys != null ? PdfColor.fromInt(segSys.colorValue) : fitColor)
+                : PdfColors.grey400;
+            final armStrokeW = isVisible
+                ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
+                : styleConfig.thinLineWidthMm * mm;
+
+            canvas.setStrokeColor(armColor);
+            canvas.setLineWidth(armStrokeW);
+            canvas.drawLine(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, pArmMm.dx * mm, (heightMm - pArmMm.dy) * mm);
+            canvas.strokePath();
+          }
+
+          // Узловой маркер центра тройника
+          final centerR = math.max(0.6 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.35 * mm);
+          canvas.setFillColor(fitColor);
+          canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
+          canvas.fillPath();
+        }
+      } else if (fit.fittingType == FittingType.reducerConcentric ||
+          fit.fittingType == FittingType.reducerEccentric) {
+        if (connected.length == 2) {
+          final s2 = connected[1];
+          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
+          if (other1 != null && other2 != null) {
+            final wires = Element3dGeometry.generateReducerWireframe(
+              fit,
+              node,
+              other1,
+              other2,
+              d1: s1.outerDiameterMm,
+              d2: s2.outerDiameterMm,
+            );
+            final strokeW = isVisible
+                ? styleConfig.fittingLineWidthMm * mm
+                : styleConfig.thinLineWidthMm * mm;
+            for (final wire in wires) {
+              drawWireSegment(wire, fitColor, strokeW);
+            }
+          }
+        }
+      } else if (fit.fittingType == FittingType.flange) {
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+        if (other1 != null) {
+          final wires = Element3dGeometry.generateFlangeWireframe(
+            fit,
+            node,
+            other1,
+            pipeOuterDiameter: s1.outerDiameterMm,
+          );
+          final strokeW = isVisible
+              ? styleConfig.fittingLineWidthMm * mm
+              : styleConfig.thinLineWidthMm * mm;
+          for (final wire in wires) {
+            drawWireSegment(wire, fitColor, strokeW);
+          }
+        }
+      } else if (fit.fittingType == FittingType.cap) {
+        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
+        if (other1 != null) {
+          final wires = Element3dGeometry.generateCapWireframe(
+            fit,
+            node,
+            other1,
+            pipeOuterDiameter: s1.outerDiameterMm,
+          );
+          final strokeW = isVisible
+              ? styleConfig.fittingLineWidthMm * mm
+              : styleConfig.thinLineWidthMm * mm;
+          for (final wire in wires) {
+            drawWireSegment(wire, fitColor, strokeW);
+          }
+        }
+      } else if (fit.fittingType == FittingType.directBranch) {
+        if (connected.length == 3) {
+          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
+          if (branchSeg != null) {
+            final otherNodeId = branchSeg.startNodeId == fit.nodeId
+                ? branchSeg.endNodeId
+                : branchSeg.startNodeId;
+            final otherNode = network.nodes[otherNodeId];
+            final mainSegs = connected.where((s) => s.id != branchSeg.id).toList();
+            if (otherNode != null && mainSegs.isNotEmpty) {
+              final wires = Element3dGeometry.generateDirectBranch3d(
+                fit,
+                node,
+                otherNode,
+                mainOuterDiameter: mainSegs[0].outerDiameterMm,
+                branchOuterDiameter: branchSeg.outerDiameterMm,
+              );
+              final strokeW = isVisible
+                  ? styleConfig.thinLineWidthMm * mm
+                  : styleConfig.thinLineWidthMm * 0.8 * mm;
+              for (final wire in wires) {
+                drawWireSegment(wire, fitColor, strokeW);
+              }
+
+              // Маркер центра
+              final rawN = projector.projectRaw(node.x, node.y, node.z);
+              final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
+              final centerR = math.max(0.6 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.35 * mm);
+              canvas.setFillColor(fitColor);
+              canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
+              canvas.fillPath();
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Арматура
+    for (final valve in network.valves.values) {
+      final seg = network.segments[valve.segmentId];
+      if (seg == null) continue;
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
+      if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+      final wireSegments = Element3dGeometry.generateValveWireframe(
+        valve,
+        start,
+        end,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+
+      final sys = network.systems[seg.systemId];
+      final pdfColor = isVisible
+          ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
+          : PdfColors.grey400;
+
+      final strokeW = styleConfig.fittingLineWidthMm * mm;
+      for (final wire in wireSegments) {
+        drawWireSegment(wire, pdfColor, strokeW);
+      }
+    }
+
+    // 6. Опоры и подвески
+    for (final support in network.supports.values) {
+      final seg = network.segments[support.segmentId];
+      if (seg == null) continue;
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
+      if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+      final wireSegments = Element3dGeometry.generateSupportWireframe(
+        support,
+        start,
+        end,
+        pipeOuterDiameter: seg.outerDiameterMm,
+      );
+
+      final strokeW = styleConfig.thinLineWidthMm * mm;
+      final supColor = isVisible ? PdfColors.blueGrey800 : PdfColors.grey400;
+      for (final wire in wireSegments) {
+        drawWireSegment(wire, supColor, strokeW);
+      }
     }
 
     // Сварные стыки
@@ -439,13 +864,21 @@ class PdfExportService {
     required DrawingSheet sheet,
     required PipingNetwork network,
     required ProjectionType projectionType,
+    required double orbitAzimuth,
+    required double orbitElevation,
+    required Node3D targetCenter,
     required pw.Font fontRegular,
     required pw.Font fontBold,
     required double heightMm,
     required double mm,
   }) {
     final vp = sheet.viewport;
-    final projector = AxonometryProjector(projectionType: projectionType);
+    final projector = AxonometryProjector(
+      projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
+    );
     final widgets = <pw.Widget>[];
 
     // Размеры (размерные числа над размерной линией)

@@ -51,6 +51,52 @@ class DrawingStyleConfig {
     this.fontFamily = 'GOST Type B',
   });
 
+  /// Пресет "ГОСТ Стандарт" (0.8 / 0.25 мм)
+  static const standard = DrawingStyleConfig();
+
+  /// Пресет "Тонкий" (0.5 / 0.18 мм)
+  static const thin = DrawingStyleConfig(
+    pipeLineWidthMm: 0.5,
+    thinLineWidthMm: 0.18,
+    fittingLineWidthMm: 0.35,
+    frameLineWidthMm: 0.7,
+    stampBorderWidthMm: 0.7,
+    stampGridWidthMm: 0.25,
+    axisLineWidthMm: 0.18,
+  );
+
+  /// Пресет "Сверхтонкий" (0.35 / 0.18 мм) для насыщенных плотных схем
+  static const ultraThin = DrawingStyleConfig(
+    pipeLineWidthMm: 0.35,
+    thinLineWidthMm: 0.18,
+    fittingLineWidthMm: 0.25,
+    frameLineWidthMm: 0.5,
+    stampBorderWidthMm: 0.5,
+    stampGridWidthMm: 0.25,
+    axisLineWidthMm: 0.18,
+  );
+
+  /// Пресет "Презентация" (1.0 / 0.35 мм)
+  static const bold = DrawingStyleConfig(
+    pipeLineWidthMm: 1.0,
+    thinLineWidthMm: 0.35,
+    fittingLineWidthMm: 0.7,
+    frameLineWidthMm: 1.0,
+    stampBorderWidthMm: 1.0,
+    stampGridWidthMm: 0.35,
+    axisLineWidthMm: 0.35,
+  );
+
+  /// Расчетная толщина линии трубы на листе (в мм бумаги) с легкой дифференциацией по DN
+  double getPipeStrokeWidthMm(int dn) {
+    if (dn <= 20) return pipeLineWidthMm * 0.85;
+    if (dn <= 32) return pipeLineWidthMm * 0.95;
+    if (dn <= 50) return pipeLineWidthMm * 1.05;
+    if (dn <= 80) return pipeLineWidthMm * 1.15;
+    if (dn <= 100) return pipeLineWidthMm * 1.25;
+    return pipeLineWidthMm * 1.35;
+  }
+
   Map<String, dynamic> toJson() => {
         'pipeLineWidthMm': pipeLineWidthMm,
         'thinLineWidthMm': thinLineWidthMm,

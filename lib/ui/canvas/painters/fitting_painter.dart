@@ -7,6 +7,7 @@ import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/models/callout.dart';
 import '../../../domain/models/fitting.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
 
@@ -18,12 +19,34 @@ class FittingPainter {
     String? selectedNodeId,
     bool showCallouts, {
     bool isVolumeMode = false,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
     for (final fit in network.fittings.values) {
       if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
-        _drawElbowSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts, isVolumeMode);
+        _drawElbowSymbol(
+          canvas,
+          projector,
+          network,
+          fit,
+          selectedNodeId,
+          showCallouts,
+          isVolumeMode,
+          styleConfig: styleConfig,
+          sheetZoom: sheetZoom,
+        );
       } else if (fit.fittingType == FittingType.tee) {
-        _drawTeeSymbol(canvas, projector, network, fit, selectedNodeId, showCallouts, isVolumeMode);
+        _drawTeeSymbol(
+          canvas,
+          projector,
+          network,
+          fit,
+          selectedNodeId,
+          showCallouts,
+          isVolumeMode,
+          styleConfig: styleConfig,
+          sheetZoom: sheetZoom,
+        );
       } else if (fit.fittingType == FittingType.reducerConcentric ||
           fit.fittingType == FittingType.reducerEccentric) {
         final node = network.nodes[fit.nodeId];
@@ -52,10 +75,13 @@ class FittingPainter {
           );
 
           final isSelected = fit.nodeId == selectedNodeId;
+          final fittingStroke = (styleConfig != null && sheetZoom != null)
+              ? math.max(0.5, styleConfig.fittingLineWidthMm * sheetZoom)
+              : (isSelected ? 2.5 : 1.8);
           final strokePaint = Paint()
             ..color = isSelected ? Colors.amber : color
             ..style = PaintingStyle.stroke
-            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeWidth = fittingStroke
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round;
 
@@ -120,10 +146,13 @@ class FittingPainter {
           );
 
           final isSelected = fit.nodeId == selectedNodeId;
+          final fittingStroke = (styleConfig != null && sheetZoom != null)
+              ? math.max(0.5, styleConfig.fittingLineWidthMm * sheetZoom)
+              : (isSelected ? 2.5 : 1.8);
           final strokePaint = Paint()
             ..color = isSelected ? Colors.amber : color
             ..style = PaintingStyle.stroke
-            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeWidth = fittingStroke
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round;
 
@@ -195,6 +224,8 @@ class FittingPainter {
           selectedNodeId: selectedNodeId,
           showCallouts: showCallouts,
           isVolumeMode: isVolumeMode,
+          styleConfig: styleConfig,
+          sheetZoom: sheetZoom,
         );
       } else if (fit.fittingType == FittingType.cap) {
         final node = network.nodes[fit.nodeId];
@@ -219,10 +250,13 @@ class FittingPainter {
           );
 
           final isSelected = fit.nodeId == selectedNodeId;
+          final capStroke = (styleConfig != null && sheetZoom != null)
+              ? math.max(0.5, styleConfig.fittingLineWidthMm * sheetZoom)
+              : (isSelected ? 2.5 : 1.8);
           final strokePaint = Paint()
             ..color = isSelected ? Colors.amber : color
             ..style = PaintingStyle.stroke
-            ..strokeWidth = isSelected ? 2.5 : 1.8
+            ..strokeWidth = capStroke
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round;
 
@@ -274,8 +308,15 @@ class FittingPainter {
         (c.targetId == fit.id || c.targetId == fit.nodeId));
   }
 
-  static double _calcWidth(int dn, PipingNetwork network, AxonometryProjector projector, bool isVolumeMode) {
-    double w = PipePainter.calcStrokeWidth(dn);
+  static double _calcWidth(
+    int dn,
+    PipingNetwork network,
+    AxonometryProjector projector,
+    bool isVolumeMode, {
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
+  }) {
+    double w = PipePainter.calcStrokeWidth(dn, styleConfig: styleConfig, sheetZoom: sheetZoom);
     if (isVolumeMode) {
       final dim = network.pipeCatalog.getDimension(dn);
       final outerMm = dim != null ? dim.outerDiameterMm : dn.toDouble();
@@ -291,8 +332,10 @@ class FittingPainter {
     Fitting fit,
     String? selectedNodeId,
     bool showCallouts,
-    bool isVolumeMode,
-  ) {
+    bool isVolumeMode, {
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
+  }) {
     final node = network.nodes[fit.nodeId];
     if (node == null) return;
     final connected = network.getConnectedSegments(fit.nodeId);
@@ -329,7 +372,14 @@ class FittingPainter {
       seg: s2,
     );
 
-    final strokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
+    final strokeWidth = _calcWidth(
+      fit.dn,
+      network,
+      projector,
+      isVolumeMode,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
 
     if (isVolumeMode) {
       if (showCallouts && !_hasCallout(network, fit)) {
@@ -398,8 +448,10 @@ class FittingPainter {
     Fitting fit,
     String? selectedNodeId,
     bool showCallouts,
-    bool isVolumeMode,
-  ) {
+    bool isVolumeMode, {
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
+  }) {
     final node = network.nodes[fit.nodeId];
     if (node == null) return;
     final connected = network.getConnectedSegments(fit.nodeId);
@@ -469,7 +521,14 @@ class FittingPainter {
 
       final sys = network.systems[seg.systemId];
       final armColor = sys != null ? Color(sys.colorValue) : Colors.black87;
-      final armStrokeWidth = _calcWidth(seg.dn, network, projector, isVolumeMode);
+      final armStrokeWidth = _calcWidth(
+        seg.dn,
+        network,
+        projector,
+        isVolumeMode,
+        styleConfig: styleConfig,
+        sheetZoom: sheetZoom,
+      );
 
       // 1. Подсветка золотистым ореолом при выделении
       if (isSelected) {
@@ -492,11 +551,18 @@ class FittingPainter {
     }
 
     // 4. Узловой маркер центра тройника
-    final mainStrokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
+    final mainStrokeWidth = _calcWidth(
+      fit.dn,
+      network,
+      projector,
+      isVolumeMode,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
     final centerPaint = Paint()
       ..color = isSelected ? Colors.amber : mainColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(ptN, math.max(3.0, mainStrokeWidth * 0.35), centerPaint);
+    canvas.drawCircle(ptN, math.max(1.5, mainStrokeWidth * 0.35), centerPaint);
 
     // 5. Выноска с наименованием/диаметрами тройника
     if (showCallouts && !_hasCallout(network, fit)) {
@@ -534,6 +600,8 @@ class FittingPainter {
     String? selectedNodeId,
     required bool showCallouts,
     bool isVolumeMode = false,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
     final isSelected = fit.nodeId == selectedNodeId;
     final strokeColor = isSelected ? Colors.amber : const Color(0xFF37474F);
@@ -603,11 +671,18 @@ class FittingPainter {
     }
 
     // 2. Узловой маркер центра врезки
-    final mainStrokeWidth = _calcWidth(fit.dn, network, projector, isVolumeMode);
+    final mainStrokeWidth = _calcWidth(
+      fit.dn,
+      network,
+      projector,
+      isVolumeMode,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
+    );
     final centerPaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, math.max(3.0, mainStrokeWidth * 0.35), centerPaint);
+    canvas.drawCircle(center, math.max(1.5, mainStrokeWidth * 0.35), centerPaint);
 
     // 3. Выноска с наименованием врезки (только если нет сгенерированных Callout)
     if (showCallouts && !_hasCallout(network, fit)) {

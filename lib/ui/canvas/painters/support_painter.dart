@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/models/pipe_support.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/services/element_3d_geometry.dart';
@@ -13,6 +15,8 @@ class SupportPainter {
     PipingNetwork network, {
     bool isVolumeMode = false,
     String? selectedSupportId,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
     // В объемном 3D-режиме опоры визуализируются твердотельными телами в Solid3dEngine
     if (network.supports.isEmpty || isVolumeMode) return;
@@ -35,9 +39,12 @@ class SupportPainter {
       final sys = network.systems[seg.systemId];
       final baseColor = sys != null ? Color(sys.colorValue) : const Color(0xFF263238);
 
+      final supportStroke = (styleConfig != null && sheetZoom != null)
+          ? math.max(0.5, styleConfig.thinLineWidthMm * sheetZoom)
+          : (isSelected ? 2.5 : 1.8);
       final strokePaint = Paint()
         ..color = isSelected ? Colors.amber : baseColor
-        ..strokeWidth = isSelected ? 2.5 : 1.8
+        ..strokeWidth = supportStroke
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;

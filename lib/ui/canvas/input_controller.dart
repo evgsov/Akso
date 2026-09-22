@@ -116,6 +116,11 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleVolumeMode() {
+    isVolumeMode = !isVolumeMode;
+    notifyListeners();
+  }
+
   void toggleCenterlineMode() {
     isCenterlineMode = !isCenterlineMode;
     notifyListeners();

@@ -4,6 +4,7 @@ import '../../../../domain/enums/valve_type.dart';
 import '../../../../domain/models/node_3d.dart';
 import '../../../../domain/models/pipe_segment.dart';
 import '../../../canvas/input_controller.dart';
+import 'drawing_style_dialog.dart';
 import 'dxf_export_dialog.dart';
 import 'fitting_catalog_dialog.dart';
 import 'materials_specification_dialog.dart';
@@ -355,6 +356,25 @@ class EditorTopBar extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(width: 8),
+
+            // Толщины линий и шрифты ГОСТ
+            OutlinedButton.icon(
+              icon: const Icon(Icons.line_weight, size: 18, color: Colors.blueGrey),
+              label: const Text('Толщины линий'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => DrawingStyleDialog(
+                    initialConfig: controller.styleConfig,
+                    onSave: (newCfg) {
+                      controller.updateDrawingStyleConfig(newCfg);
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
             // Переключатели режимов: Сетка, Привязка, Оси
             Container(
               decoration: BoxDecoration(

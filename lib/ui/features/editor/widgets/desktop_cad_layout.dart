@@ -152,7 +152,11 @@ class DesktopCadLayout extends StatelessWidget {
       final bytes = await PdfExportService.generateSheetPdf(
         sheet: sheet,
         network: controller.network,
+        styleConfig: controller.styleConfig,
         projectionType: controller.projector.projectionType,
+        orbitAzimuth: controller.projector.orbitAzimuth,
+        orbitElevation: controller.projector.orbitElevation,
+        targetCenter: controller.projector.targetCenter,
       );
       final fileName = '${sheet.name.replaceAll(':', '_').replaceAll(' ', '_')}.pdf';
       final ok = await PdfExportService.savePdfFile(

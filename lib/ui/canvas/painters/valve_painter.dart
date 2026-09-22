@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 
@@ -11,6 +13,8 @@ class ValvePainter {
     PipingNetwork network, {
     bool isVolumeMode = false,
     String? selectedValveId,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
     // В объемном 3D-режиме арматура визуализируется твердотельными телами в Solid3dEngine
     if (isVolumeMode) return;
@@ -33,10 +37,13 @@ class ValvePainter {
       );
 
       final isSelected = valve.id == selectedValveId;
+      final valveStroke = (styleConfig != null && sheetZoom != null)
+          ? math.max(0.5, styleConfig.fittingLineWidthMm * sheetZoom)
+          : (isSelected ? 2.5 : 1.6);
       final strokePaint = Paint()
         ..color = isSelected ? Colors.amber : color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = isSelected ? 2.5 : 1.6
+        ..strokeWidth = valveStroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 

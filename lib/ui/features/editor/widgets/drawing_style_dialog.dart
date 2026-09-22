@@ -71,6 +71,15 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
           _stampGridWidthMm = 0.25;
           _axisLineWidthMm = 0.18;
           break;
+        case 'ultraThin':
+          _pipeLineWidthMm = 0.35;
+          _thinLineWidthMm = 0.18;
+          _fittingLineWidthMm = 0.25;
+          _frameLineWidthMm = 0.5;
+          _stampBorderWidthMm = 0.5;
+          _stampGridWidthMm = 0.25;
+          _axisLineWidthMm = 0.18;
+          break;
         case 'bold':
           _pipeLineWidthMm = 1.0;
           _thinLineWidthMm = 0.35;
@@ -119,20 +128,25 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
             children: [
               const Text('Быстрые пресеты стандартов оформления:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   ActionChip(
                     avatar: const Icon(Icons.check_circle_outline, size: 16),
                     label: const Text('ГОСТ Стандарт (0.8 / 0.25 мм)'),
                     onPressed: () => _applyPreset('standard'),
                   ),
-                  const SizedBox(width: 8),
                   ActionChip(
                     avatar: const Icon(Icons.border_style, size: 16),
                     label: const Text('Тонкий (0.5 / 0.18 мм)'),
                     onPressed: () => _applyPreset('thin'),
                   ),
-                  const SizedBox(width: 8),
+                  ActionChip(
+                    avatar: const Icon(Icons.blur_linear, size: 16, color: Colors.cyanAccent),
+                    label: const Text('Сверхтонкий (0.35 / 0.18 мм)'),
+                    onPressed: () => _applyPreset('ultraThin'),
+                  ),
                   ActionChip(
                     avatar: const Icon(Icons.line_weight, size: 16),
                     label: const Text('Презентация (1.0 / 0.35 мм)'),

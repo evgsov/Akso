@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../../core/math/axonometry_projector.dart';
 import '../enums/projection_type.dart';
 import '../models/drawing_sheet.dart';
+import '../models/node_3d.dart';
 import '../models/piping_network.dart';
 
 /// Результат автоматического расчета масштаба и центра видового экрана
@@ -71,6 +72,9 @@ class ViewportTransformService {
     required Offset sheetPanPx,
     required double sheetZoom,
     required ProjectionType projectionType,
+    double orbitAzimuth = -math.pi / 4,
+    double orbitElevation = math.pi / 6,
+    Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
   }) {
     final vpCenterX = viewport.xMm + (viewport.widthMm / 2.0);
     final vpCenterY = viewport.yMm + (viewport.heightMm / 2.0);
@@ -81,6 +85,9 @@ class ViewportTransformService {
 
     return AxonometryProjector(
       projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
       scale: totalScale,
       panOffset: Offset(panX, panY),
     );

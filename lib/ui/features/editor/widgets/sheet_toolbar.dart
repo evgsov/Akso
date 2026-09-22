@@ -126,6 +126,32 @@ class SheetToolbar extends StatelessWidget {
                         icon: const Icon(Icons.fit_screen_outlined, size: 18, color: Colors.cyanAccent),
                         onPressed: () => controller.autoFitActiveSheetViewport(),
                       ),
+                      const SizedBox(width: 4),
+
+                      // Переключатель 3D объемные тела / 2D линии
+                      IconButton(
+                        key: const Key('sheet_volume_mode_toggle'),
+                        tooltip: controller.isVolumeMode ? '3D Модель (Тела)' : '2D Линейная схема',
+                        icon: Icon(
+                          Icons.view_in_ar,
+                          size: 18,
+                          color: controller.isVolumeMode ? Colors.amberAccent : Colors.white70,
+                        ),
+                        onPressed: () => controller.toggleVolumeMode(),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Переключатель осевых линий
+                      IconButton(
+                        key: const Key('sheet_centerline_mode_toggle'),
+                        tooltip: 'Осевые линии',
+                        icon: Icon(
+                          Icons.linear_scale,
+                          size: 18,
+                          color: controller.isCenterlineMode ? Colors.cyanAccent : Colors.white70,
+                        ),
+                        onPressed: () => controller.toggleCenterlineMode(),
+                      ),
                       const SizedBox(width: 6),
 
                       Container(width: 1, height: 20, color: const Color(0xFF334155)),
