@@ -9,6 +9,7 @@ import '../../domain/enums/fitting_type.dart';
 import '../../domain/enums/projection_type.dart';
 import '../../domain/enums/valve_type.dart';
 import '../../domain/enums/weld_type.dart';
+import '../../domain/enums/inspection_method.dart';
 import '../../domain/models/callout.dart';
 import '../../domain/models/construction_axis.dart';
 import '../../domain/models/equipment.dart';
@@ -25,6 +26,7 @@ import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/callout_layout_engine.dart';
 import '../../domain/services/fitting_detector.dart';
+import '../../domain/services/segment_positioning_service.dart';
 import '../../domain/enums/report_type.dart';
 import '../../domain/enums/sheet_format_type.dart';
 import '../../domain/enums/viewport_layout_preset.dart';
@@ -78,6 +80,12 @@ class PipingInputController extends ChangeNotifier {
 
   CanvasTool currentTool = CanvasTool.trace;
   ValveType selectedValveType = ValveType.gateValve;
+  bool isValveFlanged = false;
+  int valveFlangePressurePn = 16;
+  bool valveIncludeCounterFlanges = true;
+  String valveCounterFlangeType = 'ГОСТ 33259-2015 тип 11';
+  double? valveCounterFlangeLengthMm;
+  String valveCounterFlangeMaterial = 'Сталь 20';
   String currentWelderStamp = 'ИВ-24';
   WeldType currentWeldType = WeldType.c17;
 
@@ -463,6 +471,7 @@ class PipingInputController extends ChangeNotifier {
   /// Полная очистка выделения всех элементов
   void clearSelection() {
     selectionController.clearSelection();
+    tracingController.clearAcquiredPoints();
     notifyListeners();
   }
 
@@ -489,6 +498,7 @@ class PipingInputController extends ChangeNotifier {
     _longPressTimer?.cancel();
     _canDragElement = false;
     clearSelection();
+    tracingController.clearAcquiredPoints();
     traceStartNode = null;
     axisStartNode = null;
     currentCursorScreenPos = null;
@@ -560,6 +570,7 @@ class PipingInputController extends ChangeNotifier {
 
   void setTool(CanvasTool tool) {
     if (currentTool != tool) {
+      tracingController.clearAcquiredPoints();
       final isModifyTool = tool == CanvasTool.move || tool == CanvasTool.copy || tool == CanvasTool.rotate;
       final wasModifyTool = currentTool == CanvasTool.move || currentTool == CanvasTool.copy || currentTool == CanvasTool.rotate;
       if (!isModifyTool && !(tool == CanvasTool.select && wasModifyTool)) {
@@ -576,6 +587,42 @@ class PipingInputController extends ChangeNotifier {
 
   void setSelectedValveType(ValveType type) {
     selectedValveType = type;
+    notifyListeners();
+  }
+
+  void setIsValveFlanged(bool val) {
+    if (isValveFlanged == val) return;
+    isValveFlanged = val;
+    notifyListeners();
+  }
+
+  void setValveFlangePressurePn(int pn) {
+    if (valveFlangePressurePn == pn) return;
+    valveFlangePressurePn = pn;
+    notifyListeners();
+  }
+
+  void setValveIncludeCounterFlanges(bool val) {
+    if (valveIncludeCounterFlanges == val) return;
+    valveIncludeCounterFlanges = val;
+    notifyListeners();
+  }
+
+  void setValveCounterFlangeType(String type) {
+    if (valveCounterFlangeType == type) return;
+    valveCounterFlangeType = type;
+    notifyListeners();
+  }
+
+  void setValveCounterFlangeLength(double? len) {
+    if (valveCounterFlangeLengthMm == len) return;
+    valveCounterFlangeLengthMm = len;
+    notifyListeners();
+  }
+
+  void setValveCounterFlangeMaterial(String mat) {
+    if (valveCounterFlangeMaterial == mat) return;
+    valveCounterFlangeMaterial = mat;
     notifyListeners();
   }
 
@@ -750,6 +797,10 @@ class PipingInputController extends ChangeNotifier {
       material: activeMaterial,
     );
     network.addSegment(seg);
+    FittingDetector.autoDetectFittingsForNode(network, baseNode.id);
+    FittingDetector.autoDetectFittingsForNode(network, newNode.id);
+    network.generateElementWeldJoints();
+    network.recalculateSpools();
     history.recordState(network);
 
     traceStartNode = newNode;
@@ -1084,6 +1135,7 @@ class PipingInputController extends ChangeNotifier {
           if (traceStartNode == null) {
             traceStartNode = network.nodes[hitNodeId];
             selectedNodeId = hitNodeId;
+            tracingController.acquiredPoints.removeWhere((p) => p.nodeId == hitNodeId);
           } else {
             // Завершение сегмента в существующем узле
             _finishTraceSegment(screenPos);
@@ -1164,6 +1216,7 @@ class PipingInputController extends ChangeNotifier {
         break;
 
       case CanvasTool.select:
+        tracingController.clearAcquiredPoints();
         // Проверка клика по ручкам на концах выделенной оси (Grip Handles)
         if (selectedAxisId != null && network.axes.containsKey(selectedAxisId)) {
           final axis = network.axes[selectedAxisId!]!;
@@ -1725,6 +1778,12 @@ class PipingInputController extends ChangeNotifier {
             network.attachEndValveToNode(
               hitNodeId,
               valveType: selectedValveType,
+              isFlanged: isValveFlanged,
+              flangePressurePn: valveFlangePressurePn,
+              includeCounterFlanges: valveIncludeCounterFlanges,
+              counterFlangeType: valveCounterFlangeType,
+              counterFlangeLengthMm: valveCounterFlangeLengthMm,
+              counterFlangeMaterial: valveCounterFlangeMaterial,
             );
             history.recordState(network);
             notifyListeners();
@@ -1740,6 +1799,12 @@ class PipingInputController extends ChangeNotifier {
               ratio: ratio,
               valveType: selectedValveType,
               dn: seg.dn,
+              isFlanged: isValveFlanged,
+              flangePressurePn: valveFlangePressurePn,
+              includeCounterFlanges: valveIncludeCounterFlanges,
+              counterFlangeType: valveCounterFlangeType,
+              counterFlangeLengthMm: valveCounterFlangeLengthMm,
+              counterFlangeMaterial: valveCounterFlangeMaterial,
             );
             history.recordState(network);
           }
@@ -1754,6 +1819,7 @@ class PipingInputController extends ChangeNotifier {
             ratio: ratio,
             stamp: currentWelderStamp,
             weldType: currentWeldType,
+            isManual: true,
           );
           history.recordState(network);
         }
@@ -2257,6 +2323,7 @@ class PipingInputController extends ChangeNotifier {
               } else {
                 network.valves[selectedValveId!] = valve.copyWith(ratio: t);
               }
+              network.syncValveWelds(network.valves[selectedValveId!]!);
               notifyListeners();
             }
           }
@@ -2351,8 +2418,14 @@ class PipingInputController extends ChangeNotifier {
   }
 
   void _updateSnap(Offset screenPos) {
-    // Hover-to-Acquire OTRACK: удержание курсора над узлом для захвата точки
-    if (isSnapEnabled && draftingSettings.enableOtrack) {
+    final isDraftingTool = currentTool == CanvasTool.trace ||
+        currentTool == CanvasTool.drawAxis ||
+        currentTool == CanvasTool.move ||
+        currentTool == CanvasTool.copy ||
+        currentTool == CanvasTool.dimension;
+
+    // Hover-to-Acquire OTRACK: удержание курсора над узлом для захвата точки (только при черчении/модификации)
+    if (isSnapEnabled && draftingSettings.enableOtrack && isDraftingTool) {
       Node3D? candidateHoverNode;
       double minNodeDist = 18.0;
       for (final node in network.nodes.values) {
@@ -2380,6 +2453,9 @@ class PipingInputController extends ChangeNotifier {
         candidateNode: null,
         onAcquired: () {},
       );
+      if (!isDraftingTool && tracingController.acquiredPoints.isNotEmpty) {
+        tracingController.clearAcquiredPoints();
+      }
     }
 
     if (isSnapEnabled) {
@@ -2639,6 +2715,8 @@ class PipingInputController extends ChangeNotifier {
     if (isDraggingSegment) {
       _checkAndMergeOpenNodes();
       _checkAndConnectToSegments();
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
       history.recordState(network);
       isDraggingSegment = false;
       notifyListeners();
@@ -2647,6 +2725,9 @@ class PipingInputController extends ChangeNotifier {
     isDraggingSegment = false;
 
     if (isDraggingValve) {
+      if (selectedValveId != null && network.valves.containsKey(selectedValveId)) {
+        network.syncValveWelds(network.valves[selectedValveId]!);
+      }
       network.generateElementWeldJoints();
       network.recalculateSpools();
       history.recordState(network);
@@ -2689,6 +2770,8 @@ class PipingInputController extends ChangeNotifier {
     if (isDraggingNode) {
       _checkAndMergeOpenNodes();
       _checkAndConnectToSegments();
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
       history.recordState(network);
       isDraggingNode = false;
       notifyListeners();
@@ -2859,9 +2942,13 @@ class PipingInputController extends ChangeNotifier {
         FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
       }
 
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+
       currentElevationZ = targetWorld.z;
       traceStartNode = network.nodes[targetNodeId];
       selectedNodeId = targetNodeId;
+      tracingController.clearAcquiredPoints();
       history.recordState(network);
       notifyListeners();
       return;
@@ -2917,14 +3004,21 @@ class PipingInputController extends ChangeNotifier {
             })();
       } else {
         final w = currentSnapResult!.worldPoint;
+        final targetZ = (currentSnapResult!.isElevationTransition ||
+                currentSnapResult!.type == SnapType.extensionRay)
+            ? w.z
+            : currentElevationZ;
         final newNode = Node3D(
           id: 'node_${_uuid.v4()}',
           x: w.x,
           y: w.y,
-          z: currentElevationZ,
+          z: targetZ,
         );
         network.nodes[newNode.id] = newNode;
         targetNodeId = newNode.id;
+        if (targetZ != currentElevationZ) {
+          currentElevationZ = targetZ;
+        }
       }
     } else {
       final rawWorld = projector.unproject(endScreenPos, currentElevationZ);
@@ -2987,6 +3081,13 @@ class PipingInputController extends ChangeNotifier {
       }
     }
 
+    // Предотвращение создания вырожденных сегментов нулевой длины
+    if (targetNodeId == traceStartNode!.id) return;
+    final targetNode = network.nodes[targetNodeId];
+    if (targetNode != null && traceStartNode!.distanceTo(targetNode) < 1.0) {
+      return;
+    }
+
     final segId = 'seg_${_uuid.v4()}';
     final dim = network.pipeCatalog.getDimension(activeDn);
     final outerD = dim?.outerDiameterMm;
@@ -3010,6 +3111,7 @@ class PipingInputController extends ChangeNotifier {
     history.recordState(network);
     traceStartNode = network.nodes[targetNodeId];
     selectedNodeId = targetNodeId;
+    tracingController.clearAcquiredPoints();
   }
 
   /// Вычисляет единичный направляющий 3D-вектор от startNode к текущей цели привязки или курсору
@@ -3084,10 +3186,15 @@ class PipingInputController extends ChangeNotifier {
         material: activeMaterial,
       );
       network.addSegment(seg);
+      FittingDetector.autoDetectFittingsForNode(network, startNode.id);
+      FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
 
       history.recordState(network);
       traceStartNode = network.nodes[targetNodeId];
       selectedNodeId = targetNodeId;
+      tracingController.clearAcquiredPoints();
 
       currentSnapResult = null;
       if (currentCursorScreenPos != null) {
@@ -3133,6 +3240,7 @@ class PipingInputController extends ChangeNotifier {
         }
       }
       axisStartNode = null;
+      tracingController.clearAcquiredPoints();
       history.recordState(network);
 
       if (currentCursorScreenPos != null) {
@@ -3937,11 +4045,23 @@ class PipingInputController extends ChangeNotifier {
   void collapseSelectedSegmentToButtJoint() {
     final segId = activeSegmentId;
     if (segId == null) return;
-    final changed = network.collapseSegmentToButtJoint(segId);
+    collapseSegmentToButtJoint(segId);
+  }
+
+  /// Схлопнуть зазор между элементами заданного сегмента встык
+  void collapseSegmentToButtJoint(String segmentId) {
+    final changed = network.collapseSegmentToButtJoint(segmentId);
     if (changed) {
       history.recordState(network);
       notifyListeners();
     }
+  }
+
+  /// Схлопнуть зазор между элементами сегмента катушки встык
+  void collapseSpoolToButtJoint(String spoolId) {
+    final spool = network.spools[spoolId];
+    if (spool == null) return;
+    collapseSegmentToButtJoint(spool.segmentId);
   }
 
   /// Изменение диаметра DN выбранного сегмента трубы или группы выбранных сегментов
@@ -4141,10 +4261,8 @@ class PipingInputController extends ChangeNotifier {
 
     if (selectedValveId != null) {
       final vId = selectedValveId!;
-      network.valves.remove(vId);
-      network.callouts.removeWhere((_, c) => c.targetId == vId);
+      network.removeValve(vId);
       selectedValveId = null;
-      network.recalculateSpools();
       history.recordState(network);
       notifyListeners();
       return;
@@ -4379,6 +4497,7 @@ class PipingInputController extends ChangeNotifier {
           clearSerialNumber: true,
         );
         network.valves[newId] = newValve;
+        network.syncValveWelds(newValve);
         network.generateElementWeldJoints();
         network.recalculateSpools();
         if (updateSelection) {
@@ -4470,19 +4589,33 @@ class PipingInputController extends ChangeNotifier {
         newSegmentIds.add(newSegId);
 
         // Копируем арматуру
+        final valveMap = <String, Valve>{};
         for (final v in network.valves.values.where((val) => val.segmentId == seg.id).toList()) {
           final newValveId = 'valve_${_uuid.v4()}';
-          network.valves[newValveId] = v.copyWith(id: newValveId, segmentId: newSegId);
+          final newV = v.copyWith(id: newValveId, segmentId: newSegId);
+          network.valves[newValveId] = newV;
+          valveMap[v.id] = newV;
         }
 
         // Копируем сварные стыки
         for (final w in network.weldJoints.values.where((wj) => wj.segmentId == seg.id).toList()) {
           final newWeldId = 'weld_${_uuid.v4()}';
           final newWeldNum = network.weldJoints.length + 1;
+          String? newSourceId = w.sourceElementId;
+          final srcId = newSourceId;
+          if (srcId != null) {
+            for (final entry in valveMap.entries) {
+              if (srcId.startsWith(entry.key)) {
+                newSourceId = srcId.replaceFirst(entry.key, entry.value.id);
+                break;
+              }
+            }
+          }
           network.weldJoints[newWeldId] = w.copyWith(
             id: newWeldId,
             segmentId: newSegId,
             number: newWeldNum,
+            sourceElementId: newSourceId,
           );
         }
 
@@ -4536,6 +4669,10 @@ class PipingInputController extends ChangeNotifier {
       );
       newDimIds.add(newDimId);
     }
+
+    final newCreatedNodeIds = oldToNewNodeId.values.toList();
+    _checkAndMergeOpenNodes(newCreatedNodeIds);
+    _checkAndConnectToSegments(newCreatedNodeIds);
 
     network.autoDetectAllFittings();
     network.recalculateSpools();
@@ -4842,6 +4979,22 @@ class PipingInputController extends ChangeNotifier {
         final t = ((ux * vx + uy * vy + uz * vz) / segLenSq).clamp(0.0, 1.0);
         if (t < 0.01 || t > 0.99) continue;
 
+        // Ответвление должно отходить под углом к трубе (не коллинеарно)
+        final otherNodeId = branchSeg.startNodeId == mId ? branchSeg.endNodeId : branchSeg.startNodeId;
+        final otherNode = network.nodes[otherNodeId];
+        if (otherNode != null) {
+          final bx = otherNode.x - nodeA.x;
+          final by = otherNode.y - nodeA.y;
+          final bz = otherNode.z - nodeA.z;
+          final bLenSq = bx * bx + by * by + bz * bz;
+          if (bLenSq > 1.0) {
+            final dot = (bx * vx + by * vy + bz * vz).abs();
+            final cosThetaSq = (dot * dot) / (bLenSq * segLenSq);
+            // Если cos^2 > cos^2(20°) ≈ 0.88, трубы почти параллельны/коллинеарны - это не врезка!
+            if (cosThetaSq > 0.88) continue;
+          }
+        }
+
         final projX = s.x + vx * t;
         final projY = s.y + vy * t;
         final projZ = s.z + vz * t;
@@ -4880,7 +5033,7 @@ class PipingInputController extends ChangeNotifier {
           FittingDetector.autoDetectFittingsForNode(network, mId);
           network.generateElementWeldJoints();
           network.recalculateSpools();
-          break;
+          continue;
         }
       }
     }
@@ -5014,6 +5167,312 @@ class PipingInputController extends ChangeNotifier {
       shelfDirection: direction ?? existing.shelfDirection,
       arrowOnNode: arrowOnNode ?? existing.arrowOnNode,
     );
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  // =========================================================================
+  // Точное позиционирование арматуры и сварных стыков по высоте и катушкам
+  // =========================================================================
+
+  /// Обновление позиции арматуры по высотной отметке Z (в метрах)
+  void updateValvePositionByElevation(String valveId, double elevationM) {
+    final v = network.valves[valveId];
+    if (v == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromElevation(
+      network,
+      v.segmentId,
+      elevationM,
+      elementLengthMm: v.effectiveTotalLengthMm,
+      currentElementId: v.id,
+      currentRatio: v.ratio,
+    );
+    if ((newRatio - v.ratio).abs() > 0.0001) {
+      final updated = v.copyWith(ratio: newRatio);
+      network.updateValve(valveId, updated);
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции арматуры по длине предыдущей катушки L1 (мм)
+  void updateValvePositionByPrevSection(String valveId, double l1Mm) {
+    final v = network.valves[valveId];
+    if (v == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromLengthToPrev(
+      network,
+      v.segmentId,
+      l1Mm,
+      elementLengthMm: v.effectiveTotalLengthMm,
+      currentElementId: v.id,
+      currentRatio: v.ratio,
+    );
+    if ((newRatio - v.ratio).abs() > 0.0001) {
+      final updated = v.copyWith(ratio: newRatio);
+      network.updateValve(valveId, updated);
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции арматуры по длине следующей катушки L2 (мм)
+  void updateValvePositionByNextSection(String valveId, double l2Mm) {
+    final v = network.valves[valveId];
+    if (v == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromLengthToNext(
+      network,
+      v.segmentId,
+      l2Mm,
+      elementLengthMm: v.effectiveTotalLengthMm,
+      currentElementId: v.id,
+      currentRatio: v.ratio,
+    );
+    if ((newRatio - v.ratio).abs() > 0.0001) {
+      final updated = v.copyWith(ratio: newRatio);
+      network.updateValve(valveId, updated);
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции арматуры по расстоянию от физического начала трубы (мм)
+  void updateValvePositionByDistanceFromStart(String valveId, double distMm) {
+    final v = network.valves[valveId];
+    if (v == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromDistanceFromStart(
+      network,
+      v.segmentId,
+      distMm,
+      elementLengthMm: v.effectiveTotalLengthMm,
+      currentElementId: v.id,
+      currentRatio: v.ratio,
+    );
+    if ((newRatio - v.ratio).abs() > 0.0001) {
+      final updated = v.copyWith(ratio: newRatio);
+      network.updateValve(valveId, updated);
+      network.generateElementWeldJoints();
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции сварного стыка по высотной отметке Z (в метрах)
+  void updateWeldPositionByElevation(String weldId, double elevationM) {
+    final w = network.weldJoints[weldId];
+    if (w == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromElevation(
+      network,
+      w.segmentId,
+      elevationM,
+      elementLengthMm: 0.0,
+      currentElementId: w.id,
+      currentRatio: w.ratio,
+    );
+    if ((newRatio - w.ratio).abs() > 0.0001) {
+      network.weldJoints[weldId] = w.copyWith(ratio: newRatio);
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции сварного стыка по длине предыдущей катушки L1 (мм)
+  void updateWeldPositionByPrevSection(String weldId, double l1Mm) {
+    final w = network.weldJoints[weldId];
+    if (w == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromLengthToPrev(
+      network,
+      w.segmentId,
+      l1Mm,
+      elementLengthMm: 0.0,
+      currentElementId: w.id,
+      currentRatio: w.ratio,
+    );
+    if ((newRatio - w.ratio).abs() > 0.0001) {
+      network.weldJoints[weldId] = w.copyWith(ratio: newRatio);
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции сварного стыка по длине следующей катушки L2 (мм)
+  void updateWeldPositionByNextSection(String weldId, double l2Mm) {
+    final w = network.weldJoints[weldId];
+    if (w == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromLengthToNext(
+      network,
+      w.segmentId,
+      l2Mm,
+      elementLengthMm: 0.0,
+      currentElementId: w.id,
+      currentRatio: w.ratio,
+    );
+    if ((newRatio - w.ratio).abs() > 0.0001) {
+      network.weldJoints[weldId] = w.copyWith(ratio: newRatio);
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Обновление позиции сварного стыка по расстоянию от физического начала трубы (мм)
+  void updateWeldPositionByDistanceFromStart(String weldId, double distMm) {
+    final w = network.weldJoints[weldId];
+    if (w == null) return;
+    final newRatio = SegmentPositioningService.calculateRatioFromDistanceFromStart(
+      network,
+      w.segmentId,
+      distMm,
+      elementLengthMm: 0.0,
+      currentElementId: w.id,
+      currentRatio: w.ratio,
+    );
+    if ((newRatio - w.ratio).abs() > 0.0001) {
+      network.weldJoints[weldId] = w.copyWith(ratio: newRatio);
+      network.recalculateSpools();
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Добавление или удаление выноски высотной отметки ГОСТ 21.101 для арматуры
+  bool toggleValveElevationCallout(
+    String valveId, {
+    double offsetX = 50.0,
+    double offsetY = -50.0,
+    ElevationMarkStyle? style,
+    ShelfDirection? direction,
+    bool? arrowOnNode,
+  }) {
+    if (!network.valves.containsKey(valveId)) return false;
+    final existingCallout = network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.valve && c.targetId == valveId && c.elevationStyle != null)
+        .firstOrNull;
+    if (existingCallout != null) {
+      network.callouts.remove(existingCallout.id);
+      history.recordState(network);
+      notifyListeners();
+      return false;
+    } else {
+      final id = 'callout_valve_elev_${DateTime.now().millisecondsSinceEpoch}_$valveId';
+      final defaultArrowOnNode = currentProject.calloutTemplates['elevation_arrow_on_node'] != 'false';
+      network.callouts[id] = Callout(
+        id: id,
+        targetId: valveId,
+        targetType: CalloutTargetType.valve,
+        screenOffsetX: offsetX,
+        screenOffsetY: offsetY,
+        elevationStyle: style ?? ElevationMarkStyle.gostOutline,
+        shelfDirection: direction ?? ShelfDirection.auto,
+        arrowOnNode: arrowOnNode ?? defaultArrowOnNode,
+      );
+      history.recordState(network);
+      notifyListeners();
+      return true;
+    }
+  }
+
+  /// Проверка, имеет ли арматура выноску высотной отметки
+  bool valveHasElevationCallout(String valveId) {
+    return network.callouts.values.any(
+      (c) => c.targetType == CalloutTargetType.valve && c.targetId == valveId && c.elevationStyle != null,
+    );
+  }
+
+  /// Получить выноску высотной отметки арматуры (если есть)
+  Callout? getValveElevationCallout(String valveId) {
+    return network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.valve && c.targetId == valveId && c.elevationStyle != null)
+        .firstOrNull;
+  }
+
+  /// Добавление или удаление выноски высотной отметки ГОСТ 21.101 для сварного стыка
+  bool toggleWeldElevationCallout(
+    String weldId, {
+    double offsetX = 50.0,
+    double offsetY = -50.0,
+    ElevationMarkStyle? style,
+    ShelfDirection? direction,
+    bool? arrowOnNode,
+  }) {
+    if (!network.weldJoints.containsKey(weldId)) return false;
+    final existingCallout = network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.weld && c.targetId == weldId && c.elevationStyle != null)
+        .firstOrNull;
+    if (existingCallout != null) {
+      network.callouts.remove(existingCallout.id);
+      history.recordState(network);
+      notifyListeners();
+      return false;
+    } else {
+      final id = 'callout_weld_elev_${DateTime.now().millisecondsSinceEpoch}_$weldId';
+      final defaultArrowOnNode = currentProject.calloutTemplates['elevation_arrow_on_node'] != 'false';
+      network.callouts[id] = Callout(
+        id: id,
+        targetId: weldId,
+        targetType: CalloutTargetType.weld,
+        screenOffsetX: offsetX,
+        screenOffsetY: offsetY,
+        elevationStyle: style ?? ElevationMarkStyle.gostOutline,
+        shelfDirection: direction ?? ShelfDirection.auto,
+        arrowOnNode: arrowOnNode ?? defaultArrowOnNode,
+      );
+      history.recordState(network);
+      notifyListeners();
+      return true;
+    }
+  }
+
+  /// Проверка, имеет ли сварной стык выноску высотной отметки
+  bool weldHasElevationCallout(String weldId) {
+    return network.callouts.values.any(
+      (c) => c.targetType == CalloutTargetType.weld && c.targetId == weldId && c.elevationStyle != null,
+    );
+  }
+
+  /// Получить выноску высотной отметки сварного стыка (если есть)
+  Callout? getWeldElevationCallout(String weldId) {
+    return network.callouts.values
+        .where((c) => c.targetType == CalloutTargetType.weld && c.targetId == weldId && c.elevationStyle != null)
+        .firstOrNull;
+  }
+
+  /// Нарезка стояка на катушки по заданным позициям сварных стыков (ratios)
+  void divideRiserIntoSpools(
+    String segmentId,
+    List<double> ratios, {
+    String? stamp,
+    WeldType? weldType,
+    InspectionMethod? inspectionMethod,
+  }) {
+    final seg = network.segments[segmentId];
+    if (seg == null || ratios.isEmpty) return;
+
+    final sortedRatios = List<double>.from(ratios)..sort();
+    final effectiveStamp = stamp ?? currentProject.calloutTemplates['default_weld_stamp'] ?? 'С-01';
+    final effectiveType = weldType ?? WeldType.c17;
+    final effectiveMethod = inspectionMethod ?? InspectionMethod.vik;
+
+    for (final r in sortedRatios) {
+      network.addWeldJoint(
+        segmentId: segmentId,
+        ratio: r,
+        stamp: effectiveStamp,
+        weldType: effectiveType,
+        inspectionMethod: effectiveMethod,
+        isManual: true,
+      );
+    }
+
+    network.recalculateSpools();
     history.recordState(network);
     notifyListeners();
   }

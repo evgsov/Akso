@@ -253,6 +253,17 @@ void main() {
       expect(dxf, contains('Формат A3'));
       expect(dxf, contains('Изм.'));
       expect(dxf, contains('Кол.уч'));
+      expect(dxf, contains('Лист'));
+      expect(dxf, contains('№ док.'));
+      expect(dxf, contains('Подп.'));
+      expect(dxf, contains('Дата'));
+      expect(dxf, contains('Стадия'));
+      expect(dxf, contains('Листов'));
+      expect(dxf, contains('Разраб.'));
+      expect(dxf, contains('Пров.'));
+      expect(dxf, contains('ГИП'));
+      expect(dxf, contains('Н.контр.'));
+      expect(dxf, contains('Утв.'));
     });
   });
 }

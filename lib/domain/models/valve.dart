@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import '../enums/valve_type.dart';
+import '../enums/weld_type.dart';
 import 'node_3d.dart';
 
 /// Трубопроводная арматура, установленная на участке трубы
@@ -66,6 +67,12 @@ class Valve {
   /// Исполнение ответных фланцев (тип 11 воротниковый, тип 01 плоский)
   final String counterFlangeType;
 
+  /// Строительная длина одного ответного фланца (мм) (если null — берется из типа: 45 мм для тип 11, 35 мм для тип 01)
+  final double? counterFlangeLengthMm;
+
+  /// Марка стали ответных фланцев
+  final String counterFlangeMaterial;
+
   /// Заводской номер арматуры (индивидуальный номер изделия)
   final String? serialNumber;
 
@@ -83,8 +90,46 @@ class Valve {
     this.flangePressurePn = 16,
     this.includeCounterFlanges = true,
     this.counterFlangeType = 'ГОСТ 33259-2015 тип 11',
+    this.counterFlangeLengthMm,
+    this.counterFlangeMaterial = 'Сталь 20',
     this.serialNumber,
   });
+
+  /// Является ли ответный фланец плоским (тип 01)
+  bool get isFlatCounterFlange =>
+      counterFlangeType.contains('тип 01') ||
+      (counterFlangeType.contains('01') && !counterFlangeType.contains('11'));
+
+  /// Эффективная строительная длина одного ответного фланца (воротника/шейки)
+  double get effectiveCounterFlangeLengthMm {
+    if (!isFlanged || !includeCounterFlanges) return 0.0;
+    if (counterFlangeLengthMm != null && counterFlangeLengthMm! > 0) {
+      return counterFlangeLengthMm!;
+    }
+    if (isFlatCounterFlange) {
+      return 35.0;
+    }
+    return 45.0;
+  }
+
+  /// Полный строительно-монтажный габарит узла (корпус арматуры + ответные фланцы)
+  double get effectiveTotalLengthMm {
+    if (!isFlanged || !includeCounterFlanges) {
+      return lengthMm;
+    }
+    return lengthMm + effectiveCounterFlangeLengthMm * 2.0;
+  }
+
+  /// Полудлина от центра арматуры до наружного торца воротника ответного фланца
+  double get effectiveHalfLengthMm => effectiveTotalLengthMm / 2.0;
+
+  /// Эффективная марка стали ответных фланцев
+  String get effectiveCounterFlangeMaterial =>
+      counterFlangeMaterial.isNotEmpty ? counterFlangeMaterial : 'Сталь 20';
+
+  /// Тип сварного шва приварки ответного фланца к трубе (С17 для воротниковых, С2 для плоских)
+  WeldType get counterFlangeWeldType =>
+      isFlatCounterFlange ? WeldType.c2 : WeldType.c17;
 
   /// Вычисление 3D координат центра арматуры в пространстве
   Node3D calculatePosition(Node3D startNode, Node3D endNode) {
@@ -108,6 +153,8 @@ class Valve {
     int? flangePressurePn,
     bool? includeCounterFlanges,
     String? counterFlangeType,
+    double? counterFlangeLengthMm,
+    String? counterFlangeMaterial,
     String? serialNumber,
     bool clearSerialNumber = false,
   }) {
@@ -125,6 +172,8 @@ class Valve {
       flangePressurePn: flangePressurePn ?? this.flangePressurePn,
       includeCounterFlanges: includeCounterFlanges ?? this.includeCounterFlanges,
       counterFlangeType: counterFlangeType ?? this.counterFlangeType,
+      counterFlangeLengthMm: counterFlangeLengthMm ?? this.counterFlangeLengthMm,
+      counterFlangeMaterial: counterFlangeMaterial ?? this.counterFlangeMaterial,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
     );
   }
@@ -143,6 +192,8 @@ class Valve {
         'flangePressurePn': flangePressurePn,
         'includeCounterFlanges': includeCounterFlanges,
         'counterFlangeType': counterFlangeType,
+        if (counterFlangeLengthMm != null) 'counterFlangeLengthMm': counterFlangeLengthMm,
+        'counterFlangeMaterial': counterFlangeMaterial,
         if (serialNumber != null) 'serialNumber': serialNumber,
       };
 
@@ -160,6 +211,8 @@ class Valve {
         flangePressurePn: json['flangePressurePn'] as int? ?? 16,
         includeCounterFlanges: json['includeCounterFlanges'] as bool? ?? true,
         counterFlangeType: json['counterFlangeType'] as String? ?? 'ГОСТ 33259-2015 тип 11',
+        counterFlangeLengthMm: (json['counterFlangeLengthMm'] as num?)?.toDouble(),
+        counterFlangeMaterial: json['counterFlangeMaterial'] as String? ?? 'Сталь 20',
         serialNumber: json['serialNumber'] as String?,
       );
 }

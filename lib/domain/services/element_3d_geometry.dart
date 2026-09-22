@@ -154,39 +154,45 @@ class Element3dGeometry {
       ));
     }
 
-    // Шпиндель (шток)
-    final stemHeight = math.max(40.0, r * 2.2);
-    final hwCenter = center + basis.u * stemHeight;
-    lines.add(WireframeSegment3D(
-      center.x, center.y, center.z,
-      hwCenter.x, hwCenter.y, hwCenter.z,
-      layer: layerValves,
-    ));
+    final hasStem = valve.valveType != ValveType.checkValve &&
+        valve.valveType != ValveType.strainer &&
+        valve.valveType != ValveType.drainValve;
 
-    // Штурвал / маховик (окружность в плоскости T, V)
-    final hwRadius = math.max(25.0, r * 1.4);
-    final hwPts = <Vector3D>[];
-    for (int i = 0; i < segments; i++) {
-      final theta = 2.0 * math.pi * i / segments;
-      final offset = basis.t * (hwRadius * math.cos(theta)) + basis.v * (hwRadius * math.sin(theta));
-      hwPts.add(hwCenter + offset);
-    }
-    for (int i = 0; i < segments; i++) {
-      final next = (i + 1) % segments;
+    if (hasStem) {
+      // Шпиндель (шток)
+      final stemHeight = math.max(40.0, r * 2.2);
+      final hwCenter = center + basis.u * stemHeight;
       lines.add(WireframeSegment3D(
-        hwPts[i].x, hwPts[i].y, hwPts[i].z,
-        hwPts[next].x, hwPts[next].y, hwPts[next].z,
-        layer: layerValves,
-      ));
-    }
-
-    // 4 спицы штурвала
-    for (int i = 0; i < segments; i += (segments ~/ 4)) {
-      lines.add(WireframeSegment3D(
+        center.x, center.y, center.z,
         hwCenter.x, hwCenter.y, hwCenter.z,
-        hwPts[i].x, hwPts[i].y, hwPts[i].z,
         layer: layerValves,
       ));
+
+      // Штурвал / маховик (окружность в плоскости T, V)
+      final hwRadius = math.max(25.0, r * 1.4);
+      final hwPts = <Vector3D>[];
+      for (int i = 0; i < segments; i++) {
+        final theta = 2.0 * math.pi * i / segments;
+        final offset = basis.t * (hwRadius * math.cos(theta)) + basis.v * (hwRadius * math.sin(theta));
+        hwPts.add(hwCenter + offset);
+      }
+      for (int i = 0; i < segments; i++) {
+        final next = (i + 1) % segments;
+        lines.add(WireframeSegment3D(
+          hwPts[i].x, hwPts[i].y, hwPts[i].z,
+          hwPts[next].x, hwPts[next].y, hwPts[next].z,
+          layer: layerValves,
+        ));
+      }
+
+      // 4 спицы штурвала
+      for (int i = 0; i < segments; i += (segments ~/ 4)) {
+        lines.add(WireframeSegment3D(
+          hwCenter.x, hwCenter.y, hwCenter.z,
+          hwPts[i].x, hwPts[i].y, hwPts[i].z,
+          layer: layerValves,
+        ));
+      }
     }
 
     // Если арматура фланцевая — добавляем фланцевые кольца
@@ -790,7 +796,12 @@ class Element3dGeometry {
     // Шток (шпиндель)
     final stemH = w * 1.55;
     final hwCenter = center + basis.u * stemH;
-    lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+    final hasStem = valve.valveType != ValveType.checkValve &&
+        valve.valveType != ValveType.strainer &&
+        valve.valveType != ValveType.drainValve;
+    if (hasStem) {
+      lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+    }
 
     // Маховик / рукоятка в зависимости от типа арматуры
     switch (valve.valveType) {
@@ -922,66 +933,79 @@ class Element3dGeometry {
     // Если арматура фланцевая — засечки фланцев на торцах
     if (valve.isFlanged) {
       final flW = w * 1.25;
+      // Основная линия фланца параллельна основанию треугольника (basis.u)
       lines.add(WireframeSegment3D(
-        (cIn + basis.v * flW).x, (cIn + basis.v * flW).y, (cIn + basis.v * flW).z,
-        (cIn - basis.v * flW).x, (cIn - basis.v * flW).y, (cIn - basis.v * flW).z,
+        (cIn + basis.u * flW).x, (cIn + basis.u * flW).y, (cIn + basis.u * flW).z,
+        (cIn - basis.u * flW).x, (cIn - basis.u * flW).y, (cIn - basis.u * flW).z,
         layer: layer,
       ));
       lines.add(WireframeSegment3D(
-        (cOut + basis.v * flW).x, (cOut + basis.v * flW).y, (cOut + basis.v * flW).z,
-        (cOut - basis.v * flW).x, (cOut - basis.v * flW).y, (cOut - basis.v * flW).z,
+        (cOut + basis.u * flW).x, (cOut + basis.u * flW).y, (cOut + basis.u * flW).z,
+        (cOut - basis.u * flW).x, (cOut - basis.u * flW).y, (cOut - basis.u * flW).z,
+        layer: layer,
+      ));
+      // Легкая засечка по нормали глубины v для 3D объемности
+      final flV = flW * 0.35;
+      lines.add(WireframeSegment3D(
+        (cIn + basis.v * flV).x, (cIn + basis.v * flV).y, (cIn + basis.v * flV).z,
+        (cIn - basis.v * flV).x, (cIn - basis.v * flV).y, (cIn - basis.v * flV).z,
+        layer: layer,
+      ));
+      lines.add(WireframeSegment3D(
+        (cOut + basis.v * flV).x, (cOut + basis.v * flV).y, (cOut + basis.v * flV).z,
+        (cOut - basis.v * flV).x, (cOut - basis.v * flV).y, (cOut - basis.v * flV).z,
         layer: layer,
       ));
 
       if (valve.includeCounterFlanges) {
-        final gap = math.max(6.0, w * 0.25);
-        final neckLen = math.min(10.0, w * 0.35);
+        final flLen = valve.effectiveCounterFlangeLengthMm;
+        final gasketGap = math.min(4.0, flLen * 0.1);
 
         // Входной ответный фланец и воротник приварки к трубе
-        final cInC = cIn - basis.t * gap;
+        final cInC = cIn - basis.t * gasketGap;
         lines.add(WireframeSegment3D(
-          (cInC + basis.v * flW).x, (cInC + basis.v * flW).y, (cInC + basis.v * flW).z,
-          (cInC - basis.v * flW).x, (cInC - basis.v * flW).y, (cInC - basis.v * flW).z,
+          (cInC + basis.u * flW).x, (cInC + basis.u * flW).y, (cInC + basis.u * flW).z,
+          (cInC - basis.u * flW).x, (cInC - basis.u * flW).y, (cInC - basis.u * flW).z,
           layer: layer,
         ));
-        final pNeckIn = cInC - basis.t * neckLen;
+        final pNeckIn = cIn - basis.t * flLen;
         lines.add(WireframeSegment3D(
-          (pNeckIn + basis.v * w).x, (pNeckIn + basis.v * w).y, (pNeckIn + basis.v * w).z,
-          (pNeckIn - basis.v * w).x, (pNeckIn - basis.v * w).y, (pNeckIn - basis.v * w).z,
-          layer: layer,
-        ));
-        lines.add(WireframeSegment3D(
-          (cInC + basis.v * flW).x, (cInC + basis.v * flW).y, (cInC + basis.v * flW).z,
-          (pNeckIn + basis.v * w).x, (pNeckIn + basis.v * w).y, (pNeckIn + basis.v * w).z,
+          (pNeckIn + basis.u * w).x, (pNeckIn + basis.u * w).y, (pNeckIn + basis.u * w).z,
+          (pNeckIn - basis.u * w).x, (pNeckIn - basis.u * w).y, (pNeckIn - basis.u * w).z,
           layer: layer,
         ));
         lines.add(WireframeSegment3D(
-          (cInC - basis.v * flW).x, (cInC - basis.v * flW).y, (cInC - basis.v * flW).z,
-          (pNeckIn - basis.v * w).x, (pNeckIn - basis.v * w).y, (pNeckIn - basis.v * w).z,
+          (cInC + basis.u * flW).x, (cInC + basis.u * flW).y, (cInC + basis.u * flW).z,
+          (pNeckIn + basis.u * w).x, (pNeckIn + basis.u * w).y, (pNeckIn + basis.u * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cInC - basis.u * flW).x, (cInC - basis.u * flW).y, (cInC - basis.u * flW).z,
+          (pNeckIn - basis.u * w).x, (pNeckIn - basis.u * w).y, (pNeckIn - basis.u * w).z,
           layer: layer,
         ));
 
         // Выходной ответный фланец и воротник приварки к трубе
-        final cOutC = cOut + basis.t * gap;
+        final cOutC = cOut + basis.t * gasketGap;
         lines.add(WireframeSegment3D(
-          (cOutC + basis.v * flW).x, (cOutC + basis.v * flW).y, (cOutC + basis.v * flW).z,
-          (cOutC - basis.v * flW).x, (cOutC - basis.v * flW).y, (cOutC - basis.v * flW).z,
+          (cOutC + basis.u * flW).x, (cOutC + basis.u * flW).y, (cOutC + basis.u * flW).z,
+          (cOutC - basis.u * flW).x, (cOutC - basis.u * flW).y, (cOutC - basis.u * flW).z,
           layer: layer,
         ));
-        final pNeckOut = cOutC + basis.t * neckLen;
+        final pNeckOut = cOut + basis.t * flLen;
         lines.add(WireframeSegment3D(
-          (pNeckOut + basis.v * w).x, (pNeckOut + basis.v * w).y, (pNeckOut + basis.v * w).z,
-          (pNeckOut - basis.v * w).x, (pNeckOut - basis.v * w).y, (pNeckOut - basis.v * w).z,
-          layer: layer,
-        ));
-        lines.add(WireframeSegment3D(
-          (cOutC + basis.v * flW).x, (cOutC + basis.v * flW).y, (cOutC + basis.v * flW).z,
-          (pNeckOut + basis.v * w).x, (pNeckOut + basis.v * w).y, (pNeckOut + basis.v * w).z,
+          (pNeckOut + basis.u * w).x, (pNeckOut + basis.u * w).y, (pNeckOut + basis.u * w).z,
+          (pNeckOut - basis.u * w).x, (pNeckOut - basis.u * w).y, (pNeckOut - basis.u * w).z,
           layer: layer,
         ));
         lines.add(WireframeSegment3D(
-          (cOutC - basis.v * flW).x, (cOutC - basis.v * flW).y, (cOutC - basis.v * flW).z,
-          (pNeckOut - basis.v * w).x, (pNeckOut - basis.v * w).y, (pNeckOut - basis.v * w).z,
+          (cOutC + basis.u * flW).x, (cOutC + basis.u * flW).y, (cOutC + basis.u * flW).z,
+          (pNeckOut + basis.u * w).x, (pNeckOut + basis.u * w).y, (pNeckOut + basis.u * w).z,
+          layer: layer,
+        ));
+        lines.add(WireframeSegment3D(
+          (cOutC - basis.u * flW).x, (cOutC - basis.u * flW).y, (cOutC - basis.u * flW).z,
+          (pNeckOut - basis.u * w).x, (pNeckOut - basis.u * w).y, (pNeckOut - basis.u * w).z,
           layer: layer,
         ));
       }

@@ -409,7 +409,6 @@ class SnapEngine {
         final e = network.nodes[seg.endNodeId];
         if (s == null || e == null) continue;
         if (s.id == traceStartNode.id || e.id == traceStartNode.id) continue;
-        if (settings.isZLocked && (s.z - currentElevationZ).abs() > 15.0 && (e.z - currentElevationZ).abs() > 15.0) continue;
 
         // Векторы сегмента
         final vx = e.x - s.x;

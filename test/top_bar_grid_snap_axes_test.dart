@@ -94,7 +94,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final gridBtn = find.byTooltip('Сетка (Grid)');
-      final snapBtn = find.byTooltip('Привязка (Snap)');
+      final snapBtn = find.byTooltip('Привязка (Snap / F3)');
       final axesBtn = find.byTooltip('Осевые линии (Axes)');
 
       expect(gridBtn, findsOneWidget);
@@ -128,7 +128,7 @@ void main() {
 
   group('DesktopCadLayout header buttons test', () {
     testWidgets('DesktopCadLayout contains Grid, Snap, and Axes buttons', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.physicalSize = const Size(2560, 1080);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -143,7 +143,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final gridBtn = find.byTooltip('Сетка (Grid)');
-      final snapBtn = find.byTooltip('Привязка (Snap)');
+      final snapBtn = find.byTooltip('Привязка (Snap / F3)');
       final axesBtn = find.byTooltip('Осевые линии (Axes)');
 
       expect(gridBtn, findsOneWidget);

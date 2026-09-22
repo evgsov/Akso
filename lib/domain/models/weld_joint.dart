@@ -64,6 +64,12 @@ class WeldJoint {
   /// Индивидуальный размер засечки в мм (null = использовать настройку сети или диаметр трубы)
   final double? tickSizeMm;
 
+  /// Идентификатор элемента-источника (арматура, фитинг, сопряжение), создавшего этот стык
+  final String? sourceElementId;
+
+  /// Флаг ручного создания шва пользователем (не удаляется и не сдвигается автоматикой)
+  final bool isManual;
+
   const WeldJoint({
     required this.id,
     required this.segmentId,
@@ -79,6 +85,8 @@ class WeldJoint {
     this.notes = 'Годен',
     this.style,
     this.tickSizeMm,
+    this.sourceElementId,
+    this.isManual = false,
   })  : _inspectionMethods = inspectionMethods ?? const [InspectionMethod.vik],
         _legacyMethod = inspectionMethod;
 
@@ -117,6 +125,9 @@ class WeldJoint {
     bool clearStyle = false,
     double? tickSizeMm,
     bool clearTickSize = false,
+    String? sourceElementId,
+    bool clearSourceElementId = false,
+    bool? isManual,
   }) {
     return WeldJoint(
       id: id ?? this.id,
@@ -133,6 +144,8 @@ class WeldJoint {
       notes: notes ?? this.notes,
       style: clearStyle ? null : (style ?? this.style),
       tickSizeMm: clearTickSize ? null : (tickSizeMm ?? this.tickSizeMm),
+      sourceElementId: clearSourceElementId ? null : (sourceElementId ?? this.sourceElementId),
+      isManual: isManual ?? this.isManual,
     );
   }
 
@@ -151,6 +164,8 @@ class WeldJoint {
         'notes': notes,
         if (style != null) 'style': style!.name,
         if (tickSizeMm != null) 'tickSizeMm': tickSizeMm,
+        if (sourceElementId != null) 'sourceElementId': sourceElementId,
+        if (isManual) 'isManual': isManual,
       };
 
   factory WeldJoint.fromJson(Map<String, dynamic> json) {
@@ -179,6 +194,8 @@ class WeldJoint {
       notes: json['notes'] as String? ?? 'Годен',
       style: json['style'] != null ? WeldJointStyle.fromString(json['style'] as String?) : null,
       tickSizeMm: (json['tickSizeMm'] as num?)?.toDouble(),
+      sourceElementId: json['sourceElementId'] as String?,
+      isManual: json['isManual'] as bool? ?? false,
     );
   }
 }

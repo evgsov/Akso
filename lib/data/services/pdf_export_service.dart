@@ -177,92 +177,87 @@ class PdfExportService {
     canvas.drawRect(stampLeftMm * mm, stampBottomMm * mm, 185.0 * mm, 55.0 * mm);
     canvas.fillPath();
 
-    // Внешний контур штампа
+    // Внешний контур штампа (основная сплошная линия по ГОСТ 2.303)
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
     canvas.drawRect(stampLeftMm * mm, stampBottomMm * mm, 185.0 * mm, 55.0 * mm);
     canvas.strokePath();
 
     // Основной вертикальный разделитель: 65 мм слева (блок согласований/изменений)
     final xApprovalsEndMm = stampLeftMm + 65.0;
+    final stampRightMm = widthMm - sheet.format.frameRightMm;
+
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
     canvas.drawLine(xApprovalsEndMm * mm, stampBottomMm * mm, xApprovalsEndMm * mm, (stampBottomMm + 55.0) * mm);
+
+    // Сквозная горизонтальная линия Y = 25 мм от верха (stampBottomMm + 30 мм) по всей ширине штампа (0..185 мм)
+    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 30.0) * mm, stampRightMm * mm, (stampBottomMm + 30.0) * mm);
     canvas.strokePath();
 
     // --- ЛЕВЫЙ БЛОК (0..65 мм) ---
-    // В эталонной Форме 3 (по ГОСТ 21.101 и образцу 09/2025-НВК):
-    // y=0..15 мм сверху (stampBottomMm + 40..55) - 3 строки изменений
-    // y=15..20 мм сверху (stampBottomMm + 35..40) - шапка таблицы изменений
-    // y=20..55 мм сверху (stampBottomMm + 0..35) - 7 строк согласований по 5 мм
+    // Таблица изменений: 4 строки изменений (y_bot = stampBottomMm + 35, 40, 45, 50 мм)
     canvas.setLineWidth(styleConfig.stampGridWidthMm * mm);
+    for (int i = 1; i <= 4; i++) {
+      final yMm = stampBottomMm + 30.0 + (i * 5.0);
+      canvas.drawLine(stampLeftMm * mm, yMm * mm, xApprovalsEndMm * mm, yMm * mm);
+    }
 
-    // Горизонтальные линии строк изменений (y = stampBottomMm + 40, 45, 50)
-    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 50.0) * mm, xApprovalsEndMm * mm, (stampBottomMm + 50.0) * mm);
-    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 45.0) * mm, xApprovalsEndMm * mm, (stampBottomMm + 45.0) * mm);
-    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 40.0) * mm, xApprovalsEndMm * mm, (stampBottomMm + 40.0) * mm);
-
-    // Линия под шапкой таблицы изменений (y = stampBottomMm + 35)
-    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 35.0) * mm, xApprovalsEndMm * mm, (stampBottomMm + 35.0) * mm);
-
-    // Вертикальные линии колонок изменений (проходят от stampBottomMm + 35 до stampBottomMm + 55)
+    // Вертикальные линии колонок таблицы изменений (проходят от stampBottomMm + 30 до stampBottomMm + 55)
     final xRevIzmMm = stampLeftMm + 10.0;
     final xRevKolMm = stampLeftMm + 20.0;
     final xRevListMm = stampLeftMm + 30.0;
-    final xRevDocMm = stampLeftMm + 45.0;
+    final xRevDocMm = stampLeftMm + 40.0;
     final xRevSignMm = stampLeftMm + 55.0;
 
-    canvas.drawLine(xRevIzmMm * mm, (stampBottomMm + 35.0) * mm, xRevIzmMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevKolMm * mm, (stampBottomMm + 35.0) * mm, xRevKolMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevListMm * mm, (stampBottomMm + 35.0) * mm, xRevListMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevDocMm * mm, (stampBottomMm + 35.0) * mm, xRevDocMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevSignMm * mm, (stampBottomMm + 35.0) * mm, xRevSignMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(xRevIzmMm * mm, (stampBottomMm + 30.0) * mm, xRevIzmMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(xRevKolMm * mm, (stampBottomMm + 30.0) * mm, xRevKolMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(xRevListMm * mm, (stampBottomMm + 30.0) * mm, xRevListMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(xRevDocMm * mm, (stampBottomMm + 30.0) * mm, xRevDocMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(xRevSignMm * mm, (stampBottomMm + 30.0) * mm, xRevSignMm * mm, (stampBottomMm + 55.0) * mm);
 
-    // 7 строк согласований (y = stampBottomMm + 5, 10, 15, 20, 25, 30)
-    for (int i = 1; i <= 6; i++) {
+    // Блок согласований: 6 строк по 5 мм (y = stampBottomMm + 5, 10, 15, 20, 25 мм)
+    for (int i = 1; i <= 5; i++) {
       final yMm = stampBottomMm + (i * 5.0);
       canvas.drawLine(stampLeftMm * mm, yMm * mm, xApprovalsEndMm * mm, yMm * mm);
     }
 
-    // Вертикальные линии блока согласований (от stampBottomMm до stampBottomMm + 35)
-    final xRoleMm = stampLeftMm + 17.0;
+    // Вертикальные линии блока согласований (от stampBottomMm до stampBottomMm + 30):
+    // Должность (20 мм), Фамилия (20 мм), Подпись (15 мм), Дата (10 мм)
+    final xRoleMm = stampLeftMm + 20.0;
     final xNameMm = stampLeftMm + 40.0;
     final xSignMm = stampLeftMm + 55.0;
 
-    canvas.drawLine(xRoleMm * mm, stampBottomMm * mm, xRoleMm * mm, (stampBottomMm + 35.0) * mm);
-    canvas.drawLine(xNameMm * mm, stampBottomMm * mm, xNameMm * mm, (stampBottomMm + 35.0) * mm);
-    canvas.drawLine(xSignMm * mm, stampBottomMm * mm, xSignMm * mm, (stampBottomMm + 35.0) * mm);
+    canvas.drawLine(xRoleMm * mm, stampBottomMm * mm, xRoleMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(xNameMm * mm, stampBottomMm * mm, xNameMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(xSignMm * mm, stampBottomMm * mm, xSignMm * mm, (stampBottomMm + 30.0) * mm);
     canvas.strokePath();
 
     // --- ПРАВЫЙ БЛОК (65..185 мм, ширина 120 мм) ---
-    final stampRightMm = widthMm - sheet.format.frameRightMm;
     final xCenterEndMm = stampLeftMm + 135.0;
 
-    // Строка 1: Шифр проекта (15 мм сверху, y: stampBottomMm + 40..55)
-    final yRow1Mm = stampBottomMm + 40.0;
+    // Строка 1: Шифр проекта (10 мм сверху, y: stampBottomMm + 45..55)
+    final yRow1Mm = stampBottomMm + 45.0;
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
     canvas.drawLine(xApprovalsEndMm * mm, yRow1Mm * mm, stampRightMm * mm, yRow1Mm * mm);
 
-    // Строка 2: Объект (15 мм, y: stampBottomMm + 25..40)
-    final yRow2Mm = stampBottomMm + 25.0;
-    canvas.drawLine(xApprovalsEndMm * mm, yRow2Mm * mm, stampRightMm * mm, yRow2Mm * mm);
+    // Разделитель между левой (70 мм) и правой (50 мм) частями: от stampBottomMm до stampBottomMm + 30.0
+    canvas.drawLine(xCenterEndMm * mm, stampBottomMm * mm, xCenterEndMm * mm, (stampBottomMm + 30.0) * mm);
 
-    // Разделитель между 70 мм и 50 мм справа: от stampBottomMm до yRow2Mm
-    canvas.drawLine(xCenterEndMm * mm, stampBottomMm * mm, xCenterEndMm * mm, yRow2Mm * mm);
-
-    // Разделитель строк 3 и 4: y = stampBottomMm + 15 (Строка 3: 10 мм, Строка 4: 15 мм)
+    // Разделитель строк 3 и 4: y = stampBottomMm + 15 (Строка 3: 15 мм, Строка 4: 15 мм)
     final yRow3Mm = stampBottomMm + 15.0;
     canvas.drawLine(xApprovalsEndMm * mm, yRow3Mm * mm, stampRightMm * mm, yRow3Mm * mm);
+
+    // Строка 3 Справа: Стадия | Лист | Листов (от stampBottomMm + 15 до stampBottomMm + 30)
+    // Вертикальные разделители: Стадия (15 мм: 135..150), Лист (15 мм: 150..165), Листов (20 мм: 165..185)
+    final xStageMm = xCenterEndMm + 15.0;
+    final xSheetMm = xCenterEndMm + 30.0;
+    canvas.drawLine(xStageMm * mm, yRow3Mm * mm, xStageMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(xSheetMm * mm, yRow3Mm * mm, xSheetMm * mm, (stampBottomMm + 30.0) * mm);
     canvas.strokePath();
 
-    // Строка 3 Справа: Стадия | Лист | Листов
-    // Шапка (5 мм, y = stampBottomMm + 20)
+    // Шапка Стадия | Лист | Листов (5 мм сверху строки 3: y = stampBottomMm + 25)
     canvas.setLineWidth(styleConfig.stampGridWidthMm * mm);
-    final yStageHeaderMm = stampBottomMm + 20.0;
+    final yStageHeaderMm = stampBottomMm + 25.0;
     canvas.drawLine(xCenterEndMm * mm, yStageHeaderMm * mm, stampRightMm * mm, yStageHeaderMm * mm);
-
-    final xStageMm = xCenterEndMm + 15.0;
-    final xSheetMm = xCenterEndMm + 32.0;
-    canvas.drawLine(xStageMm * mm, yRow3Mm * mm, xStageMm * mm, yRow2Mm * mm);
-    canvas.drawLine(xSheetMm * mm, yRow3Mm * mm, xSheetMm * mm, yRow2Mm * mm);
     canvas.strokePath();
   }
 
@@ -554,9 +549,9 @@ class PdfExportService {
     final widgets = <pw.Widget>[];
 
     // --- ЛЕВЫЙ БЛОК (0..65 мм) ---
-    // В Form 3: 3 пустые строки изменений (0..15 мм),
-    // Затем строка 4 (15..20 мм) - шапка таблицы изменений:
-    final revHeaderTop = stampTop + 15.0 * mm;
+    // Таблица изменений (Y = 0..25 мм):
+    // Шапка таблицы изменений: строка 5 (Y = 20..25 мм)
+    final revHeaderTop = stampTop + 20.0 * mm;
 
     widgets.add(pw.Positioned(
       left: stampLeft,
@@ -575,7 +570,7 @@ class PdfExportService {
         width: 10.0 * mm,
         height: 5.0 * mm,
         alignment: pw.Alignment.center,
-        child: pw.Text('Кол.уч', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        child: pw.Text('Кол. уч.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
       ),
     ));
     widgets.add(pw.Positioned(
@@ -592,17 +587,17 @@ class PdfExportService {
       left: stampLeft + 30.0 * mm,
       top: revHeaderTop,
       child: pw.Container(
-        width: 15.0 * mm,
+        width: 10.0 * mm,
         height: 5.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text('№ док.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
       ),
     ));
     widgets.add(pw.Positioned(
-      left: stampLeft + 45.0 * mm,
+      left: stampLeft + 40.0 * mm,
       top: revHeaderTop,
       child: pw.Container(
-        width: 10.0 * mm,
+        width: 15.0 * mm,
         height: 5.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text('Подп.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
@@ -619,7 +614,73 @@ class PdfExportService {
       ),
     ));
 
-    // Строки согласований: строки 5..11 (20..55 мм: 7 строк по 5 мм)
+    // Отрисовка записей изменений над шапкой (снизу вверх: строки 4, 3, 2, 1)
+    for (int r = 0; r < tb.revisions.length && r < 4; r++) {
+      final rev = tb.revisions[r];
+      final revTop = stampTop + ((3 - r) * 5.0) * mm;
+      widgets.add(pw.Positioned(
+        left: stampLeft,
+        top: revTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.changeIndex, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+      widgets.add(pw.Positioned(
+        left: stampLeft + 10.0 * mm,
+        top: revTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.changeCount, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+      widgets.add(pw.Positioned(
+        left: stampLeft + 20.0 * mm,
+        top: revTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.sheetNum, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+      widgets.add(pw.Positioned(
+        left: stampLeft + 30.0 * mm,
+        top: revTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.docNum, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+      widgets.add(pw.Positioned(
+        left: stampLeft + 40.0 * mm,
+        top: revTop,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.signature, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+      widgets.add(pw.Positioned(
+        left: stampLeft + 55.0 * mm,
+        top: revTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(rev.date, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+        ),
+      ));
+    }
+
+    // Строки согласований: Графы 10..13 (Y = 25..55 мм: 6 строк по 5 мм)
     final approvals = tb.approvals.isNotEmpty
         ? tb.approvals
         : const [
@@ -630,11 +691,11 @@ class PdfExportService {
             TitleBlockApproval(role: 'ГИП', name: ''),
           ];
 
-    for (int i = 0; i < approvals.length && i < 7; i++) {
+    for (int i = 0; i < approvals.length && i < 6; i++) {
       final app = approvals[i];
-      final rowTop = stampTop + (20.0 + i * 5.0) * mm + (1.2 * mm);
+      final rowTop = stampTop + (25.0 + i * 5.0) * mm + (1.2 * mm);
 
-      // Должность (17 мм)
+      // Должность (20 мм)
       if (app.role.isNotEmpty) {
         widgets.add(pw.Positioned(
           left: stampLeft + 1.5 * mm,
@@ -643,10 +704,10 @@ class PdfExportService {
         ));
       }
 
-      // Фамилия (23 мм)
+      // Фамилия (20 мм)
       if (app.name.isNotEmpty) {
         widgets.add(pw.Positioned(
-          left: stampLeft + 18.5 * mm,
+          left: stampLeft + 21.0 * mm,
           top: rowTop,
           child: pw.Text(app.name, style: pw.TextStyle(font: fontRegular, fontSize: 6.5)),
         ));
@@ -666,28 +727,28 @@ class PdfExportService {
     final xCenter = stampLeft + 65.0 * mm;
     final xRight = stampLeft + 135.0 * mm;
 
-    // Строка 1 (0..15 мм): Графа 4: Обозначение документа / шифр проекта (120 мм ширина)
+    // Строка 1 (0..10 мм, высота 10 мм): Графа 4: Обозначение документа / шифр проекта (120 мм ширина)
     if (tb.documentCode.isNotEmpty) {
       widgets.add(pw.Positioned(
         left: xCenter,
         top: stampTop,
         child: pw.Container(
           width: 120.0 * mm,
-          height: 15.0 * mm,
+          height: 10.0 * mm,
           alignment: pw.Alignment.center,
           child: pw.Text(tb.documentCode, style: pw.TextStyle(font: fontBold, fontSize: 11)),
         ),
       ));
     }
 
-    // Строка 2 (15..30 мм): Графа 1: Наименование объекта строительства (120 мм ширина)
+    // Строка 2 (10..25 мм, высота 15 мм): Графа 1: Наименование объекта строительства (120 мм ширина)
     if (tb.projectName.isNotEmpty) {
       widgets.add(pw.Positioned(
         left: xCenter + 2.0 * mm,
-        top: stampTop + 16.0 * mm,
+        top: stampTop + 10.0 * mm,
         child: pw.Container(
           width: 116.0 * mm,
-          height: 13.0 * mm,
+          height: 15.0 * mm,
           alignment: pw.Alignment.centerLeft,
           child: pw.Text(
             tb.projectName,
@@ -698,18 +759,19 @@ class PdfExportService {
       ));
     }
 
-    // Строка 3 (30..40 мм, высота 10 мм):
+    // Строка 3 (25..40 мм, высота 15 мм):
     // Слева (65..135 мм, 70 мм): Графа 2: Наименование здания / сооружения
     if (tb.buildingName.isNotEmpty) {
       widgets.add(pw.Positioned(
         left: xCenter + 2.0 * mm,
-        top: stampTop + 31.0 * mm,
+        top: stampTop + 25.0 * mm,
         child: pw.Container(
           width: 66.0 * mm,
-          height: 8.5 * mm,
-          alignment: pw.Alignment.centerLeft,
+          height: 15.0 * mm,
+          alignment: pw.Alignment.center,
           child: pw.Text(
             tb.buildingName,
+            textAlign: pw.TextAlign.center,
             style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
             maxLines: 2,
           ),
@@ -717,11 +779,11 @@ class PdfExportService {
       ));
     }
 
-    // Справа (135..185 мм, 50 мм): Стадия | Лист | Листов
-    // Шапка (30..35 мм: 5 мм)
+    // Справа (135..185 мм, 50 мм): Стадия | Лист | Листов (Y = 25..40 мм)
+    // Шапка (25..30 мм: высота 5 мм)
     widgets.add(pw.Positioned(
       left: xRight,
-      top: stampTop + 30.0 * mm,
+      top: stampTop + 25.0 * mm,
       child: pw.Container(
         width: 15.0 * mm,
         height: 5.0 * mm,
@@ -731,52 +793,52 @@ class PdfExportService {
     ));
     widgets.add(pw.Positioned(
       left: xRight + 15.0 * mm,
-      top: stampTop + 30.0 * mm,
+      top: stampTop + 25.0 * mm,
       child: pw.Container(
-        width: 17.0 * mm,
+        width: 15.0 * mm,
         height: 5.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text('Лист', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
       ),
     ));
     widgets.add(pw.Positioned(
-      left: xRight + 32.0 * mm,
-      top: stampTop + 30.0 * mm,
+      left: xRight + 30.0 * mm,
+      top: stampTop + 25.0 * mm,
       child: pw.Container(
-        width: 18.0 * mm,
+        width: 20.0 * mm,
         height: 5.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text('Листов', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
       ),
     ));
 
-    // Значения (35..40 мм: 5 мм)
+    // Значения (30..40 мм: высота 10 мм)
     widgets.add(pw.Positioned(
       left: xRight,
-      top: stampTop + 35.0 * mm,
+      top: stampTop + 30.0 * mm,
       child: pw.Container(
         width: 15.0 * mm,
-        height: 5.0 * mm,
+        height: 10.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text(tb.stage, style: pw.TextStyle(font: fontBold, fontSize: 8)),
       ),
     ));
     widgets.add(pw.Positioned(
       left: xRight + 15.0 * mm,
-      top: stampTop + 35.0 * mm,
+      top: stampTop + 30.0 * mm,
       child: pw.Container(
-        width: 17.0 * mm,
-        height: 5.0 * mm,
+        width: 15.0 * mm,
+        height: 10.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text(tb.sheetNumber.toString(), style: pw.TextStyle(font: fontBold, fontSize: 8)),
       ),
     ));
     widgets.add(pw.Positioned(
-      left: xRight + 32.0 * mm,
-      top: stampTop + 35.0 * mm,
+      left: xRight + 30.0 * mm,
+      top: stampTop + 30.0 * mm,
       child: pw.Container(
-        width: 18.0 * mm,
-        height: 5.0 * mm,
+        width: 20.0 * mm,
+        height: 10.0 * mm,
         alignment: pw.Alignment.center,
         child: pw.Text(tb.totalSheets.toString(), style: pw.TextStyle(font: fontBold, fontSize: 8)),
       ),
@@ -787,10 +849,10 @@ class PdfExportService {
     if (tb.drawingTitle.isNotEmpty) {
       widgets.add(pw.Positioned(
         left: xCenter + 2.0 * mm,
-        top: stampTop + 41.0 * mm,
+        top: stampTop + 40.0 * mm,
         child: pw.Container(
           width: 66.0 * mm,
-          height: 13.0 * mm,
+          height: 15.0 * mm,
           alignment: pw.Alignment.centerLeft,
           child: pw.Text(
             tb.drawingTitle,
@@ -805,10 +867,10 @@ class PdfExportService {
     if (tb.organization.isNotEmpty) {
       widgets.add(pw.Positioned(
         left: xRight + 1.0 * mm,
-        top: stampTop + 41.0 * mm,
+        top: stampTop + 40.0 * mm,
         child: pw.Container(
           width: 48.0 * mm,
-          height: 13.0 * mm,
+          height: 15.0 * mm,
           alignment: pw.Alignment.center,
           child: pw.Text(
             tb.organization,

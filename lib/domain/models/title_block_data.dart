@@ -304,8 +304,10 @@ class TitleBlockData {
     this.approvals = const [
       TitleBlockApproval(role: 'Разраб.', name: ''),
       TitleBlockApproval(role: 'Пров.', name: ''),
+      TitleBlockApproval(role: 'Гидрогеол.', name: ''),
       TitleBlockApproval(role: 'ГИП', name: ''),
       TitleBlockApproval(role: 'Н.контр.', name: ''),
+      TitleBlockApproval(role: 'Утв.', name: ''),
     ],
     this.archive = const TitleBlockArchive(),
     this.topRightCorner = const TopRightCornerBlock(),

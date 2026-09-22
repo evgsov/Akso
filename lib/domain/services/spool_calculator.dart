@@ -336,7 +336,7 @@ class SpoolCalculator {
       points.add(w.ratio);
     }
     for (final v in segValves) {
-      final halfRatio = (v.lengthMm / 2.0) / math.max(totalLen, 1.0);
+      final halfRatio = (v.effectiveHalfLengthMm) / math.max(totalLen, 1.0);
       points.add((v.ratio - halfRatio).clamp(0.0, 1.0));
       points.add((v.ratio + halfRatio).clamp(0.0, 1.0));
     }
@@ -368,7 +368,7 @@ class SpoolCalculator {
 
       bool insideValve = false;
       for (final v in segValves) {
-        final halfRatio = (v.lengthMm / 2.0) / math.max(totalLen, 1.0);
+        final halfRatio = (v.effectiveHalfLengthMm) / math.max(totalLen, 1.0);
         if (p1 >= v.ratio - halfRatio - 0.001 && p2 <= v.ratio + halfRatio + 0.001) {
           insideValve = true;
           break;
@@ -376,18 +376,11 @@ class SpoolCalculator {
       }
       if (insideValve) continue;
 
-      double dStart = p1 * totalLen;
-      double dEnd = p2 * totalLen;
-      double dStartVisual = p1 * totalLen;
-      double dEndVisual = p2 * totalLen;
-      if (i == 0) {
-        dStart += startDeduction;
-        dStartVisual += sVisD;
-      }
-      if (i == uniquePoints.length - 2) {
-        dEnd -= endDeduction;
-        dEndVisual -= eVisD;
-      }
+      // Ограничиваем координаты катушки чистой зоной трубы вне строительных вычетов фитингов на концах
+      double dStart = math.max(startDeduction, p1 * totalLen);
+      double dEnd = math.min(math.max(0.0, totalLen - endDeduction), p2 * totalLen);
+      double dStartVisual = math.max(sVisD, p1 * totalLen);
+      double dEndVisual = math.min(math.max(0.0, totalLen - eVisD), p2 * totalLen);
 
       final cutLen = math.max(0.0, dEnd - dStart);
       if (cutLen > 1.0) {
@@ -486,7 +479,7 @@ class SpoolCalculator {
       for (final v in segValves) {
         final r = isRev ? (1.0 - v.ratio) : v.ratio;
         final cDist = accumDist + r * len;
-        final half = v.lengthMm / 2.0;
+        final half = v.effectiveHalfLengthMm;
         final d1 = math.max(0.0, cDist - half);
         final d2 = math.min(totalChainLen, cDist + half);
         valveIntervals.add((d1, d2));

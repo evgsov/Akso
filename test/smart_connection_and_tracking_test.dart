@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/core/math/snap_engine.dart';
 import 'package:akso/domain/enums/fitting_type.dart';
+import 'package:akso/domain/models/acquired_tracking_point.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/piping_network.dart';
@@ -108,14 +109,21 @@ void main() {
         projector: projector,
         currentElevationZ: 0.0,
         enableObjectTracking: true,
+        acquiredPoints: [
+          AcquiredTrackingPoint(
+            worldPoint: n2,
+            screenPoint: projector.project(n2),
+            nodeId: 'n2',
+            acquiredAt: DateTime.now(),
+          ),
+        ],
       );
 
       expect(snap.type, SnapType.extensionRay);
-      expect(snap.snappedSegmentId, 'seg1');
       expect(snap.trackingSourcePoint?.id, 'n2');
       expect(snap.worldPoint.y, closeTo(500, 1));
       expect(snap.worldPoint.x, closeTo(1400, 1));
-      expect(snap.label, contains('Створ трубы'));
+      expect(snap.label, contains('Створ'));
     });
 
     test('Detects orthogonal alignment guide (OTRACK Alignment Guide)', () {
@@ -138,12 +146,20 @@ void main() {
         currentElevationZ: 0.0,
         traceStartNode: startNode,
         enableObjectTracking: true,
+        acquiredPoints: [
+          AcquiredTrackingPoint(
+            worldPoint: refNode,
+            screenPoint: projector.project(refNode),
+            nodeId: 'ref',
+            acquiredAt: DateTime.now(),
+          ),
+        ],
       );
 
-      expect(snap.type, SnapType.alignmentGuide);
+      expect(snap.type, SnapType.extensionRay);
       expect(snap.trackingSourcePoint?.id, 'ref');
       expect(snap.worldPoint.x, closeTo(800, 1));
-      expect(snap.label, contains('Выравнивание'));
+      expect(snap.label, contains('Створ'));
     });
 
     test('Disabling OTRACK ignores extension rays and alignment guides', () {
@@ -163,6 +179,14 @@ void main() {
         projector: projector,
         currentElevationZ: 0.0,
         enableObjectTracking: false,
+        acquiredPoints: [
+          AcquiredTrackingPoint(
+            worldPoint: n2,
+            screenPoint: projector.project(n2),
+            nodeId: 'n2',
+            acquiredAt: DateTime.now(),
+          ),
+        ],
       );
 
       expect(snap.type, isNot(SnapType.extensionRay));

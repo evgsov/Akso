@@ -419,6 +419,28 @@ class ReportEngine {
       fittingMap[key] = (fittingMap[key] ?? 0) + 1;
       fittingData[key] = fit;
     }
+    // Добавляем ответные фланцы от фланцевой арматуры в общую спецификацию фланцев
+    for (final v in network.valves.values) {
+      if (v.isFlanged && v.includeCounterFlanges) {
+        final flName = 'Фланец ${v.isFlatCounterFlange ? 'плоский (тип 01)' : 'воротниковый (тип 11)'} Ду${v.dn} Ру${v.flangePressurePn}';
+        final key = '$flName|${v.counterFlangeType}|${v.counterFlangeMaterial}';
+        fittingMap[key] = (fittingMap[key] ?? 0) + 2;
+        fittingData.putIfAbsent(
+          key,
+          () => Fitting(
+            id: 'valve_flange_${v.id}',
+            nodeId: '',
+            fittingType: FittingType.flange,
+            dn: v.dn,
+            radiusMm: 0,
+            material: v.counterFlangeMaterial,
+            standard: v.counterFlangeType,
+            pressurePn: v.flangePressurePn,
+            name: flName,
+          ),
+        );
+      }
+    }
     for (final entry in fittingMap.entries) {
       final parts = entry.key.split('|');
       final fit = fittingData[entry.key]!;

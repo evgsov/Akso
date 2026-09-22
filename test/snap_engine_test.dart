@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
+import 'package:akso/core/math/drafting_settings.dart';
 import 'package:akso/core/math/snap_engine.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
@@ -59,6 +60,7 @@ void main() {
         network: network,
         projector: projector,
         currentElevationZ: 0.0,
+        settings: const DraftingSettings(snapNearest: true),
       );
 
       expect(result.type, equals(SnapType.segmentAxis));

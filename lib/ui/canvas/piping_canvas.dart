@@ -309,7 +309,12 @@ class PipingCanvasPainter extends CustomPainter {
     }
 
     // 8.1. Захваченные опорные точки отслеживания AutoCAD OTRACK (+)
-    _drawAcquiredTrackingPoints(canvas);
+    if (currentTool == CanvasTool.trace ||
+        currentTool == CanvasTool.drawAxis ||
+        currentTool == CanvasTool.move ||
+        currentTool == CanvasTool.copy) {
+      _drawAcquiredTrackingPoints(canvas);
+    }
 
     // 9. Индикатор магнитной привязки и полярных углов
     _drawSnapIndicator(canvas);

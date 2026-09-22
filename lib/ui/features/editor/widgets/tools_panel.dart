@@ -335,18 +335,29 @@ class EditorToolsPanel extends StatelessWidget {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ValveType.values.map((vt) {
-                  final isSelected = controller.selectedValveType == vt;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      selected: isSelected,
-                      label: Text(vt.displayName),
-                      selectedColor: Colors.amber.shade200,
-                      onSelected: (_) => controller.setSelectedValveType(vt),
+                      selected: controller.isValveFlanged,
+                      label: const Text('Фланцы', style: TextStyle(fontWeight: FontWeight.bold)),
+                      selectedColor: Colors.amber.shade300,
+                      onSelected: (val) => controller.setIsValveFlanged(val),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  ...ValveType.values.map((vt) {
+                    final isSelected = controller.selectedValveType == vt;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        selected: isSelected,
+                        label: Text(vt.displayName),
+                        selectedColor: Colors.amber.shade200,
+                        onSelected: (_) => controller.setSelectedValveType(vt),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           ] else if (controller.currentTool == CanvasTool.insertWeld) ...[

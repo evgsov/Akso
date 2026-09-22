@@ -13,6 +13,7 @@ class ValveSymbolPainter {
     required Color color,
     double size = 16.0,
     bool isReversed = false,
+    bool isFlanged = false,
   }) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -40,7 +41,7 @@ class ValveSymbolPainter {
     switch (type) {
       case ValveType.gateValve:
         // Задвижка клиновая по ГОСТ 21.205: два контурных треугольника с тонкой штриховкой + шпиндель + маховик со спицами
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint, isFlanged: isFlanged);
         // Шток вверх с упорным кольцом (буртиком)
         canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.55), strokePaint);
         canvas.drawLine(Offset(-2.0, -halfH * 0.7), Offset(2.0, -halfH * 0.7), strokePaint);
@@ -55,7 +56,7 @@ class ValveSymbolPainter {
 
       case ValveType.butterflyValve:
         // Затвор дисковый «баттерфляй»: встречные треугольники + центральный диск + рукоятка поворота
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, isFlanged: isFlanged);
         // Поворотный диск по центру
         final diskPaint = Paint()
           ..color = color
@@ -69,7 +70,7 @@ class ValveSymbolPainter {
 
       case ValveType.ballValve:
         // Кран шаровой: треугольники + окружность шаровой пробки с протоком + рычаг
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, isFlanged: isFlanged);
         canvas.drawCircle(Offset.zero, halfH * 0.65, fillPaint);
         canvas.drawCircle(Offset.zero, halfH * 0.65, strokePaint);
         // Открытый проход в шаре
@@ -81,7 +82,7 @@ class ValveSymbolPainter {
 
       case ValveType.checkValve:
         // Клапан обратный по ГОСТ 21.205: контурные треугольники + стрелка направления потока + наклонное седло
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, isFlanged: isFlanged);
         // Наклонное седло клапана (затвор)
         canvas.drawLine(Offset(-halfL * 0.25, -halfH * 0.85), Offset(halfL * 0.25, halfH * 0.85), strokePaint);
         // Стрелка направления потока вдоль оси трубы
@@ -101,7 +102,7 @@ class ValveSymbolPainter {
 
       case ValveType.strainer:
         // Фильтр сетчатый осадочный (грязевик): треугольники + косой отстойник с металлической сеткой
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, isFlanged: isFlanged);
         final branchPath = Path()
           ..moveTo(0, 0)
           ..lineTo(halfL * 0.65, halfH * 1.85)
@@ -119,7 +120,7 @@ class ValveSymbolPainter {
 
       case ValveType.waterMeter:
         // Счетчик воды / водомер: треугольники + измерительная камера с буквой 'В' и импульсными засечками
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, isFlanged: isFlanged);
         canvas.drawCircle(Offset.zero, halfH * 0.95, fillPaint);
         canvas.drawCircle(Offset.zero, halfH * 0.95, strokePaint);
         final tp = TextPainter(
@@ -139,7 +140,7 @@ class ValveSymbolPainter {
 
       case ValveType.balancingValve:
         // Балансировочный клапан: треугольники + измерительные штуцеры давления
-        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint);
+        _drawTwoTriangles(canvas, halfL, halfH, fillPaint, strokePaint, hatchPaint: hatchPaint, isFlanged: isFlanged);
         canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.4), strokePaint);
         // Измерительные ниппели со штуцерами
         canvas.drawLine(Offset(-halfL * 0.45, -halfH * 0.4), Offset(-halfL * 0.45, -halfH * 1.1), strokePaint);
@@ -200,6 +201,7 @@ class ValveSymbolPainter {
     Paint fillPaint,
     Paint strokePaint, {
     Paint? hatchPaint,
+    bool isFlanged = false,
   }) {
     final path = Path()
       ..moveTo(-halfL, -halfH)
@@ -225,9 +227,11 @@ class ValveSymbolPainter {
 
     canvas.drawPath(path, strokePaint);
 
-    // Торцевые фланцевые засечки по ГОСТ на стыках с трубой
-    final tickH = halfH * 1.25;
-    canvas.drawLine(Offset(-halfL, -tickH), Offset(-halfL, tickH), strokePaint);
-    canvas.drawLine(Offset(halfL, -tickH), Offset(halfL, tickH), strokePaint);
+    // Торцевые фланцевые засечки по ГОСТ на стыках с трубой (только для фланцевой арматуры)
+    if (isFlanged) {
+      final tickH = halfH * 1.25;
+      canvas.drawLine(Offset(-halfL, -tickH), Offset(-halfL, tickH), strokePaint);
+      canvas.drawLine(Offset(halfL, -tickH), Offset(halfL, tickH), strokePaint);
+    }
   }
 }

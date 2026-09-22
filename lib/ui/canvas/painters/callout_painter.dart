@@ -259,7 +259,7 @@ class CalloutPainter {
             ? false
             : callout.screenOffsetX >= 0);
 
-    if (callout.targetType == CalloutTargetType.node) {
+    if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
       if (callout.arrowOnNode) {
         final shelfY = anchorScreen.dy + callout.screenOffsetY;
         final bgTop = shelfY - topTp.height - 4.0;
@@ -418,7 +418,7 @@ class CalloutPainter {
       textPos.dy,
     );
 
-    if (callout.targetType == CalloutTargetType.node) {
+    if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
       final styleName = templates['elevation_style'];
       final defaultStyle = ElevationMarkStyleExt.fromString(styleName, fallback: ElevationMarkStyle.gostOutline);
       final effectiveStyle = callout.elevationStyle ?? defaultStyle;

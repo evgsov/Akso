@@ -397,6 +397,8 @@ class TopologyService {
       network.dimensions.removeWhere((_, d) => d.startNodeId == nodeId || d.endNodeId == nodeId);
 
       network.autoDetectAllFittings();
+      network.generateElementWeldJoints();
+      network.validateAndCleanWeldJoints();
       network.recalculateSpools();
       return true;
     }
@@ -414,6 +416,8 @@ class TopologyService {
     network.callouts.removeWhere((_, c) => c.targetId == nodeId);
     network.dimensions.removeWhere((_, d) => d.startNodeId == nodeId || d.endNodeId == nodeId);
     network.autoDetectAllFittings();
+    network.generateElementWeldJoints();
+    network.validateAndCleanWeldJoints();
     network.recalculateSpools();
     return true;
   }
