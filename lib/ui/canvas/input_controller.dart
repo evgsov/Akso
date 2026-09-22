@@ -2418,6 +2418,8 @@ class PipingInputController extends ChangeNotifier {
         angleMode: effectiveAngleMode,
         customAngleStepDegrees: customAngleDegrees,
         enableObjectTracking: tracingController.isObjectTrackingEnabled,
+        settings: draftingSettings,
+        acquiredPoints: tracingController.acquiredPoints,
       );
     } else {
       currentSnapResult = SnapResult.none(screenPos, projector.unproject(screenPos, currentElevationZ));

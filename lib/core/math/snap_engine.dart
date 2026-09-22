@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../domain/models/acquired_tracking_point.dart';
 import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 import 'axonometry_projector.dart';
+import 'drafting_settings.dart';
 
 enum SnapType {
   none,
@@ -95,134 +97,144 @@ class SnapEngine {
     AngleSnapMode angleMode = AngleSnapMode.ortho90,
     double customAngleStepDegrees = 15.0,
     bool enableObjectTracking = true,
+    DraftingSettings settings = const DraftingSettings(),
+    List<AcquiredTrackingPoint> acquiredPoints = const [],
   }) {
     // 1. Дискретные точки (Endpoint узлов труб, края осей и пересечения)
     // Соревнуются по минимальному экранному расстоянию до курсора
     SnapResult? bestDiscreteSnap;
-    double minDiscreteDist = nodeSnapScreenRadius;
+    double minDiscreteDist = settings.nodeSnapRadius;
 
     // 1.1. Проверка примагничивания к существующим узлам труб (Node / Endpoint)
-    for (final node in network.nodes.values) {
-      if (traceStartNode != null && node.id == traceStartNode.id) continue;
-      final proj = projector.project(node);
-      final dist = (proj - screenPos).distance;
-      if (dist <= minDiscreteDist) {
-        final elevM = (node.z / 1000.0).toStringAsFixed(3);
-        final sign = node.z >= 0 ? '+' : '';
-        final isElevationTrans = traceStartNode != null && (node.z - currentElevationZ).abs() >= 10.0;
-        final deltaZ = isElevationTrans ? node.z - currentElevationZ : null;
-        final intermediateTurn = isElevationTrans
-            ? Node3D(id: '', x: node.x, y: node.y, z: currentElevationZ)
-            : null;
-        final label = isElevationTrans
-            ? '🔀 Соединение со стояком [∇$sign$elevM]'
-            : 'Узел [∇$sign$elevM]';
-        bestDiscreteSnap = SnapResult(
-          type: SnapType.node,
-          screenPoint: proj,
-          worldPoint: node,
-          snappedNodeId: node.id,
-          label: label,
-          isElevationTransition: isElevationTrans,
-          elevationDeltaMm: deltaZ,
-          intermediateTurnPoint: intermediateTurn,
-          distanceLengthMm: traceStartNode != null
-              ? math.sqrt(math.pow(node.x - traceStartNode.x, 2) + math.pow(node.y - traceStartNode.y, 2))
-              : null,
-        );
-        minDiscreteDist = dist;
-      }
-    }
+    if (settings.snapNodes) {
+      for (final node in network.nodes.values) {
+        if (traceStartNode != null && node.id == traceStartNode.id) continue;
+        if (settings.isZLocked && (node.z - currentElevationZ).abs() > 15.0) continue;
 
-    // 1.2. Проверка краев (концов) строительных и опорных осей (Endpoint)
-    for (final axis in network.axes.values) {
-      final endpoints = <Node3D>[
-        Node3D(id: '', x: axis.startPoint.x, y: axis.startPoint.y, z: currentElevationZ),
-        Node3D(id: '', x: axis.endPoint.x, y: axis.endPoint.y, z: currentElevationZ),
-      ];
-      // Если ось создана на другой высоте Z, также проверяем оригинальные концы
-      if ((axis.startPoint.z - currentElevationZ).abs() > 1.0) {
-        endpoints.add(axis.startPoint);
-        endpoints.add(axis.endPoint);
-      }
-
-      for (final pt in endpoints) {
-        final proj = projector.project(pt);
+        final proj = projector.project(node);
         final dist = (proj - screenPos).distance;
-        // Край оси выбирается, если он ближе к курсору (при равенстве узел трубы в приоритете)
-        if (dist < minDiscreteDist || (dist <= minDiscreteDist && bestDiscreteSnap?.type != SnapType.node)) {
-          final label = axis.isBuildingGrid && axis.label.isNotEmpty
-              ? 'Край оси ${axis.label}'
-              : 'Край опорной линии';
+        if (dist <= minDiscreteDist) {
+          final elevM = (node.z / 1000.0).toStringAsFixed(3);
+          final sign = node.z >= 0 ? '+' : '';
+          final isElevationTrans = traceStartNode != null && (node.z - currentElevationZ).abs() >= 10.0;
+          final deltaZ = isElevationTrans ? node.z - currentElevationZ : null;
+          final intermediateTurn = isElevationTrans
+              ? Node3D(id: '', x: node.x, y: node.y, z: currentElevationZ)
+              : null;
+          final label = isElevationTrans
+              ? '🔀 Соединение со стояком [∇$sign$elevM]'
+              : 'Узел [∇$sign$elevM]';
           bestDiscreteSnap = SnapResult(
-            type: SnapType.endpoint,
+            type: SnapType.node,
             screenPoint: proj,
-            worldPoint: pt,
-            snappedSegmentId: axis.id,
+            worldPoint: node,
+            snappedNodeId: node.id,
             label: label,
+            isElevationTransition: isElevationTrans,
+            elevationDeltaMm: deltaZ,
+            intermediateTurnPoint: intermediateTurn,
+            distanceLengthMm: traceStartNode != null
+                ? math.sqrt(math.pow(node.x - traceStartNode.x, 2) + math.pow(node.y - traceStartNode.y, 2))
+                : null,
           );
           minDiscreteDist = dist;
         }
       }
     }
 
-    // 1.3. Проверка пересечений строительных и опорных осей (Intersection)
-    final axisList = network.axes.values.toList();
-    for (int i = 0; i < axisList.length; i++) {
-      for (int j = i + 1; j < axisList.length; j++) {
-        final a1 = axisList[i];
-        final a2 = axisList[j];
-        final inter = _lineIntersection2D(
-          a1.startPoint.x, a1.startPoint.y, a1.endPoint.x, a1.endPoint.y,
-          a2.startPoint.x, a2.startPoint.y, a2.endPoint.x, a2.endPoint.y,
-        );
-        if (inter != null) {
-          final interWorld = Node3D(id: '', x: inter.dx, y: inter.dy, z: currentElevationZ);
-          final proj = projector.project(interWorld);
+    // 1.2. Проверка краев (концов) строительных и опорных осей (Endpoint)
+    if (settings.snapNodes) {
+      for (final axis in network.axes.values) {
+        final endpoints = <Node3D>[
+          Node3D(id: '', x: axis.startPoint.x, y: axis.startPoint.y, z: currentElevationZ),
+          Node3D(id: '', x: axis.endPoint.x, y: axis.endPoint.y, z: currentElevationZ),
+        ];
+        // Если Z-Lock выключен и ось создана на другой высоте Z, также проверяем оригинальные концы
+        if (!settings.isZLocked && (axis.startPoint.z - currentElevationZ).abs() > 1.0) {
+          endpoints.add(axis.startPoint);
+          endpoints.add(axis.endPoint);
+        }
+
+        for (final pt in endpoints) {
+          final proj = projector.project(pt);
           final dist = (proj - screenPos).distance;
-          if (dist <= nodeSnapScreenRadius) {
-            // Пересечение побеждает только если оно ближе к курсору, чем край оси или узел (с запасом 2px)
-            if (bestDiscreteSnap == null || dist < minDiscreteDist - 2.0) {
-              final l1 = a1.isBuildingGrid && a1.label.isNotEmpty ? a1.label : 'оп.';
-              final l2 = a2.isBuildingGrid && a2.label.isNotEmpty ? a2.label : 'оп.';
-              bestDiscreteSnap = SnapResult(
-                type: SnapType.intersection,
-                screenPoint: proj,
-                worldPoint: interWorld,
-                label: 'Пересечение [$l1 / $l2]',
-              );
-              minDiscreteDist = dist;
-            }
+          // Край оси выбирается, если он ближе к курсору (при равенстве узел трубы в приоритете)
+          if (dist < minDiscreteDist || (dist <= minDiscreteDist && bestDiscreteSnap?.type != SnapType.node)) {
+            final label = axis.isBuildingGrid && axis.label.isNotEmpty
+                ? 'Край оси ${axis.label}'
+                : 'Край опорной линии';
+            bestDiscreteSnap = SnapResult(
+              type: SnapType.endpoint,
+              screenPoint: proj,
+              worldPoint: pt,
+              snappedSegmentId: axis.id,
+              label: label,
+            );
+            minDiscreteDist = dist;
           }
         }
       }
     }
 
-    // 1.4. Проверка пересечений сегментов труб со строительными осями
-    for (final seg in network.segments.values) {
-      final s = network.nodes[seg.startNodeId];
-      final e = network.nodes[seg.endNodeId];
-      if (s == null || e == null) continue;
-      if ((s.z - currentElevationZ).abs() > 10.0 && (e.z - currentElevationZ).abs() > 10.0) continue;
-      for (final axis in network.axes.values) {
-        final inter = _lineIntersection2D(
-          s.x, s.y, e.x, e.y,
-          axis.startPoint.x, axis.startPoint.y, axis.endPoint.x, axis.endPoint.y,
-        );
-        if (inter != null) {
-          final interWorld = Node3D(id: '', x: inter.dx, y: inter.dy, z: currentElevationZ);
-          final proj = projector.project(interWorld);
-          final dist = (proj - screenPos).distance;
-          if (dist <= nodeSnapScreenRadius) {
-            if (bestDiscreteSnap == null || dist < minDiscreteDist - 2.0) {
-              final axLabel = axis.isBuildingGrid && axis.label.isNotEmpty ? 'Ось ${axis.label}' : 'Опорная линия';
-              bestDiscreteSnap = SnapResult(
-                type: SnapType.intersection,
-                screenPoint: proj,
-                worldPoint: interWorld,
-                label: 'Пересечение [Ду${seg.dn} / $axLabel]',
-              );
-              minDiscreteDist = dist;
+    // 1.3. Проверка пересечений строительных и опорных осей (Intersection)
+    if (settings.snapIntersections) {
+      final axisList = network.axes.values.toList();
+      for (int i = 0; i < axisList.length; i++) {
+        for (int j = i + 1; j < axisList.length; j++) {
+          final a1 = axisList[i];
+          final a2 = axisList[j];
+          final inter = _lineIntersection2D(
+            a1.startPoint.x, a1.startPoint.y, a1.endPoint.x, a1.endPoint.y,
+            a2.startPoint.x, a2.startPoint.y, a2.endPoint.x, a2.endPoint.y,
+          );
+          if (inter != null) {
+            final interWorld = Node3D(id: '', x: inter.dx, y: inter.dy, z: currentElevationZ);
+            final proj = projector.project(interWorld);
+            final dist = (proj - screenPos).distance;
+            if (dist <= settings.nodeSnapRadius) {
+              // Пересечение побеждает только если оно ближе к курсору, чем край оси или узел (с запасом 2px)
+              if (bestDiscreteSnap == null || dist < minDiscreteDist - 2.0) {
+                final l1 = a1.isBuildingGrid && a1.label.isNotEmpty ? a1.label : 'оп.';
+                final l2 = a2.isBuildingGrid && a2.label.isNotEmpty ? a2.label : 'оп.';
+                bestDiscreteSnap = SnapResult(
+                  type: SnapType.intersection,
+                  screenPoint: proj,
+                  worldPoint: interWorld,
+                  label: 'Пересечение [$l1 / $l2]',
+                );
+                minDiscreteDist = dist;
+              }
+            }
+          }
+        }
+      }
+
+      // 1.4. Проверка пересечений сегментов труб со строительными осями
+      for (final seg in network.segments.values) {
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
+        if (s == null || e == null) continue;
+        if (settings.isZLocked && (s.z - currentElevationZ).abs() > 15.0 && (e.z - currentElevationZ).abs() > 15.0) continue;
+        for (final axis in network.axes.values) {
+          final inter = _lineIntersection2D(
+            s.x, s.y, e.x, e.y,
+            axis.startPoint.x, axis.startPoint.y, axis.endPoint.x, axis.endPoint.y,
+          );
+          if (inter != null) {
+            final interWorld = Node3D(id: '', x: inter.dx, y: inter.dy, z: currentElevationZ);
+            final proj = projector.project(interWorld);
+            final dist = (proj - screenPos).distance;
+            if (dist <= settings.nodeSnapRadius) {
+              if (bestDiscreteSnap == null || dist < minDiscreteDist - 2.0) {
+                final axLabel = axis.isBuildingGrid && axis.label.isNotEmpty ? 'Ось ${axis.label}' : 'Опорная линия';
+                bestDiscreteSnap = SnapResult(
+                  type: SnapType.intersection,
+                  screenPoint: proj,
+                  worldPoint: interWorld,
+                  label: 'Пересечение [Ду${seg.dn} / $axLabel]',
+                );
+                minDiscreteDist = dist;
+              }
             }
           }
         }
@@ -236,59 +248,62 @@ class SnapEngine {
 
     // 2. Поиск ближайшей геометрической точки на отрезках (Midpoint и Perpendicular 90°)
     SnapResult? bestFeatureSnap;
-    double minFeatureDist = nodeSnapScreenRadius;
+    double minFeatureDist = settings.nodeSnapRadius;
 
-    // Проверка середины сегментов труб (Midpoint)
-    for (final seg in network.segments.values) {
-      final s = network.nodes[seg.startNodeId];
-      final e = network.nodes[seg.endNodeId];
-      if (s == null || e == null) continue;
-      final midWorld = Node3D(
-        id: '',
-        x: (s.x + e.x) / 2.0,
-        y: (s.y + e.y) / 2.0,
-        z: (s.z + e.z) / 2.0,
-      );
-      final proj = projector.project(midWorld);
-      final dist = (proj - screenPos).distance;
-      if (dist <= minFeatureDist) {
-        minFeatureDist = dist;
-        bestFeatureSnap = SnapResult(
-          type: SnapType.midpoint,
-          screenPoint: proj,
-          worldPoint: midWorld,
-          snappedSegmentId: seg.id,
-          label: 'Середина трубы Ду${seg.dn}',
+    if (settings.snapMidpoints) {
+      // Проверка середины сегментов труб (Midpoint)
+      for (final seg in network.segments.values) {
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
+        if (s == null || e == null) continue;
+        if (settings.isZLocked && (s.z - currentElevationZ).abs() > 15.0 && (e.z - currentElevationZ).abs() > 15.0) continue;
+        final midWorld = Node3D(
+          id: '',
+          x: (s.x + e.x) / 2.0,
+          y: (s.y + e.y) / 2.0,
+          z: (s.z + e.z) / 2.0,
         );
+        final proj = projector.project(midWorld);
+        final dist = (proj - screenPos).distance;
+        if (dist <= minFeatureDist) {
+          minFeatureDist = dist;
+          bestFeatureSnap = SnapResult(
+            type: SnapType.midpoint,
+            screenPoint: proj,
+            worldPoint: midWorld,
+            snappedSegmentId: seg.id,
+            label: 'Середина трубы Ду${seg.dn}',
+          );
+        }
       }
-    }
 
-    // Проверка середины строительных и опорных осей (Midpoint)
-    for (final axis in network.axes.values) {
-      if ((axis.startPoint.z - currentElevationZ).abs() > 10.0 &&
-          (axis.endPoint.z - currentElevationZ).abs() > 10.0) {
-        continue;
-      }
-      final midWorld = Node3D(
-        id: '',
-        x: (axis.startPoint.x + axis.endPoint.x) / 2.0,
-        y: (axis.startPoint.y + axis.endPoint.y) / 2.0,
-        z: currentElevationZ,
-      );
-      final proj = projector.project(midWorld);
-      final dist = (proj - screenPos).distance;
-      if (dist <= minFeatureDist) {
-        minFeatureDist = dist;
-        final label = axis.isBuildingGrid && axis.label.isNotEmpty
-            ? 'Середина оси ${axis.label}'
-            : 'Середина опорной линии';
-        bestFeatureSnap = SnapResult(
-          type: SnapType.midpoint,
-          screenPoint: proj,
-          worldPoint: midWorld,
-          snappedSegmentId: axis.id,
-          label: label,
+      // Проверка середины строительных и опорных осей (Midpoint)
+      for (final axis in network.axes.values) {
+        if ((axis.startPoint.z - currentElevationZ).abs() > 10.0 &&
+            (axis.endPoint.z - currentElevationZ).abs() > 10.0) {
+          continue;
+        }
+        final midWorld = Node3D(
+          id: '',
+          x: (axis.startPoint.x + axis.endPoint.x) / 2.0,
+          y: (axis.startPoint.y + axis.endPoint.y) / 2.0,
+          z: currentElevationZ,
         );
+        final proj = projector.project(midWorld);
+        final dist = (proj - screenPos).distance;
+        if (dist <= minFeatureDist) {
+          minFeatureDist = dist;
+          final label = axis.isBuildingGrid && axis.label.isNotEmpty
+              ? 'Середина оси ${axis.label}'
+              : 'Середина опорной линии';
+          bestFeatureSnap = SnapResult(
+            type: SnapType.midpoint,
+            screenPoint: proj,
+            worldPoint: midWorld,
+            snappedSegmentId: axis.id,
+            label: label,
+          );
+        }
       }
     }
 
@@ -388,12 +403,13 @@ class SnapEngine {
     }
 
     // Проверка перпендикуляра к сегментам труб (Perpendicular 90°)
-    if (traceStartNode != null) {
+    if (settings.snapPerpendicular && traceStartNode != null) {
       for (final seg in network.segments.values) {
         final s = network.nodes[seg.startNodeId];
         final e = network.nodes[seg.endNodeId];
         if (s == null || e == null) continue;
         if (s.id == traceStartNode.id || e.id == traceStartNode.id) continue;
+        if (settings.isZLocked && (s.z - currentElevationZ).abs() > 15.0 && (e.z - currentElevationZ).abs() > 15.0) continue;
 
         // Векторы сегмента
         final vx = e.x - s.x;
@@ -479,6 +495,11 @@ class SnapEngine {
 
       // Проверка перпендикуляра к строительным и опорным осям (Perpendicular 90°)
       for (final axis in network.axes.values) {
+        if (settings.isZLocked &&
+            (axis.startPoint.z - currentElevationZ).abs() > 15.0 &&
+            (axis.endPoint.z - currentElevationZ).abs() > 15.0) {
+          continue;
+        }
         final ax = axis.endPoint.x - axis.startPoint.x;
         final ay = axis.endPoint.y - axis.startPoint.y;
         final aLenSq = ax * ax + ay * ay;
@@ -525,50 +546,53 @@ class SnapEngine {
     }
 
     // 4. Проверка примагничивания к осям труб (сегментов - Nearest)
-    for (final seg in network.segments.values) {
-      final s = network.nodes[seg.startNodeId];
-      final e = network.nodes[seg.endNodeId];
-      if (s == null || e == null) continue;
+    if (settings.snapNearest) {
+      for (final seg in network.segments.values) {
+        final s = network.nodes[seg.startNodeId];
+        final e = network.nodes[seg.endNodeId];
+        if (s == null || e == null) continue;
+        if (settings.isZLocked && (s.z - currentElevationZ).abs() > 15.0 && (e.z - currentElevationZ).abs() > 15.0) continue;
 
-      final p1 = projector.project(s);
-      final p2 = projector.project(e);
-      final dist = _distanceToLineSegment(screenPos, p1, p2);
+        final p1 = projector.project(s);
+        final p2 = projector.project(e);
+        final dist = _distanceToLineSegment(screenPos, p1, p2);
 
-      if (dist <= segmentSnapScreenRadius) {
-        // Вычисляем ближайшую точку на сегменте в мировых координатах
-        final ratio = _calcSegmentRatio(p1, p2, screenPos);
-        final snappedWorld = Node3D(
-          id: '',
-          x: s.x + (e.x - s.x) * ratio,
-          y: s.y + (e.y - s.y) * ratio,
-          z: s.z + (e.z - s.z) * ratio,
-        );
-        final snappedScreen = projector.project(snappedWorld);
-        final isElevationTrans = traceStartNode != null && (snappedWorld.z - currentElevationZ).abs() >= 10.0;
-        final deltaZ = isElevationTrans ? snappedWorld.z - currentElevationZ : null;
-        final intermediateTurn = isElevationTrans
-            ? Node3D(id: '', x: snappedWorld.x, y: snappedWorld.y, z: currentElevationZ)
-            : null;
-        final signDelta = deltaZ != null
-            ? (deltaZ >= 0 ? '+${(deltaZ / 1000.0).toStringAsFixed(3)}м' : '${(deltaZ / 1000.0).toStringAsFixed(3)}м')
-            : '';
-        final label = isElevationTrans
-            ? '🔀 Врезка со стояком [Ду${seg.dn} | ∇$signDelta]'
-            : 'Ось трубы Ду${seg.dn}';
+        if (dist <= settings.nearestSnapRadius) {
+          // Вычисляем ближайшую точку на сегменте в мировых координатах
+          final ratio = _calcSegmentRatio(p1, p2, screenPos);
+          final snappedWorld = Node3D(
+            id: '',
+            x: s.x + (e.x - s.x) * ratio,
+            y: s.y + (e.y - s.y) * ratio,
+            z: s.z + (e.z - s.z) * ratio,
+          );
+          final snappedScreen = projector.project(snappedWorld);
+          final isElevationTrans = traceStartNode != null && (snappedWorld.z - currentElevationZ).abs() >= 10.0;
+          final deltaZ = isElevationTrans ? snappedWorld.z - currentElevationZ : null;
+          final intermediateTurn = isElevationTrans
+              ? Node3D(id: '', x: snappedWorld.x, y: snappedWorld.y, z: currentElevationZ)
+              : null;
+          final signDelta = deltaZ != null
+              ? (deltaZ >= 0 ? '+${(deltaZ / 1000.0).toStringAsFixed(3)}м' : '${(deltaZ / 1000.0).toStringAsFixed(3)}м')
+              : '';
+          final label = isElevationTrans
+              ? '🔀 Врезка со стояком [Ду${seg.dn} | ∇$signDelta]'
+              : 'Ось трубы Ду${seg.dn}';
 
-        return SnapResult(
-          type: SnapType.segmentAxis,
-          screenPoint: snappedScreen,
-          worldPoint: snappedWorld,
-          snappedSegmentId: seg.id,
-          label: label,
-          isElevationTransition: isElevationTrans,
-          elevationDeltaMm: deltaZ,
-          intermediateTurnPoint: intermediateTurn,
-          distanceLengthMm: traceStartNode != null && intermediateTurn != null
-              ? math.sqrt(math.pow(intermediateTurn.x - traceStartNode.x, 2) + math.pow(intermediateTurn.y - traceStartNode.y, 2))
-              : null,
-        );
+          return SnapResult(
+            type: SnapType.segmentAxis,
+            screenPoint: snappedScreen,
+            worldPoint: snappedWorld,
+            snappedSegmentId: seg.id,
+            label: label,
+            isElevationTransition: isElevationTrans,
+            elevationDeltaMm: deltaZ,
+            intermediateTurnPoint: intermediateTurn,
+            distanceLengthMm: traceStartNode != null && intermediateTurn != null
+                ? math.sqrt(math.pow(intermediateTurn.x - traceStartNode.x, 2) + math.pow(intermediateTurn.y - traceStartNode.y, 2))
+                : null,
+          );
+        }
       }
     }
 
@@ -720,14 +744,16 @@ class SnapEngine {
       }
     }
 
-    // 5. Объектное отслеживание (Object Snap Tracking / OTRACK: продление осей труб и выравнивание по узлам)
-    if (enableObjectTracking) {
+    // 5. Объектное отслеживание (Object Snap Tracking / OTRACK по захваченным точкам)
+    if (enableObjectTracking && settings.enableOtrack && acquiredPoints.isNotEmpty) {
       final trackingSnap = _findObjectTrackingSnap(
         screenPos: screenPos,
         network: network,
         projector: projector,
         currentElevationZ: currentElevationZ,
         traceStartNode: traceStartNode,
+        acquiredPoints: acquiredPoints,
+        settings: settings,
       );
       if (trackingSnap != null) {
         return trackingSnap;
@@ -758,136 +784,160 @@ class SnapEngine {
     }
   }
 
-  /// Объектное отслеживание осей и створов (OTRACK):
-  /// 1. Продление осей существующих труб (Ray Extension).
-  /// 2. Ортогональное выравнивание по ключевым узлам сети.
+  /// Объектное отслеживание (OTRACK) по явно захваченным точкам (Hover-to-Acquire):
+  /// - 3D-лучи: в плане по осям X, Y и створу трубы, а также вертикальный луч стояка (±Z).
+  /// - Виртуальное пересечение двух лучей при захвате 2 точек.
   SnapResult? _findObjectTrackingSnap({
     required Offset screenPos,
     required PipingNetwork network,
     required AxonometryProjector projector,
     required double currentElevationZ,
     Node3D? traceStartNode,
+    required List<AcquiredTrackingPoint> acquiredPoints,
+    required DraftingSettings settings,
   }) {
+    if (acquiredPoints.isEmpty) return null;
+
     final rawWorld = projector.unproject(screenPos, currentElevationZ);
-    SnapResult? bestTrackingSnap;
     double minScreenDist = 14.0;
+    SnapResult? bestTrackingSnap;
 
-    // 1. Продление осей существующих труб (Ray Extension)
-    for (final seg in network.segments.values) {
-      final s = network.nodes[seg.startNodeId];
-      final e = network.nodes[seg.endNodeId];
-      if (s == null || e == null) continue;
+    // СЦЕНАРИЙ А: Если захвачено 2 точки — вычисляем виртуальное пересечение их лучей (Dual OTRACK)
+    if (acquiredPoints.length >= 2) {
+      final p1 = acquiredPoints[0];
+      final p2 = acquiredPoints[1];
 
-      // Проверяем трубы, проходящие на текущей рабочей высоте (или пересекающие её)
-      final minZ = math.min(s.z, e.z);
-      final maxZ = math.max(s.z, e.z);
-      if (currentElevationZ < minZ - 50.0 || currentElevationZ > maxZ + 50.0) continue;
+      // Пересечение в плане XY: (p1.x, p2.y) и (p2.x, p1.y)
+      final interA = Node3D(id: '', x: p1.worldPoint.x, y: p2.worldPoint.y, z: currentElevationZ);
+      final interB = Node3D(id: '', x: p2.worldPoint.x, y: p1.worldPoint.y, z: currentElevationZ);
 
-      final dx = e.x - s.x;
-      final dy = e.y - s.y;
-      final len = math.sqrt(dx * dx + dy * dy);
-      if (len < 30.0) continue;
-
-      final ux = dx / len;
-      final uy = dy / len;
-
-      // Проекция точки курсора на прямую трубы в плоскости XY
-      final t = (rawWorld.x - s.x) * ux + (rawWorld.y - s.y) * uy;
-
-      // Нас интересует продление ЗА пределы отрезка (вылет за начало или за конец)
-      if (t < -20.0 || t > len + 20.0) {
-        final snappedWorld = Node3D(
-          id: '',
-          x: s.x + t * ux,
-          y: s.y + t * uy,
-          z: currentElevationZ,
-        );
-        final projScreen = projector.project(snappedWorld);
-        final screenDist = (projScreen - screenPos).distance;
-
-        if (screenDist <= minScreenDist) {
-          minScreenDist = screenDist;
-          final sourceNode = t < 0 ? s : e;
-          final distFromEnd = t < 0 ? (-t) : (t - len);
-          final projSource = projector.project(sourceNode);
-          final rayDir = (projScreen - projSource);
-          final rayOffset = rayDir.distance > 0 ? rayDir / rayDir.distance : Offset(ux, uy);
-
+      for (final inter in [interA, interB]) {
+        final proj = projector.project(inter);
+        final dist = (proj - screenPos).distance;
+        if (dist <= 16.0 && dist < minScreenDist) {
+          minScreenDist = dist;
           bestTrackingSnap = SnapResult(
-            type: SnapType.extensionRay,
-            screenPoint: projScreen,
-            worldPoint: snappedWorld,
-            snappedSegmentId: seg.id,
-            trackingSourcePoint: sourceNode,
-            trackingRayDirection: rayOffset,
-            trackingRayWorldDir: Node3D(id: '', x: ux, y: uy, z: 0),
-            distanceLengthMm: distFromEnd,
-            label: '⤢ Створ трубы Ду${seg.dn} [+${distFromEnd.round()} мм]',
+            type: SnapType.intersection,
+            screenPoint: proj,
+            worldPoint: inter,
+            label: '⤧ Пересечение створов',
+            trackingSourcePoint: p1.worldPoint,
           );
         }
       }
+      if (bestTrackingSnap != null) return bestTrackingSnap;
     }
 
-    if (bestTrackingSnap != null) {
-      return bestTrackingSnap;
-    }
+    // СЦЕНАРИЙ Б: Отслеживание 3D-лучей от каждой захваченной точки
+    for (final acq in acquiredPoints) {
+      final source = acq.worldPoint;
+      final projSource = projector.project(source);
 
-    // 2. Ортогональное выравнивание по ключевым узлам сети (OTRACK Alignment)
-    if (traceStartNode != null) {
-      final connectedNodeIds = network
-          .getConnectedSegments(traceStartNode.id)
-          .map((s) => s.startNodeId == traceStartNode.id ? s.endNodeId : s.startNodeId)
-          .toSet();
+      // 1. Вертикальный луч стояка (±Z)
+      // В аксонометрии вертикальный вектор [0, 0, 1] проецируется на экран вертикально
+      final ptUp = Node3D(id: '', x: source.x, y: source.y, z: source.z + 2000.0);
+      final projUp = projector.project(ptUp);
+      final vRayDir = projUp - projSource;
+      final vLen = vRayDir.distance;
 
-      for (final node in network.nodes.values) {
-        if (node.id == traceStartNode.id) continue;
-        if (connectedNodeIds.contains(node.id)) continue;
-        if ((node.z - currentElevationZ).abs() > 50.0) continue;
+      if (vLen > 0.001) {
+        // Расстояние от экранной точки курсора до вертикальной прямой
+        final unprojZ = projector.unprojectElevation(screenPos, source.x, source.y);
+        final unprojWorld = Node3D(id: '', x: source.x, y: source.y, z: unprojZ);
+        final unprojProj = projector.project(unprojWorld);
+        final distToVertRay = (unprojProj - screenPos).distance;
 
-        // Выравнивание по оси X (совпадение Y-координаты)
-        final ptAlignY = Node3D(id: '', x: rawWorld.x, y: node.y, z: currentElevationZ);
-        final projY = projector.project(ptAlignY);
-        final distY = (projY - screenPos).distance;
-        final spanX = (rawWorld.x - node.x).abs();
+        if (distToVertRay <= 14.0) {
+          final deltaZ = unprojZ - source.z;
+          final isSubstantialDelta = deltaZ.abs() >= 20.0;
+          final elevM = (unprojZ / 1000.0).toStringAsFixed(3);
+          final signZ = unprojZ >= 0 ? '+' : '';
+          final signDelta = deltaZ >= 0 ? '+' : '';
+          final deltaStr = '$signDelta${deltaZ.round()} мм';
 
-        if (distY <= minScreenDist && spanX > 60.0) {
-          minScreenDist = distY;
-          final projSource = projector.project(node);
-          final dir = (projY - projSource);
-          bestTrackingSnap = SnapResult(
-            type: SnapType.alignmentGuide,
-            screenPoint: projY,
-            worldPoint: ptAlignY,
-            snappedNodeId: node.id,
-            trackingSourcePoint: node,
-            trackingRayDirection: dir.distance > 0 ? dir / dir.distance : const Offset(1, 0),
-            trackingRayWorldDir: const Node3D(id: '', x: 1, y: 0, z: 0),
-            distanceLengthMm: spanX,
-            label: '⊣ Выравнивание по створу [Y = ${node.y.round()} мм]',
+          final label = isSubstantialDelta
+              ? '⬆ Стояк по створу [ΔZ: $deltaStr | ∇$signZ$elevM]'
+              : 'Выравнивание по оси Z [∇$signZ$elevM]';
+
+          return SnapResult(
+            type: SnapType.extensionRay,
+            screenPoint: unprojProj,
+            worldPoint: unprojWorld,
+            label: label,
+            trackingSourcePoint: source,
+            trackingRayDirection: const Offset(0, -1),
+            trackingRayWorldDir: const Node3D(id: '', x: 0, y: 0, z: 1),
+            isElevationTransition: isSubstantialDelta,
+            elevationDeltaMm: deltaZ,
           );
         }
+      }
 
-        // Выравнивание по оси Y (совпадение X-координаты)
-        final ptAlignX = Node3D(id: '', x: node.x, y: rawWorld.y, z: currentElevationZ);
-        final projX = projector.project(ptAlignX);
-        final distX = (projX - screenPos).distance;
-        final spanY = (rawWorld.y - node.y).abs();
+      // 2. Горизонтальные ортогональные лучи (X, Y) на рабочей высоте currentElevationZ
+      final directions = <Node3D>[
+        const Node3D(id: '', x: 1, y: 0, z: 0),
+        const Node3D(id: '', x: 0, y: 1, z: 0),
+      ];
 
-        if (distX <= minScreenDist && spanY > 60.0) {
-          minScreenDist = distX;
-          final projSource = projector.project(node);
-          final dir = (projX - projSource);
-          bestTrackingSnap = SnapResult(
-            type: SnapType.alignmentGuide,
-            screenPoint: projX,
-            worldPoint: ptAlignX,
-            snappedNodeId: node.id,
-            trackingSourcePoint: node,
-            trackingRayDirection: dir.distance > 0 ? dir / dir.distance : const Offset(0, 1),
-            trackingRayWorldDir: const Node3D(id: '', x: 0, y: 1, z: 0),
-            distanceLengthMm: spanY,
-            label: '⊣ Выравнивание по створу [X = ${node.x.round()} мм]',
+      // Добавляем створы подключенных к узлу труб (продление оси трубы)
+      if (acq.nodeId != null) {
+        final connectedSegs = network.getConnectedSegments(acq.nodeId!);
+        for (final seg in connectedSegs) {
+          final otherId = seg.startNodeId == acq.nodeId ? seg.endNodeId : seg.startNodeId;
+          final other = network.nodes[otherId];
+          if (other != null) {
+            final pdx = source.x - other.x;
+            final pdy = source.y - other.y;
+            final plen = math.sqrt(pdx * pdx + pdy * pdy);
+            if (plen > 10.0) {
+              directions.add(Node3D(id: '', x: pdx / plen, y: pdy / plen, z: 0));
+            }
+          }
+        }
+      }
+
+      for (final dir in directions) {
+        // Проекция точки rawWorld на луч source + t * dir в плоскости XY
+        final dx = rawWorld.x - source.x;
+        final dy = rawWorld.y - source.y;
+        final t = dx * dir.x + dy * dir.y;
+
+        // Если курсор вдоль луча на расстоянии не менее 40 мм
+        if (t.abs() > 40.0) {
+          final snappedWorld = Node3D(
+            id: '',
+            x: source.x + t * dir.x,
+            y: source.y + t * dir.y,
+            z: currentElevationZ,
           );
+          final projRay = projector.project(snappedWorld);
+          final screenDist = (projRay - screenPos).distance;
+
+          if (screenDist <= minScreenDist) {
+            minScreenDist = screenDist;
+            final rayScreenDir = (projRay - projSource);
+            final rayNorm = rayScreenDir.distance > 0 ? rayScreenDir / rayScreenDir.distance : Offset(dir.x, dir.y);
+
+            final String label;
+            if (dir.x.abs() > 0.9) {
+              label = '⤢ Створ X [+${t.abs().round()} мм]';
+            } else if (dir.y.abs() > 0.9) {
+              label = '⤢ Створ Y [+${t.abs().round()} мм]';
+            } else {
+              label = '⤢ Створ трубы [+${t.abs().round()} мм]';
+            }
+
+            bestTrackingSnap = SnapResult(
+              type: SnapType.extensionRay,
+              screenPoint: projRay,
+              worldPoint: snappedWorld,
+              trackingSourcePoint: source,
+              trackingRayDirection: rayNorm,
+              trackingRayWorldDir: dir,
+              distanceLengthMm: t.abs(),
+              label: label,
+            );
+          }
         }
       }
     }
