@@ -379,7 +379,7 @@ class EditorTopBar extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.gps_fixed, size: 18),
-                    tooltip: 'Привязка (Snap)',
+                    tooltip: 'Привязка (Snap / F3)',
                     color: controller.isSnapEnabled ? Colors.indigo.shade700 : Colors.grey.shade600,
                     style: IconButton.styleFrom(
                       backgroundColor: controller.isSnapEnabled ? Colors.indigo.shade50 : Colors.transparent,
@@ -388,6 +388,30 @@ class EditorTopBar extends StatelessWidget {
                       ),
                     ),
                     onPressed: controller.toggleSnap,
+                  ),
+                  IconButton(
+                    icon: Icon(controller.draftingSettings.isZLocked ? Icons.lock : Icons.lock_open, size: 18),
+                    tooltip: controller.draftingSettings.isZLocked ? 'Замок отметки Z (ВКЛ)' : 'Замок отметки Z (ВЫКЛ)',
+                    color: controller.draftingSettings.isZLocked ? Colors.amber.shade900 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.draftingSettings.isZLocked ? Colors.amber.shade100 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: controller.toggleZLock,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.grid_on, size: 18),
+                    tooltip: controller.draftingSettings.showZPlaneGrid ? 'Сетка Z-плоскости (ВКЛ)' : 'Сетка Z-плоскости (ВЫКЛ)',
+                    color: controller.draftingSettings.showZPlaneGrid ? Colors.teal.shade800 : Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      backgroundColor: controller.draftingSettings.showZPlaneGrid ? Colors.teal.shade50 : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: controller.toggleZGrid,
                   ),
                   IconButton(
                     icon: const Icon(Icons.square_foot, size: 18),

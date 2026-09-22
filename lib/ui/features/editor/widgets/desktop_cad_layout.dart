@@ -760,7 +760,7 @@ class DesktopCadLayout extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.gps_fixed, size: 16),
-                  tooltip: 'Привязка (Snap)',
+                  tooltip: 'Привязка (Snap / F3)',
                   color: controller.isSnapEnabled ? Colors.cyanAccent : Colors.white60,
                   style: IconButton.styleFrom(
                     backgroundColor: controller.isSnapEnabled ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
@@ -769,6 +769,30 @@ class DesktopCadLayout extends StatelessWidget {
                     ),
                   ),
                   onPressed: controller.toggleSnap,
+                ),
+                IconButton(
+                  icon: Icon(controller.draftingSettings.isZLocked ? Icons.lock : Icons.lock_open, size: 16),
+                  tooltip: controller.draftingSettings.isZLocked ? 'Замок отметки Z (ВКЛ)' : 'Замок отметки Z (ВЫКЛ)',
+                  color: controller.draftingSettings.isZLocked ? Colors.amberAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.draftingSettings.isZLocked ? Colors.amber.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: controller.toggleZLock,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.grid_on, size: 16),
+                  tooltip: controller.draftingSettings.showZPlaneGrid ? 'Сетка Z-плоскости (ВКЛ)' : 'Сетка Z-плоскости (ВЫКЛ)',
+                  color: controller.draftingSettings.showZPlaneGrid ? Colors.cyanAccent : Colors.white60,
+                  style: IconButton.styleFrom(
+                    backgroundColor: controller.draftingSettings.showZPlaneGrid ? Colors.cyan.shade900.withValues(alpha: 0.4) : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: controller.toggleZGrid,
                 ),
                 IconButton(
                   icon: const Icon(Icons.square_foot, size: 16),
@@ -2539,17 +2563,50 @@ class DesktopCadLayout extends StatelessWidget {
             const SizedBox(width: 16),
             const VerticalDivider(width: 1, indent: 4, endIndent: 4),
             const SizedBox(width: 16),
-            InkWell(
-              onTap: controller.toggleSnap,
-              child: Tooltip(
-                message: 'Объектная привязка OSNAP (клавиша F3)',
-                child: Text(
-                  'SNAP (F3): ${controller.isSnapEnabled ? "ВКЛ" : "ВЫКЛ"}',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: controller.isSnapEnabled ? Colors.green.shade800 : Colors.red.shade800),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: controller.toggleSnap,
+                  child: Tooltip(
+                    message: 'Объектная привязка OSNAP (клавиша F3)',
+                    child: Text(
+                      'SNAP (F3): ${controller.isSnapEnabled ? "ВКЛ" : "ВЫКЛ"}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: controller.isSnapEnabled ? Colors.green.shade800 : Colors.red.shade800,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                  ),
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Режимы объектной привязки (Osnap)',
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.arrow_drop_down, size: 16, color: Colors.blueGrey),
+                    color: const Color(0xFF1E293B),
+                    itemBuilder: (ctx) => [
+                      _buildOsnapCheckItem('snapNodes', 'Узлы и концы труб (Endpoint)', controller.draftingSettings.snapNodes),
+                      _buildOsnapCheckItem('snapIntersections', 'Пересечения (Intersection)', controller.draftingSettings.snapIntersections),
+                      _buildOsnapCheckItem('snapMidpoints', 'Середины труб (Midpoint)', controller.draftingSettings.snapMidpoints),
+                      _buildOsnapCheckItem('snapPerpendicular', 'Перпендикуляры (Perpendicular)', controller.draftingSettings.snapPerpendicular),
+                      _buildOsnapCheckItem('snapNearest', 'Ближайшая к оси (Nearest / Trajectory)', controller.draftingSettings.snapNearest),
+                      const PopupMenuDivider(),
+                      _buildOsnapCheckItem('enableOtrack', 'Отслеживание створов (OTRACK F11)', controller.draftingSettings.enableOtrack),
+                      _buildOsnapCheckItem('isZLocked', 'Замок отметки Z (Z-Lock)', controller.draftingSettings.isZLocked),
+                      _buildOsnapCheckItem('showZPlaneGrid', 'Сетка рабочей плоскости Z', controller.draftingSettings.showZPlaneGrid),
+                    ],
+                    onSelected: (key) => _toggleOsnapSetting(key),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             InkWell(
               onTap: controller.toggleObjectTracking,
               child: Tooltip(
@@ -2560,6 +2617,82 @@ class DesktopCadLayout extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: controller.isObjectTrackingEnabled ? Colors.teal.shade800 : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            InkWell(
+              onTap: controller.toggleZLock,
+              child: Tooltip(
+                message: controller.draftingSettings.isZLocked
+                    ? 'Замок отметки Z активен (привязка только на отметке ∇$zStr). Нажмите, чтобы отключить'
+                    : 'Зафиксировать отметку Z на ∇$zStr (Z-Lock). Игнорирует узлы на других высотах',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: controller.draftingSettings.isZLocked ? Colors.amber.shade100 : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: controller.draftingSettings.isZLocked ? Colors.amber.shade800 : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        controller.draftingSettings.isZLocked ? Icons.lock : Icons.lock_open,
+                        size: 13,
+                        color: controller.draftingSettings.isZLocked ? Colors.amber.shade900 : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Z-Lock: ${controller.draftingSettings.isZLocked ? "ВКЛ" : "ВЫКЛ"}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: controller.draftingSettings.isZLocked ? Colors.amber.shade900 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: controller.toggleZGrid,
+              child: Tooltip(
+                message: 'Сетка плоскости Z: аксонометрический контур активной высоты ∇$zStr',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: controller.draftingSettings.showZPlaneGrid ? Colors.cyan.shade50 : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: controller.draftingSettings.showZPlaneGrid ? Colors.cyan.shade700 : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.grid_on,
+                        size: 13,
+                        color: controller.draftingSettings.showZPlaneGrid ? Colors.cyan.shade800 : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Сетка Z: ${controller.draftingSettings.showZPlaneGrid ? "ВКЛ" : "ВЫКЛ"}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: controller.draftingSettings.showZPlaneGrid ? Colors.cyan.shade800 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2600,6 +2733,59 @@ class DesktopCadLayout extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _toggleOsnapSetting(String key) {
+    final s = controller.draftingSettings;
+    switch (key) {
+      case 'snapNodes':
+        controller.updateDraftingSettings(s.copyWith(snapNodes: !s.snapNodes));
+        break;
+      case 'snapIntersections':
+        controller.updateDraftingSettings(s.copyWith(snapIntersections: !s.snapIntersections));
+        break;
+      case 'snapMidpoints':
+        controller.updateDraftingSettings(s.copyWith(snapMidpoints: !s.snapMidpoints));
+        break;
+      case 'snapPerpendicular':
+        controller.updateDraftingSettings(s.copyWith(snapPerpendicular: !s.snapPerpendicular));
+        break;
+      case 'snapNearest':
+        controller.updateDraftingSettings(s.copyWith(snapNearest: !s.snapNearest));
+        break;
+      case 'enableOtrack':
+        controller.updateDraftingSettings(s.copyWith(enableOtrack: !s.enableOtrack));
+        break;
+      case 'isZLocked':
+        controller.toggleZLock();
+        break;
+      case 'showZPlaneGrid':
+        controller.toggleZGrid();
+        break;
+    }
+  }
+
+  PopupMenuItem<String> _buildOsnapCheckItem(String key, String title, bool isChecked) {
+    return PopupMenuItem<String>(
+      value: key,
+      height: 34,
+      child: Row(
+        children: [
+          Icon(
+            isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+            size: 16,
+            color: isChecked ? Colors.tealAccent.shade400 : Colors.white54,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 12, color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
