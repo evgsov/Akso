@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,7 @@ class _MaterialsSpecificationDialogState extends State<MaterialsSpecificationDia
   String? _statusMessage;
   ReportTemplate? _activeTemplate;
   List<ReportTemplate> _availableTemplates = [];
+  bool _isMaximized = false;
 
   static const List<String> _categories = [
     'Все',
@@ -182,16 +184,22 @@ class _MaterialsSpecificationDialogState extends State<MaterialsSpecificationDia
       return r.any((cell) => cell.toLowerCase().contains(q));
     }).toList();
 
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = _isMaximized
+        ? screenSize.width * 0.99
+        : math.min(1380.0, screenSize.width * 0.96);
+    final dialogHeight = _isMaximized
+        ? screenSize.height * 0.99
+        : math.min(880.0, screenSize.height * 0.94);
+
     return DefaultTabController(
       length: 2,
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 1100,
-            maxHeight: 740,
-          ),
-          child: Container(
+        child: SizedBox(
+          width: dialogWidth,
+          height: dialogHeight,
+          child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +228,13 @@ class _MaterialsSpecificationDialogState extends State<MaterialsSpecificationDia
                       ),
                     ),
                     IconButton(
+                      icon: Icon(_isMaximized ? Icons.fullscreen_exit : Icons.fullscreen),
+                      tooltip: _isMaximized ? 'Восстановить размер' : 'Развернуть на весь экран',
+                      onPressed: () => setState(() => _isMaximized = !_isMaximized),
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.close),
+                      tooltip: 'Закрыть',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],

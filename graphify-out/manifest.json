@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1790081197.8622708,
-    "seen": 1790138086.0679028,
-    "ast_hash": "b821a2ec5214e08bb1562cd9f0c6c1f4",
+    "mtime": 1790164560.5591593,
+    "seen": 1790164757.110642,
+    "ast_hash": "5ed6a0e643a95bb53482c11097bee6ab",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790143025.5010583,
-    "seen": 1790143980.208817,
-    "ast_hash": "b2b077833d574146b2342cdeed290835",
+    "mtime": 1790164242.684802,
+    "seen": 1790164757.1106787,
+    "ast_hash": "889503f125a64b0627a75b994a4a3f57",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -288,9 +288,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/materials_specification_dialog.dart": {
-    "mtime": 1789959553.4673798,
-    "seen": 1790138086.0679553,
-    "ast_hash": "c2a0edf0d62a8e1b3086df7fcb0ead13",
+    "mtime": 1790165800.7475786,
+    "seen": 1790167902.0487237,
+    "ast_hash": "18dfb8007a61e46a2b43e3a7f3fa71c5",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/tools_panel.dart": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/weld_journal_dialog.dart": {
-    "mtime": 1789959553.471387,
-    "seen": 1790138086.067971,
-    "ast_hash": "a19d109813f78fc9aadbb0ae528c4933",
+    "mtime": 1790165727.8609982,
+    "seen": 1790167902.0487506,
+    "ast_hash": "045af447e4db381417fa514f71da6cfe",
     "semantic_hash": ""
   },
   "linux/flutter/generated_plugin_registrant.cc": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790138228.8089006,
-    "seen": 1790143980.2091439,
-    "ast_hash": "3d8e002c4a2bac77edb5fa0cade7fcaf",
+    "mtime": 1790167864.2619884,
+    "seen": 1790167902.0490735,
+    "ast_hash": "328e79aa9b4e6c828b267be7d951eada",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1790143237.406506,
-    "seen": 1790143980.208843,
-    "ast_hash": "186d6a1cfd15638d0c23b9d7987303ed",
+    "mtime": 1790166834.2174275,
+    "seen": 1790167902.0487123,
+    "ast_hash": "ff1fc62035abe27f68fd050620994e88",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1272,9 +1272,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/spool_calculator.dart": {
-    "mtime": 1790080786.4912062,
-    "seen": 1790138086.06792,
-    "ast_hash": "b00012d5d1ac5d4ad241dcf648fb6ba2",
+    "mtime": 1790164260.0733771,
+    "seen": 1790164757.1106699,
+    "ast_hash": "0a43904cdad4db334fbe03825595d028",
     "semantic_hash": ""
   },
   "lib/data/repositories/project_repository.dart": {
@@ -1602,9 +1602,9 @@
     "semantic_hash": ""
   },
   "test/element_selection_and_interaction_test.dart": {
-    "mtime": 1789561971.4408355,
-    "seen": 1790138086.0680215,
-    "ast_hash": "9a3df34db3ccb8e3fa8e7a7e961ee6e8",
+    "mtime": 1790167419.6572125,
+    "seen": 1790167902.0488524,
+    "ast_hash": "86a51828fb92859f2ec57b0c423b3a6b",
     "semantic_hash": ""
   },
   "test/elements_3d_wireframe_and_dxf_test.dart": {
@@ -2004,15 +2004,15 @@
     "semantic_hash": ""
   },
   "lib/domain/services/report_engine.dart": {
-    "mtime": 1790067708.7934172,
-    "seen": 1790138086.0679173,
-    "ast_hash": "44ced57914576ade4c2df6ba2924ce2b",
+    "mtime": 1790165877.7281127,
+    "seen": 1790167902.0486693,
+    "ast_hash": "41eafcb88e9fb387329b58e564b41a00",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/report_template_builder_widget.dart": {
-    "mtime": 1789959553.4684012,
-    "seen": 1790138086.0679605,
-    "ast_hash": "d08bc061648ea94ce9fd87f0db8d70dc",
+    "mtime": 1790167712.6429162,
+    "seen": 1790167902.0487313,
+    "ast_hash": "50b402ce7466d184a2848e9f0820b854",
     "semantic_hash": ""
   },
   "test/excel_export_service_test.dart": {
@@ -2022,15 +2022,15 @@
     "semantic_hash": ""
   },
   "test/report_engine_test.dart": {
-    "mtime": 1789959553.4809,
-    "seen": 1790138086.0680766,
-    "ast_hash": "61f0326ccb56532baa937415620bfa39",
+    "mtime": 1790167408.5989878,
+    "seen": 1790167902.048911,
+    "ast_hash": "3ffcebdde9fb5ee555742be0b43cc00d",
     "semantic_hash": ""
   },
   "test/report_template_builder_widget_test.dart": {
-    "mtime": 1789959553.4818997,
-    "seen": 1790138086.068078,
-    "ast_hash": "06b58766084f8b6f20ee0227d75b0906",
+    "mtime": 1790167381.3181539,
+    "seen": 1790167902.0489168,
+    "ast_hash": "a18da18838d18a3a8b0fb3ecb73832e0",
     "semantic_hash": ""
   },
   "test/report_template_model_test.dart": {
@@ -2340,9 +2340,9 @@
     "semantic_hash": ""
   },
   "test/riser_elbow_tracing_test.dart": {
-    "mtime": 1790081373.1505723,
-    "seen": 1790138086.0680842,
-    "ast_hash": "742fbe6dfbd33aa5e0af32bc92bccca0",
+    "mtime": 1790164688.130268,
+    "seen": 1790164757.110879,
+    "ast_hash": "42042f6e5c2c80491c5b708987b283db",
     "semantic_hash": ""
   },
   "lib/domain/services/grid_system_engine.dart": {

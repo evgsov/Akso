@@ -2,7 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
+import 'package:akso/domain/enums/fitting_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
+import 'package:akso/domain/models/fitting.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
 import 'package:akso/domain/models/pipe_support.dart';
@@ -359,5 +361,49 @@ void main() {
       expect(net.weldJoints.containsKey(weld.id), isFalse);
       controller.dispose();
     });
+
+    testWidgets('Displays Fitting inspector with long UUID without RenderFlex overflow', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final net = PipingNetwork();
+      final controller = PipingInputController(network: net);
+      const longUuidNodeId = 'node-48a04b19-f55a-4ba4-9a84-1845f448bdfd';
+      net.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      net.nodes[longUuidNodeId] = const Node3D(id: longUuidNodeId, x: 1000, y: 0, z: 0);
+      final seg = const PipeSegment(id: 's1', startNodeId: 'n1', endNodeId: longUuidNodeId, systemId: 'sys_1', dn: 100);
+      net.segments[seg.id] = seg;
+
+      const elbow = Fitting(
+        id: 'fit_elbow_long',
+        nodeId: longUuidNodeId,
+        fittingType: FittingType.elbow90,
+        dn: 100,
+        radiusMm: 150.0,
+      );
+      net.fittings[longUuidNodeId] = elbow;
+      controller.selectedNodeId = longUuidNodeId;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DesktopCadLayout(
+              controller: controller,
+              canvasWidget: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Отвод 90°'), findsOneWidget);
+      expect(find.text('Ду100'), findsOneWidget);
+      expect(find.textContaining('f448bdfd'), findsWidgets);
+
+      controller.dispose();
+    });
   });
 }
+

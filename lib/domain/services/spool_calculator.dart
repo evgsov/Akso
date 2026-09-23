@@ -376,6 +376,14 @@ class SpoolCalculator {
       }
       if (insideValve) continue;
 
+      // Если отрезок целиком лежит в зоне строительного вычета отвода/фитинга (заходит за стык внутрь отвода)
+      if (startDeduction > 1.0 && p2 * totalLen <= startDeduction + 1.0) {
+        continue;
+      }
+      if (endDeduction > 1.0 && p1 * totalLen >= totalLen - endDeduction - 1.0) {
+        continue;
+      }
+
       // Ограничиваем координаты катушки чистой зоной трубы вне строительных вычетов фитингов на концах
       double dStart = math.max(startDeduction, p1 * totalLen);
       double dEnd = math.min(math.max(0.0, totalLen - endDeduction), p2 * totalLen);

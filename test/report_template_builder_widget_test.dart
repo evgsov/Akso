@@ -80,5 +80,66 @@ void main() {
       expect(updatedTemplate, isNotNull);
       expect(updatedTemplate!.columns.length, initialColCount + 1);
     });
+
+    testWidgets('duplicates a column in template', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      ReportTemplate? updatedTemplate;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ReportTemplateBuilderWidget(
+              reportType: ReportType.weldJournal,
+              network: network,
+              initialTemplate: ReportTemplate.defaultWeldJournalTransneftTemplate,
+              onTemplateChanged: (t) => updatedTemplate = t,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final initialColCount = ReportTemplate.defaultWeldJournalTransneftTemplate.columns.length;
+
+      // Tap duplicate on the first column
+      final dupBtn = find.byTooltip('Дублировать столбец').first;
+      expect(dupBtn, findsOneWidget);
+
+      await tester.tap(dupBtn);
+      await tester.pump();
+
+      expect(updatedTemplate, isNotNull);
+      expect(updatedTemplate!.columns.length, initialColCount + 1);
+    });
+
+    testWidgets('toggles demo sample data in preview panel', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ReportTemplateBuilderWidget(
+              reportType: ReportType.weldJournal,
+              network: network,
+              initialTemplate: ReportTemplate.defaultWeldJournalTransneftTemplate,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Check demo data badge exists
+      expect(find.textContaining('Демо-образцы'), findsOneWidget);
+
+      // Banner for sample data on empty network
+      expect(find.textContaining('отображаются демо-данные'), findsOneWidget);
+    });
   });
 }

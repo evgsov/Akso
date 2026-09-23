@@ -227,5 +227,23 @@ void main() {
       final colCutIdx = template.columns.indexWhere((c) => c.template == '{cut_length}');
       expect(rows[0][colCutIdx], isNotNull);
     });
+
+    test('generateSampleData produces rows for all report templates', () {
+      final weldTemplate = ReportTemplate.defaultWeldJournalTransneftTemplate;
+      final weldSampleRows = ReportEngine.generateSampleData(weldTemplate);
+      expect(weldSampleRows.length, greaterThanOrEqualTo(2));
+      expect(weldSampleRows.first.length, weldTemplate.columns.length);
+
+      final mtoTemplate = ReportTemplate.defaultMtoGostTemplate;
+      final mtoSampleRows = ReportEngine.generateSampleData(mtoTemplate);
+      expect(mtoSampleRows.length, greaterThanOrEqualTo(2));
+      expect(mtoSampleRows.first.length, mtoTemplate.columns.length);
+
+      final spoolsTemplate = ReportTemplate.defaultSpoolsCutListTemplate;
+      final spoolsSampleRows = ReportEngine.generateSampleData(spoolsTemplate);
+      expect(spoolsSampleRows.length, greaterThanOrEqualTo(2));
+      expect(spoolsSampleRows.first.length, spoolsTemplate.columns.length);
+    });
   });
 }
+

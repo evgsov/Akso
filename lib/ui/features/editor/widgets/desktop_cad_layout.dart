@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../domain/enums/fitting_type.dart';
 import '../../../../domain/enums/inspection_method.dart';
 import '../../../../domain/enums/projection_type.dart';
@@ -2181,7 +2182,52 @@ class DesktopCadLayout extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Узел ID: $nodeId', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Узел сети',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 1),
+                              Tooltip(
+                                message: 'Нажмите, чтобы скопировать ID:\n$nodeId',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(4),
+                                  onTap: () {
+                                    Clipboard.setData(ClipboardData(text: nodeId));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('ID узла скопирован: $nodeId'),
+                                        duration: const Duration(seconds: 1),
+                                        behavior: SnackBarBehavior.floating,
+                                        width: 320,
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '#${nodeId.length > 8 ? nodeId.substring(nodeId.length - 8) : nodeId}',
+                                        style: TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.grey.shade600),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Icon(Icons.copy_rounded, size: 9, color: Colors.grey.shade500),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     _DesktopNodeElevationEditor(
                       controller: controller,
@@ -2879,12 +2925,62 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Узел: $nodeId', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-            Text(
-              'Ду${fitting.dn}${fitting.dnSecondary != null && fitting.dnSecondary != fitting.dn ? "х${fitting.dnSecondary}" : ""}',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Узел фитинга',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 1),
+                  Tooltip(
+                    message: 'Нажмите, чтобы скопировать ID:\n$nodeId',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: nodeId));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('ID узла скопирован: $nodeId'),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                            width: 320,
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '#${nodeId.length > 8 ? nodeId.substring(nodeId.length - 8) : nodeId}',
+                            style: TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(width: 3),
+                          Icon(Icons.copy_rounded, size: 9, color: Colors.grey.shade500),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.indigo.shade200),
+              ),
+              child: Text(
+                'Ду${fitting.dn}${fitting.dnSecondary != null && fitting.dnSecondary != fitting.dn ? "х${fitting.dnSecondary}" : ""}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+              ),
             ),
           ],
         ),
@@ -5043,7 +5139,40 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('ID: ${weld.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Монтажный шов', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Tooltip(
+              message: 'Нажмите, чтобы скопировать ID:\n${weld.id}',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: weld.id));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('ID стыка скопирован: ${weld.id}'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                      width: 320,
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '#${weld.id.length > 8 ? weld.id.substring(weld.id.length - 8) : weld.id}',
+                      style: TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(Icons.copy_rounded, size: 9, color: Colors.grey.shade500),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 6),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -34,6 +34,7 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
   final Set<String> _selectedWeldIds = {};
   ReportTemplate? _activeWeldTemplate;
   List<ReportTemplate> _weldTemplates = [];
+  bool _isMaximized = false;
 
   @override
   void initState() {
@@ -435,8 +436,12 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
     final welds = widget.network.weldJoints.values.toList()..sort((a, b) => a.number.compareTo(b.number));
     final spools = widget.network.spools.values.toList();
     final screenSize = MediaQuery.of(context).size;
-    final dialogWidth = math.min(980.0, screenSize.width * 0.95);
-    final dialogHeight = math.min(680.0, screenSize.height * 0.90);
+    final dialogWidth = _isMaximized
+        ? screenSize.width * 0.99
+        : math.min(1380.0, screenSize.width * 0.96);
+    final dialogHeight = _isMaximized
+        ? screenSize.height * 0.99
+        : math.min(880.0, screenSize.height * 0.94);
 
     return DefaultTabController(
       length: 3,
@@ -458,7 +463,13 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                   ),
                   const Spacer(),
                   IconButton(
+                    icon: Icon(_isMaximized ? Icons.fullscreen_exit : Icons.fullscreen),
+                    tooltip: _isMaximized ? 'Восстановить размер' : 'Развернуть на весь экран',
+                    onPressed: () => setState(() => _isMaximized = !_isMaximized),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Закрыть',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

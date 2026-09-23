@@ -850,6 +850,7 @@ class PipingNetwork {
     for (final nId in affectedNodeIds) {
       FittingDetector.autoDetectFittingsForNode(this, nId);
     }
+    generateElementWeldJoints();
     recalculateSpools();
   }
 
@@ -867,6 +868,7 @@ class PipingNetwork {
       FittingDetector.autoDetectFittingsForNode(this, seg.startNodeId);
       FittingDetector.autoDetectFittingsForNode(this, seg.endNodeId);
     }
+    generateElementWeldJoints();
     recalculateSpools();
   }
 
@@ -1840,26 +1842,38 @@ class PipingNetwork {
       return null;
     }
 
-    // 3. Если это шов фитинга у торца трубы, проверяем, нет ли устаревшего шва в крайнем положении 0.0 или 1.0
-    if (ratio < 0.35) {
+    // 3. Если это шов фитинга у торца трубы, проверяем, нет ли устаревшего шва в крайнем положении 0.0 или 1.0 (или устаревшего coaxial)
+    if (ratio < 0.5) {
       final legacyStartWeld = weldJoints.values.where(
-        (w) => w.segmentId == segmentId && w.ratio < 0.01 && !w.isManual,
+        (w) =>
+            w.segmentId == segmentId &&
+            !w.isManual &&
+            (w.ratio < 0.05 ||
+                (w.sourceElementId != null &&
+                    w.sourceElementId!.startsWith('coaxial_'))),
       ).firstOrNull;
       if (legacyStartWeld != null) {
         weldJoints[legacyStartWeld.id] = legacyStartWeld.copyWith(
           ratio: ratio,
           sourceElementId: sourceElementId ?? legacyStartWeld.sourceElementId,
+          weldType: weldType,
         );
         return null;
       }
-    } else if (ratio > 0.65) {
+    } else {
       final legacyEndWeld = weldJoints.values.where(
-        (w) => w.segmentId == segmentId && w.ratio > 0.99 && !w.isManual,
+        (w) =>
+            w.segmentId == segmentId &&
+            !w.isManual &&
+            (w.ratio > 0.95 ||
+                (w.sourceElementId != null &&
+                    w.sourceElementId!.startsWith('coaxial_'))),
       ).firstOrNull;
       if (legacyEndWeld != null) {
         weldJoints[legacyEndWeld.id] = legacyEndWeld.copyWith(
           ratio: ratio,
           sourceElementId: sourceElementId ?? legacyEndWeld.sourceElementId,
+          weldType: weldType,
         );
         return null;
       }
@@ -2330,6 +2344,45 @@ class PipingNetwork {
         if (toRemove.contains(w.id)) continue;
       }
 
+      // 0.3 Очистка лишних неручных швов при наличии штатного шва фитинга на том же конце
+      if (!w.isManual && (w.sourceElementId == null || !w.sourceElementId!.startsWith('valve_'))) {
+        final totalLen = seg.calculateLength(startNode, endNode);
+        if (totalLen > 0.1) {
+          final hasStartFittingWeld = weldJoints.values.any((wOther) =>
+              wOther.segmentId == seg.id &&
+              wOther.id != w.id &&
+              (wOther.sourceElementId == 'fit_${seg.startNodeId}_${seg.id}' ||
+               wOther.sourceElementId == 'butt_${seg.id}'));
+          if (hasStartFittingWeld &&
+              w.sourceElementId != 'fit_${seg.startNodeId}_${seg.id}' &&
+              w.sourceElementId != 'butt_${seg.id}') {
+            final startD = getFittingDeduction(seg.startNodeId, seg.id);
+            final distFromStart = w.ratio * totalLen;
+            if (distFromStart <= startD + 10.0 || w.ratio < 0.05) {
+              toRemove.add(w.id);
+              continue;
+            }
+          }
+
+          final hasEndFittingWeld = weldJoints.values.any((wOther) =>
+              wOther.segmentId == seg.id &&
+              wOther.id != w.id &&
+              (wOther.sourceElementId == 'fit_${seg.endNodeId}_${seg.id}' ||
+               wOther.sourceElementId == 'butt_${seg.id}'));
+          if (hasEndFittingWeld &&
+              w.sourceElementId != 'fit_${seg.endNodeId}_${seg.id}' &&
+              w.sourceElementId != 'butt_${seg.id}') {
+            final endD = getFittingDeduction(seg.endNodeId, seg.id);
+            final distFromEnd = (1.0 - w.ratio) * totalLen;
+            if (distFromEnd <= endD + 10.0 || w.ratio > 0.95) {
+              toRemove.add(w.id);
+              continue;
+            }
+          }
+        }
+        if (toRemove.contains(w.id)) continue;
+      }
+
       final isNearStart = w.ratio < 0.25;
       final isNearEnd = w.ratio > 0.75;
 
@@ -2397,8 +2450,14 @@ class PipingNetwork {
       }
     }
 
-    // 4. Поиск дублирующих стыков на одном сегменте (ближе 15 мм)
+    // 4. Поиск дублирующих стыков на одном сегменте (ближе 15-20 мм)
     for (final seg in segments.values) {
+      final startNode = nodes[seg.startNodeId];
+      final endNode = nodes[seg.endNodeId];
+      final totalLen = (startNode != null && endNode != null)
+          ? seg.calculateLength(startNode, endNode)
+          : 1000.0;
+
       final segWelds = weldJoints.values
           .where((w) => w.segmentId == seg.id && !toRemove.contains(w.id))
           .toList();
@@ -2406,7 +2465,8 @@ class PipingNetwork {
         for (int j = i + 1; j < segWelds.length; j++) {
           final w1 = segWelds[i];
           final w2 = segWelds[j];
-          if ((w1.ratio - w2.ratio).abs() < 0.015) {
+          final distMm = (w1.ratio - w2.ratio).abs() * totalLen;
+          if ((w1.ratio - w2.ratio).abs() < 0.015 || distMm < 20.0) {
             // Приоритет сохранению шва с sourceElementId или ручного
             if (w1.sourceElementId != null && w2.sourceElementId == null) {
               toRemove.add(w2.id);

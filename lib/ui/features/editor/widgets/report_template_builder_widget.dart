@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../data/repositories/report_template_repository.dart';
 import '../../../../domain/enums/report_type.dart';
@@ -36,6 +37,9 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
   late ReportTemplate _activeTemplate;
   int _activeColumnIndex = 0;
   bool _isLoading = true;
+  bool _isPaletteCollapsed = false;
+  String _tokenSearchQuery = '';
+  bool _showSampleData = false;
 
   final ScrollController _columnsScrollController = ScrollController();
   final ScrollController _previewVerticalController = ScrollController();
@@ -125,6 +129,62 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..add(newCol);
     _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
     _activeColumnIndex = updatedColumns.length - 1;
+    _notifyChange();
+  }
+
+  void _addNewColumnFromToken(ReportTokenDefinition token) {
+    final newCol = ReportColumn(
+      id: 'col_${DateTime.now().millisecondsSinceEpoch}',
+      header: token.label,
+      template: token.code,
+      groupHeader: (token.category == 'Общие' || token.category == 'Геодезия') ? null : token.category,
+      width: 120,
+      alignment: token.category == 'Контроль' ||
+              token.code == '{stamp}' ||
+              token.code == '{weld_type}' ||
+              token.code == '{num}' ||
+              token.code == '{date}'
+          ? TextAlign.center
+          : TextAlign.left,
+    );
+    final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..add(newCol);
+    _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
+    _activeColumnIndex = updatedColumns.length - 1;
+    _notifyChange();
+  }
+
+  void _duplicateColumn(int idx) {
+    if (idx < 0 || idx >= _activeTemplate.columns.length) return;
+    final src = _activeTemplate.columns[idx];
+    final copy = src.copyWith(
+      id: 'col_${DateTime.now().millisecondsSinceEpoch}',
+      header: '${src.header} (копия)',
+    );
+    final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..insert(idx + 1, copy);
+    _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
+    _activeColumnIndex = idx + 1;
+    _notifyChange();
+  }
+
+  void _moveColumn(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _activeTemplate.columns.length) return;
+    if (newIndex < 0 || newIndex >= _activeTemplate.columns.length) return;
+    final cols = List<ReportColumn>.from(_activeTemplate.columns);
+    final moved = cols.removeAt(oldIndex);
+    cols.insert(newIndex, moved);
+    _activeTemplate = _activeTemplate.copyWith(columns: cols);
+    _activeColumnIndex = newIndex;
+    _notifyChange();
+  }
+
+  void _insertTokenToColumn(int colIdx, String tokenCode) {
+    if (colIdx < 0 || colIdx >= _activeTemplate.columns.length) return;
+    final col = _activeTemplate.columns[colIdx];
+    final newTemplateStr = col.template.isEmpty ? tokenCode : '${col.template} $tokenCode';
+    final cols = List<ReportColumn>.from(_activeTemplate.columns);
+    cols[colIdx] = col.copyWith(template: newTemplateStr);
+    _activeTemplate = _activeTemplate.copyWith(columns: cols);
+    _activeColumnIndex = colIdx;
     _notifyChange();
   }
 
@@ -327,6 +387,58 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
         ? _activeTemplate.columns[_activeColumnIndex].header
         : '—';
 
+    if (_isPaletteCollapsed) {
+      return Card(
+        elevation: 0,
+        color: Colors.indigo.shade50.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: Colors.indigo.shade100),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              const Icon(Icons.touch_app_outlined, size: 16, color: Colors.indigo),
+              const SizedBox(width: 8),
+              const Text('Палитра токенов', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Активный столбец: $activeColName',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.indigo.shade900),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                icon: const Icon(Icons.expand_more, size: 16),
+                label: const Text('Развернуть палитру', style: TextStyle(fontSize: 11)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                onPressed: () => setState(() => _isPaletteCollapsed = false),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final filteredGroups = <String, List<ReportTokenDefinition>>{};
+    for (final entry in groupedTokens.entries) {
+      final list = entry.value.where((t) {
+        if (_tokenSearchQuery.isEmpty) return true;
+        final q = _tokenSearchQuery.toLowerCase();
+        return t.code.toLowerCase().contains(q) || t.label.toLowerCase().contains(q);
+      }).toList();
+      if (list.isNotEmpty) {
+        filteredGroups[entry.key] = list;
+      }
+    }
+
     return Card(
       elevation: 0,
       color: Colors.indigo.shade50.withValues(alpha: 0.5),
@@ -345,7 +457,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                 const SizedBox(width: 8),
                 const Flexible(
                   child: Text(
-                    'Кликните на чип для вставки в активный столбец: ',
+                    'Кликните на чип для вставки в: ',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -362,6 +474,29 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.indigo.shade900),
                   ),
                 ),
+                const Spacer(),
+                SizedBox(
+                  width: 180,
+                  height: 30,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Поиск токена...',
+                      prefixIcon: const Icon(Icons.search, size: 14),
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    style: const TextStyle(fontSize: 11),
+                    onChanged: (q) => setState(() => _tokenSearchQuery = q.trim()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  icon: const Icon(Icons.expand_less, size: 16),
+                  label: const Text('Свернуть', style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  onPressed: () => setState(() => _isPaletteCollapsed = true),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -369,7 +504,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
               scrollDirection: Axis.horizontal,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: groupedTokens.entries.map((entry) {
+                children: filteredGroups.entries.map((entry) {
                   return Container(
                     margin: const EdgeInsets.only(right: 12),
                     padding: const EdgeInsets.all(8),
@@ -424,35 +559,123 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
             ),
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.spaceBetween,
               children: [
-                const Icon(Icons.view_column_outlined, size: 18, color: Colors.indigo),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Столбцы шаблона (${_activeTemplate.columns.length})',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.view_column_outlined, size: 18, color: Colors.indigo),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Столбцы шаблона (${_activeTemplate.columns.length})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Добавить столбец', style: TextStyle(fontSize: 11)),
-                  onPressed: _addNewColumn,
-                  style: FilledButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _addNewColumn,
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('+ Добавить столбец', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                PopupMenuButton<dynamic>(
+                  tooltip: 'Добавить поле из каталога',
+                  onSelected: (val) {
+                    if (val == '__empty__') {
+                      _addNewColumn();
+                    } else if (val is ReportTokenDefinition) {
+                      _addNewColumnFromToken(val);
+                    }
+                  },
+                  itemBuilder: (ctx) {
+                    final grouped = ReportTokenDefinition.getGroupedTokensForType(widget.reportType);
+                    final items = <PopupMenuEntry<dynamic>>[];
+
+                    for (final entry in grouped.entries) {
+                      items.add(PopupMenuItem<dynamic>(
+                        enabled: false,
+                        height: 24,
+                        child: Text(
+                          '— ${entry.key.toUpperCase()} —',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo),
+                        ),
+                      ));
+                      for (final token in entry.value) {
+                        items.add(PopupMenuItem<dynamic>(
+                          value: token,
+                          height: 32,
+                          child: Row(
+                            children: [
+                              Text(token.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                              const Spacer(),
+                              Text(
+                                token.code,
+                                style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ));
+                      }
+                      items.add(const PopupMenuDivider(height: 8));
+                    }
+
+                    items.add(const PopupMenuItem<dynamic>(
+                      value: '__empty__',
+                      height: 34,
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_circle_outline, size: 16, color: Colors.teal),
+                          SizedBox(width: 8),
+                          Text('+ Пустой произвольный столбец', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                        ],
+                      ),
+                    ));
+
+                    return items;
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.indigo.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.playlist_add, size: 16, color: Colors.indigo.shade800),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+ Из каталога ▾',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo.shade900),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+          ],
+        ),
+      ),
           Expanded(
             child: _activeTemplate.columns.isEmpty
                 ? const Center(child: Text('Нет столбцов'))
@@ -463,12 +686,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                     itemCount: _activeTemplate.columns.length,
                     onReorder: (oldIndex, newIndex) {
                       if (oldIndex < newIndex) newIndex -= 1;
-                      final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                      final moved = cols.removeAt(oldIndex);
-                      cols.insert(newIndex, moved);
-                      _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                      _activeColumnIndex = newIndex;
-                      _notifyChange();
+                      _moveColumn(oldIndex, newIndex);
                     },
                     itemBuilder: (context, idx) {
                       final col = _activeTemplate.columns[idx];
@@ -495,10 +713,24 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.drag_indicator, size: 18, color: Colors.grey),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 2),
                               Text(
                                 '${idx + 1}',
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+                              ),
+                              const SizedBox(width: 4),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  InkWell(
+                                    onTap: idx > 0 ? () => _moveColumn(idx, idx - 1) : null,
+                                    child: Icon(Icons.arrow_drop_up, size: 18, color: idx > 0 ? Colors.indigo : Colors.grey.shade300),
+                                  ),
+                                  InkWell(
+                                    onTap: idx < _activeTemplate.columns.length - 1 ? () => _moveColumn(idx, idx + 1) : null,
+                                    child: Icon(Icons.arrow_drop_down, size: 18, color: idx < _activeTemplate.columns.length - 1 ? Colors.indigo : Colors.grey.shade300),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -511,6 +743,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                                     fontSize: 13,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (col.groupHeader != null && col.groupHeader!.isNotEmpty)
@@ -527,6 +760,19 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                     style: TextStyle(fontSize: 10, color: Colors.blueGrey.shade800),
                                   ),
                                 ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  '${col.width.round()} px',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                                ),
+                              ),
                             ],
                           ),
                           subtitle: Text(
@@ -538,6 +784,11 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              IconButton(
+                                icon: const Icon(Icons.copy_rounded, size: 17, color: Colors.indigo),
+                                tooltip: 'Дублировать столбец',
+                                onPressed: () => _duplicateColumn(idx),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
                                 tooltip: 'Удалить столбец',
@@ -562,6 +813,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                     children: [
                                       Expanded(
                                         child: TextFormField(
+                                          key: ValueKey('header_${col.id}_${col.header}'),
                                           initialValue: col.header,
                                           decoration: const InputDecoration(
                                             labelText: 'Заголовок столбца',
@@ -580,6 +832,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: TextFormField(
+                                          key: ValueKey('group_${col.id}_${col.groupHeader}'),
                                           initialValue: col.groupHeader ?? '',
                                           decoration: const InputDecoration(
                                             labelText: 'Группа (шапка Excel)',
@@ -590,7 +843,10 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                           style: const TextStyle(fontSize: 12),
                                           onChanged: (val) {
                                             final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                            cols[idx] = col.copyWith(groupHeader: val.trim().isEmpty ? null : val.trim(), clearGroupHeader: val.trim().isEmpty);
+                                            cols[idx] = col.copyWith(
+                                              groupHeader: val.trim().isEmpty ? null : val.trim(),
+                                              clearGroupHeader: val.trim().isEmpty,
+                                            );
                                             _activeTemplate = _activeTemplate.copyWith(columns: cols);
                                             _notifyChange();
                                           },
@@ -599,21 +855,139 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  TextFormField(
-                                    initialValue: col.template,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Формула / Токены',
-                                      hintText: '{elem1_name} Ду{elem1_dn}',
-                                      isDense: true,
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                                    onChanged: (val) {
-                                      final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                      cols[idx] = col.copyWith(template: val);
-                                      _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                      _notifyChange();
-                                    },
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          key: ValueKey('template_${col.id}_${col.template}'),
+                                          initialValue: col.template,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Формула / Токены',
+                                            hintText: '{elem1_name} Ду{elem1_dn}',
+                                            isDense: true,
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                                          onChanged: (val) {
+                                            final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                            cols[idx] = col.copyWith(template: val);
+                                            _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                            _notifyChange();
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      PopupMenuButton<String>(
+                                        tooltip: 'Вставить токен в формулу',
+                                        onSelected: (code) => _insertTokenToColumn(idx, code),
+                                        itemBuilder: (ctx) {
+                                          final allTokens = ReportTokenDefinition.getTokensForType(widget.reportType);
+                                          return allTokens.map((t) {
+                                            return PopupMenuItem<String>(
+                                              value: t.code,
+                                              height: 32,
+                                              child: Row(
+                                                children: [
+                                                  Text(t.label, style: const TextStyle(fontSize: 12)),
+                                                  const Spacer(),
+                                                  Text(
+                                                    t.code,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontFamily: 'monospace',
+                                                      color: Colors.indigo.shade700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.indigo.shade50,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: Colors.indigo.shade200),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.add_link, size: 16, color: Colors.indigo),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                '+ Токен',
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Text('Ширина:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                      const SizedBox(width: 8),
+                                      SizedBox(
+                                        width: 75,
+                                        height: 32,
+                                        child: TextFormField(
+                                          key: ValueKey('width_${col.id}_${col.width}'),
+                                          initialValue: col.width.round().toString(),
+                                          keyboardType: TextInputType.number,
+                                          decoration: const InputDecoration(
+                                            isDense: true,
+                                            border: OutlineInputBorder(),
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                            suffixText: 'px',
+                                          ),
+                                          style: const TextStyle(fontSize: 11),
+                                          onChanged: (val) {
+                                            final w = double.tryParse(val.trim());
+                                            if (w != null && w >= 40 && w <= 600) {
+                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                              cols[idx] = col.copyWith(width: w);
+                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                              _notifyChange();
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Wrap(
+                                        spacing: 4,
+                                        children: [80, 100, 120, 150, 180, 220].map((presetW) {
+                                          final isCurrent = col.width.round() == presetW;
+                                          return InkWell(
+                                            onTap: () {
+                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                              cols[idx] = col.copyWith(width: presetW.toDouble());
+                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                              _notifyChange();
+                                            },
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isCurrent ? Colors.indigo : Colors.grey.shade100,
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(color: isCurrent ? Colors.indigo : Colors.grey.shade300),
+                                              ),
+                                              child: Text(
+                                                '$presetW',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isCurrent ? Colors.white : Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
@@ -678,7 +1052,9 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
   }
 
   Widget _buildLivePreviewPanel() {
-    final dataRows = ReportEngine.generateTableData(_activeTemplate, widget.network);
+    final realDataRows = ReportEngine.generateTableData(_activeTemplate, widget.network);
+    final isUsingSample = _showSampleData || realDataRows.isEmpty;
+    final dataRows = isUsingSample ? ReportEngine.generateSampleData(_activeTemplate) : realDataRows;
 
     return Card(
       elevation: 0,
@@ -690,7 +1066,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
@@ -707,13 +1083,58 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Строк: ${dataRows.length}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                InkWell(
+                  onTap: () => setState(() => _showSampleData = !_showSampleData),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isUsingSample ? Colors.amber.shade50 : Colors.indigo.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: isUsingSample ? Colors.amber.shade300 : Colors.indigo.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isUsingSample ? Icons.science_outlined : Icons.storage_outlined,
+                          size: 13,
+                          color: isUsingSample ? Colors.amber.shade900 : Colors.indigo,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isUsingSample ? 'Демо-образцы (${dataRows.length})' : 'Сеть (${dataRows.length})',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isUsingSample ? Colors.amber.shade900 : Colors.indigo,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+          if (isUsingSample && realDataRows.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              color: Colors.amber.shade50,
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 13, color: Colors.amber.shade900),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'В проекте еще нет элементов этого типа — отображаются демо-данные для настройки',
+                      style: TextStyle(fontSize: 10, color: Colors.amber.shade900),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: dataRows.isEmpty
                 ? Center(
@@ -735,28 +1156,68 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                         scrollDirection: Axis.horizontal,
                         child: DataTable(
                           headingRowColor: WidgetStateProperty.all(Colors.indigo.shade50),
-                          headingRowHeight: 38,
+                          headingRowHeight: 40,
                           dataRowMinHeight: 32,
-                          dataRowMaxHeight: 36,
-                          columnSpacing: 16,
+                          dataRowMaxHeight: 38,
+                          columnSpacing: 14,
                           columns: _activeTemplate.columns.map((col) {
+                            final w = math.max(65.0, col.width * 0.85);
                             return DataColumn(
-                              label: Text(
-                                col.header,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                              label: SizedBox(
+                                width: w,
+                                child: Column(
+                                  crossAxisAlignment: col.alignment == TextAlign.center
+                                      ? CrossAxisAlignment.center
+                                      : (col.alignment == TextAlign.right
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start),
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (col.groupHeader != null && col.groupHeader!.isNotEmpty)
+                                      Text(
+                                        col.groupHeader!,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.indigo.shade800,
+                                          fontWeight: FontWeight.normal,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    Text(
+                                      col.header,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: col.alignment,
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           }).toList(),
                           rows: dataRows.map((row) {
                             return DataRow(
-                              cells: row.map((cellVal) {
+                              cells: List.generate(row.length, (colIdx) {
+                                final cellVal = row[colIdx]?.toString() ?? '';
+                                final col = colIdx < _activeTemplate.columns.length
+                                    ? _activeTemplate.columns[colIdx]
+                                    : null;
+                                final align = col?.alignment ?? TextAlign.left;
+                                final w = col != null ? math.max(65.0, col.width * 0.85) : 80.0;
                                 return DataCell(
-                                  Text(
-                                    cellVal?.toString() ?? '',
-                                    style: const TextStyle(fontSize: 11),
+                                  SizedBox(
+                                    width: w,
+                                    child: Text(
+                                      cellVal,
+                                      textAlign: align,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontFamily: col?.isNumeric == true ? 'monospace' : null,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 );
-                              }).toList(),
+                              }),
                             );
                           }).toList(),
                         ),

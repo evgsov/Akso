@@ -3113,6 +3113,7 @@ class PipingInputController extends ChangeNotifier {
         network.addSegment(riserSeg);
 
         // Детектируем фитинги: поворот под 90° получает отвод, а врезка в трубу - тройник
+        FittingDetector.autoDetectFittingsForNode(network, traceStartNode!.id);
         FittingDetector.autoDetectFittingsForNode(network, turnNodeId);
         FittingDetector.autoDetectFittingsForNode(network, targetNodeId);
       } else {
@@ -3248,19 +3249,33 @@ class PipingInputController extends ChangeNotifier {
         );
         targetNodeId = nozzleNode.id;
       } else if (hitExistingSegId != null) {
+        final hitSeg = network.segments[hitExistingSegId];
+        final isConnectedToStart = hitSeg != null &&
+            (hitSeg.startNodeId == traceStartNode!.id || hitSeg.endNodeId == traceStartNode!.id);
         final ratio = _calcSegmentRatio(hitExistingSegId, endScreenPos);
-        final midNode = network.splitSegmentAtRatio(hitExistingSegId, ratio);
-        targetNodeId = midNode?.id ??
-            (() {
-              final fallback = Node3D(
-                id: 'node_${_uuid.v4()}',
-                x: snapped.x,
-                y: snapped.y,
-                z: currentElevationZ,
-              );
-              network.nodes[fallback.id] = fallback;
-              return fallback.id;
-            })();
+        if (isConnectedToStart || ratio < 0.05 || ratio > 0.95) {
+          final newNode = Node3D(
+            id: 'node_${_uuid.v4()}',
+            x: snapped.x,
+            y: snapped.y,
+            z: currentElevationZ,
+          );
+          network.nodes[newNode.id] = newNode;
+          targetNodeId = newNode.id;
+        } else {
+          final midNode = network.splitSegmentAtRatio(hitExistingSegId, ratio);
+          targetNodeId = midNode?.id ??
+              (() {
+                final fallback = Node3D(
+                  id: 'node_${_uuid.v4()}',
+                  x: snapped.x,
+                  y: snapped.y,
+                  z: currentElevationZ,
+                );
+                network.nodes[fallback.id] = fallback;
+                return fallback.id;
+              })();
+        }
       } else {
         final newNode = Node3D(
           id: 'node_${_uuid.v4()}',
@@ -3387,6 +3402,9 @@ class PipingInputController extends ChangeNotifier {
       traceStartNode = network.nodes[targetNodeId];
       selectedNodeId = targetNodeId;
       tracingController.clearAcquiredPoints();
+      if (endZ != currentElevationZ) {
+        currentElevationZ = endZ;
+      }
 
       currentSnapResult = null;
       if (currentCursorScreenPos != null) {
