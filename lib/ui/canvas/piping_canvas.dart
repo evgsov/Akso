@@ -7,6 +7,7 @@ import '../../domain/models/node_3d.dart';
 
 import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/services/grid_system_engine.dart';
 import 'painters/grid_painter.dart';
 import 'painters/pipe_painter.dart';
 import 'painters/fitting_painter.dart';
@@ -547,6 +548,10 @@ class PipingCanvasPainter extends CustomPainter {
   }
 
   void _drawConstructionAxes(Canvas canvas) {
+    if (network.axes.isEmpty) return;
+
+    final chains = GridSystemEngine.findAlignmentChains(network.axes);
+
     for (final axis in network.axes.values) {
       final p1 = projector.project(axis.startPoint);
       final p2 = projector.project(axis.endPoint);
@@ -558,18 +563,92 @@ class PipingCanvasPainter extends CustomPainter {
         ..strokeWidth = isSelected ? 2.4 : 1.2
         ..style = PaintingStyle.stroke;
 
-      _drawDashedLine(canvas, p1, p2, axisPaint);
+      // Осевая линия по ГОСТ 2.303
+      _drawGostCenterLine(canvas, p1, p2, axisPaint);
 
-      if (axis.isBuildingGrid && axis.label.isNotEmpty) {
-        _drawGridBubble(canvas, p1, axis.label, isSelected: isSelected);
-        _drawGridBubble(canvas, p2, axis.label, isSelected: isSelected);
+      final dir = _getScreenDirection(p1, p2);
+      final normal = Offset(-dir.dy, dir.dx);
+
+      // Конечные точки с учетом возможного излома марки (Revit Elbow Break)
+      final effectiveP1 = axis.startElbowOffset != null ? (p1 + axis.startElbowOffset!) : p1;
+      final effectiveP2 = axis.endElbowOffset != null ? (p2 + axis.endElbowOffset!) : p2;
+
+      // Отрисовка плеча излома (dogleg leader)
+      if (axis.startElbowOffset != null) {
+        _drawElbowShoulderLine(canvas, p1, effectiveP1, axisPaint);
+      }
+      if (axis.endElbowOffset != null) {
+        _drawElbowShoulderLine(canvas, p2, effectiveP2, axisPaint);
       }
 
+      // Марки осей здания с кружками/эллипсами
+      if (axis.isBuildingGrid && axis.label.isNotEmpty) {
+        if (axis.showStartBubble) {
+          _drawGridBubble(
+            canvas,
+            worldCenter: axis.startPoint,
+            screenCenter: effectiveP1,
+            label: axis.label,
+            is3d: axis.is3dPlaneOriented,
+            elbowOffset: axis.startElbowOffset,
+            isSelected: isSelected,
+          );
+        }
+        if (axis.showEndBubble) {
+          _drawGridBubble(
+            canvas,
+            worldCenter: axis.endPoint,
+            screenCenter: effectiveP2,
+            label: axis.label,
+            is3d: axis.is3dPlaneOriented,
+            elbowOffset: axis.endElbowOffset,
+            isSelected: isSelected,
+          );
+        }
+      }
+
+      // Интерактивные ручки и контролы при выделении оси (Revit Grips)
       if (isSelected) {
-        _drawGripHandle(canvas, p1);
-        _drawGripHandle(canvas, p2);
+        // 1. Концевые ручки растяжения
+        _drawGripHandle(canvas, effectiveP1);
+        _drawGripHandle(canvas, effectiveP2);
+
+        // 2. Чекбоксы видимости марок на концах
+        _drawBubbleToggleCheckbox(canvas, effectiveP1 - dir * 18.0, axis.showStartBubble);
+        _drawBubbleToggleCheckbox(canvas, effectiveP2 + dir * 18.0, axis.showEndBubble);
+
+        // 3. Замочки выравнивания (Alignment Locks)
+        final hasStartChain = chains.any((c) => c.isStart && c.axisIds.contains(axis.id));
+        if (hasStartChain) {
+          _drawPadlockIcon(canvas, effectiveP1 + normal * 18.0, axis.isStartLocked);
+        }
+        final hasEndChain = chains.any((c) => !c.isStart && c.axisIds.contains(axis.id));
+        if (hasEndChain) {
+          _drawPadlockIcon(canvas, effectiveP2 + normal * 18.0, axis.isEndLocked);
+        }
+
+        // 4. Ручки излома марки (Elbow break handle)
+        if (axis.showStartBubble) {
+          _drawElbowBreakHandle(canvas, effectiveP1 - normal * 16.0, hasElbow: axis.startElbowOffset != null);
+        }
+        if (axis.showEndBubble) {
+          _drawElbowBreakHandle(canvas, effectiveP2 - normal * 16.0, hasElbow: axis.endElbowOffset != null);
+        }
+
+        // 5. Временные размеры до соседних параллельных осей (Temporary Dimensions)
+        final tempDims = GridSystemEngine.calculateTemporaryDimensions(axis.id, network.axes);
+        for (final td in tempDims) {
+          _drawTemporaryGridDimension(canvas, td);
+        }
       }
     }
+  }
+
+  Offset _getScreenDirection(Offset p1, Offset p2) {
+    final d = p2 - p1;
+    final len = d.distance;
+    if (len < 1e-4) return const Offset(1, 0);
+    return Offset(d.dx / len, d.dy / len);
   }
 
   void _drawGripHandle(Canvas canvas, Offset pt) {
@@ -579,30 +658,263 @@ class PipingCanvasPainter extends CustomPainter {
     canvas.drawRect(rect, Paint()..color = Colors.amber.shade900..strokeWidth = 1.5..style = PaintingStyle.stroke);
   }
 
-  void _drawGridBubble(Canvas canvas, Offset center, String label, {bool isSelected = false}) {
-    const r = 13.0;
-    canvas.drawCircle(center, r, Paint()..color = isSelected ? Colors.amber.shade50 : Colors.white..style = PaintingStyle.fill);
+  void _drawBubbleToggleCheckbox(Canvas canvas, Offset pt, bool isChecked) {
+    const size = 11.0;
+    final rect = Rect.fromCenter(center: pt, width: size, height: size);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(2.5));
+
+    canvas.drawRRect(rrect, Paint()..color = Colors.white..style = PaintingStyle.fill);
+    canvas.drawRRect(rrect, Paint()..color = const Color(0xFF78909C)..strokeWidth = 1.2..style = PaintingStyle.stroke);
+
+    if (isChecked) {
+      final p = Paint()
+        ..color = Colors.indigo
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      final checkPath = Path()
+        ..moveTo(rect.left + 2.5, rect.top + 5.5)
+        ..lineTo(rect.left + 4.8, rect.bottom - 2.8)
+        ..lineTo(rect.right - 2.5, rect.top + 3.0);
+      canvas.drawPath(checkPath, p);
+    }
+  }
+
+  void _drawPadlockIcon(Canvas canvas, Offset pt, bool isLocked) {
+    const w = 11.0;
+    const h = 9.0;
+    final bodyRect = Rect.fromCenter(center: pt + const Offset(0, 2), width: w, height: h);
+    final rrect = RRect.fromRectAndRadius(bodyRect, const Radius.circular(2.0));
+
+    final color = isLocked ? Colors.amber.shade900 : const Color(0xFF90A4AE);
+    canvas.drawRRect(rrect, Paint()..color = color..style = PaintingStyle.fill);
+
+    // Дужка замка
+    final shacklePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+    final arcRect = Rect.fromCenter(
+      center: isLocked ? pt - const Offset(0, 3) : pt - const Offset(2, 4),
+      width: 6.5,
+      height: 6.5,
+    );
+    canvas.drawArc(arcRect, math.pi, math.pi, false, shacklePaint);
+  }
+
+  void _drawElbowBreakHandle(Canvas canvas, Offset pt, {required bool hasElbow}) {
+    const size = 11.0;
+    final rect = Rect.fromCenter(center: pt, width: size, height: size);
+    canvas.drawCircle(pt, size / 2, Paint()..color = Colors.white..style = PaintingStyle.fill);
     canvas.drawCircle(
-      center,
-      r,
+      pt,
+      size / 2,
       Paint()
-        ..color = isSelected ? Colors.amber.shade800 : const Color(0xFF546E7A)
-        ..strokeWidth = isSelected ? 2.0 : 1.4
+        ..color = hasElbow ? Colors.deepPurple : const Color(0xFF78909C)
+        ..strokeWidth = 1.2
         ..style = PaintingStyle.stroke,
     );
 
+    // Зигзаг излома
+    final zigPaint = Paint()
+      ..color = hasElbow ? Colors.deepPurple : const Color(0xFF546E7A)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final zig = Path()
+      ..moveTo(rect.left + 2.5, rect.top + 3)
+      ..lineTo(rect.right - 2.5, rect.center.dy - 1)
+      ..lineTo(rect.left + 2.5, rect.center.dy + 1)
+      ..lineTo(rect.right - 2.5, rect.bottom - 3);
+    canvas.drawPath(zig, zigPaint);
+  }
+
+  void _drawElbowShoulderLine(Canvas canvas, Offset axisEnd, Offset bubbleCenter, Paint paint) {
+    final shoulderPaint = Paint()
+      ..color = paint.color
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final mid = Offset(axisEnd.dx, bubbleCenter.dy);
+    canvas.drawLine(axisEnd, mid, shoulderPaint);
+    canvas.drawLine(mid, bubbleCenter, shoulderPaint);
+  }
+
+  void _drawTemporaryGridDimension(Canvas canvas, TemporaryGridDimension td) {
+    final p1 = projector.project(td.dimStart);
+    final p2 = projector.project(td.dimEnd);
+    final dist = (p2 - p1).distance;
+    if (dist < 10.0) return;
+
+    final dimPaint = Paint()
+      ..color = const Color(0xFF00ACC1)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    _drawDashedLine(canvas, p1, p2, dimPaint);
+
+    // Засечки на концах
+    final dir = (p2 - p1) / dist;
+    final n = Offset(-dir.dy, dir.dx) * 4.0;
+    canvas.drawLine(p1 - n, p1 + n, dimPaint);
+    canvas.drawLine(p2 - n, p2 + n, dimPaint);
+
+    // Плашка с расстоянием
+    final mid = (p1 + p2) / 2;
+    final text = '${td.distanceMm.round()}';
     final tp = TextPainter(
       text: TextSpan(
-        text: label,
-        style: TextStyle(
-          color: isSelected ? Colors.amber.shade900 : const Color(0xFF37474F),
-          fontSize: 11,
+        text: text,
+        style: const TextStyle(
+          color: Color(0xFF006064),
+          fontSize: 10.5,
           fontWeight: FontWeight.bold,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
+
+    final pillRect = Rect.fromCenter(center: mid, width: tp.width + 10, height: tp.height + 4);
+    final pillRRect = RRect.fromRectAndRadius(pillRect, const Radius.circular(4));
+    canvas.drawRRect(pillRRect, Paint()..color = const Color(0xE6E0F7FA)..style = PaintingStyle.fill);
+    canvas.drawRRect(pillRRect, Paint()..color = const Color(0xFF00ACC1)..strokeWidth = 1.0..style = PaintingStyle.stroke);
+    tp.paint(canvas, mid - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  void _drawGridBubble(
+    Canvas canvas, {
+    required Node3D worldCenter,
+    required Offset screenCenter,
+    required String label,
+    required bool is3d,
+    Offset? elbowOffset,
+    bool isSelected = false,
+  }) {
+    if (is3d && elbowOffset == null) {
+      // 3D лежачая марка в плоскости XY
+      final rWorld = math.max(250.0, 14.0 / projector.scale);
+      final path = Path();
+      const segments = 24;
+
+      for (int i = 0; i < segments; i++) {
+        final theta = (2 * math.pi * i) / segments;
+        final wx = worldCenter.x + rWorld * math.cos(theta);
+        final wy = worldCenter.y + rWorld * math.sin(theta);
+        final pt = projector.project(Node3D(id: 'b', x: wx, y: wy, z: worldCenter.z));
+        if (i == 0) {
+          path.moveTo(pt.dx, pt.dy);
+        } else {
+          path.lineTo(pt.dx, pt.dy);
+        }
+      }
+      path.close();
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = isSelected ? Colors.amber.shade50 : Colors.white
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = isSelected ? Colors.amber.shade800 : const Color(0xFF546E7A)
+          ..strokeWidth = isSelected ? 2.0 : 1.4
+          ..style = PaintingStyle.stroke,
+      );
+
+      // Векторы плоскости для аффинной ориентации текста
+      final c2d = projector.project(worldCenter);
+      final px100 = projector.project(Node3D(id: 'bx', x: worldCenter.x + 100, y: worldCenter.y, z: worldCenter.z));
+      final py100 = projector.project(Node3D(id: 'by', x: worldCenter.x, y: worldCenter.y + 100, z: worldCenter.z));
+      final vx = px100 - c2d;
+      final vy = py100 - c2d;
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: isSelected ? Colors.amber.shade900 : const Color(0xFF37474F),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final det = (vx.dx * vy.dy - vx.dy * vy.dx).abs();
+      if (det > 5.0) {
+        final lenX = vx.distance;
+        final lenY = vy.distance;
+        final ux = lenX > 1e-4 ? vx / lenX : const Offset(1, 0);
+        final uy = lenY > 1e-4 ? vy / lenY : const Offset(0, 1);
+
+        canvas.save();
+        canvas.translate(screenCenter.dx, screenCenter.dy);
+        final m = Matrix4(
+          ux.dx, ux.dy, 0, 0,
+          uy.dx, uy.dy, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1,
+        );
+        canvas.transform(m.storage);
+        tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+        canvas.restore();
+      } else {
+        tp.paint(canvas, screenCenter - Offset(tp.width / 2, tp.height / 2));
+      }
+    } else {
+      // 2D экранный кружок (billboarding)
+      const r = 13.0;
+      canvas.drawCircle(
+        screenCenter,
+        r,
+        Paint()
+          ..color = isSelected ? Colors.amber.shade50 : Colors.white
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        screenCenter,
+        r,
+        Paint()
+          ..color = isSelected ? Colors.amber.shade800 : const Color(0xFF546E7A)
+          ..strokeWidth = isSelected ? 2.0 : 1.4
+          ..style = PaintingStyle.stroke,
+      );
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: isSelected ? Colors.amber.shade900 : const Color(0xFF37474F),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, screenCenter - Offset(tp.width / 2, tp.height / 2));
+    }
+  }
+
+  void _drawGostCenterLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
+    final dist = (p2 - p1).distance;
+    if (dist <= 0) return;
+    final unit = (p2 - p1) / dist;
+
+    // ГОСТ 2.303 тип Ж (штрихпунктирная линия с двумя точками)
+    const pattern = [14.0, 3.5, 1.5, 2.5, 1.5, 3.5];
+    double current = 0.0;
+    int patIdx = 0;
+
+    while (current < dist) {
+      final step = pattern[patIdx % pattern.length];
+      final next = math.min(current + step, dist);
+      if (patIdx % 2 == 0) {
+        canvas.drawLine(p1 + unit * current, p1 + unit * next, paint);
+      }
+      current = next;
+      patIdx++;
+    }
   }
 
   void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
