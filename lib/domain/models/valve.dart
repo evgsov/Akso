@@ -76,6 +76,9 @@ class Valve {
   /// Заводской номер арматуры (индивидуальный номер изделия)
   final String? serialNumber;
 
+  /// Идентификатор пользовательского семейства арматуры (CustomValveDefinition)
+  final String? customDefinitionId;
+
   const Valve({
     required this.id,
     required this.segmentId,
@@ -93,6 +96,7 @@ class Valve {
     this.counterFlangeLengthMm,
     this.counterFlangeMaterial = 'Сталь 20',
     this.serialNumber,
+    this.customDefinitionId,
   });
 
   /// Является ли ответный фланец плоским (тип 01)
@@ -157,6 +161,8 @@ class Valve {
     String? counterFlangeMaterial,
     String? serialNumber,
     bool clearSerialNumber = false,
+    String? customDefinitionId,
+    bool clearCustomDefinition = false,
   }) {
     return Valve(
       id: id ?? this.id,
@@ -175,6 +181,7 @@ class Valve {
       counterFlangeLengthMm: counterFlangeLengthMm ?? this.counterFlangeLengthMm,
       counterFlangeMaterial: counterFlangeMaterial ?? this.counterFlangeMaterial,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
+      customDefinitionId: clearCustomDefinition ? null : (customDefinitionId ?? this.customDefinitionId),
     );
   }
 
@@ -195,24 +202,39 @@ class Valve {
         if (counterFlangeLengthMm != null) 'counterFlangeLengthMm': counterFlangeLengthMm,
         'counterFlangeMaterial': counterFlangeMaterial,
         if (serialNumber != null) 'serialNumber': serialNumber,
+        if (customDefinitionId != null) 'customDefinitionId': customDefinitionId,
       };
 
-  factory Valve.fromJson(Map<String, dynamic> json) => Valve(
-        id: json['id'] as String,
-        segmentId: json['segmentId'] as String,
-        ratio: (json['ratio'] as num).toDouble(),
-        valveType: ValveType.values[json['valveType'] as int? ?? 0],
-        name: json['name'] as String,
-        dn: json['dn'] as int,
-        lengthMm: (json['lengthMm'] as num).toDouble(),
-        handleAngleDeg: (json['handleAngleDeg'] as num?)?.toDouble() ?? 90.0,
-        isReversed: json['isReversed'] as bool? ?? false,
-        isFlanged: json['isFlanged'] as bool? ?? false,
-        flangePressurePn: json['flangePressurePn'] as int? ?? 16,
-        includeCounterFlanges: json['includeCounterFlanges'] as bool? ?? true,
-        counterFlangeType: json['counterFlangeType'] as String? ?? 'ГОСТ 33259-2015 тип 11',
-        counterFlangeLengthMm: (json['counterFlangeLengthMm'] as num?)?.toDouble(),
-        counterFlangeMaterial: json['counterFlangeMaterial'] as String? ?? 'Сталь 20',
-        serialNumber: json['serialNumber'] as String?,
+  factory Valve.fromJson(Map<String, dynamic> json) {
+    ValveType parsedType = ValveType.gateValve;
+    final vt = json['valveType'];
+    if (vt is int && vt >= 0 && vt < ValveType.values.length) {
+      parsedType = ValveType.values[vt];
+    } else if (vt is String) {
+      parsedType = ValveType.values.firstWhere(
+        (e) => e.name == vt,
+        orElse: () => ValveType.gateValve,
       );
+    }
+
+    return Valve(
+      id: json['id'] as String,
+      segmentId: json['segmentId'] as String,
+      ratio: (json['ratio'] as num).toDouble(),
+      valveType: parsedType,
+      name: json['name'] as String,
+      dn: json['dn'] as int,
+      lengthMm: (json['lengthMm'] as num).toDouble(),
+      handleAngleDeg: (json['handleAngleDeg'] as num?)?.toDouble() ?? 90.0,
+      isReversed: json['isReversed'] as bool? ?? false,
+      isFlanged: json['isFlanged'] as bool? ?? false,
+      flangePressurePn: json['flangePressurePn'] as int? ?? 16,
+      includeCounterFlanges: json['includeCounterFlanges'] as bool? ?? true,
+      counterFlangeType: json['counterFlangeType'] as String? ?? 'ГОСТ 33259-2015 тип 11',
+      counterFlangeLengthMm: (json['counterFlangeLengthMm'] as num?)?.toDouble(),
+      counterFlangeMaterial: json['counterFlangeMaterial'] as String? ?? 'Сталь 20',
+      serialNumber: json['serialNumber'] as String?,
+      customDefinitionId: json['customDefinitionId'] as String?,
+    );
+  }
 }

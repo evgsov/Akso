@@ -1,5 +1,6 @@
 import '../enums/projection_type.dart';
 import 'callout.dart';
+import 'custom_valve_definition.dart';
 import 'drawing_sheet.dart';
 import 'drawing_style_config.dart';
 import 'piping_network.dart';
@@ -25,6 +26,7 @@ class ProjectModel {
   final List<DrawingSheet> sheets;
   final String? activeSheetId;
   final DrawingStyleConfig styleConfig;
+  final Map<String, CustomValveDefinition> customValves;
 
   /// Активно ли пространство модели (бесконечный 3D-холст)
   bool get isModelSpaceActive => activeSheetId == null;
@@ -54,13 +56,15 @@ class ProjectModel {
     List<DrawingSheet>? sheets,
     this.activeSheetId,
     this.styleConfig = const DrawingStyleConfig(),
+    Map<String, CustomValveDefinition>? customValves,
   })  : creationDate = creationDate ?? DateTime.now().toIso8601String().substring(0, 10),
         lastModifiedDate = lastModifiedDate ?? (creationDate ?? DateTime.now().toIso8601String()),
         network = network ?? PipingNetwork(),
         calloutTemplates = calloutTemplates != null
             ? Map.from(calloutTemplates)
             : Map.from(defaultCalloutTemplates),
-        sheets = sheets != null ? List.from(sheets) : [];
+        sheets = sheets != null ? List.from(sheets) : [],
+        customValves = customValves != null ? Map.from(customValves) : {};
 
   ProjectModel copyWith({
     String? id,
@@ -83,6 +87,7 @@ class ProjectModel {
     String? activeSheetId,
     bool clearActiveSheet = false,
     DrawingStyleConfig? styleConfig,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -103,6 +108,7 @@ class ProjectModel {
       sheets: sheets ?? this.sheets,
       activeSheetId: clearActiveSheet ? null : (activeSheetId ?? this.activeSheetId),
       styleConfig: styleConfig ?? this.styleConfig,
+      customValves: customValves ?? this.customValves,
     );
   }
 
@@ -126,6 +132,8 @@ class ProjectModel {
         'sheets': sheets.map((s) => s.toJson()).toList(),
         'activeSheetId': activeSheetId,
         'styleConfig': styleConfig.toJson(),
+        if (customValves.isNotEmpty)
+          'customValves': customValves.map((k, v) => MapEntry(k, v.toJson())),
       };
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
@@ -165,6 +173,14 @@ class ProjectModel {
       styleConfig: json['styleConfig'] != null
           ? DrawingStyleConfig.fromJson(Map<String, dynamic>.from(json['styleConfig'] as Map))
           : const DrawingStyleConfig(),
+      customValves: json['customValves'] != null
+          ? (json['customValves'] as Map).map(
+              (k, v) => MapEntry(
+                k.toString(),
+                CustomValveDefinition.fromJson(Map<String, dynamic>.from(v as Map)),
+              ),
+            )
+          : null,
     );
   }
 }
