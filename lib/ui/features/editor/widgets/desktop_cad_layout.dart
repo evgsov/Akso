@@ -30,6 +30,8 @@ import 'riser_sectioning_dialog.dart';
 import 'sheet_tab_bar.dart';
 import 'sheet_toolbar.dart';
 import '../../../../data/services/pdf_export_service.dart';
+import '../../../../domain/models/construction_axis.dart';
+import '../../../../domain/services/grid_system_engine.dart';
 
 class DesktopCadLayout extends StatelessWidget {
   final PipingInputController controller;
@@ -210,6 +212,73 @@ class DesktopCadLayout extends StatelessWidget {
       if (shouldProceed != true) return;
     }
     controller.newProject(force: true);
+  }
+
+  void _showOffsetAxisDialog(BuildContext context, PipingInputController controller, ConstructionAxis axis) {
+    final distController = TextEditingController(text: '3000');
+    final labelController = TextEditingController(text: GridSystemEngine.generateNextLabel(axis.label));
+    bool isPositive = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Создать параллельную ось (Offset)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: distController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Расстояние смещения (мм)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: labelController,
+                decoration: const InputDecoration(
+                  labelText: 'Марка новой оси',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('+ Смещение')),
+                  ButtonSegment(value: false, label: Text('- Смещение')),
+                ],
+                selected: {isPositive},
+                onSelectionChanged: (set) {
+                  setState(() => isPositive = set.first);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final dist = double.tryParse(distController.text.trim()) ?? 3000.0;
+                final newLabel = labelController.text.trim();
+                final newAxis = controller.createOffsetAxis(axis.id, dist, positiveSide: isPositive);
+                if (newLabel.isNotEmpty) {
+                  controller.updateConstructionAxis(newAxis.copyWith(label: newLabel));
+                }
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Создать'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showRecentProjectsDialog(BuildContext context) async {
@@ -1735,7 +1804,24 @@ class DesktopCadLayout extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ID: ${axis.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('ID: ${axis.id}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                        IconButton(
+                          icon: Icon(
+                            axis.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                            size: 16,
+                            color: axis.isPinned ? Colors.red : Colors.grey,
+                          ),
+                          tooltip: axis.isPinned ? 'Разблокировать (Unpin)' : 'Заблокировать (Pin)',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            controller.updateConstructionAxis(axis.copyWith(isPinned: !axis.isPinned));
+                          },
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1748,13 +1834,80 @@ class DesktopCadLayout extends StatelessWidget {
                       ],
                     ),
                     if (axis.isBuildingGrid) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Марка:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                          Text(axis.label.isEmpty ? '—' : axis.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SizedBox(
+                              height: 28,
+                              child: TextFormField(
+                                key: ValueKey('axis_label_${axis.id}_${axis.label}'),
+                                initialValue: axis.label,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  border: OutlineInputBorder(),
+                                ),
+                                onFieldSubmitted: (val) {
+                                  controller.updateConstructionAxis(axis.copyWith(label: val.trim()));
+                                },
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward, size: 16),
+                            tooltip: 'Следующая марка по ГОСТ',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              final next = GridSystemEngine.generateNextLabel(axis.label);
+                              controller.updateConstructionAxis(axis.copyWith(label: next));
+                            },
+                          ),
                         ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Text('Кружки марок:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              title: const Text('В начале', style: TextStyle(fontSize: 11)),
+                              value: axis.showStartBubble,
+                              onChanged: (val) {
+                                controller.toggleAxisBubbleVisibility(axis.id, isStart: true);
+                              },
+                            ),
+                          ),
+                          Expanded(
+                            child: CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              title: const Text('В конце', style: TextStyle(fontSize: 11)),
+                              value: axis.showEndBubble,
+                              onChanged: (val) {
+                                controller.toggleAxisBubbleVisibility(axis.id, isStart: false);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SwitchListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        title: const Text('3D в плоскости', style: TextStyle(fontSize: 11)),
+                        subtitle: const Text('Ориентация в плоскости XY', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                        value: axis.is3dPlaneOriented,
+                        onChanged: (val) {
+                          controller.updateConstructionAxis(axis.copyWith(is3dPlaneOriented: val));
+                        },
                       ),
                     ],
                     const SizedBox(height: 4),
@@ -1765,12 +1918,51 @@ class DesktopCadLayout extends StatelessWidget {
                         Text('${lengthMm.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                       ],
                     ),
+                    if (axis.elevationZ != 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Отметка Z:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          Text('${axis.elevationZ.round()} мм', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       'P1: (${axis.startPoint.x.round()}, ${axis.startPoint.y.round()})\nP2: (${axis.endPoint.x.round()}, ${axis.endPoint.y.round()})',
                       style: const TextStyle(fontSize: 10, color: Colors.grey),
                     ),
-                    const SizedBox(height: 12),
+                    if (axis.startElbowOffset != null || axis.endElbowOffset != null) ...[
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.straighten, size: 14),
+                          label: const Text('Сбросить изломы марки', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            controller.clearAxisElbowOffset(axis.id, isStart: true);
+                            controller.clearAxisElbowOffset(axis.id, isStart: false);
+                          },
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.copy, size: 14),
+                        label: const Text('Создать смещение (Offset)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => _showOffsetAxisDialog(context, controller, axis),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(

@@ -819,6 +819,12 @@ class PipingInputController extends ChangeNotifier {
     return newAxis;
   }
 
+  void updateConstructionAxis(ConstructionAxis axis) {
+    network.axes[axis.id] = axis;
+    history.recordState(network);
+    notifyListeners();
+  }
+
   void refresh() {
     notifyListeners();
   }
