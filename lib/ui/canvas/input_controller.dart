@@ -27,6 +27,7 @@ import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/callout_layout_engine.dart';
 import '../../domain/services/fitting_detector.dart';
 import '../../domain/services/segment_positioning_service.dart';
+import '../../domain/services/grid_system_engine.dart';
 import '../../domain/enums/report_type.dart';
 import '../../domain/enums/sheet_format_type.dart';
 import '../../domain/enums/viewport_layout_preset.dart';
@@ -370,6 +371,8 @@ class PipingInputController extends ChangeNotifier {
   // Grip Mode для строительных осей
   String? activeGripAxisId;
   bool? isGripAxisStart;
+  String? activeElbowAxisId;
+  bool? isElbowAxisStart;
 
   // Модификаторы для рамочного выбора
   bool get _boxSelectIsShift => selectionController.boxSelectIsShift;
@@ -717,6 +720,105 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Revit-Style Coordinate Grid Controls ---
+
+  void toggleAxisBubbleVisibility(String axisId, {required bool isStart}) {
+    final axis = network.axes[axisId];
+    if (axis == null) return;
+    network.axes[axisId] = isStart
+        ? axis.copyWith(showStartBubble: !axis.showStartBubble)
+        : axis.copyWith(showEndBubble: !axis.showEndBubble);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  void toggleAxisAlignmentLock(String axisId, {required bool isStart}) {
+    final axis = network.axes[axisId];
+    if (axis == null) return;
+    network.axes[axisId] = isStart
+        ? axis.copyWith(isStartLocked: !axis.isStartLocked)
+        : axis.copyWith(isEndLocked: !axis.isEndLocked);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  void startAxisGripDrag(String axisId, {required bool isStart}) {
+    activeGripAxisId = axisId;
+    isGripAxisStart = isStart;
+    notifyListeners();
+  }
+
+  void updateAxisGripDrag(Node3D newPoint) {
+    if (activeGripAxisId == null || isGripAxisStart == null) return;
+    final updated = GridSystemEngine.stretchChainedEndpoints(
+      draggedAxisId: activeGripAxisId!,
+      isStart: isGripAxisStart!,
+      newPoint: newPoint,
+      axes: network.axes,
+    );
+    network.axes.addAll(updated);
+    notifyListeners();
+  }
+
+  void endAxisGripDrag() {
+    if (activeGripAxisId != null) {
+      history.recordState(network);
+      activeGripAxisId = null;
+      isGripAxisStart = null;
+      notifyListeners();
+    }
+  }
+
+  void applyTemporaryDimension(String targetAxisId, String referenceAxisId, double targetDistanceMm) {
+    final target = network.axes[targetAxisId];
+    final reference = network.axes[referenceAxisId];
+    if (target == null || reference == null) return;
+    network.axes[targetAxisId] = GridSystemEngine.moveAxisByDistance(
+      axisToMove: target,
+      referenceAxis: reference,
+      targetDistanceMm: targetDistanceMm,
+    );
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  void setAxisElbowOffset(String axisId, {required bool isStart, required Offset offset}) {
+    final axis = network.axes[axisId];
+    if (axis == null) return;
+    network.axes[axisId] = isStart
+        ? axis.copyWith(startElbowOffset: offset)
+        : axis.copyWith(endElbowOffset: offset);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  void clearAxisElbowOffset(String axisId, {required bool isStart}) {
+    final axis = network.axes[axisId];
+    if (axis == null) return;
+    network.axes[axisId] = isStart
+        ? axis.copyWith(clearStartElbow: true)
+        : axis.copyWith(clearEndElbow: true);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  ConstructionAxis createOffsetAxis(String sourceAxisId, double offsetDistanceMm, {bool positiveSide = true}) {
+    final source = network.axes[sourceAxisId];
+    if (source == null) {
+      throw ArgumentError('Axis $sourceAxisId not found');
+    }
+    final newAxis = GridSystemEngine.createOffsetAxis(
+      sourceAxis: source,
+      offsetDistanceMm: offsetDistanceMm,
+      positiveSide: positiveSide,
+    );
+    network.axes[newAxis.id] = newAxis;
+    selectedAxisId = newAxis.id;
+    history.recordState(network);
+    notifyListeners();
+    return newAxis;
+  }
+
   void refresh() {
     notifyListeners();
   }
@@ -1014,17 +1116,15 @@ class PipingInputController extends ChangeNotifier {
       final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
           ? currentSnapResult!.worldPoint
           : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
-      final axis = network.axes[activeGripAxisId!];
-      if (axis != null) {
-        if (isGripAxisStart == true) {
-          network.axes[activeGripAxisId!] = axis.copyWith(startPoint: snapWorld);
-        } else {
-          network.axes[activeGripAxisId!] = axis.copyWith(endPoint: snapWorld);
-        }
-        history.recordState(network);
-      }
-      activeGripAxisId = null;
-      isGripAxisStart = null;
+      updateAxisGripDrag(snapWorld);
+      endAxisGripDrag();
+      return;
+    }
+
+    if (activeElbowAxisId != null) {
+      history.recordState(network);
+      activeElbowAxisId = null;
+      isElbowAxisStart = null;
       notifyListeners();
       return;
     }
@@ -1227,15 +1327,91 @@ class PipingInputController extends ChangeNotifier {
           final axis = network.axes[selectedAxisId!]!;
           final p1 = projector.project(axis.startPoint);
           final p2 = projector.project(axis.endPoint);
-          if ((screenPos - p1).distance <= 14.0) {
-            activeGripAxisId = selectedAxisId;
-            isGripAxisStart = true;
-            notifyListeners();
+          final d = p2 - p1;
+          final len = d.distance;
+          final dir = len > 1e-4 ? d / len : const Offset(1, 0);
+          final normal = Offset(-dir.dy, dir.dx);
+
+          final effectiveP1 = axis.startElbowOffset != null ? (p1 + axis.startElbowOffset!) : p1;
+          final effectiveP2 = axis.endElbowOffset != null ? (p2 + axis.endElbowOffset!) : p2;
+
+          // 1. Чекбоксы видимости марок
+          final startCbPos = effectiveP1 - dir * 18.0;
+          if ((screenPos - startCbPos).distance <= 10.0) {
+            toggleAxisBubbleVisibility(selectedAxisId!, isStart: true);
             break;
-          } else if ((screenPos - p2).distance <= 14.0) {
-            activeGripAxisId = selectedAxisId;
-            isGripAxisStart = false;
-            notifyListeners();
+          }
+          final endCbPos = effectiveP2 + dir * 18.0;
+          if ((screenPos - endCbPos).distance <= 10.0) {
+            toggleAxisBubbleVisibility(selectedAxisId!, isStart: false);
+            break;
+          }
+
+          // 2. Замочки выравнивания
+          final chains = GridSystemEngine.findAlignmentChains(network.axes);
+          if (chains.any((c) => c.isStart && c.axisIds.contains(axis.id))) {
+            final startLockPos = effectiveP1 + normal * 18.0;
+            if ((screenPos - startLockPos).distance <= 10.0) {
+              toggleAxisAlignmentLock(selectedAxisId!, isStart: true);
+              break;
+            }
+          }
+          if (chains.any((c) => !c.isStart && c.axisIds.contains(axis.id))) {
+            final endLockPos = effectiveP2 + normal * 18.0;
+            if ((screenPos - endLockPos).distance <= 10.0) {
+              toggleAxisAlignmentLock(selectedAxisId!, isStart: false);
+              break;
+            }
+          }
+
+          // 3. Ручки излома марки (Elbow break)
+          if (axis.showStartBubble) {
+            final startElbowPos = effectiveP1 - normal * 16.0;
+            if ((screenPos - startElbowPos).distance <= 10.0) {
+              if (axis.startElbowOffset != null) {
+                clearAxisElbowOffset(selectedAxisId!, isStart: true);
+              } else {
+                activeElbowAxisId = selectedAxisId;
+                isElbowAxisStart = true;
+                notifyListeners();
+              }
+              break;
+            }
+          }
+          if (axis.showEndBubble) {
+            final endElbowPos = effectiveP2 - normal * 16.0;
+            if ((screenPos - endElbowPos).distance <= 10.0) {
+              if (axis.endElbowOffset != null) {
+                clearAxisElbowOffset(selectedAxisId!, isStart: false);
+              } else {
+                activeElbowAxisId = selectedAxisId;
+                isElbowAxisStart = false;
+                notifyListeners();
+              }
+              break;
+            }
+          }
+
+          // 4. Временные размеры
+          final tempDims = GridSystemEngine.calculateTemporaryDimensions(selectedAxisId!, network.axes);
+          bool hitTempDim = false;
+          for (final td in tempDims) {
+            final d1 = projector.project(td.dimStart);
+            final d2 = projector.project(td.dimEnd);
+            final mid = (d1 + d2) / 2;
+            if ((screenPos - mid).distance <= 16.0) {
+              hitTempDim = true;
+              break;
+            }
+          }
+          if (hitTempDim) break;
+
+          // 5. Концевые ручки растяжения
+          if ((screenPos - effectiveP1).distance <= 14.0) {
+            startAxisGripDrag(selectedAxisId!, isStart: true);
+            break;
+          } else if ((screenPos - effectiveP2).distance <= 14.0) {
+            startAxisGripDrag(selectedAxisId!, isStart: false);
             break;
           }
         }
@@ -2069,14 +2245,18 @@ class PipingInputController extends ChangeNotifier {
       final snapWorld = (isSnapEnabled && currentSnapResult != null && currentSnapResult!.type != SnapType.none)
           ? currentSnapResult!.worldPoint
           : _snapToGrid(projector.unproject(screenPos, currentElevationZ));
-      final axis = network.axes[activeGripAxisId!];
+      updateAxisGripDrag(snapWorld);
+      return;
+    }
+
+    // Активное смещение излома марки оси (Elbow Drag)
+    if (activeElbowAxisId != null && isElbowAxisStart != null) {
+      final axis = network.axes[activeElbowAxisId!];
       if (axis != null) {
-        if (isGripAxisStart == true) {
-          network.axes[activeGripAxisId!] = axis.copyWith(startPoint: snapWorld);
-        } else {
-          network.axes[activeGripAxisId!] = axis.copyWith(endPoint: snapWorld);
-        }
-        notifyListeners();
+        final basePoint = isElbowAxisStart == true ? axis.startPoint : axis.endPoint;
+        final base2d = projector.project(basePoint);
+        final offset = screenPos - base2d;
+        setAxisElbowOffset(activeElbowAxisId!, isStart: isElbowAxisStart == true, offset: offset);
       }
       return;
     }
