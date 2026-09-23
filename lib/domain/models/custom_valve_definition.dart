@@ -10,7 +10,20 @@ enum ValveWingFillStyle {
   hatched,
 
   /// Перекрестная сетчатая штриховка
-  crossHatched,
+  crossHatched;
+
+  String get displayName {
+    switch (this) {
+      case ValveWingFillStyle.outline:
+        return 'Контур';
+      case ValveWingFillStyle.solid:
+        return 'Сплошная заливка';
+      case ValveWingFillStyle.hatched:
+        return 'Штриховка 45°';
+      case ValveWingFillStyle.crossHatched:
+        return 'Сетка (перекрестная)';
+    }
+  }
 }
 
 /// Внутренний центральный разделитель / знак затвора
@@ -31,7 +44,24 @@ enum ValveDividerType {
   circle,
 
   /// Наклонное седло клапана
-  slantedDisc,
+  slantedDisc;
+
+  String get displayName {
+    switch (this) {
+      case ValveDividerType.none:
+        return 'Без разделителя';
+      case ValveDividerType.line:
+        return 'Прямая линия';
+      case ValveDividerType.zigzag:
+        return 'Зигзаг / вибродемпфер';
+      case ValveDividerType.arrow:
+        return 'Стрелка потока';
+      case ValveDividerType.circle:
+        return 'Круг (шар)';
+      case ValveDividerType.slantedDisc:
+        return 'Наклонный диск';
+    }
+  }
 }
 
 /// Тип органа управления / штока в 2D УГО
@@ -52,8 +82,26 @@ enum ValveStemSymbolType {
   diaphragm,
 
   /// Пружинный колпак предохранительного клапана
-  spring,
+  spring;
+
+  String get displayName {
+    switch (this) {
+      case ValveStemSymbolType.none:
+        return 'Без привода';
+      case ValveStemSymbolType.handwheel:
+        return 'Маховик / штурвал';
+      case ValveStemSymbolType.lever:
+        return 'Рычаг / рукоятка';
+      case ValveStemSymbolType.boxWithText:
+        return 'Коробка с текстом (Э, АВ)';
+      case ValveStemSymbolType.diaphragm:
+        return 'Мембрана (МИМ)';
+      case ValveStemSymbolType.spring:
+        return 'Пружина';
+    }
+  }
 }
+
 
 /// Конфигурация 2D условного графического обозначения (УГО) арматуры
 class ValveSymbolConfig {
@@ -132,7 +180,20 @@ enum Valve3dBodyShape {
   bellows,
 
   /// Сферический корпус
-  sphere,
+  sphere;
+
+  String get displayName {
+    switch (this) {
+      case Valve3dBodyShape.doubleCones:
+        return 'Двойные конусы';
+      case Valve3dBodyShape.cylinder:
+        return 'Цилиндр';
+      case Valve3dBodyShape.bellows:
+        return 'Сильфон (гофра)';
+      case Valve3dBodyShape.sphere:
+        return 'Сфера';
+    }
+  }
 }
 
 /// Тип привода / органа управления в 3D
@@ -153,8 +214,26 @@ enum Valve3dActuatorType {
   diaphragm,
 
   /// Вертикальный цилиндрический стакан пружины
-  springBonnet,
+  springBonnet;
+
+  String get displayName {
+    switch (this) {
+      case Valve3dActuatorType.none:
+        return 'Без привода';
+      case Valve3dActuatorType.handwheel:
+        return 'Штурвал';
+      case Valve3dActuatorType.lever:
+        return 'Рычаг';
+      case Valve3dActuatorType.actuatorBox:
+        return 'Коробка электропривода';
+      case Valve3dActuatorType.diaphragm:
+        return 'Мембранная камера';
+      case Valve3dActuatorType.springBonnet:
+        return 'Стакан пружины';
+    }
+  }
 }
+
 
 /// Конфигурация пространственной 3D геометрии арматуры
 class ValveGeometry3dConfig {

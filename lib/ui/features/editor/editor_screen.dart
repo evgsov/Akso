@@ -544,6 +544,7 @@ class _EditorScreenState extends State<EditorScreen> {
                           acquiredPoints: controller.tracingController.acquiredPoints,
                           isZLocked: controller.draftingSettings.isZLocked,
                           showZPlaneGrid: controller.draftingSettings.showZPlaneGrid,
+                          customValves: controller.customValves,
                         )
                       : SheetCanvasPainter(
                           sheet: controller.activeSheet!,
@@ -556,6 +557,7 @@ class _EditorScreenState extends State<EditorScreen> {
                           activeGrip: controller.activeViewportGrip,
                           projectionType: controller.projector.projectionType,
                           styleConfig: controller.styleConfig,
+                          customValves: controller.customValves,
                           isVolumeMode: controller.isVolumeMode,
                           isCenterlineMode: controller.isCenterlineMode,
                           showWelds: true,

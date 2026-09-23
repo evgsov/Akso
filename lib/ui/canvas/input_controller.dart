@@ -22,6 +22,7 @@ import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/valve.dart';
+import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/models/project_model.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/callout_layout_engine.dart';
@@ -6043,6 +6044,12 @@ class PipingInputController extends ChangeNotifier {
   List<DrawingSheet> get sheets => currentProject.sheets;
   DrawingSheet? get activeSheet => currentProject.activeSheet;
   DrawingStyleConfig get styleConfig => currentProject.styleConfig;
+  Map<String, CustomValveDefinition> get customValves => currentProject.customValves;
+
+  void addOrUpdateCustomValve(CustomValveDefinition definition) {
+    currentProject.customValves[definition.id] = definition;
+    notifyListeners();
+  }
 
   Rect? getActiveSheetPaperRect() {
     final sheet = activeSheet;

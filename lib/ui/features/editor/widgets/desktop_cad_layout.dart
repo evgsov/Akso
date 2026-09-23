@@ -13,6 +13,8 @@ import '../../../canvas/input_controller.dart';
 import '../../../../domain/services/segment_positioning_service.dart';
 import 'callout_manager_panel.dart';
 import 'custom_pipe_dimension_dialog.dart';
+import 'custom_valve_catalog_dialog.dart';
+import '../../../../domain/services/custom_valve_catalog.dart';
 import 'dxf_export_dialog.dart';
 import 'elevation_panel.dart';
 import 'fitting_catalog_dialog.dart';
@@ -4206,6 +4208,96 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 6),
+
+        // Семейство / УГО (Кастомное семейство арматуры)
+        const Text('Семейство / УГО:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 3),
+        Builder(
+          builder: (context) {
+            final customValves = widget.controller.customValves;
+            final customId = valve.customDefinitionId;
+            final customDef = customId != null
+                ? (customValves[customId] ?? CustomValveCatalog.instance.getById(customId))
+                : null;
+            final isCustom = customDef != null;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isCustom ? Colors.indigo.shade50 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isCustom ? Colors.indigo.shade200 : Colors.grey.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isCustom ? Icons.auto_awesome : Icons.tune,
+                    size: 16,
+                    color: isCustom ? Colors.indigo : Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      isCustom ? customDef.name : 'Стандартное ГОСТ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isCustom ? FontWeight.bold : FontWeight.normal,
+                        color: isCustom ? Colors.indigo.shade900 : Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isCustom)
+                    InkWell(
+                      onTap: () {
+                        widget.controller.network.updateValve(
+                          valve.id,
+                          valve.copyWith(clearCustomDefinition: true),
+                        );
+                        widget.controller.history.recordState(widget.controller.network);
+                        widget.controller.refresh();
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Icon(Icons.close, size: 14, color: Colors.grey),
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () async {
+                      final selected = await CustomValveCatalogDialog.show(
+                        context,
+                        projectValves: widget.controller.customValves,
+                      );
+                      if (selected != null) {
+                        widget.controller.addOrUpdateCustomValve(selected);
+                        widget.controller.network.updateValve(
+                          valve.id,
+                          valve.copyWith(customDefinitionId: selected.id),
+                        );
+                        widget.controller.history.recordState(widget.controller.network);
+                        widget.controller.refresh();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('Каталог', style: TextStyle(fontSize: 10, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
         const SizedBox(height: 6),
 

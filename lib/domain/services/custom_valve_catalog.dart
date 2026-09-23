@@ -13,11 +13,15 @@ class CustomValveCatalog {
   static const String _fileName = 'custom_valves.json';
   static CustomValveCatalog instance = CustomValveCatalog();
 
-  final Future<Directory> Function()? _getStorageDir;
+  Future<Directory> Function()? _getStorageDir;
 
   CustomValveCatalog({
     Future<Directory> Function()? getStorageDir,
   }) : _getStorageDir = getStorageDir;
+
+  void setStorageDir(Future<Directory> Function()? getStorageDir) {
+    _getStorageDir = getStorageDir;
+  }
 
   static final List<CustomValveDefinition> _builtInPresets = [
     const CustomValveDefinition(
@@ -134,13 +138,17 @@ class CustomValveCatalog {
         dir = await getDir();
       } else {
         try {
-          dir = await getApplicationSupportDirectory();
+          dir = await getApplicationSupportDirectory().timeout(const Duration(milliseconds: 300));
         } catch (_) {
-          dir = await getApplicationDocumentsDirectory();
+          try {
+            dir = await getApplicationDocumentsDirectory().timeout(const Duration(milliseconds: 300));
+          } catch (_) {
+            return null;
+          }
         }
       }
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
       }
       return File('${dir.path}${Platform.pathSeparator}$_fileName');
     } catch (_) {
@@ -150,12 +158,12 @@ class CustomValveCatalog {
 
   Future<void> load() async {
     final file = await _getConfigFile();
-    if (file == null || !await file.exists()) {
+    if (file == null || !file.existsSync()) {
       return;
     }
 
     try {
-      final content = await file.readAsString();
+      final content = file.readAsStringSync();
       if (content.trim().isEmpty) return;
 
       final decoded = jsonDecode(content);
@@ -180,7 +188,7 @@ class CustomValveCatalog {
     try {
       final list = _userDefinitions.values.map((d) => d.toJson()).toList();
       final content = const JsonEncoder.withIndent('  ').convert(list);
-      await file.writeAsString(content);
+      file.writeAsStringSync(content);
     } catch (e) {
       debugPrint('CustomValveCatalog persist error: $e');
     }

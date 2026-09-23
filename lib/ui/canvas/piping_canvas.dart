@@ -7,6 +7,7 @@ import '../../domain/models/node_3d.dart';
 
 import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/services/grid_system_engine.dart';
 import 'painters/grid_painter.dart';
 import 'painters/pipe_painter.dart';
@@ -75,6 +76,7 @@ class PipingCanvasPainter extends CustomPainter {
   final List<AcquiredTrackingPoint>? acquiredPoints;
   final bool isZLocked;
   final bool showZPlaneGrid;
+  final Map<String, CustomValveDefinition>? customValves;
 
   PipingCanvasPainter({
     required this.network,
@@ -116,6 +118,7 @@ class PipingCanvasPainter extends CustomPainter {
     this.acquiredPoints,
     this.isZLocked = false,
     this.showZPlaneGrid = false,
+    this.customValves,
   });
 
   @override
@@ -168,6 +171,9 @@ class PipingCanvasPainter extends CustomPainter {
       selectedSpoolIds,
       isZLocked,
       currentElevationZ,
+      null,
+      null,
+      customValves,
     );
 
     // 4. Отрисовка арматуры
@@ -177,6 +183,7 @@ class PipingCanvasPainter extends CustomPainter {
       network,
       isVolumeMode: isVolumeMode,
       selectedValveId: selectedValveId,
+      customValves: customValves,
     );
 
     // 4.1. Отрисовка опор и подвесок
