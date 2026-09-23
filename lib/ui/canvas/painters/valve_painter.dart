@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/custom_valve_definition.dart';
+import '../../../domain/services/custom_valve_catalog.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 
 class ValvePainter {
@@ -15,6 +17,7 @@ class ValvePainter {
     String? selectedValveId,
     DrawingStyleConfig? styleConfig,
     double? sheetZoom,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     // В объемном 3D-режиме арматура визуализируется твердотельными телами в Solid3dEngine
     if (isVolumeMode) return;
@@ -29,11 +32,17 @@ class ValvePainter {
       final sys = network.systems[seg.systemId];
       final color = sys != null ? Color(sys.colorValue) : Colors.black87;
 
+      final customDef = valve.customDefinitionId != null
+          ? (customValves?[valve.customDefinitionId!] ??
+              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
+          : null;
+
       final wireSegments = Element3dGeometry.generateValveWireframe(
         valve,
         start,
         end,
         pipeOuterDiameter: seg.outerDiameterMm,
+        customDefinition: customDef,
       );
 
       final isSelected = valve.id == selectedValveId;

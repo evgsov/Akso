@@ -14,6 +14,7 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/piping_system.dart';
 import '../../domain/models/title_block_data.dart';
 import '../../domain/models/valve.dart';
+import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/models/weld_joint.dart';
 import '../../domain/models/fitting.dart';
 import '../../domain/services/viewport_transform_service.dart';
@@ -39,6 +40,7 @@ class SheetCanvasPainter extends CustomPainter {
   final String? activeGrip;
   final ProjectionType projectionType;
   final DrawingStyleConfig styleConfig;
+  final Map<String, CustomValveDefinition>? customValves;
 
   // Полноценные свойства отображения модели внутри видового экрана
   final bool isVolumeMode;
@@ -76,6 +78,7 @@ class SheetCanvasPainter extends CustomPainter {
     this.activeGrip,
     this.projectionType = ProjectionType.gostFrontal45,
     this.styleConfig = const DrawingStyleConfig(),
+    this.customValves,
     this.isVolumeMode = false,
     this.isCenterlineMode = false,
     this.showWelds = true,
@@ -955,6 +958,7 @@ class SheetCanvasPainter extends CustomPainter {
       selectedValveId: isViewportFocused ? selectedValveId : null,
       styleConfig: styleConfig,
       sheetZoom: sheetZoom,
+      customValves: customValves,
     );
 
     // 6. Отрисовка опор и подвесок
@@ -1151,6 +1155,7 @@ class SheetCanvasPainter extends CustomPainter {
       isVolumeMode: false,
       styleConfig: styleConfig,
       sheetZoom: sheetZoom,
+      customValves: customValves,
     );
 
     SupportPainter.paint(

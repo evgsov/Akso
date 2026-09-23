@@ -9,6 +9,7 @@ import '../../../domain/models/node_3d.dart';
 import '../../../domain/models/pipe_segment.dart';
 import '../../../domain/models/pipe_spool.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/custom_valve_definition.dart';
 import '../../../domain/enums/valve_type.dart';
 import '../smart_callout.dart';
 import 'solid_3d_engine.dart';
@@ -32,6 +33,7 @@ class PipePainter {
     double activeElevationZ = 0.0,
     DrawingStyleConfig? styleConfig,
     double? sheetZoom,
+    Map<String, CustomValveDefinition>? customValves,
   ]) {
     if (isVolumeMode) {
       // Честная 3D твердотельная модель с полигональными цилиндрами, Z-сортировкой и направленным освещением
@@ -41,6 +43,7 @@ class PipePainter {
         network,
         selectedSegmentId: selectedSegmentId,
         selectedSegmentIds: selectedSegmentIds,
+        customValves: customValves,
       );
 
       // Отрисовка бейджей выбранных труб и аннотаций

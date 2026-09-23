@@ -9,6 +9,7 @@ import '../models/pipe_support.dart';
 import '../models/piping_network.dart';
 import '../models/valve.dart';
 import '../models/weld_joint.dart';
+import '../models/custom_valve_definition.dart';
 
 /// Отрезок 3D пространственной каркасной линии (Wireframe) с указанием слоя
 class WireframeSegment3D {
@@ -98,6 +99,7 @@ class Element3dGeometry {
     Node3D start,
     Node3D end, {
     double? pipeOuterDiameter,
+    CustomValveDefinition? customDefinition,
   }) {
     final lines = <WireframeSegment3D>[];
     final angleRad = valve.handleAngleDeg * math.pi / 180.0;
@@ -140,60 +142,109 @@ class Element3dGeometry {
       ));
     }
 
-    // Образующие конусов корпуса (8 генераторов от колец к центру)
-    for (int i = 0; i < segments; i += (segments ~/ 8)) {
-      lines.add(WireframeSegment3D(
-        inPts[i].x, inPts[i].y, inPts[i].z,
-        center.x, center.y, center.z,
-        layer: layerValves,
-      ));
-      lines.add(WireframeSegment3D(
-        outPts[i].x, outPts[i].y, outPts[i].z,
-        center.x, center.y, center.z,
-        layer: layerValves,
-      ));
+    final bodyShape = customDefinition?.geometry3d.bodyShape ?? Valve3dBodyShape.doubleCones;
+    if (bodyShape == Valve3dBodyShape.bellows) {
+      // 3 гофрированных кольца сильфона
+      for (int b = 1; b <= 3; b++) {
+        final bCenter = cIn + (cOut - cIn) * (b / 4.0);
+        final bRadius = (b % 2 == 1) ? r * 1.35 : r * 0.95;
+        final bPts = <Vector3D>[];
+        for (int i = 0; i < segments; i++) {
+          final theta = 2.0 * math.pi * i / segments;
+          final offset = basis.u * (bRadius * math.cos(theta)) + basis.v * (bRadius * math.sin(theta));
+          bPts.add(bCenter + offset);
+        }
+        for (int i = 0; i < segments; i++) {
+          final next = (i + 1) % segments;
+          lines.add(WireframeSegment3D(
+            bPts[i].x, bPts[i].y, bPts[i].z,
+            bPts[next].x, bPts[next].y, bPts[next].z,
+            layer: layerValves,
+          ));
+        }
+      }
+    } else {
+      // Образующие конусов корпуса (8 генераторов от колец к центру)
+      for (int i = 0; i < segments; i += (segments ~/ 8)) {
+        lines.add(WireframeSegment3D(
+          inPts[i].x, inPts[i].y, inPts[i].z,
+          center.x, center.y, center.z,
+          layer: layerValves,
+        ));
+        lines.add(WireframeSegment3D(
+          outPts[i].x, outPts[i].y, outPts[i].z,
+          center.x, center.y, center.z,
+          layer: layerValves,
+        ));
+      }
     }
 
-    final hasStem = valve.valveType != ValveType.checkValve &&
-        valve.valveType != ValveType.strainer &&
-        valve.valveType != ValveType.drainValve;
+    final stemRatio = customDefinition?.geometry3d.stemHeightRatio ?? 2.2;
+    final stemHeight = math.max(40.0, r * stemRatio);
+    final hwCenter = center + basis.u * stemHeight;
+
+    final hasStem = customDefinition != null
+        ? customDefinition.geometry3d.actuatorType != Valve3dActuatorType.none
+        : (valve.valveType != ValveType.checkValve &&
+            valve.valveType != ValveType.strainer &&
+            valve.valveType != ValveType.drainValve);
 
     if (hasStem) {
       // Шпиндель (шток)
-      final stemHeight = math.max(40.0, r * 2.2);
-      final hwCenter = center + basis.u * stemHeight;
       lines.add(WireframeSegment3D(
         center.x, center.y, center.z,
         hwCenter.x, hwCenter.y, hwCenter.z,
         layer: layerValves,
       ));
 
-      // Штурвал / маховик (окружность в плоскости T, V)
-      final hwRadius = math.max(25.0, r * 1.4);
-      final hwPts = <Vector3D>[];
-      for (int i = 0; i < segments; i++) {
-        final theta = 2.0 * math.pi * i / segments;
-        final offset = basis.t * (hwRadius * math.cos(theta)) + basis.v * (hwRadius * math.sin(theta));
-        hwPts.add(hwCenter + offset);
-      }
-      for (int i = 0; i < segments; i++) {
-        final next = (i + 1) % segments;
-        lines.add(WireframeSegment3D(
-          hwPts[i].x, hwPts[i].y, hwPts[i].z,
-          hwPts[next].x, hwPts[next].y, hwPts[next].z,
-          layer: layerValves,
-        ));
-      }
+      if (customDefinition != null &&
+          customDefinition.geometry3d.actuatorType == Valve3dActuatorType.actuatorBox) {
+        // Прямоугольная коробка привода
+        final bSize = r * customDefinition.geometry3d.actuatorSizeRatio;
+        final bx = basis.t * (bSize * 0.5);
+        final by = basis.v * (bSize * 0.5);
+        final bz = basis.u * (bSize * 0.5);
+        final p000 = hwCenter - bx - by - bz;
+        final p001 = hwCenter - bx - by + bz;
+        final p010 = hwCenter - bx + by - bz;
+        final p011 = hwCenter - bx + by + bz;
+        final p100 = hwCenter + bx - by - bz;
+        final p101 = hwCenter + bx - by + bz;
+        final p110 = hwCenter + bx + by - bz;
+        final p111 = hwCenter + bx + by + bz;
+        void addEdge(Vector3D a, Vector3D b) => lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layerValves));
+        addEdge(p000, p001); addEdge(p010, p011); addEdge(p100, p101); addEdge(p110, p111);
+        addEdge(p000, p010); addEdge(p010, p110); addEdge(p110, p100); addEdge(p100, p000);
+        addEdge(p001, p011); addEdge(p011, p111); addEdge(p111, p101); addEdge(p101, p001);
+      } else {
+        // Штурвал / маховик (окружность в плоскости T, V)
+        final hwRadius = math.max(25.0, r * (customDefinition?.geometry3d.actuatorSizeRatio ?? 1.4));
+        final hwPts = <Vector3D>[];
+        for (int i = 0; i < segments; i++) {
+          final theta = 2.0 * math.pi * i / segments;
+          final offset = basis.t * (hwRadius * math.cos(theta)) + basis.v * (hwRadius * math.sin(theta));
+          hwPts.add(hwCenter + offset);
+        }
+        for (int i = 0; i < segments; i++) {
+          final next = (i + 1) % segments;
+          lines.add(WireframeSegment3D(
+            hwPts[i].x, hwPts[i].y, hwPts[i].z,
+            hwPts[next].x, hwPts[next].y, hwPts[next].z,
+            layer: layerValves,
+          ));
+        }
 
-      // 4 спицы штурвала
-      for (int i = 0; i < segments; i += (segments ~/ 4)) {
-        lines.add(WireframeSegment3D(
-          hwCenter.x, hwCenter.y, hwCenter.z,
-          hwPts[i].x, hwPts[i].y, hwPts[i].z,
-          layer: layerValves,
-        ));
+        // 4 спицы штурвала
+        for (int i = 0; i < segments; i += (segments ~/ 4)) {
+          lines.add(WireframeSegment3D(
+            hwCenter.x, hwCenter.y, hwCenter.z,
+            hwPts[i].x, hwPts[i].y, hwPts[i].z,
+            layer: layerValves,
+          ));
+        }
       }
     }
+
 
     // Если арматура фланцевая — добавляем фланцевые кольца
     if (valve.isFlanged) {
@@ -764,6 +815,7 @@ class Element3dGeometry {
     Node3D end, {
     double? pipeOuterDiameter,
     String layer = layerValves,
+    CustomValveDefinition? customDefinition,
   }) {
     final lines = <WireframeSegment3D>[];
     final angleRad = valve.handleAngleDeg * math.pi / 180.0;
@@ -779,29 +831,133 @@ class Element3dGeometry {
 
     final w = math.max(10.0, ((pipeOuterDiameter ?? valve.dn.toDouble()) / 2.0));
 
-    // Входной треугольник: основание cIn +/- basis.u * w, вершина в center
-    final pIn1 = cIn + basis.u * w;
-    final pIn2 = cIn - basis.u * w;
-    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
-    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, center.x, center.y, center.z, layer: layer));
-    lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, center.x, center.y, center.z, layer: layer));
+    final bodyShape = customDefinition?.geometry3d.bodyShape ?? Valve3dBodyShape.doubleCones;
 
-    // Выходной треугольник: основание cOut +/- basis.u * w, вершина в center
-    final pOut1 = cOut + basis.u * w;
-    final pOut2 = cOut - basis.u * w;
-    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
-    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, center.x, center.y, center.z, layer: layer));
-    lines.add(WireframeSegment3D(pOut2.x, pOut2.y, pOut2.z, center.x, center.y, center.z, layer: layer));
+    // 1. Отрисовка тела арматуры в соответствии с геометрией
+    if (bodyShape == Valve3dBodyShape.bellows) {
+      // Гофрированный сильфонный компенсатор (виброкомпенсатор)
+      const int ripples = 4;
+      for (int i = 0; i <= ripples; i++) {
+        final frac = i / ripples;
+        final pCenter = cIn + (cOut - cIn) * frac;
+        final rRipple = (i % 2 == 1) ? w * 1.35 : w * 0.9;
+        final rTop = pCenter + basis.u * rRipple;
+        final rBottom = pCenter - basis.u * rRipple;
+        final rLeft = pCenter - basis.v * rRipple;
+        final rRight = pCenter + basis.v * rRipple;
+        lines.add(WireframeSegment3D(rTop.x, rTop.y, rTop.z, rRight.x, rRight.y, rRight.z, layer: layer));
+        lines.add(WireframeSegment3D(rRight.x, rRight.y, rRight.z, rBottom.x, rBottom.y, rBottom.z, layer: layer));
+        lines.add(WireframeSegment3D(rBottom.x, rBottom.y, rBottom.z, rLeft.x, rLeft.y, rLeft.z, layer: layer));
+        lines.add(WireframeSegment3D(rLeft.x, rLeft.y, rLeft.z, rTop.x, rTop.y, rTop.z, layer: layer));
+      }
+      lines.add(WireframeSegment3D((cIn + basis.u * w).x, (cIn + basis.u * w).y, (cIn + basis.u * w).z, (cOut + basis.u * w).x, (cOut + basis.u * w).y, (cOut + basis.u * w).z, layer: layer));
+      lines.add(WireframeSegment3D((cIn - basis.u * w).x, (cIn - basis.u * w).y, (cIn - basis.u * w).z, (cOut - basis.u * w).x, (cOut - basis.u * w).y, (cOut - basis.u * w).z, layer: layer));
+    } else if (bodyShape == Valve3dBodyShape.cylinder) {
+      // Прямой цилиндрический корпус
+      final pIn1 = cIn + basis.u * w;
+      final pIn2 = cIn - basis.u * w;
+      final pOut1 = cOut + basis.u * w;
+      final pOut2 = cOut - basis.u * w;
+      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
+      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
+      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pOut1.x, pOut1.y, pOut1.z, layer: layer));
+      lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
+      lines.add(WireframeSegment3D((center + basis.u * (w * 1.1)).x, (center + basis.u * (w * 1.1)).y, (center + basis.u * (w * 1.1)).z, (center - basis.u * (w * 1.1)).x, (center - basis.u * (w * 1.1)).y, (center - basis.u * (w * 1.1)).z, layer: layer));
+    } else if (bodyShape == Valve3dBodyShape.sphere) {
+      // Сферический корпус
+      final rSph = w * 1.2;
+      lines.add(WireframeSegment3D((center - basis.t * rSph).x, (center - basis.t * rSph).y, (center - basis.t * rSph).z, (center + basis.t * rSph).x, (center + basis.t * rSph).y, (center + basis.t * rSph).z, layer: layer));
+      lines.add(WireframeSegment3D((center - basis.u * rSph).x, (center - basis.u * rSph).y, (center - basis.u * rSph).z, (center + basis.u * rSph).x, (center + basis.u * rSph).y, (center + basis.u * rSph).z, layer: layer));
+      lines.add(WireframeSegment3D((center - basis.v * rSph).x, (center - basis.v * rSph).y, (center - basis.v * rSph).z, (center + basis.v * rSph).x, (center + basis.v * rSph).y, (center + basis.v * rSph).z, layer: layer));
+    } else {
+      // Стандартные конусы корпуса («песочные часы»)
+      final pIn1 = cIn + basis.u * w;
+      final pIn2 = cIn - basis.u * w;
+      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
+      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, center.x, center.y, center.z, layer: layer));
+      lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, center.x, center.y, center.z, layer: layer));
 
-    // Шток (шпиндель)
-    final stemH = w * 1.55;
+      final pOut1 = cOut + basis.u * w;
+      final pOut2 = cOut - basis.u * w;
+      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
+      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, center.x, center.y, center.z, layer: layer));
+      lines.add(WireframeSegment3D(pOut2.x, pOut2.y, pOut2.z, center.x, center.y, center.z, layer: layer));
+    }
+
+    // 2. Шток и привод
+    final stemRatio = customDefinition?.geometry3d.stemHeightRatio ?? 1.55;
+    final stemH = w * stemRatio;
     final hwCenter = center + basis.u * stemH;
+
+    if (customDefinition != null) {
+      final act = customDefinition.geometry3d.actuatorType;
+      switch (act) {
+        case Valve3dActuatorType.none:
+          break;
+        case Valve3dActuatorType.handwheel:
+          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+          final hwR = w * 0.8;
+          lines.add(WireframeSegment3D((hwCenter - basis.t * hwR).x, (hwCenter - basis.t * hwR).y, (hwCenter - basis.t * hwR).z, (hwCenter + basis.t * hwR).x, (hwCenter + basis.t * hwR).y, (hwCenter + basis.t * hwR).z, layer: layer));
+          lines.add(WireframeSegment3D((hwCenter - basis.v * hwR).x, (hwCenter - basis.v * hwR).y, (hwCenter - basis.v * hwR).z, (hwCenter + basis.v * hwR).x, (hwCenter + basis.v * hwR).y, (hwCenter + basis.v * hwR).z, layer: layer));
+          break;
+        case Valve3dActuatorType.lever:
+          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+          final leverLen = w * 1.4;
+          lines.add(WireframeSegment3D(hwCenter.x, hwCenter.y, hwCenter.z, (hwCenter + basis.t * leverLen).x, (hwCenter + basis.t * leverLen).y, (hwCenter + basis.t * leverLen).z, layer: layer));
+          break;
+        case Valve3dActuatorType.actuatorBox:
+          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+          final bSize = w * customDefinition.geometry3d.actuatorSizeRatio;
+          final bx = basis.t * (bSize * 0.5);
+          final by = basis.v * (bSize * 0.5);
+          final bz = basis.u * (bSize * 0.5);
+          final p000 = hwCenter - bx - by - bz;
+          final p001 = hwCenter - bx - by + bz;
+          final p010 = hwCenter - bx + by - bz;
+          final p011 = hwCenter - bx + by + bz;
+          final p100 = hwCenter + bx - by - bz;
+          final p101 = hwCenter + bx - by + bz;
+          final p110 = hwCenter + bx + by - bz;
+          final p111 = hwCenter + bx + by + bz;
+          void addEdge(Vector3D a, Vector3D b) => lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layer));
+          addEdge(p000, p001); addEdge(p010, p011); addEdge(p100, p101); addEdge(p110, p111);
+          addEdge(p000, p010); addEdge(p010, p110); addEdge(p110, p100); addEdge(p100, p000);
+          addEdge(p001, p011); addEdge(p011, p111); addEdge(p111, p101); addEdge(p101, p001);
+          break;
+        case Valve3dActuatorType.diaphragm:
+          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+          final diaR = w * customDefinition.geometry3d.actuatorSizeRatio;
+          final diaP1 = hwCenter + basis.t * diaR;
+          final diaP2 = hwCenter + basis.v * diaR;
+          final diaP3 = hwCenter - basis.t * diaR;
+          final diaP4 = hwCenter - basis.v * diaR;
+          lines.add(WireframeSegment3D(diaP1.x, diaP1.y, diaP1.z, diaP2.x, diaP2.y, diaP2.z, layer: layer));
+          lines.add(WireframeSegment3D(diaP2.x, diaP2.y, diaP2.z, diaP3.x, diaP3.y, diaP3.z, layer: layer));
+          lines.add(WireframeSegment3D(diaP3.x, diaP3.y, diaP3.z, diaP4.x, diaP4.y, diaP4.z, layer: layer));
+          lines.add(WireframeSegment3D(diaP4.x, diaP4.y, diaP4.z, diaP1.x, diaP1.y, diaP1.z, layer: layer));
+          final domeTop = hwCenter + basis.u * (w * 0.4);
+          lines.add(WireframeSegment3D(diaP1.x, diaP1.y, diaP1.z, domeTop.x, domeTop.y, domeTop.z, layer: layer));
+          lines.add(WireframeSegment3D(diaP3.x, diaP3.y, diaP3.z, domeTop.x, domeTop.y, domeTop.z, layer: layer));
+          break;
+        case Valve3dActuatorType.springBonnet:
+          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
+          final bonTop = hwCenter + basis.u * (w * 1.2);
+          final bonR = w * 0.5;
+          lines.add(WireframeSegment3D((hwCenter - basis.t * bonR).x, (hwCenter - basis.t * bonR).y, (hwCenter - basis.t * bonR).z, (bonTop - basis.t * bonR).x, (bonTop - basis.t * bonR).y, (bonTop - basis.t * bonR).z, layer: layer));
+          lines.add(WireframeSegment3D((hwCenter + basis.t * bonR).x, (hwCenter + basis.t * bonR).y, (hwCenter + basis.t * bonR).z, (bonTop + basis.t * bonR).x, (bonTop + basis.t * bonR).y, (bonTop + basis.t * bonR).z, layer: layer));
+          lines.add(WireframeSegment3D((bonTop - basis.t * bonR).x, (bonTop - basis.t * bonR).y, (bonTop - basis.t * bonR).z, (bonTop + basis.t * bonR).x, (bonTop + basis.t * bonR).y, (bonTop + basis.t * bonR).z, layer: layer));
+          break;
+      }
+      return lines;
+    }
+
     final hasStem = valve.valveType != ValveType.checkValve &&
         valve.valveType != ValveType.strainer &&
         valve.valveType != ValveType.drainValve;
     if (hasStem) {
       lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
     }
+
 
     // Маховик / рукоятка в зависимости от типа арматуры
     switch (valve.valveType) {

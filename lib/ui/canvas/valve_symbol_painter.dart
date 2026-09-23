@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../domain/enums/valve_type.dart';
+import '../../domain/models/custom_valve_definition.dart';
 
 /// Отрисовщик условных графических обозначений (УГО) арматуры по ГОСТ 21.205
 class ValveSymbolPainter {
@@ -234,4 +235,285 @@ class ValveSymbolPainter {
       canvas.drawLine(Offset(halfL, -tickH), Offset(halfL, tickH), strokePaint);
     }
   }
+
+  /// Отрисовка параметрического пользовательского УГО арматуры
+  static void drawCustomValve(
+    Canvas canvas, {
+    required Offset center,
+    required double angleRad,
+    required ValveSymbolConfig symbolConfig,
+    required Color color,
+    double size = 16.0,
+    bool isReversed = false,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angleRad + (isReversed ? math.pi : 0.0));
+
+    final strokePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
+
+    final hatchPaint = Paint()
+      ..color = color.withValues(alpha: 0.65)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+
+    final solidFillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final whiteFillPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.95)
+      ..style = PaintingStyle.fill;
+
+    final halfL = size * 0.9;
+    final halfH = size * 0.45;
+
+    // Левое и правое крылья (треугольники)
+    final leftWing = Path()
+      ..moveTo(-halfL, -halfH)
+      ..lineTo(0, 0)
+      ..lineTo(-halfL, halfH)
+      ..close();
+
+    final rightWing = Path()
+      ..moveTo(halfL, -halfH)
+      ..lineTo(0, 0)
+      ..lineTo(halfL, halfH)
+      ..close();
+
+    _drawWing(canvas, leftWing, symbolConfig.leftWingStyle, halfL, halfH,
+        whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+    _drawWing(canvas, rightWing, symbolConfig.rightWingStyle, halfL, halfH,
+        whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+
+    // Фланцевые торцевые засечки
+    if (symbolConfig.hasBodyFlanges) {
+      final tickH = halfH * 1.25;
+      canvas.drawLine(Offset(-halfL, -tickH), Offset(-halfL, tickH), strokePaint);
+      canvas.drawLine(Offset(halfL, -tickH), Offset(halfL, tickH), strokePaint);
+    }
+
+    // Разделитель по центру
+    switch (symbolConfig.dividerType) {
+      case ValveDividerType.none:
+        break;
+      case ValveDividerType.line:
+        canvas.drawLine(Offset(0, -halfH), Offset(0, halfH), strokePaint);
+        break;
+      case ValveDividerType.slantedDisc:
+        canvas.drawLine(
+          Offset(-halfL * 0.25, -halfH * 0.9),
+          Offset(halfL * 0.25, halfH * 0.9),
+          strokePaint,
+        );
+        break;
+      case ValveDividerType.zigzag:
+        final zig = Path()
+          ..moveTo(0, -halfH)
+          ..lineTo(-halfL * 0.15, -halfH * 0.5)
+          ..lineTo(halfL * 0.15, 0)
+          ..lineTo(-halfL * 0.15, halfH * 0.5)
+          ..lineTo(0, halfH);
+        canvas.drawPath(zig, strokePaint);
+        break;
+      case ValveDividerType.arrow:
+        final arrowPaint = Paint()
+          ..color = color
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(Offset(-halfL * 0.6, 0), Offset(halfL * 0.6, 0), arrowPaint);
+        final arrowHead = Path()
+          ..moveTo(halfL * 0.6, 0)
+          ..lineTo(halfL * 0.35, -halfH * 0.4)
+          ..moveTo(halfL * 0.6, 0)
+          ..lineTo(halfL * 0.35, halfH * 0.4);
+        canvas.drawPath(arrowHead, arrowPaint);
+        break;
+      case ValveDividerType.circle:
+        canvas.drawCircle(Offset.zero, halfH * 0.65, whiteFillPaint);
+        canvas.drawCircle(Offset.zero, halfH * 0.65, strokePaint);
+        break;
+    }
+
+    // Шток и привод арматуры
+    switch (symbolConfig.stemType) {
+      case ValveStemSymbolType.none:
+        break;
+      case ValveStemSymbolType.handwheel:
+        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.55), strokePaint);
+        canvas.drawLine(Offset(-2.0, -halfH * 0.7), Offset(2.0, -halfH * 0.7), strokePaint);
+        final wheelCenter = Offset(0, -halfH * 1.55);
+        final wheelRect = Rect.fromCenter(
+          center: wheelCenter,
+          width: halfL * 0.85,
+          height: halfH * 0.65,
+        );
+        canvas.drawOval(wheelRect, whiteFillPaint);
+        canvas.drawOval(wheelRect, strokePaint);
+        canvas.drawLine(
+          Offset(-halfL * 0.35, wheelCenter.dy),
+          Offset(halfL * 0.35, wheelCenter.dy),
+          hatchPaint,
+        );
+        canvas.drawLine(
+          Offset(0, wheelCenter.dy - halfH * 0.28),
+          Offset(0, wheelCenter.dy + halfH * 0.28),
+          hatchPaint,
+        );
+        break;
+      case ValveStemSymbolType.lever:
+        canvas.drawLine(Offset.zero, Offset(halfL * 0.85, -halfH * 1.45), strokePaint);
+        canvas.drawCircle(
+          Offset(halfL * 0.85, -halfH * 1.45),
+          2.2,
+          solidFillPaint,
+        );
+        break;
+      case ValveStemSymbolType.boxWithText:
+        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.3), strokePaint);
+        final boxCenter = Offset(0, -halfH * 1.95);
+        final boxRect = Rect.fromCenter(
+          center: boxCenter,
+          width: halfL * 0.95,
+          height: halfH * 1.1,
+        );
+        canvas.drawRect(boxRect, whiteFillPaint);
+        canvas.drawRect(boxRect, strokePaint);
+        if (symbolConfig.stemText.isNotEmpty) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: symbolConfig.stemText,
+              style: TextStyle(
+                color: color,
+                fontSize: halfH * 0.75,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(
+            canvas,
+            Offset(boxCenter.dx - tp.width / 2, boxCenter.dy - tp.height / 2),
+          );
+        }
+        break;
+      case ValveStemSymbolType.diaphragm:
+        canvas.drawLine(Offset.zero, Offset(0, -halfH * 1.3), strokePaint);
+        final dCenter = Offset(0, -halfH * 1.9);
+        final dRect = Rect.fromCenter(
+          center: dCenter,
+          width: halfL * 1.05,
+          height: halfH * 0.9,
+        );
+        canvas.drawOval(dRect, whiteFillPaint);
+        canvas.drawOval(dRect, strokePaint);
+        canvas.drawLine(
+          Offset(-halfL * 0.5, dCenter.dy),
+          Offset(halfL * 0.5, dCenter.dy),
+          strokePaint,
+        );
+        if (symbolConfig.stemText.isNotEmpty) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: symbolConfig.stemText,
+              style: TextStyle(
+                color: color,
+                fontSize: halfH * 0.65,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(
+            canvas,
+            Offset(dCenter.dx - tp.width / 2, dCenter.dy - tp.height / 2),
+          );
+        }
+        break;
+      case ValveStemSymbolType.spring:
+        final spring = Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, -halfH * 0.4)
+          ..lineTo(-halfL * 0.2, -halfH * 0.7)
+          ..lineTo(halfL * 0.2, -halfH * 1.0)
+          ..lineTo(-halfL * 0.2, -halfH * 1.3)
+          ..lineTo(halfL * 0.2, -halfH * 1.6)
+          ..lineTo(0, -halfH * 1.9)
+          ..lineTo(0, -halfH * 2.3);
+        canvas.drawPath(spring, strokePaint);
+        canvas.drawLine(
+          Offset(-halfL * 0.3, -halfH * 2.3),
+          Offset(halfL * 0.3, -halfH * 2.3),
+          strokePaint,
+        );
+        break;
+    }
+
+    canvas.restore();
+  }
+
+  static void _drawWing(
+    Canvas canvas,
+    Path path,
+    ValveWingFillStyle style,
+    double halfL,
+    double halfH,
+    Paint whiteFillPaint,
+    Paint solidFillPaint,
+    Paint strokePaint,
+    Paint hatchPaint,
+  ) {
+    switch (style) {
+      case ValveWingFillStyle.outline:
+        canvas.drawPath(path, whiteFillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+      case ValveWingFillStyle.solid:
+        canvas.drawPath(path, solidFillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+      case ValveWingFillStyle.hatched:
+        canvas.drawPath(path, whiteFillPaint);
+        canvas.save();
+        canvas.clipPath(path);
+        final span = halfL * 2.5;
+        for (double x = -span; x <= span; x += 3.0) {
+          canvas.drawLine(
+            Offset(x, -halfH * 2.0),
+            Offset(x + halfH * 3.0, halfH * 2.0),
+            hatchPaint,
+          );
+        }
+        canvas.restore();
+        canvas.drawPath(path, strokePaint);
+        break;
+      case ValveWingFillStyle.crossHatched:
+        canvas.drawPath(path, whiteFillPaint);
+        canvas.save();
+        canvas.clipPath(path);
+        final span = halfL * 2.5;
+        for (double x = -span; x <= span; x += 3.0) {
+          canvas.drawLine(
+            Offset(x, -halfH * 2.0),
+            Offset(x + halfH * 3.0, halfH * 2.0),
+            hatchPaint,
+          );
+          canvas.drawLine(
+            Offset(x, halfH * 2.0),
+            Offset(x + halfH * 3.0, -halfH * 2.0),
+            hatchPaint,
+          );
+        }
+        canvas.restore();
+        canvas.drawPath(path, strokePaint);
+        break;
+    }
+  }
 }
+

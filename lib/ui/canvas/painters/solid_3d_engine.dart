@@ -10,6 +10,8 @@ import '../../../domain/models/weld_joint.dart';
 import '../../../domain/enums/weld_joint_style.dart';
 export '../../../core/math/vector_3d.dart';
 import '../../../core/math/vector_3d.dart';
+import '../../../domain/models/custom_valve_definition.dart';
+import '../../../domain/services/custom_valve_catalog.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
 
@@ -45,6 +47,7 @@ class Solid3dEngine {
     String? selectedSegmentId,
     Set<String>? selectedSegmentIds,
     int cylinderFacets = 12,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     final polygons = <Polygon3D>[];
 
@@ -291,6 +294,11 @@ class Solid3dEngine {
       final sys = network.systems[seg.systemId];
       final baseColor = sys != null ? Color(sys.colorValue) : const Color(0xFF1E88E5);
 
+      final customDef = valve.customDefinitionId != null
+          ? (customValves?[valve.customDefinitionId!] ??
+              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
+          : null;
+
       _buildValveSolidMesh(
         polygons: polygons,
         projector: projector,
@@ -300,7 +308,9 @@ class Solid3dEngine {
         length: valve.lengthMm,
         color: baseColor,
         isFlanged: valve.isFlanged,
+        customDefinition: customDef,
       );
+
     }
 
     // 4. Сборка сварных стыков (WeldJoint) в виде объемных валиков шва (только для стиля ring3d)
@@ -985,7 +995,87 @@ class Solid3dEngine {
     }
   }
 
-  /// Построение объемной модели арматуры (корпус, фланцы, шток, штурвал)
+  /// Построение объемной модели кубической коробки привода
+  static void _buildBoxMesh({
+    required List<Polygon3D> polygons,
+    required AxonometryProjector projector,
+    required Vector3D center,
+    required double size,
+    required Color color,
+  }) {
+    final half = size / 2.0;
+    final faces = [
+      (
+        normal: const Vector3D(0, 0, 1),
+        vertices: [
+          center + Vector3D(-half, -half, half),
+          center + Vector3D(half, -half, half),
+          center + Vector3D(half, half, half),
+          center + Vector3D(-half, half, half),
+        ],
+      ),
+      (
+        normal: const Vector3D(0, 0, -1),
+        vertices: [
+          center + Vector3D(-half, half, -half),
+          center + Vector3D(half, half, -half),
+          center + Vector3D(half, -half, -half),
+          center + Vector3D(-half, -half, -half),
+        ],
+      ),
+      (
+        normal: const Vector3D(1, 0, 0),
+        vertices: [
+          center + Vector3D(half, -half, -half),
+          center + Vector3D(half, half, -half),
+          center + Vector3D(half, half, half),
+          center + Vector3D(half, -half, half),
+        ],
+      ),
+      (
+        normal: const Vector3D(-1, 0, 0),
+        vertices: [
+          center + Vector3D(-half, -half, half),
+          center + Vector3D(-half, half, half),
+          center + Vector3D(-half, half, -half),
+          center + Vector3D(-half, -half, -half),
+        ],
+      ),
+      (
+        normal: const Vector3D(0, 1, 0),
+        vertices: [
+          center + Vector3D(-half, half, -half),
+          center + Vector3D(half, half, -half),
+          center + Vector3D(half, half, half),
+          center + Vector3D(-half, half, half),
+        ],
+      ),
+      (
+        normal: const Vector3D(0, -1, 0),
+        vertices: [
+          center + Vector3D(-half, -half, half),
+          center + Vector3D(half, -half, half),
+          center + Vector3D(half, -half, -half),
+          center + Vector3D(-half, -half, -half),
+        ],
+      ),
+    ];
+
+    for (final face in faces) {
+      final cFace = (face.vertices[0] + face.vertices[1] + face.vertices[2] + face.vertices[3]) * 0.25;
+      final depth = projector.computeDepth(cFace.x, cFace.y, cFace.z);
+      final shaded = computeLighting(face.normal, color);
+      polygons.add(Polygon3D(
+        vertices: face.vertices,
+        normal: face.normal,
+        baseColor: color,
+        depth: depth,
+        shadedColor: shaded,
+      ));
+    }
+  }
+
+  /// Построение объемной модели арматуры (корпус, фланцы, шток, штурвал/привод)
   static void _buildValveSolidMesh({
     required List<Polygon3D> polygons,
     required AxonometryProjector projector,
@@ -995,25 +1085,49 @@ class Solid3dEngine {
     required double length,
     required Color color,
     required bool isFlanged,
+    CustomValveDefinition? customDefinition,
   }) {
     final halfL = length / 2.0;
     final vStart = center - axisDir * halfL;
     final vEnd = center + axisDir * halfL;
 
-    // 1. Корпус задвижки (центральный цилиндр увеличенного диаметра)
-    final bodyRadius = radius * 1.35;
-    _buildCylinderMesh(
-      polygons: polygons,
-      projector: projector,
-      start: center - axisDir * (halfL * 0.5),
-      end: center + axisDir * (halfL * 0.5),
-      radius: bodyRadius,
-      color: color,
-      facets: 8,
-    );
+    // 1. Корпус задвижки / виброкомпенсатора
+    final bodyShape = customDefinition?.geometry3d.bodyShape ?? Valve3dBodyShape.doubleCones;
+    if (bodyShape == Valve3dBodyShape.bellows) {
+      // Гофрированный сильфон (3 ребра волны)
+      const ripples = 3;
+      for (int rIndex = 0; rIndex < ripples; rIndex++) {
+        final frac1 = (rIndex + 0.1) / ripples;
+        final frac2 = (rIndex + 0.9) / ripples;
+        final p1 = (center - axisDir * (halfL * 0.6)) + axisDir * (halfL * 1.2 * frac1);
+        final p2 = (center - axisDir * (halfL * 0.6)) + axisDir * (halfL * 1.2 * frac2);
+        final rippleR = (rIndex % 2 == 1) ? radius * 1.45 : radius * 1.15;
+        _buildCylinderMesh(
+          polygons: polygons,
+          projector: projector,
+          start: p1,
+          end: p2,
+          radius: rippleR,
+          color: color,
+          facets: 8,
+        );
+      }
+    } else {
+      final bodyRadius = radius * 1.35;
+      _buildCylinderMesh(
+        polygons: polygons,
+        projector: projector,
+        start: center - axisDir * (halfL * 0.5),
+        end: center + axisDir * (halfL * 0.5),
+        radius: bodyRadius,
+        color: color,
+        facets: 8,
+      );
+    }
 
-    // 2. Торцевые фланцы (если фланцевая)
-    if (isFlanged) {
+    // 2. Торцевые фланцы (если фланцевая или указано в семействе)
+    final hasFlanges = isFlanged || (customDefinition?.symbol2d.hasBodyFlanges ?? false);
+    if (hasFlanges) {
       final flangeR = radius * 1.55;
       final flangeW = length * 0.12;
       final flangeColor = Color.lerp(color, Colors.black87, 0.25)!;
@@ -1038,10 +1152,17 @@ class Solid3dEngine {
       );
     }
 
-    // 3. Вертикальный шток / шпиндель
+    // 3. Вертикальный шток / шпиндель и привод
+    final actType = customDefinition?.geometry3d.actuatorType ?? Valve3dActuatorType.handwheel;
+    if (actType == Valve3dActuatorType.none) {
+      return; // Без штока и привода (например, виброкомпенсатор или обратный клапан)
+    }
+
     final upDir = const Vector3D(0, 0, 1);
-    final stemLen = radius * 2.2;
+    final stemRatio = customDefinition?.geometry3d.stemHeightRatio ?? 2.2;
+    final stemLen = radius * stemRatio;
     final stemTop = center + upDir * stemLen;
+
     _buildCylinderMesh(
       polygons: polygons,
       projector: projector,
@@ -1052,18 +1173,51 @@ class Solid3dEngine {
       facets: 6,
     );
 
-    // 4. Штурвал (маховик) наверху
-    final wheelRadius = radius * 1.4;
-    _buildCylinderMesh(
-      polygons: polygons,
-      projector: projector,
-      start: stemTop - upDir * (radius * 0.2),
-      end: stemTop + upDir * (radius * 0.2),
-      radius: wheelRadius,
-      color: Colors.red.shade700,
-      facets: 8,
-    );
+    // 4. Привод наверху
+    if (actType == Valve3dActuatorType.actuatorBox) {
+      final bSize = radius * (customDefinition?.geometry3d.actuatorSizeRatio ?? 1.6);
+      _buildBoxMesh(
+        polygons: polygons,
+        projector: projector,
+        center: stemTop,
+        size: bSize,
+        color: Colors.blueGrey.shade800,
+      );
+    } else if (actType == Valve3dActuatorType.diaphragm) {
+      final diaR = radius * (customDefinition?.geometry3d.actuatorSizeRatio ?? 1.5);
+      _buildCylinderMesh(
+        polygons: polygons,
+        projector: projector,
+        start: stemTop - upDir * (radius * 0.15),
+        end: stemTop + upDir * (radius * 0.15),
+        radius: diaR,
+        color: Colors.teal.shade700,
+        facets: 12,
+      );
+    } else if (actType == Valve3dActuatorType.springBonnet) {
+      _buildCylinderMesh(
+        polygons: polygons,
+        projector: projector,
+        start: stemTop,
+        end: stemTop + upDir * (radius * 1.5),
+        radius: radius * 0.6,
+        color: Colors.grey.shade600,
+        facets: 8,
+      );
+    } else {
+      final wheelRadius = radius * (customDefinition?.geometry3d.actuatorSizeRatio ?? 1.4);
+      _buildCylinderMesh(
+        polygons: polygons,
+        projector: projector,
+        start: stemTop - upDir * (radius * 0.2),
+        end: stemTop + upDir * (radius * 0.2),
+        radius: wheelRadius,
+        color: Colors.red.shade700,
+        facets: 8,
+      );
+    }
   }
+
 
   /// Расчет направленного освещения (Lambertian Diffuse + Specular Highlight)
   static Color computeLighting(Vector3D normal, Color baseColor) {
