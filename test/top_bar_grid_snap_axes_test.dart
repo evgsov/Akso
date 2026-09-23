@@ -71,7 +71,7 @@ void main() {
 
   group('EditorTopBar widget tests', () {
     testWidgets('EditorTopBar displays Grid, Snap, and Axes buttons and responds to taps', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(3600, 1080);
+      tester.view.physicalSize = const Size(4000, 1080);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
