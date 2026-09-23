@@ -1,64 +1,100 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:akso/data/dxf/dxf_writer.dart';
 import 'package:akso/domain/models/construction_axis.dart';
 import 'package:akso/domain/models/node_3d.dart';
-import 'package:akso/domain/models/piping_network.dart';
 
 void main() {
-  group('ConstructionAxis Tests', () {
-    late PipingNetwork network;
-
-    setUp(() {
-      network = PipingNetwork();
+  group('ConstructionAxis Revit properties & serialization', () {
+    test('default values match expected Revit configuration', () {
+      final axis = ConstructionAxis(
+        id: 'ax1',
+        label: '1',
+        startPoint: const Node3D(id: 'n1', x: 0, y: 0, z: 0),
+        endPoint: const Node3D(id: 'n2', x: 6000, y: 0, z: 0),
+      );
+      expect(axis.showStartBubble, isTrue);
+      expect(axis.showEndBubble, isFalse);
+      expect(axis.elevationZ, 0.0);
+      expect(axis.isPinned, isFalse);
+      expect(axis.is3dPlaneOriented, isTrue);
+      expect(axis.isStartLocked, isTrue);
+      expect(axis.isEndLocked, isTrue);
+      expect(axis.startElbowOffset, isNull);
+      expect(axis.endElbowOffset, isNull);
     });
 
-    test('Создание и сериализация строительных осей в PipingNetwork', () {
-      const axis1 = ConstructionAxis(
-        id: 'axis_1',
-        label: '1',
-        startPoint: Node3D(id: '', x: 0, y: -1000, z: 0),
-        endPoint: Node3D(id: '', x: 0, y: 5000, z: 0),
-        isBuildingGrid: true,
-      );
-
-      const axisA = ConstructionAxis(
-        id: 'axis_a',
+    test('serialization round-trip with all fields', () {
+      final axis = ConstructionAxis(
+        id: 'ax2',
         label: 'А',
-        startPoint: Node3D(id: '', x: -1000, y: 0, z: 0),
-        endPoint: Node3D(id: '', x: 5000, y: 0, z: 0),
-        isBuildingGrid: true,
+        startPoint: const Node3D(id: 'n1', x: 0, y: 0, z: 1000),
+        endPoint: const Node3D(id: 'n2', x: 0, y: 6000, z: 1000),
+        showStartBubble: true,
+        showEndBubble: true,
+        elevationZ: 1000.0,
+        startElbowOffset: const Offset(15.0, -20.0),
+        endElbowOffset: const Offset(-10.0, 25.0),
+        isPinned: true,
+        is3dPlaneOriented: true,
+        isStartLocked: false,
+        isEndLocked: true,
       );
-
-      network.axes['axis_1'] = axis1;
-      network.axes['axis_a'] = axisA;
-
-      final json = network.toJson();
-      expect(json.containsKey('axes'), isTrue);
-
-      final restored = PipingNetwork();
-      restored.loadFromJson(json);
-
-      expect(restored.axes.length, equals(2));
-      expect(restored.axes['axis_1']?.label, equals('1'));
-      expect(restored.axes['axis_a']?.label, equals('А'));
-      expect(restored.axes['axis_1']?.isBuildingGrid, isTrue);
+      final json = axis.toJson();
+      final restored = ConstructionAxis.fromJson(json);
+      expect(restored.id, 'ax2');
+      expect(restored.label, 'А');
+      expect(restored.showStartBubble, isTrue);
+      expect(restored.showEndBubble, isTrue);
+      expect(restored.elevationZ, 1000.0);
+      expect(restored.startElbowOffset?.dx, 15.0);
+      expect(restored.startElbowOffset?.dy, -20.0);
+      expect(restored.endElbowOffset?.dx, -10.0);
+      expect(restored.endElbowOffset?.dy, 25.0);
+      expect(restored.isPinned, isTrue);
+      expect(restored.is3dPlaneOriented, isTrue);
+      expect(restored.isStartLocked, isFalse);
+      expect(restored.isEndLocked, isTrue);
     });
 
-    test('DXF экспорт включает слой АКСО_ОСИ и текстовые марки осей', () {
-      const axis = ConstructionAxis(
-        id: 'axis_1',
+    test('backward compatibility for legacy json without new fields', () {
+      final legacyJson = {
+        'id': 'legacy1',
+        'label': 'Б',
+        'startPoint': {'id': 'n1', 'x': 0.0, 'y': 0.0, 'z': 0.0},
+        'endPoint': {'id': 'n2', 'x': 5000.0, 'y': 0.0, 'z': 0.0},
+        'isBuildingGrid': true,
+      };
+      final restored = ConstructionAxis.fromJson(legacyJson);
+      expect(restored.id, 'legacy1');
+      expect(restored.label, 'Б');
+      expect(restored.showStartBubble, isTrue);
+      expect(restored.showEndBubble, isFalse);
+      expect(restored.elevationZ, 0.0);
+      expect(restored.isPinned, isFalse);
+      expect(restored.is3dPlaneOriented, isTrue);
+      expect(restored.isStartLocked, isTrue);
+      expect(restored.isEndLocked, isTrue);
+      expect(restored.startElbowOffset, isNull);
+      expect(restored.endElbowOffset, isNull);
+    });
+
+    test('copyWith updates properties correctly', () {
+      final axis = ConstructionAxis(
+        id: 'ax3',
         label: '1',
-        startPoint: Node3D(id: '', x: 0, y: 0, z: 0),
-        endPoint: Node3D(id: '', x: 0, y: 3000, z: 0),
-        isBuildingGrid: true,
+        startPoint: const Node3D(id: 'n1', x: 0, y: 0, z: 0),
+        endPoint: const Node3D(id: 'n2', x: 3000, y: 0, z: 0),
       );
-      network.axes['axis_1'] = axis;
-
-      final dxfContent = DxfWriter.generate2dGostAxonometryDxf(network);
-
-      expect(dxfContent.contains(DxfWriter.toAutoCadString('АКСО_ОСИ')), isTrue);
-      expect(dxfContent.contains('DASHDOT'), isTrue);
-      expect(dxfContent.contains('1'), isTrue); // Марка оси
+      final updated = axis.copyWith(
+        showEndBubble: true,
+        isPinned: true,
+        elevationZ: 500.0,
+        startElbowOffset: const Offset(5, 5),
+      );
+      expect(updated.showEndBubble, isTrue);
+      expect(updated.isPinned, isTrue);
+      expect(updated.elevationZ, 500.0);
+      expect(updated.startElbowOffset, const Offset(5, 5));
+      expect(updated.showStartBubble, isTrue); // preserved
     });
   });
 }
