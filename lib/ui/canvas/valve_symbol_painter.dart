@@ -296,24 +296,40 @@ class ValveSymbolPainter {
 
       case Valve3dBodyShape.cylinder:
         // Прямоугольный корпус (цилиндр) вдоль оси трубы
-        final leftCylinder = Path()
+        final leftFill = Path()
           ..moveTo(-halfL, -halfH)
           ..lineTo(0, -halfH)
           ..lineTo(0, halfH)
           ..lineTo(-halfL, halfH)
           ..close();
 
-        final rightCylinder = Path()
+        final rightFill = Path()
           ..moveTo(0, -halfH)
           ..lineTo(halfL, -halfH)
           ..lineTo(halfL, halfH)
           ..lineTo(0, halfH)
           ..close();
 
-        _drawWing(canvas, leftCylinder, symbolConfig.leftWingStyle, halfL, halfH,
-            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
-        _drawWing(canvas, rightCylinder, symbolConfig.rightWingStyle, halfL, halfH,
-            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        // Заполняем левую и правую части отдельно
+        _drawWing(canvas, leftFill, symbolConfig.leftWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, Paint()..color = Colors.transparent, hatchPaint);
+        _drawWing(canvas, rightFill, symbolConfig.rightWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, Paint()..color = Colors.transparent, hatchPaint);
+
+        // Затем обводим единый контур
+        final outline = Path()
+          ..moveTo(-halfL, -halfH)
+          ..lineTo(halfL, -halfH)
+          ..lineTo(halfL, halfH)
+          ..lineTo(-halfL, halfH)
+          ..close();
+        canvas.drawPath(outline, strokePaint);
+        
+        // Линия по центру рисуется только если левое и правое крылья имеют разный стиль (для четкой границы)
+        // или если dividerType установлен в line (что обрабатывается ниже)
+        if (symbolConfig.leftWingStyle != symbolConfig.rightWingStyle) {
+          canvas.drawLine(Offset(0, -halfH), Offset(0, halfH), strokePaint);
+        }
         break;
 
       case Valve3dBodyShape.bellows:

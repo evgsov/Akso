@@ -1045,37 +1045,40 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Wrap(
-                                          spacing: 4,
-                                          children: [80, 100, 120, 150, 180, 220].map((presetW) {
-                                            final isCurrent = col.width.round() == presetW;
-                                            return InkWell(
-                                              onTap: () {
-                                                final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                                cols[idx] = col.copyWith(width: presetW.toDouble());
-                                                _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                                _widthController?.text = presetW.toString();
-                                                _notifyChange();
-                                              },
-                                              borderRadius: BorderRadius.circular(4),
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                decoration: BoxDecoration(
-                                                  color: isCurrent ? Colors.indigo : Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  border: Border.all(color: isCurrent ? Colors.indigo : Colors.grey.shade300),
-                                                ),
-                                                child: Text(
-                                                  '$presetW',
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isCurrent ? Colors.white : Colors.black87,
+                                        Expanded(
+                                          child: Wrap(
+                                            spacing: 4,
+                                            runSpacing: 4,
+                                            children: [80, 100, 120, 150, 180, 220].map((presetW) {
+                                              final isCurrent = col.width.round() == presetW;
+                                              return InkWell(
+                                                onTap: () {
+                                                  final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                                  cols[idx] = col.copyWith(width: presetW.toDouble());
+                                                  _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                                  _widthController?.text = presetW.toString();
+                                                  _notifyChange();
+                                                },
+                                                borderRadius: BorderRadius.circular(4),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: isCurrent ? Colors.indigo : Colors.grey.shade100,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: isCurrent ? Colors.indigo : Colors.grey.shade300),
+                                                  ),
+                                                  child: Text(
+                                                    '$presetW',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isCurrent ? Colors.white : Colors.black87,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            );
-                                          }).toList(),
+                                              );
+                                            }).toList(),
+                                          ),
                                         ),
                                       ],
                                     ),
