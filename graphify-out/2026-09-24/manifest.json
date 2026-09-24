@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790175397.3542216,
-    "seen": 1790176798.8754826,
-    "ast_hash": "889503f125a64b0627a75b994a4a3f57",
+    "mtime": 1790213290.5237184,
+    "seen": 1790213357.210765,
+    "ast_hash": "55a7d0da9cdd43784943f3ef812a1efe",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -1554,9 +1554,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/solid_3d_engine.dart": {
-    "mtime": 1790175397.3562205,
-    "seen": 1790176798.8754907,
-    "ast_hash": "3d76fa4ae27cf0c8887a0fd57c094065",
+    "mtime": 1790213272.2404382,
+    "seen": 1790213357.2107735,
+    "ast_hash": "4b2f2d5d1d6a601a6ef73177fdb7e7c1",
     "semantic_hash": ""
   },
   "test/controllers_refactoring_test.dart": {
@@ -2394,9 +2394,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/custom_valve_catalog.dart": {
-    "mtime": 1790186069.888204,
-    "seen": 1790186950.0265613,
-    "ast_hash": "c4b83b07756630b5b1677166e5aa2d2e",
+    "mtime": 1790213208.3112073,
+    "seen": 1790213357.2107508,
+    "ast_hash": "e46e53ab6df5ed418abb1460626b6290",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/custom_valve_catalog_dialog.dart": {
