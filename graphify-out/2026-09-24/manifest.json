@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/piping_network.dart": {
-    "mtime": 1790180923.2240086,
-    "seen": 1790181086.5909288,
-    "ast_hash": "e9e7ab543fd8f178f60c1a603b46e35f",
+    "mtime": 1790187891.348884,
+    "seen": 1790188093.3876274,
+    "ast_hash": "9a2e79d7357f85d6ce817d4e2f7e1044",
     "semantic_hash": ""
   },
   "lib/domain/models/piping_system.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790184662.6637473,
-    "seen": 1790186950.0268352,
-    "ast_hash": "73fe0abc354b17355837def51b5d0eb0",
+    "mtime": 1790186967.5203333,
+    "seen": 1790188093.3879137,
+    "ast_hash": "64a3cbc66247e8f390aceb7c8b64abd3",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/annotation_painter.dart": {
-    "mtime": 1789796410.5519726,
-    "seen": 1790176798.8754833,
-    "ast_hash": "66fdb4d1aff9dea881e19e8b210ae6d0",
+    "mtime": 1790212299.0323098,
+    "seen": 1790212330.1072383,
+    "ast_hash": "1e699904bc18bb7160f980f71e1d4f0e",
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/fitting_painter.dart": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/painters/equipment_painter.dart": {
-    "mtime": 1789796410.5529726,
-    "seen": 1790176798.8754864,
-    "ast_hash": "06ea7c9a79971869bec0eb067613e251",
+    "mtime": 1790212303.5085695,
+    "seen": 1790212330.1072419,
+    "ast_hash": "78a416edaf572e54af17372e22fe8c6e",
     "semantic_hash": ""
   },
   "test/equipment_test.dart": {
@@ -1596,9 +1596,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/element_3d_geometry.dart": {
-    "mtime": 1790186046.11363,
-    "seen": 1790186950.026562,
-    "ast_hash": "1f5916feaa685c7dae2d1a22a18b1e7d",
+    "mtime": 1790188065.3651648,
+    "seen": 1790188093.3876398,
+    "ast_hash": "7f6c30236a2796629a1b144436e181ae",
     "semantic_hash": ""
   },
   "test/element_selection_and_interaction_test.dart": {
@@ -2100,9 +2100,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/sheet_canvas_painter.dart": {
-    "mtime": 1790175397.3592224,
-    "seen": 1790176798.8754947,
-    "ast_hash": "d42353035e934d55c8060d8bb38c5d00",
+    "mtime": 1790212265.9405022,
+    "seen": 1790212330.1072505,
+    "ast_hash": "bdc3dbb9e79c7f4f0c6fb2c8ce206251",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_tab_bar.dart": {
