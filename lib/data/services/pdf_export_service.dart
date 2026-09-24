@@ -778,9 +778,7 @@ class PdfExportService {
         if (n1 == null || n2 == null) continue;
 
         final pos = joint.calculatePosition(n1, n2);
-        final rawPos = projector.projectRaw(pos.x, pos.y, pos.z);
-        final pMm = ViewportTransformService.model2dToSheetMm(rawPos, vp);
-
+        
         final vStart = n1;
         final vEnd = n2;
         final dx3d = vEnd.x - vStart.x;
