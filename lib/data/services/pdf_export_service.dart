@@ -603,11 +603,13 @@ class PdfExportService {
             canvas.strokePath();
           }
 
-          // Узловой маркер центра тройника
-          final centerR = math.max(0.6 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.35 * mm);
-          canvas.setFillColor(fitColor);
-          canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
-          canvas.fillPath();
+          if (styleConfig.showTeeNodes) {
+            // Узловой маркер центра тройника (уменьшенный)
+            final centerR = math.max(0.25 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm);
+            canvas.setFillColor(fitColor);
+            canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
+            canvas.fillPath();
+          }
         }
       } else if (fit.fittingType == FittingType.reducerConcentric ||
           fit.fittingType == FittingType.reducerEccentric) {
@@ -688,13 +690,15 @@ class PdfExportService {
                 drawWireSegment(wire, fitColor, strokeW);
               }
 
-              // Маркер центра
-              final rawN = projector.projectRaw(node.x, node.y, node.z);
-              final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
-              final centerR = math.max(0.6 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.35 * mm);
-              canvas.setFillColor(fitColor);
-              canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
-              canvas.fillPath();
+              if (styleConfig.showDirectBranchNodes) {
+                // Маркер центра врезки (уменьшенный)
+                final rawN = projector.projectRaw(node.x, node.y, node.z);
+                final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
+                final centerR = math.max(0.25 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm);
+                canvas.setFillColor(fitColor);
+                canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
+                canvas.fillPath();
+              }
             }
           }
         }
@@ -762,25 +766,62 @@ class PdfExportService {
     }
 
     // Сварные стыки
-    for (final joint in network.weldJoints.values) {
-      final seg = network.segments[joint.segmentId];
-      if (seg == null) continue;
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible) continue;
+    if (styleConfig.showWeldJoints) {
+      for (final joint in network.weldJoints.values) {
+        final seg = network.segments[joint.segmentId];
+        if (seg == null) continue;
+        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
+        if (!isVisible) continue;
 
-      final n1 = network.nodes[seg.startNodeId];
-      final n2 = network.nodes[seg.endNodeId];
-      if (n1 == null || n2 == null) continue;
+        final n1 = network.nodes[seg.startNodeId];
+        final n2 = network.nodes[seg.endNodeId];
+        if (n1 == null || n2 == null) continue;
 
-      final pos = joint.calculatePosition(n1, n2);
-      final raw = projector.projectRaw(pos.x, pos.y, pos.z);
-      final pMm = ViewportTransformService.model2dToSheetMm(raw, vp);
-      final xPt = pMm.dx * mm;
-      final yPt = (heightMm - pMm.dy) * mm;
+        final pos = joint.calculatePosition(n1, n2);
+        final rawPos = projector.projectRaw(pos.x, pos.y, pos.z);
+        final pMm = ViewportTransformService.model2dToSheetMm(rawPos, vp);
 
-      canvas.setFillColor(PdfColors.red700);
-      canvas.drawEllipse(xPt, yPt, 1.2 * mm, 1.2 * mm);
-      canvas.fillPath();
+        final vStart = n1;
+        final vEnd = n2;
+        final dx3d = vEnd.x - vStart.x;
+        final dy3d = vEnd.y - vStart.y;
+        final lenXy = math.sqrt(dx3d * dx3d + dy3d * dy3d);
+        
+        double uX = 0, uY = 1.0, uZ = 0.0;
+        if (lenXy > 1e-4) {
+          uX = -dy3d / lenXy;
+          uY = dx3d / lenXy;
+        }
+
+        // Half length of the tick in real world units (rough scaling factor for visualization)
+        // Usually, 1mm on paper = scale factor. But pipe DN is in mm, so we approximate
+        // Wait, tick size should be constant on paper, not scale with zoom?
+        // In PDF, we scale everything to sheet Mm. But projector scales 3D coords to raw 2D.
+        // Wait, ViewportTransformService scales raw 2D to sheet mm.
+        // What is the scale factor from 3D to raw 2D? Projector just scales by 1.0 (isometric is 1:1 roughly)
+        // Then ViewportTransformService scales by vp.viewScale.
+        // So 1 unit in 3D = vp.viewScale mm on paper.
+        // We want tickHalfLenMm on paper.
+        final tickHalfLenMm = math.max(0.7, styleConfig.getPipeStrokeWidthMm(seg.dn) * 1.5);
+        final tickHalfLen3d = tickHalfLenMm / vp.viewScale;
+        
+        final p13dx = pos.x + uX * tickHalfLen3d;
+        final p13dy = pos.y + uY * tickHalfLen3d;
+        final p13dz = pos.z + uZ * tickHalfLen3d;
+        final p23dx = pos.x - uX * tickHalfLen3d;
+        final p23dy = pos.y - uY * tickHalfLen3d;
+        final p23dz = pos.z - uZ * tickHalfLen3d;
+
+        final raw1 = projector.projectRaw(p13dx, p13dy, p13dz);
+        final raw2 = projector.projectRaw(p23dx, p23dy, p23dz);
+        final t1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+        final t2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+
+        canvas.setStrokeColor(PdfColors.black);
+        canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
+        canvas.drawLine(t1Mm.dx * mm, (heightMm - t1Mm.dy) * mm, t2Mm.dx * mm, (heightMm - t2Mm.dy) * mm);
+        canvas.strokePath();
+      }
     }
 
     // Векторные линии линейных размеров (ГОСТ 2.307)

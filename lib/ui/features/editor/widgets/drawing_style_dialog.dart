@@ -29,6 +29,9 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
   late double _textHeightMediumMm;
   late double _textHeightLargeMm;
   late String _fontFamily;
+  late bool _showTeeNodes;
+  late bool _showDirectBranchNodes;
+  late bool _showWeldJoints;
 
   /// Стандартный ряд толщин линий по ГОСТ 2.303-68 (в мм)
   static const List<double> gostLineWidths = [0.18, 0.25, 0.35, 0.5, 0.7, 0.8, 1.0, 1.4, 2.0];
@@ -48,6 +51,9 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
     _textHeightMediumMm = widget.initialConfig.textHeightMediumMm;
     _textHeightLargeMm = widget.initialConfig.textHeightLargeMm;
     _fontFamily = widget.initialConfig.fontFamily;
+    _showTeeNodes = widget.initialConfig.showTeeNodes;
+    _showDirectBranchNodes = widget.initialConfig.showDirectBranchNodes;
+    _showWeldJoints = widget.initialConfig.showWeldJoints;
   }
 
   void _applyPreset(String preset) {
@@ -107,6 +113,9 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
       textHeightMediumMm: _textHeightMediumMm,
       textHeightLargeMm: _textHeightLargeMm,
       fontFamily: _fontFamily,
+      showTeeNodes: _showTeeNodes,
+      showDirectBranchNodes: _showDirectBranchNodes,
+      showWeldJoints: _showWeldJoints,
     );
   }
 
@@ -207,6 +216,30 @@ class _DrawingStyleDialogState extends State<DrawingStyleDialog> {
               _buildHeightRow('Крупный шрифт (заголовок схемы, 7.0 мм):', _textHeightLargeMm, [5.0, 7.0, 10.0], (v) {
                 setState(() => _textHeightLargeMm = v);
               }),
+              const Divider(height: 24),
+              const Text('Настройки отображения элементов:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text('Показывать круги (узлы) тройников', style: TextStyle(fontSize: 13)),
+                value: _showTeeNodes,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onChanged: (val) => setState(() => _showTeeNodes = val),
+              ),
+              SwitchListTile(
+                title: const Text('Показывать круги (узлы) прямых врезок', style: TextStyle(fontSize: 13)),
+                value: _showDirectBranchNodes,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onChanged: (val) => setState(() => _showDirectBranchNodes = val),
+              ),
+              SwitchListTile(
+                title: const Text('Показывать сварные стыки', style: TextStyle(fontSize: 13)),
+                value: _showWeldJoints,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onChanged: (val) => setState(() => _showWeldJoints = val),
+              ),
             ],
           ),
         ),

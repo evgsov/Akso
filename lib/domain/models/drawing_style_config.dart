@@ -36,6 +36,15 @@ class DrawingStyleConfig {
   /// Семейство шрифтов ('GOST Type B', 'GOST Type A', 'Roboto')
   final String fontFamily;
 
+  /// Отображать ли узловые маркеры центров тройников
+  final bool showTeeNodes;
+
+  /// Отображать ли узловые маркеры центров прямых врезок
+  final bool showDirectBranchNodes;
+
+  /// Отображать ли сварные стыки (засечки) на чертеже
+  final bool showWeldJoints;
+
   const DrawingStyleConfig({
     this.pipeLineWidthMm = 0.8,
     this.thinLineWidthMm = 0.25,
@@ -49,6 +58,9 @@ class DrawingStyleConfig {
     this.textHeightMediumMm = 5.0,
     this.textHeightLargeMm = 7.0,
     this.fontFamily = 'GOST Type B',
+    this.showTeeNodes = true,
+    this.showDirectBranchNodes = true,
+    this.showWeldJoints = true,
   });
 
   /// Пресет "ГОСТ Стандарт" (0.8 / 0.25 мм)
@@ -110,6 +122,9 @@ class DrawingStyleConfig {
         'textHeightMediumMm': textHeightMediumMm,
         'textHeightLargeMm': textHeightLargeMm,
         'fontFamily': fontFamily,
+        'showTeeNodes': showTeeNodes,
+        'showDirectBranchNodes': showDirectBranchNodes,
+        'showWeldJoints': showWeldJoints,
       };
 
   factory DrawingStyleConfig.fromJson(Map<String, dynamic> json) => DrawingStyleConfig(
@@ -125,6 +140,9 @@ class DrawingStyleConfig {
         textHeightMediumMm: (json['textHeightMediumMm'] as num?)?.toDouble() ?? 5.0,
         textHeightLargeMm: (json['textHeightLargeMm'] as num?)?.toDouble() ?? 7.0,
         fontFamily: json['fontFamily'] as String? ?? 'GOST Type B',
+        showTeeNodes: json['showTeeNodes'] as bool? ?? true,
+        showDirectBranchNodes: json['showDirectBranchNodes'] as bool? ?? true,
+        showWeldJoints: json['showWeldJoints'] as bool? ?? true,
       );
 
   DrawingStyleConfig copyWith({
@@ -140,6 +158,9 @@ class DrawingStyleConfig {
     double? textHeightMediumMm,
     double? textHeightLargeMm,
     String? fontFamily,
+    bool? showTeeNodes,
+    bool? showDirectBranchNodes,
+    bool? showWeldJoints,
   }) {
     return DrawingStyleConfig(
       pipeLineWidthMm: pipeLineWidthMm ?? this.pipeLineWidthMm,
@@ -154,6 +175,9 @@ class DrawingStyleConfig {
       textHeightMediumMm: textHeightMediumMm ?? this.textHeightMediumMm,
       textHeightLargeMm: textHeightLargeMm ?? this.textHeightLargeMm,
       fontFamily: fontFamily ?? this.fontFamily,
+      showTeeNodes: showTeeNodes ?? this.showTeeNodes,
+      showDirectBranchNodes: showDirectBranchNodes ?? this.showDirectBranchNodes,
+      showWeldJoints: showWeldJoints ?? this.showWeldJoints,
     );
   }
 }
