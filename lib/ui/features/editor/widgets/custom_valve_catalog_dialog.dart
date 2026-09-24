@@ -10,19 +10,33 @@ import 'custom_valve_editor_dialog.dart';
 /// выбор, создание, редактирование и удаление параметрических УГО и 3D тел.
 class CustomValveCatalogDialog extends StatefulWidget {
   final Map<String, CustomValveDefinition>? projectValves;
+  final Function(CustomValveDefinition)? onDefinitionChanged;
+  final Function(String)? onDefinitionDeleted;
+  final bool Function(String)? isDefinitionInUse;
 
   const CustomValveCatalogDialog({
     super.key,
     this.projectValves,
+    this.onDefinitionChanged,
+    this.onDefinitionDeleted,
+    this.isDefinitionInUse,
   });
 
   static Future<CustomValveDefinition?> show(
     BuildContext context, {
     Map<String, CustomValveDefinition>? projectValves,
+    Function(CustomValveDefinition)? onDefinitionChanged,
+    Function(String)? onDefinitionDeleted,
+    bool Function(String)? isDefinitionInUse,
   }) {
     return showDialog<CustomValveDefinition>(
       context: context,
-      builder: (_) => CustomValveCatalogDialog(projectValves: projectValves),
+      builder: (_) => CustomValveCatalogDialog(
+        projectValves: projectValves,
+        onDefinitionChanged: onDefinitionChanged,
+        onDefinitionDeleted: onDefinitionDeleted,
+        isDefinitionInUse: isDefinitionInUse,
+      ),
     );
   }
 
@@ -38,13 +52,13 @@ class _CustomValveCatalogDialogState extends State<CustomValveCatalogDialog> {
     final catalog = CustomValveCatalog.instance;
     final all = <String, CustomValveDefinition>{};
 
-    for (final d in catalog.allDefinitions) {
-      all[d.id] = d;
-    }
     if (widget.projectValves != null) {
       for (final entry in widget.projectValves!.entries) {
         all[entry.key] = entry.value;
       }
+    }
+    for (final d in catalog.allDefinitions) {
+      all[d.id] = d;
     }
 
     return all.values.where((def) {
@@ -103,6 +117,7 @@ class _CustomValveCatalogDialogState extends State<CustomValveCatalogDialog> {
                       builder: (_) => const CustomValveEditorDialog(),
                     );
                     if (created != null && mounted) {
+                      widget.onDefinitionChanged?.call(created);
                       setState(() {});
                     }
                   },
@@ -237,6 +252,7 @@ class _CustomValveCatalogDialogState extends State<CustomValveCatalogDialog> {
                                     builder: (_) => CustomValveEditorDialog(initialDefinition: def),
                                   );
                                   if (edited != null && mounted) {
+                                    widget.onDefinitionChanged?.call(edited);
                                     setState(() {});
                                   }
                                 },
@@ -246,7 +262,14 @@ class _CustomValveCatalogDialogState extends State<CustomValveCatalogDialog> {
                                   icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                                   tooltip: 'Удалить',
                                   onPressed: () async {
+                                    if (widget.isDefinitionInUse?.call(def.id) == true) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Невозможно удалить: арматура используется на схеме')),
+                                      );
+                                      return;
+                                    }
                                     await CustomValveCatalog.instance.deleteDefinition(def.id);
+                                    widget.onDefinitionDeleted?.call(def.id);
                                     if (mounted) setState(() {});
                                   },
                                 ),

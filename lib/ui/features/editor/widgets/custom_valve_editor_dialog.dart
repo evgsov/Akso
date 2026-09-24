@@ -296,7 +296,7 @@ class _CustomValveEditorDialogState extends State<CustomValveEditorDialog> {
 
   CustomValveDefinition _buildDefinition() {
     final minLen = double.tryParse(_minLengthController.text) ?? 100.0;
-    final isEditing = widget.initialDefinition != null;
+    final isEditing = widget.initialDefinition != null && !widget.initialDefinition!.isBuiltin;
     final id = isEditing
         ? widget.initialDefinition!.id
         : 'custom_valve_${_uuid.v4().substring(0, 8)}';

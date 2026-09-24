@@ -4374,6 +4374,32 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                       final selected = await CustomValveCatalogDialog.show(
                         context,
                         projectValves: widget.controller.customValves,
+                        onDefinitionChanged: (def) {
+                          widget.controller.addOrUpdateCustomValve(def);
+                          bool changedAny = false;
+                          for (final v in widget.controller.network.valves.values.toList()) {
+                            if (v.customDefinitionId == def.id) {
+                              widget.controller.network.updateValve(
+                                v.id,
+                                v.copyWith(isFlanged: def.symbol2d.hasBodyFlanges),
+                              );
+                              changedAny = true;
+                            }
+                          }
+                          if (changedAny) {
+                            widget.controller.network.generateElementWeldJoints();
+                            widget.controller.network.recalculateSpools();
+                            widget.controller.history.recordState(widget.controller.network);
+                          }
+                          widget.controller.refresh();
+                        },
+                        onDefinitionDeleted: (id) {
+                          widget.controller.customValves.remove(id);
+                          widget.controller.refresh();
+                        },
+                        isDefinitionInUse: (id) {
+                          return widget.controller.network.valves.values.any((v) => v.customDefinitionId == id);
+                        },
                       );
                       if (selected != null) {
                         widget.controller.addOrUpdateCustomValve(selected);
