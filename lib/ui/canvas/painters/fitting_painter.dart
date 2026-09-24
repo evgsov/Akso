@@ -559,10 +559,12 @@ class FittingPainter {
       styleConfig: styleConfig,
       sheetZoom: sheetZoom,
     );
-    final centerPaint = Paint()
-      ..color = isSelected ? Colors.amber : mainColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(ptN, math.max(1.5, mainStrokeWidth * 0.35), centerPaint);
+    if (styleConfig?.showTeeNodes ?? true) {
+      final centerPaint = Paint()
+        ..color = isSelected ? Colors.amber : mainColor
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(ptN, math.max(1.0, mainStrokeWidth * 0.2), centerPaint);
+    }
 
     // 5. Выноска с наименованием/диаметрами тройника
     if (showCallouts && !_hasCallout(network, fit)) {
@@ -679,10 +681,12 @@ class FittingPainter {
       styleConfig: styleConfig,
       sheetZoom: sheetZoom,
     );
-    final centerPaint = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, math.max(1.5, mainStrokeWidth * 0.35), centerPaint);
+    if (styleConfig?.showDirectBranchNodes ?? true) {
+      final centerPaint = Paint()
+        ..color = strokeColor
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, math.max(1.0, mainStrokeWidth * 0.2), centerPaint);
+    }
 
     // 3. Выноска с наименованием врезки (только если нет сгенерированных Callout)
     if (showCallouts && !_hasCallout(network, fit)) {

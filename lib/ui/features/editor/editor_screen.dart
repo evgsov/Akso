@@ -537,6 +537,7 @@ class _EditorScreenState extends State<EditorScreen> {
                           selectedSpoolId: controller.selectedSpoolId,
                           selectedSpoolIds: controller.selectedSpoolIds,
                           activeTraceEnd: controller.currentCursorScreenPos,
+                          styleConfig: controller.styleConfig,
                           activeAxisStart: controller.axisStartNode,
                           snapResult: controller.currentSnapResult,
                           currentElevationZ: controller.currentElevationZ,

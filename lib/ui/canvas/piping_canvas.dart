@@ -8,6 +8,7 @@ import '../../domain/models/node_3d.dart';
 import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/custom_valve_definition.dart';
+import '../../domain/models/drawing_style_config.dart';
 import '../../domain/services/grid_system_engine.dart';
 import 'painters/grid_painter.dart';
 import 'painters/pipe_painter.dart';
@@ -77,6 +78,7 @@ class PipingCanvasPainter extends CustomPainter {
   final bool isZLocked;
   final bool showZPlaneGrid;
   final Map<String, CustomValveDefinition>? customValves;
+  final DrawingStyleConfig? styleConfig;
 
   PipingCanvasPainter({
     required this.network,
@@ -119,6 +121,7 @@ class PipingCanvasPainter extends CustomPainter {
     this.isZLocked = false,
     this.showZPlaneGrid = false,
     this.customValves,
+    this.styleConfig,
   });
 
   @override
@@ -203,6 +206,7 @@ class PipingCanvasPainter extends CustomPainter {
       selectedNodeId,
       showCallouts,
       isVolumeMode: isVolumeMode,
+      styleConfig: styleConfig,
     );
 
     // 5 & 6. Отрисовка сварных стыков, узлов сети и отметок
@@ -211,9 +215,10 @@ class PipingCanvasPainter extends CustomPainter {
       projector,
       network,
       selectedNodeId,
-      showWelds,
+      showWelds && (styleConfig?.showWeldJoints ?? true),
       showCallouts,
       selectedWeldId: selectedWeldId,
+      styleConfig: styleConfig,
     );
 
     // 6.1. Отрисовка умных выносок сети (Callout) поверх графа
