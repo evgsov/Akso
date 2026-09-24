@@ -56,6 +56,13 @@ class ValvePainter {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 
+      final handlePaint = Paint()
+        ..color = isSelected ? Colors.amber : color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.5, valveStroke * 0.45)
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
       if (isSelected) {
         final glowPaint = Paint()
           ..color = Colors.amber.withValues(alpha: 0.35)
@@ -72,7 +79,8 @@ class ValvePainter {
       for (final wire in wireSegments) {
         final p1 = projector.project(wire.startNode);
         final p2 = projector.project(wire.endNode);
-        canvas.drawLine(p1, p2, strokePaint);
+        final paint = wire.layer == Element3dGeometry.layerHandles ? handlePaint : strokePaint;
+        canvas.drawLine(p1, p2, paint);
       }
     }
   }

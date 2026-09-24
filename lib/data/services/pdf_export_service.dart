@@ -37,6 +37,7 @@ class PdfExportService {
     double orbitElevation = math.pi / 6,
     Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
     Map<String, CustomValveDefinition>? customValves,
+    Map<String, String>? calloutTemplates,
   }) async {
     final pdf = pw.Document(
       title: sheet.name,
@@ -50,16 +51,15 @@ class PdfExportService {
     final heightMm = sheet.format.heightMm;
     const mm = PdfPageFormat.mm;
 
-    final pageFormat = PdfPageFormat(
-      widthMm * mm,
-      heightMm * mm,
-      marginAll: 0,
-    );
+    final pageFormat = PdfPageFormat(widthMm * mm, heightMm * mm, marginAll: 0);
 
     pdf.addPage(
       pw.Page(
         pageFormat: pageFormat,
         build: (context) {
+          final pdfFontRegular = fontRegular.getFont(context);
+          final pdfFontBold = fontBold.getFont(context);
+
           return pw.Stack(
             children: [
               // 1. Векторные линии видового экрана, выносок, размеров, рамки листа и штампа
@@ -75,7 +75,9 @@ class PdfExportService {
                     orbitAzimuth: orbitAzimuth,
                     orbitElevation: orbitElevation,
                     targetCenter: targetCenter,
+                    fontRegular: pdfFontRegular,
                     customValves: customValves,
+                    calloutTemplates: calloutTemplates,
                     heightMm: heightMm,
                     mm: mm,
                   );
@@ -93,6 +95,9 @@ class PdfExportService {
                 targetCenter: targetCenter,
                 fontRegular: fontRegular,
                 fontBold: fontBold,
+                pdfFontRegular: pdfFontRegular,
+                pdfFontBold: pdfFontBold,
+                calloutTemplates: calloutTemplates,
                 heightMm: heightMm,
                 mm: mm,
               ),
@@ -191,12 +196,22 @@ class PdfExportService {
 
     // Непрозрачная белая подложка штампа
     canvas.setFillColor(PdfColors.white);
-    canvas.drawRect(stampLeftMm * mm, stampBottomMm * mm, 185.0 * mm, 55.0 * mm);
+    canvas.drawRect(
+      stampLeftMm * mm,
+      stampBottomMm * mm,
+      185.0 * mm,
+      55.0 * mm,
+    );
     canvas.fillPath();
 
     // Внешний контур штампа (основная сплошная линия по ГОСТ 2.303)
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
-    canvas.drawRect(stampLeftMm * mm, stampBottomMm * mm, 185.0 * mm, 55.0 * mm);
+    canvas.drawRect(
+      stampLeftMm * mm,
+      stampBottomMm * mm,
+      185.0 * mm,
+      55.0 * mm,
+    );
     canvas.strokePath();
 
     // Основной вертикальный разделитель: 65 мм слева (блок согласований/изменений)
@@ -204,10 +219,20 @@ class PdfExportService {
     final stampRightMm = widthMm - sheet.format.frameRightMm;
 
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
-    canvas.drawLine(xApprovalsEndMm * mm, stampBottomMm * mm, xApprovalsEndMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(
+      xApprovalsEndMm * mm,
+      stampBottomMm * mm,
+      xApprovalsEndMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
 
     // Сквозная горизонтальная линия Y = 25 мм от верха (stampBottomMm + 30 мм) по всей ширине штампа (0..185 мм)
-    canvas.drawLine(stampLeftMm * mm, (stampBottomMm + 30.0) * mm, stampRightMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(
+      stampLeftMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      stampRightMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
     canvas.strokePath();
 
     // --- ЛЕВЫЙ БЛОК (0..65 мм) ---
@@ -215,7 +240,12 @@ class PdfExportService {
     canvas.setLineWidth(styleConfig.stampGridWidthMm * mm);
     for (int i = 1; i <= 4; i++) {
       final yMm = stampBottomMm + 30.0 + (i * 5.0);
-      canvas.drawLine(stampLeftMm * mm, yMm * mm, xApprovalsEndMm * mm, yMm * mm);
+      canvas.drawLine(
+        stampLeftMm * mm,
+        yMm * mm,
+        xApprovalsEndMm * mm,
+        yMm * mm,
+      );
     }
 
     // Вертикальные линии колонок таблицы изменений (проходят от stampBottomMm + 30 до stampBottomMm + 55)
@@ -225,16 +255,46 @@ class PdfExportService {
     final xRevDocMm = stampLeftMm + 40.0;
     final xRevSignMm = stampLeftMm + 55.0;
 
-    canvas.drawLine(xRevIzmMm * mm, (stampBottomMm + 30.0) * mm, xRevIzmMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevKolMm * mm, (stampBottomMm + 30.0) * mm, xRevKolMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevListMm * mm, (stampBottomMm + 30.0) * mm, xRevListMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevDocMm * mm, (stampBottomMm + 30.0) * mm, xRevDocMm * mm, (stampBottomMm + 55.0) * mm);
-    canvas.drawLine(xRevSignMm * mm, (stampBottomMm + 30.0) * mm, xRevSignMm * mm, (stampBottomMm + 55.0) * mm);
+    canvas.drawLine(
+      xRevIzmMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      xRevIzmMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
+    canvas.drawLine(
+      xRevKolMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      xRevKolMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
+    canvas.drawLine(
+      xRevListMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      xRevListMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
+    canvas.drawLine(
+      xRevDocMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      xRevDocMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
+    canvas.drawLine(
+      xRevSignMm * mm,
+      (stampBottomMm + 30.0) * mm,
+      xRevSignMm * mm,
+      (stampBottomMm + 55.0) * mm,
+    );
 
     // Блок согласований: 6 строк по 5 мм (y = stampBottomMm + 5, 10, 15, 20, 25 мм)
     for (int i = 1; i <= 5; i++) {
       final yMm = stampBottomMm + (i * 5.0);
-      canvas.drawLine(stampLeftMm * mm, yMm * mm, xApprovalsEndMm * mm, yMm * mm);
+      canvas.drawLine(
+        stampLeftMm * mm,
+        yMm * mm,
+        xApprovalsEndMm * mm,
+        yMm * mm,
+      );
     }
 
     // Вертикальные линии блока согласований (от stampBottomMm до stampBottomMm + 30):
@@ -243,9 +303,24 @@ class PdfExportService {
     final xNameMm = stampLeftMm + 40.0;
     final xSignMm = stampLeftMm + 55.0;
 
-    canvas.drawLine(xRoleMm * mm, stampBottomMm * mm, xRoleMm * mm, (stampBottomMm + 30.0) * mm);
-    canvas.drawLine(xNameMm * mm, stampBottomMm * mm, xNameMm * mm, (stampBottomMm + 30.0) * mm);
-    canvas.drawLine(xSignMm * mm, stampBottomMm * mm, xSignMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(
+      xRoleMm * mm,
+      stampBottomMm * mm,
+      xRoleMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
+    canvas.drawLine(
+      xNameMm * mm,
+      stampBottomMm * mm,
+      xNameMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
+    canvas.drawLine(
+      xSignMm * mm,
+      stampBottomMm * mm,
+      xSignMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
     canvas.strokePath();
 
     // --- ПРАВЫЙ БЛОК (65..185 мм, ширина 120 мм) ---
@@ -254,27 +329,57 @@ class PdfExportService {
     // Строка 1: Шифр проекта (10 мм сверху, y: stampBottomMm + 45..55)
     final yRow1Mm = stampBottomMm + 45.0;
     canvas.setLineWidth(styleConfig.stampBorderWidthMm * mm);
-    canvas.drawLine(xApprovalsEndMm * mm, yRow1Mm * mm, stampRightMm * mm, yRow1Mm * mm);
+    canvas.drawLine(
+      xApprovalsEndMm * mm,
+      yRow1Mm * mm,
+      stampRightMm * mm,
+      yRow1Mm * mm,
+    );
 
     // Разделитель между левой (70 мм) и правой (50 мм) частями: от stampBottomMm до stampBottomMm + 30.0
-    canvas.drawLine(xCenterEndMm * mm, stampBottomMm * mm, xCenterEndMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(
+      xCenterEndMm * mm,
+      stampBottomMm * mm,
+      xCenterEndMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
 
     // Разделитель строк 3 и 4: y = stampBottomMm + 15 (Строка 3: 15 мм, Строка 4: 15 мм)
     final yRow3Mm = stampBottomMm + 15.0;
-    canvas.drawLine(xApprovalsEndMm * mm, yRow3Mm * mm, stampRightMm * mm, yRow3Mm * mm);
+    canvas.drawLine(
+      xApprovalsEndMm * mm,
+      yRow3Mm * mm,
+      stampRightMm * mm,
+      yRow3Mm * mm,
+    );
 
     // Строка 3 Справа: Стадия | Лист | Листов (от stampBottomMm + 15 до stampBottomMm + 30)
     // Вертикальные разделители: Стадия (15 мм: 135..150), Лист (15 мм: 150..165), Листов (20 мм: 165..185)
     final xStageMm = xCenterEndMm + 15.0;
     final xSheetMm = xCenterEndMm + 30.0;
-    canvas.drawLine(xStageMm * mm, yRow3Mm * mm, xStageMm * mm, (stampBottomMm + 30.0) * mm);
-    canvas.drawLine(xSheetMm * mm, yRow3Mm * mm, xSheetMm * mm, (stampBottomMm + 30.0) * mm);
+    canvas.drawLine(
+      xStageMm * mm,
+      yRow3Mm * mm,
+      xStageMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
+    canvas.drawLine(
+      xSheetMm * mm,
+      yRow3Mm * mm,
+      xSheetMm * mm,
+      (stampBottomMm + 30.0) * mm,
+    );
     canvas.strokePath();
 
     // Шапка Стадия | Лист | Листов (5 мм сверху строки 3: y = stampBottomMm + 25)
     canvas.setLineWidth(styleConfig.stampGridWidthMm * mm);
     final yStageHeaderMm = stampBottomMm + 25.0;
-    canvas.drawLine(xCenterEndMm * mm, yStageHeaderMm * mm, stampRightMm * mm, yStageHeaderMm * mm);
+    canvas.drawLine(
+      xCenterEndMm * mm,
+      yStageHeaderMm * mm,
+      stampRightMm * mm,
+      yStageHeaderMm * mm,
+    );
     canvas.strokePath();
   }
 
@@ -288,11 +393,14 @@ class PdfExportService {
     required double orbitAzimuth,
     required double orbitElevation,
     required Node3D targetCenter,
+    required PdfFont fontRegular,
     Map<String, CustomValveDefinition>? customValves,
+    Map<String, String>? calloutTemplates,
     required double heightMm,
     required double mm,
   }) {
     final vp = sheet.viewport;
+    final templates = calloutTemplates ?? defaultCalloutTemplates;
     final projector = AxonometryProjector(
       projectionType: projectionType,
       orbitAzimuth: orbitAzimuth,
@@ -318,21 +426,38 @@ class PdfExportService {
     canvas.clipPath();
 
     // Вспомогательная функция рисования 3D отрезка каркаса в PDF
-    void drawWireSegment(WireframeSegment3D wire, PdfColor color, double strokeWidth) {
+    void drawWireSegment(
+      WireframeSegment3D wire,
+      PdfColor color,
+      double strokeWidth,
+    ) {
       final raw1 = projector.projectRaw(wire.x1, wire.y1, wire.z1);
       final raw2 = projector.projectRaw(wire.x2, wire.y2, wire.z2);
       final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
       final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
       canvas.setStrokeColor(color);
       canvas.setLineWidth(strokeWidth);
-      canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
+      canvas.drawLine(
+        p1Mm.dx * mm,
+        (heightMm - p1Mm.dy) * mm,
+        p2Mm.dx * mm,
+        (heightMm - p2Mm.dy) * mm,
+      );
       canvas.strokePath();
     }
 
     // 1. Строительные оси здания
     for (final axis in network.axes.values) {
-      final raw1 = projector.projectRaw(axis.startPoint.x, axis.startPoint.y, axis.startPoint.z);
-      final raw2 = projector.projectRaw(axis.endPoint.x, axis.endPoint.y, axis.endPoint.z);
+      final raw1 = projector.projectRaw(
+        axis.startPoint.x,
+        axis.startPoint.y,
+        axis.startPoint.z,
+      );
+      final raw2 = projector.projectRaw(
+        axis.endPoint.x,
+        axis.endPoint.y,
+        axis.endPoint.z,
+      );
       final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
       final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
 
@@ -344,7 +469,9 @@ class PdfExportService {
       canvas.setStrokeColor(PdfColors.blueGrey300);
       canvas.setLineWidth(styleConfig.axisLineWidthMm * mm);
 
-      final dist = math.sqrt(math.pow(x2Pt - x1Pt, 2) + math.pow(y2Pt - y1Pt, 2));
+      final dist = math.sqrt(
+        math.pow(x2Pt - x1Pt, 2) + math.pow(y2Pt - y1Pt, 2),
+      );
       if (dist > 0) {
         final dx = (x2Pt - x1Pt) / dist;
         final dy = (y2Pt - y1Pt) / dist;
@@ -354,7 +481,12 @@ class PdfExportService {
           final step = (draw ? 4.0 : 2.0) * mm;
           final next = math.min(cur + step, dist);
           if (draw) {
-            canvas.drawLine(x1Pt + dx * cur, y1Pt + dy * cur, x1Pt + dx * next, y1Pt + dy * next);
+            canvas.drawLine(
+              x1Pt + dx * cur,
+              y1Pt + dy * cur,
+              x1Pt + dx * next,
+              y1Pt + dy * next,
+            );
           }
           cur = next;
           draw = !draw;
@@ -366,11 +498,40 @@ class PdfExportService {
         final r = 3.5 * mm;
         canvas.setStrokeColor(PdfColors.blueGrey600);
         canvas.setLineWidth(0.35 * mm);
-        canvas.setFillColor(PdfColors.white);
-        canvas.drawEllipse(x1Pt, y1Pt, r, r);
-        canvas.fillAndStrokePath();
-        canvas.drawEllipse(x2Pt, y2Pt, r, r);
-        canvas.fillAndStrokePath();
+
+        final labelFont = fontRegular;
+        const labelFontSize = 7.0;
+        final labelMetrics = labelFont.stringMetrics(axis.label);
+        final labelW = labelMetrics.width * labelFontSize;
+        final labelH = labelMetrics.ascent * labelFontSize;
+
+        if (axis.showStartBubble) {
+          canvas.setFillColor(PdfColors.white);
+          canvas.drawEllipse(x1Pt, y1Pt, r, r);
+          canvas.fillAndStrokePath();
+          canvas.setFillColor(PdfColors.blueGrey800);
+          canvas.drawString(
+            labelFont,
+            labelFontSize,
+            axis.label,
+            x1Pt - labelW / 2.0,
+            y1Pt - labelH / 2.0,
+          );
+        }
+
+        if (axis.showEndBubble) {
+          canvas.setFillColor(PdfColors.white);
+          canvas.drawEllipse(x2Pt, y2Pt, r, r);
+          canvas.fillAndStrokePath();
+          canvas.setFillColor(PdfColors.blueGrey800);
+          canvas.drawString(
+            labelFont,
+            labelFontSize,
+            axis.label,
+            x2Pt - labelW / 2.0,
+            y2Pt - labelH / 2.0,
+          );
+        }
       }
     }
 
@@ -402,12 +563,24 @@ class PdfExportService {
         final z1 = eq.z;
         final z2 = eq.z + eq.height;
 
-        void drawEdge(double x1, double y1, double z1, double x2, double y2, double z2) {
+        void drawEdge(
+          double x1,
+          double y1,
+          double z1,
+          double x2,
+          double y2,
+          double z2,
+        ) {
           final r1 = projector.projectRaw(x1, y1, z1);
           final r2 = projector.projectRaw(x2, y2, z2);
           final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
           final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
-          canvas.drawLine(p1.dx * mm, (heightMm - p1.dy) * mm, p2.dx * mm, (heightMm - p2.dy) * mm);
+          canvas.drawLine(
+            p1.dx * mm,
+            (heightMm - p1.dy) * mm,
+            p2.dx * mm,
+            (heightMm - p2.dy) * mm,
+          );
         }
 
         for (int i = 0; i < 4; i++) {
@@ -417,7 +590,7 @@ class PdfExportService {
           drawEdge(c[i].dx, c[i].dy, z1, c[i].dx, c[i].dy, z2);
         }
         canvas.strokePath();
-      } else {
+      } else if (eq.type == EquipmentType.cylinderVertical) {
         final r = eq.width / 2.0;
         final z1 = eq.z;
         final z2 = eq.z + eq.height;
@@ -428,12 +601,24 @@ class PdfExportService {
           pts.add(rot(r * math.cos(a), r * math.sin(a)));
         }
 
-        void drawEdge(double x1, double y1, double z1, double x2, double y2, double z2) {
+        void drawEdge(
+          double x1,
+          double y1,
+          double z1,
+          double x2,
+          double y2,
+          double z2,
+        ) {
           final r1 = projector.projectRaw(x1, y1, z1);
           final r2 = projector.projectRaw(x2, y2, z2);
           final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
           final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
-          canvas.drawLine(p1.dx * mm, (heightMm - p1.dy) * mm, p2.dx * mm, (heightMm - p2.dy) * mm);
+          canvas.drawLine(
+            p1.dx * mm,
+            (heightMm - p1.dy) * mm,
+            p2.dx * mm,
+            (heightMm - p2.dy) * mm,
+          );
         }
 
         for (int i = 0; i < n; i++) {
@@ -443,188 +628,419 @@ class PdfExportService {
           drawEdge(pts[i].dx, pts[i].dy, z1, pts[i].dx, pts[i].dy, z2);
         }
         canvas.strokePath();
-      }
-    }
+      } else if (eq.type == EquipmentType.cylinderHorizontal) {
+        final radius = eq.height / 2.0;
+        final halfL = eq.length / 2.0;
+        final centerZ = eq.z + radius;
+        const n = 12;
 
-    // 3. Трассы трубопроводов (с вычетами фитингов и прорезями под арматуру)
-    if (network.spools.isNotEmpty) {
-      for (final spool in network.spools.values) {
-        final seg = network.segments[spool.segmentId];
-        if (seg == null) continue;
-        if (network.isButtJoint(seg.id)) continue;
-
-        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-        if (!isVisible && !vp.ghostInactiveSystems) continue;
-
-        final start = spool.startPoint ?? network.nodes[seg.startNodeId];
-        final end = spool.endPoint ?? network.nodes[seg.endNodeId];
-        if (start == null || end == null) continue;
-
-        final sys = network.systems[seg.systemId];
-        final pdfColor = isVisible
-            ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
-            : PdfColors.grey400;
-        final strokeW = isVisible
-            ? styleConfig.getPipeStrokeWidthMm(spool.dn) * mm
-            : styleConfig.thinLineWidthMm * mm;
-
-        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
-        final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(start, end, segValves);
-
-        for (final interval in intervals) {
-          final raw1 = projector.projectRaw(interval.$1.x, interval.$1.y, interval.$1.z);
-          final raw2 = projector.projectRaw(interval.$2.x, interval.$2.y, interval.$2.z);
-          final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
-          final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
-          canvas.setStrokeColor(pdfColor);
-          canvas.setLineWidth(strokeW);
-          canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
-          canvas.strokePath();
+        void drawEdge(
+          double x1,
+          double y1,
+          double z1,
+          double x2,
+          double y2,
+          double z2,
+        ) {
+          final r1 = projector.projectRaw(x1, y1, z1);
+          final r2 = projector.projectRaw(x2, y2, z2);
+          final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
+          final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
+          canvas.drawLine(
+            p1.dx * mm,
+            (heightMm - p1.dy) * mm,
+            p2.dx * mm,
+            (heightMm - p2.dy) * mm,
+          );
         }
-      }
-    } else {
-      // Fallback: отрисовка сегментов
-      for (final seg in network.segments.values) {
-        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-        if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-        final n1 = network.nodes[seg.startNodeId];
-        final n2 = network.nodes[seg.endNodeId];
-        if (n1 == null || n2 == null) continue;
+        final startCap = <List<double>>[];
+        final endCap = <List<double>>[];
 
-        final sys = network.systems[seg.systemId];
-        final pdfColor = isVisible
-            ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
-            : PdfColors.grey400;
-        final strokeW = isVisible
-            ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
-            : styleConfig.thinLineWidthMm * mm;
+        for (int i = 0; i < n; i++) {
+          final angle = (2 * math.pi * i) / n;
+          final lx = radius * math.cos(angle);
+          final vz = centerZ + radius * math.sin(angle);
 
-        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
-        final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(n1, n2, segValves);
+          final sx = eq.x + lx * cosA - (-halfL) * sinA;
+          final sy = eq.y + lx * sinA + (-halfL) * cosA;
+          startCap.add([sx, sy, vz]);
 
-        for (final interval in intervals) {
-          final raw1 = projector.projectRaw(interval.$1.x, interval.$1.y, interval.$1.z);
-          final raw2 = projector.projectRaw(interval.$2.x, interval.$2.y, interval.$2.z);
-          final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
-          final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
-          canvas.setStrokeColor(pdfColor);
-          canvas.setLineWidth(strokeW);
-          canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm);
-          canvas.strokePath();
+          final ex = eq.x + lx * cosA - halfL * sinA;
+          final ey = eq.y + lx * sinA + halfL * cosA;
+          endCap.add([ex, ey, vz]);
         }
+
+        for (int i = 0; i < n; i++) {
+          final next = (i + 1) % n;
+          drawEdge(
+            startCap[i][0],
+            startCap[i][1],
+            startCap[i][2],
+            startCap[next][0],
+            startCap[next][1],
+            startCap[next][2],
+          );
+          drawEdge(
+            endCap[i][0],
+            endCap[i][1],
+            endCap[i][2],
+            endCap[next][0],
+            endCap[next][1],
+            endCap[next][2],
+          );
+          drawEdge(
+            startCap[i][0],
+            startCap[i][1],
+            startCap[i][2],
+            endCap[i][0],
+            endCap[i][1],
+            endCap[i][2],
+          );
+        }
+        canvas.strokePath();
       }
-    }
 
-    // 4. Фасонные детали (отводы, тройники, переходы, фланцы, заглушки, врезки)
-    for (final fit in network.fittings.values) {
-      final node = network.nodes[fit.nodeId];
-      if (node == null) continue;
-      final connected = network.getConnectedSegments(fit.nodeId);
-      if (connected.isEmpty) continue;
+      // Штуцера оборудования
+      for (final noz in eq.nozzles) {
+        final node = network.nodes[noz.id];
+        final double wx, wy, wz;
+        if (node != null) {
+          wx = node.x;
+          wy = node.y;
+          wz = node.z;
+        } else {
+          wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+          wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+          wz = eq.z + noz.localZ;
+        }
 
-      final isVisible = vp.visibleSystemIds == null ||
-          connected.any((s) => vp.visibleSystemIds!.contains(s.systemId));
-      if (!isVisible && !vp.ghostInactiveSystems) continue;
+        final effDir = network.getNozzleEffectiveDirection(noz);
+        final spudLenMm = network.getNozzleEffectiveSpudLength(
+          noz,
+          defaultSpudMm: 120.0,
+        );
 
-      final s1 = connected[0];
-      final fitSys = network.systems[s1.systemId];
-      final fitColor = isVisible
-          ? (fitSys != null ? PdfColor.fromInt(fitSys.colorValue) : PdfColors.black)
-          : PdfColors.grey400;
+        final wireframe = Element3dGeometry.generateNozzleWireframe(
+          startX: wx,
+          startY: wy,
+          startZ: wz,
+          dirX: effDir.x,
+          dirY: effDir.y,
+          dirZ: effDir.z,
+          dn: noz.dn,
+          spudLengthMm: spudLenMm,
+          includeCounterFlange: noz.includeInMto,
+        );
 
-      if (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45) {
-        if (connected.length == 2) {
-          final s2 = connected[1];
-          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
-          if (other1 != null && other2 != null) {
-            final wires = Element3dGeometry.generateElbowWireframe(
-              fit,
-              node,
-              other1,
-              other2,
-              pipeOuterDiameter: s1.outerDiameterMm,
-            );
-            final strokeW = isVisible
-                ? styleConfig.getPipeStrokeWidthMm(fit.dn) * mm
-                : styleConfig.thinLineWidthMm * mm;
-            for (final wire in wires) {
-              drawWireSegment(wire, fitColor, strokeW);
-            }
+        for (int i = 0; i < wireframe.length; i++) {
+          final seg = wireframe[i];
+          final r1 = projector.projectRaw(seg.x1, seg.y1, seg.z1);
+          final r2 = projector.projectRaw(seg.x2, seg.y2, seg.z2);
+          final p1 = ViewportTransformService.model2dToSheetMm(r1, vp);
+          final p2 = ViewportTransformService.model2dToSheetMm(r2, vp);
+
+          if (i == 0) {
+            canvas.setLineWidth(styleConfig.fittingLineWidthMm * mm);
+          } else {
+            canvas.setLineWidth(
+              styleConfig.pipeLineWidthMm * mm,
+            ); // фланцы чуть толще
           }
+          canvas.drawLine(
+            p1.dx * mm,
+            (heightMm - p1.dy) * mm,
+            p2.dx * mm,
+            (heightMm - p2.dy) * mm,
+          );
         }
-      } else if (fit.fittingType == FittingType.tee) {
-        if (connected.length >= 3) {
-          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
-          final rawN = projector.projectRaw(node.x, node.y, node.z);
-          final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
+        canvas.strokePath();
+      }
 
-          for (int i = 0; i < 3; i++) {
-            final seg = connected[i];
-            final otherId = seg.startNodeId == fit.nodeId ? seg.endNodeId : seg.startNodeId;
-            final otherNode = network.nodes[otherId];
-            if (otherNode == null) continue;
+      // 3. Трассы трубопроводов (с вычетами фитингов и прорезями под арматуру)
+      if (network.spools.isNotEmpty) {
+        for (final spool in network.spools.values) {
+          final seg = network.segments[spool.segmentId];
+          if (seg == null) continue;
+          if (network.isButtJoint(seg.id)) continue;
 
-            final isBranch = seg.id == branchSeg?.id;
-            final armLenMm = isBranch
-                ? fit.effectiveBranchLengthMm
-                : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
-                    ? fit.buildingLengthMm! / 2.0
-                    : fit.dn * 1.0);
+          final isVisible =
+              vp.visibleSystemIds == null ||
+              vp.visibleSystemIds!.contains(seg.systemId);
+          if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-            final vx = otherNode.x - node.x;
-            final vy = otherNode.y - node.y;
-            final vz = otherNode.z - node.z;
-            final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
-            final uX = dist3d > 0 ? vx / dist3d : 0.0;
-            final uY = dist3d > 0 ? vy / dist3d : 0.0;
-            final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+          final start = spool.startPoint ?? network.nodes[seg.startNodeId];
+          final end = spool.endPoint ?? network.nodes[seg.endNodeId];
+          if (start == null || end == null) continue;
 
-            final effectiveArm = math.min(armLenMm, dist3d * 0.45);
-            final rawArm = projector.projectRaw(
-              node.x + uX * effectiveArm,
-              node.y + uY * effectiveArm,
-              node.z + uZ * effectiveArm,
+          final sys = network.systems[seg.systemId];
+          final pdfColor = isVisible
+              ? (sys != null
+                    ? PdfColor.fromInt(sys.colorValue)
+                    : PdfColors.black)
+              : PdfColors.grey400;
+          final strokeW = isVisible
+              ? styleConfig.getPipeStrokeWidthMm(spool.dn) * mm
+              : styleConfig.thinLineWidthMm * mm;
+
+          final segValves = network.valves.values
+              .where((v) => v.segmentId == seg.id)
+              .toList();
+          final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(
+            start,
+            end,
+            segValves,
+          );
+
+          for (final interval in intervals) {
+            final raw1 = projector.projectRaw(
+              interval.$1.x,
+              interval.$1.y,
+              interval.$1.z,
             );
-            final pArmMm = ViewportTransformService.model2dToSheetMm(rawArm, vp);
-
-            final segSys = network.systems[seg.systemId];
-            final armColor = isVisible
-                ? (segSys != null ? PdfColor.fromInt(segSys.colorValue) : fitColor)
-                : PdfColors.grey400;
-            final armStrokeW = isVisible
-                ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
-                : styleConfig.thinLineWidthMm * mm;
-
-            canvas.setStrokeColor(armColor);
-            canvas.setLineWidth(armStrokeW);
-            canvas.drawLine(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, pArmMm.dx * mm, (heightMm - pArmMm.dy) * mm);
+            final raw2 = projector.projectRaw(
+              interval.$2.x,
+              interval.$2.y,
+              interval.$2.z,
+            );
+            final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+            final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+            canvas.setStrokeColor(pdfColor);
+            canvas.setLineWidth(strokeW);
+            canvas.drawLine(
+              p1Mm.dx * mm,
+              (heightMm - p1Mm.dy) * mm,
+              p2Mm.dx * mm,
+              (heightMm - p2Mm.dy) * mm,
+            );
             canvas.strokePath();
           }
+        }
+      } else {
+        // Fallback: отрисовка сегментов
+        for (final seg in network.segments.values) {
+          final isVisible =
+              vp.visibleSystemIds == null ||
+              vp.visibleSystemIds!.contains(seg.systemId);
+          if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-          if (styleConfig.showTeeNodes) {
-            // Узловой маркер центра тройника (уменьшенный)
-            final centerR = math.max(0.25 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm);
-            canvas.setFillColor(fitColor);
-            canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
-            canvas.fillPath();
+          final n1 = network.nodes[seg.startNodeId];
+          final n2 = network.nodes[seg.endNodeId];
+          if (n1 == null || n2 == null) continue;
+
+          final sys = network.systems[seg.systemId];
+          final pdfColor = isVisible
+              ? (sys != null
+                    ? PdfColor.fromInt(sys.colorValue)
+                    : PdfColors.black)
+              : PdfColors.grey400;
+          final strokeW = isVisible
+              ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
+              : styleConfig.thinLineWidthMm * mm;
+
+          final segValves = network.valves.values
+              .where((v) => v.segmentId == seg.id)
+              .toList();
+          final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(
+            n1,
+            n2,
+            segValves,
+          );
+
+          for (final interval in intervals) {
+            final raw1 = projector.projectRaw(
+              interval.$1.x,
+              interval.$1.y,
+              interval.$1.z,
+            );
+            final raw2 = projector.projectRaw(
+              interval.$2.x,
+              interval.$2.y,
+              interval.$2.z,
+            );
+            final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+            final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+            canvas.setStrokeColor(pdfColor);
+            canvas.setLineWidth(strokeW);
+            canvas.drawLine(
+              p1Mm.dx * mm,
+              (heightMm - p1Mm.dy) * mm,
+              p2Mm.dx * mm,
+              (heightMm - p2Mm.dy) * mm,
+            );
+            canvas.strokePath();
           }
         }
-      } else if (fit.fittingType == FittingType.reducerConcentric ||
-          fit.fittingType == FittingType.reducerEccentric) {
-        if (connected.length == 2) {
-          final s2 = connected[1];
-          final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-          final other2 = network.nodes[s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId];
-          if (other1 != null && other2 != null) {
-            final wires = Element3dGeometry.generateReducerWireframe(
+      }
+
+      // 4. Фасонные детали (отводы, тройники, переходы, фланцы, заглушки, врезки)
+      for (final fit in network.fittings.values) {
+        final node = network.nodes[fit.nodeId];
+        if (node == null) continue;
+        final connected = network.getConnectedSegments(fit.nodeId);
+        if (connected.isEmpty) continue;
+
+        final isVisible =
+            vp.visibleSystemIds == null ||
+            connected.any((s) => vp.visibleSystemIds!.contains(s.systemId));
+        if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+        final s1 = connected[0];
+        final fitSys = network.systems[s1.systemId];
+        final fitColor = isVisible
+            ? (fitSys != null
+                  ? PdfColor.fromInt(fitSys.colorValue)
+                  : PdfColors.black)
+            : PdfColors.grey400;
+
+        if (fit.fittingType == FittingType.elbow90 ||
+            fit.fittingType == FittingType.elbow45) {
+          if (connected.length == 2) {
+            final s2 = connected[1];
+            final other1 =
+                network.nodes[s1.startNodeId == fit.nodeId
+                    ? s1.endNodeId
+                    : s1.startNodeId];
+            final other2 =
+                network.nodes[s2.startNodeId == fit.nodeId
+                    ? s2.endNodeId
+                    : s2.startNodeId];
+            if (other1 != null && other2 != null) {
+              final wires = Element3dGeometry.generateElbowWireframe(
+                fit,
+                node,
+                other1,
+                other2,
+                pipeOuterDiameter: s1.outerDiameterMm,
+              );
+              final strokeW = isVisible
+                  ? styleConfig.getPipeStrokeWidthMm(fit.dn) * mm
+                  : styleConfig.thinLineWidthMm * mm;
+              for (final wire in wires) {
+                drawWireSegment(wire, fitColor, strokeW);
+              }
+            }
+          }
+        } else if (fit.fittingType == FittingType.tee) {
+          if (connected.length >= 3) {
+            final branchSeg = network.identifyBranchSegment(
+              fit.nodeId,
+              connected,
+            );
+            final rawN = projector.projectRaw(node.x, node.y, node.z);
+            final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
+
+            for (int i = 0; i < 3; i++) {
+              final seg = connected[i];
+              final otherId = seg.startNodeId == fit.nodeId
+                  ? seg.endNodeId
+                  : seg.startNodeId;
+              final otherNode = network.nodes[otherId];
+              if (otherNode == null) continue;
+
+              final isBranch = seg.id == branchSeg?.id;
+              final armLenMm = isBranch
+                  ? fit.effectiveBranchLengthMm
+                  : (fit.buildingLengthMm != null && fit.buildingLengthMm! > 0
+                        ? fit.buildingLengthMm! / 2.0
+                        : fit.dn * 1.0);
+
+              final vx = otherNode.x - node.x;
+              final vy = otherNode.y - node.y;
+              final vz = otherNode.z - node.z;
+              final dist3d = math.sqrt(vx * vx + vy * vy + vz * vz);
+              final uX = dist3d > 0 ? vx / dist3d : 0.0;
+              final uY = dist3d > 0 ? vy / dist3d : 0.0;
+              final uZ = dist3d > 0 ? vz / dist3d : 0.0;
+
+              final effectiveArm = math.min(armLenMm, dist3d * 0.45);
+              final rawArm = projector.projectRaw(
+                node.x + uX * effectiveArm,
+                node.y + uY * effectiveArm,
+                node.z + uZ * effectiveArm,
+              );
+              final pArmMm = ViewportTransformService.model2dToSheetMm(
+                rawArm,
+                vp,
+              );
+
+              final segSys = network.systems[seg.systemId];
+              final armColor = isVisible
+                  ? (segSys != null
+                        ? PdfColor.fromInt(segSys.colorValue)
+                        : fitColor)
+                  : PdfColors.grey400;
+              final armStrokeW = isVisible
+                  ? styleConfig.getPipeStrokeWidthMm(seg.dn) * mm
+                  : styleConfig.thinLineWidthMm * mm;
+
+              canvas.setStrokeColor(armColor);
+              canvas.setLineWidth(armStrokeW);
+              canvas.drawLine(
+                pNMm.dx * mm,
+                (heightMm - pNMm.dy) * mm,
+                pArmMm.dx * mm,
+                (heightMm - pArmMm.dy) * mm,
+              );
+              canvas.strokePath();
+            }
+
+            if (styleConfig.showTeeNodes) {
+              // Узловой маркер центра тройника (уменьшенный)
+              final centerR = math.max(
+                0.25 * mm,
+                styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm,
+              );
+              canvas.setFillColor(fitColor);
+              canvas.drawEllipse(
+                pNMm.dx * mm,
+                (heightMm - pNMm.dy) * mm,
+                centerR,
+                centerR,
+              );
+              canvas.fillPath();
+            }
+          }
+        } else if (fit.fittingType == FittingType.reducerConcentric ||
+            fit.fittingType == FittingType.reducerEccentric) {
+          if (connected.length == 2) {
+            final s2 = connected[1];
+            final other1 =
+                network.nodes[s1.startNodeId == fit.nodeId
+                    ? s1.endNodeId
+                    : s1.startNodeId];
+            final other2 =
+                network.nodes[s2.startNodeId == fit.nodeId
+                    ? s2.endNodeId
+                    : s2.startNodeId];
+            if (other1 != null && other2 != null) {
+              final wires = Element3dGeometry.generateReducerWireframe(
+                fit,
+                node,
+                other1,
+                other2,
+                d1: s1.outerDiameterMm,
+                d2: s2.outerDiameterMm,
+              );
+              final strokeW = isVisible
+                  ? styleConfig.fittingLineWidthMm * mm
+                  : styleConfig.thinLineWidthMm * mm;
+              for (final wire in wires) {
+                drawWireSegment(wire, fitColor, strokeW);
+              }
+            }
+          }
+        } else if (fit.fittingType == FittingType.flange) {
+          final other1 =
+              network.nodes[s1.startNodeId == fit.nodeId
+                  ? s1.endNodeId
+                  : s1.startNodeId];
+          if (other1 != null) {
+            final wires = Element3dGeometry.generateFlangeWireframe(
               fit,
               node,
               other1,
-              other2,
-              d1: s1.outerDiameterMm,
-              d2: s2.outerDiameterMm,
+              pipeOuterDiameter: s1.outerDiameterMm,
             );
             final strokeW = isVisible
                 ? styleConfig.fittingLineWidthMm * mm
@@ -633,280 +1049,517 @@ class PdfExportService {
               drawWireSegment(wire, fitColor, strokeW);
             }
           }
-        }
-      } else if (fit.fittingType == FittingType.flange) {
-        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-        if (other1 != null) {
-          final wires = Element3dGeometry.generateFlangeWireframe(
-            fit,
-            node,
-            other1,
-            pipeOuterDiameter: s1.outerDiameterMm,
-          );
-          final strokeW = isVisible
-              ? styleConfig.fittingLineWidthMm * mm
-              : styleConfig.thinLineWidthMm * mm;
-          for (final wire in wires) {
-            drawWireSegment(wire, fitColor, strokeW);
+        } else if (fit.fittingType == FittingType.cap) {
+          final other1 =
+              network.nodes[s1.startNodeId == fit.nodeId
+                  ? s1.endNodeId
+                  : s1.startNodeId];
+          if (other1 != null) {
+            final wires = Element3dGeometry.generateCapWireframe(
+              fit,
+              node,
+              other1,
+              pipeOuterDiameter: s1.outerDiameterMm,
+            );
+            final strokeW = isVisible
+                ? styleConfig.fittingLineWidthMm * mm
+                : styleConfig.thinLineWidthMm * mm;
+            for (final wire in wires) {
+              drawWireSegment(wire, fitColor, strokeW);
+            }
           }
-        }
-      } else if (fit.fittingType == FittingType.cap) {
-        final other1 = network.nodes[s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId];
-        if (other1 != null) {
-          final wires = Element3dGeometry.generateCapWireframe(
-            fit,
-            node,
-            other1,
-            pipeOuterDiameter: s1.outerDiameterMm,
-          );
-          final strokeW = isVisible
-              ? styleConfig.fittingLineWidthMm * mm
-              : styleConfig.thinLineWidthMm * mm;
-          for (final wire in wires) {
-            drawWireSegment(wire, fitColor, strokeW);
-          }
-        }
-      } else if (fit.fittingType == FittingType.directBranch) {
-        if (connected.length == 3) {
-          final branchSeg = network.identifyBranchSegment(fit.nodeId, connected);
-          if (branchSeg != null) {
-            final otherNodeId = branchSeg.startNodeId == fit.nodeId
-                ? branchSeg.endNodeId
-                : branchSeg.startNodeId;
-            final otherNode = network.nodes[otherNodeId];
-            final mainSegs = connected.where((s) => s.id != branchSeg.id).toList();
-            if (otherNode != null && mainSegs.isNotEmpty) {
-              final wires = Element3dGeometry.generateDirectBranch3d(
-                fit,
-                node,
-                otherNode,
-                mainOuterDiameter: mainSegs[0].outerDiameterMm,
-                branchOuterDiameter: branchSeg.outerDiameterMm,
-              );
-              final strokeW = isVisible
-                  ? styleConfig.thinLineWidthMm * mm
-                  : styleConfig.thinLineWidthMm * 0.8 * mm;
-              for (final wire in wires) {
-                drawWireSegment(wire, fitColor, strokeW);
-              }
+        } else if (fit.fittingType == FittingType.directBranch) {
+          if (connected.length == 3) {
+            final branchSeg = network.identifyBranchSegment(
+              fit.nodeId,
+              connected,
+            );
+            if (branchSeg != null) {
+              final otherNodeId = branchSeg.startNodeId == fit.nodeId
+                  ? branchSeg.endNodeId
+                  : branchSeg.startNodeId;
+              final otherNode = network.nodes[otherNodeId];
+              final mainSegs = connected
+                  .where((s) => s.id != branchSeg.id)
+                  .toList();
+              if (otherNode != null && mainSegs.isNotEmpty) {
+                final wires = Element3dGeometry.generateDirectBranch3d(
+                  fit,
+                  node,
+                  otherNode,
+                  mainOuterDiameter: mainSegs[0].outerDiameterMm,
+                  branchOuterDiameter: branchSeg.outerDiameterMm,
+                );
+                final strokeW = isVisible
+                    ? styleConfig.thinLineWidthMm * mm
+                    : styleConfig.thinLineWidthMm * 0.8 * mm;
+                for (final wire in wires) {
+                  drawWireSegment(wire, fitColor, strokeW);
+                }
 
-              if (styleConfig.showDirectBranchNodes) {
-                // Маркер центра врезки (уменьшенный)
-                final rawN = projector.projectRaw(node.x, node.y, node.z);
-                final pNMm = ViewportTransformService.model2dToSheetMm(rawN, vp);
-                final centerR = math.max(0.25 * mm, styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm);
-                canvas.setFillColor(fitColor);
-                canvas.drawEllipse(pNMm.dx * mm, (heightMm - pNMm.dy) * mm, centerR, centerR);
-                canvas.fillPath();
+                if (styleConfig.showDirectBranchNodes) {
+                  // Маркер центра врезки (уменьшенный)
+                  final rawN = projector.projectRaw(node.x, node.y, node.z);
+                  final pNMm = ViewportTransformService.model2dToSheetMm(
+                    rawN,
+                    vp,
+                  );
+                  final centerR = math.max(
+                    0.25 * mm,
+                    styleConfig.getPipeStrokeWidthMm(fit.dn) * 0.2 * mm,
+                  );
+                  canvas.setFillColor(fitColor);
+                  canvas.drawEllipse(
+                    pNMm.dx * mm,
+                    (heightMm - pNMm.dy) * mm,
+                    centerR,
+                    centerR,
+                  );
+                  canvas.fillPath();
+                }
               }
             }
           }
         }
       }
-    }
 
-    // 5. Арматура
-    for (final valve in network.valves.values) {
-      final seg = network.segments[valve.segmentId];
-      if (seg == null) continue;
-      final start = network.nodes[seg.startNodeId];
-      final end = network.nodes[seg.endNodeId];
-      if (start == null || end == null) continue;
-
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible && !vp.ghostInactiveSystems) continue;
-
-      final customDef = valve.customDefinitionId != null
-          ? (customValves?[valve.customDefinitionId!] ??
-              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
-          : null;
-
-      final wireSegments = Element3dGeometry.generateValveWireframe(
-        valve,
-        start,
-        end,
-        pipeOuterDiameter: seg.outerDiameterMm,
-        customDefinition: customDef,
-      );
-
-      final sys = network.systems[seg.systemId];
-      final pdfColor = isVisible
-          ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
-          : PdfColors.grey400;
-
-      final strokeW = styleConfig.fittingLineWidthMm * mm;
-      for (final wire in wireSegments) {
-        drawWireSegment(wire, pdfColor, strokeW);
-      }
-    }
-
-    // 6. Опоры и подвески
-    for (final support in network.supports.values) {
-      final seg = network.segments[support.segmentId];
-      if (seg == null) continue;
-      final start = network.nodes[seg.startNodeId];
-      final end = network.nodes[seg.endNodeId];
-      if (start == null || end == null) continue;
-
-      final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-      if (!isVisible && !vp.ghostInactiveSystems) continue;
-
-      final wireSegments = Element3dGeometry.generateSupportWireframe(
-        support,
-        start,
-        end,
-        pipeOuterDiameter: seg.outerDiameterMm,
-      );
-
-      final strokeW = styleConfig.thinLineWidthMm * mm;
-      final supColor = isVisible ? PdfColors.blueGrey800 : PdfColors.grey400;
-      for (final wire in wireSegments) {
-        drawWireSegment(wire, supColor, strokeW);
-      }
-    }
-
-    // Сварные стыки
-    if (styleConfig.showWeldJoints) {
-      for (final joint in network.weldJoints.values) {
-        final seg = network.segments[joint.segmentId];
+      // 5. Арматура
+      for (final valve in network.valves.values) {
+        final seg = network.segments[valve.segmentId];
         if (seg == null) continue;
-        final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
-        if (!isVisible) continue;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
 
-        final n1 = network.nodes[seg.startNodeId];
-        final n2 = network.nodes[seg.endNodeId];
-        if (n1 == null || n2 == null) continue;
+        final isVisible =
+            vp.visibleSystemIds == null ||
+            vp.visibleSystemIds!.contains(seg.systemId);
+        if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-        final pos = joint.calculatePosition(n1, n2);
-        
-        final vStart = n1;
-        final vEnd = n2;
-        final dx3d = vEnd.x - vStart.x;
-        final dy3d = vEnd.y - vStart.y;
-        final lenXy = math.sqrt(dx3d * dx3d + dy3d * dy3d);
-        
-        double uX = 0, uY = 1.0, uZ = 0.0;
-        if (lenXy > 1e-4) {
-          uX = -dy3d / lenXy;
-          uY = dx3d / lenXy;
+        final customDef = valve.customDefinitionId != null
+            ? (customValves?[valve.customDefinitionId!] ??
+                  CustomValveCatalog.instance.getById(
+                    valve.customDefinitionId!,
+                  ))
+            : null;
+
+        final wireSegments = Element3dGeometry.generateValveWireframe(
+          valve,
+          start,
+          end,
+          pipeOuterDiameter: seg.outerDiameterMm,
+          customDefinition: customDef,
+        );
+
+        final sys = network.systems[seg.systemId];
+        final pdfColor = isVisible
+            ? (sys != null ? PdfColor.fromInt(sys.colorValue) : PdfColors.black)
+            : PdfColors.grey400;
+
+        final strokeW = styleConfig.fittingLineWidthMm * mm;
+        final handleStrokeW = math.max(0.1 * mm, strokeW * 0.45);
+
+        for (final wire in wireSegments) {
+          final w = wire.layer == Element3dGeometry.layerHandles
+              ? handleStrokeW
+              : strokeW;
+          drawWireSegment(wire, pdfColor, w);
+        }
+      }
+
+      // 6. Опоры и подвески
+      for (final support in network.supports.values) {
+        final seg = network.segments[support.segmentId];
+        if (seg == null) continue;
+        final start = network.nodes[seg.startNodeId];
+        final end = network.nodes[seg.endNodeId];
+        if (start == null || end == null) continue;
+
+        final isVisible =
+            vp.visibleSystemIds == null ||
+            vp.visibleSystemIds!.contains(seg.systemId);
+        if (!isVisible && !vp.ghostInactiveSystems) continue;
+
+        final wireSegments = Element3dGeometry.generateSupportWireframe(
+          support,
+          start,
+          end,
+          pipeOuterDiameter: seg.outerDiameterMm,
+        );
+
+        final strokeW = styleConfig.thinLineWidthMm * mm;
+        final supColor = isVisible ? PdfColors.blueGrey800 : PdfColors.grey400;
+        for (final wire in wireSegments) {
+          drawWireSegment(wire, supColor, strokeW);
         }
 
-        // Half length of the tick in real world units (rough scaling factor for visualization)
-        // Usually, 1mm on paper = scale factor. But pipe DN is in mm, so we approximate
-        // Wait, tick size should be constant on paper, not scale with zoom?
-        // In PDF, we scale everything to sheet Mm. But projector scales 3D coords to raw 2D.
-        // Wait, ViewportTransformService scales raw 2D to sheet mm.
-        // What is the scale factor from 3D to raw 2D? Projector just scales by 1.0 (isometric is 1:1 roughly)
-        // Then ViewportTransformService scales by vp.viewScale.
-        // So 1 unit in 3D = vp.viewScale mm on paper.
-        // We want tickHalfLenMm on paper.
-        final tickHalfLenMm = math.max(0.7, styleConfig.getPipeStrokeWidthMm(seg.dn) * 1.5);
-        final tickHalfLen3d = tickHalfLenMm / vp.viewScale;
-        
-        final p13dx = pos.x + uX * tickHalfLen3d;
-        final p13dy = pos.y + uY * tickHalfLen3d;
-        final p13dz = pos.z + uZ * tickHalfLen3d;
-        final p23dx = pos.x - uX * tickHalfLen3d;
-        final p23dy = pos.y - uY * tickHalfLen3d;
-        final p23dz = pos.z - uZ * tickHalfLen3d;
+        // Маркировка опоры (на белой подложке, аналогично UI)
+        final label = support.name.isNotEmpty
+            ? support.name
+            : support.type.shortCode;
+        final pos = support.calculatePosition(start, end);
+        final rawPos = projector.projectRaw(pos.x, pos.y, pos.z);
+        final posMm = ViewportTransformService.model2dToSheetMm(rawPos, vp);
+        const labelFontSize = 5.5;
+        final labelMetrics = fontRegular.stringMetrics(label);
+        final labelW = labelMetrics.width * labelFontSize;
+        final labelH = labelMetrics.ascent * labelFontSize;
+        final lx = posMm.dx * mm - labelW / 2.0 - 1.0 * mm;
+        final ly = (heightMm - posMm.dy) * mm + 2.0 * mm;
+        // Белая подложка
+        canvas.setFillColor(PdfColors.white);
+        canvas.drawRect(
+          lx - 0.5 * mm,
+          ly - 0.5 * mm,
+          labelW + 1.0 * mm,
+          labelH + 1.0 * mm,
+        );
+        canvas.fillPath();
+        // Текст маркировки
+        canvas.setFillColor(supColor);
+        canvas.drawString(fontRegular, labelFontSize, label, lx, ly);
+      }
 
-        final raw1 = projector.projectRaw(p13dx, p13dy, p13dz);
-        final raw2 = projector.projectRaw(p23dx, p23dy, p23dz);
-        final t1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
-        final t2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+      // Сварные стыки
+      if (styleConfig.showWeldJoints) {
+        for (final joint in network.weldJoints.values) {
+          final seg = network.segments[joint.segmentId];
+          if (seg == null) continue;
+          final isVisible =
+              vp.visibleSystemIds == null ||
+              vp.visibleSystemIds!.contains(seg.systemId);
+          if (!isVisible) continue;
+
+          final n1 = network.nodes[seg.startNodeId];
+          final n2 = network.nodes[seg.endNodeId];
+          if (n1 == null || n2 == null) continue;
+
+          final pos = joint.calculatePosition(n1, n2);
+
+          final vStart = n1;
+          final vEnd = n2;
+          final dx3d = vEnd.x - vStart.x;
+          final dy3d = vEnd.y - vStart.y;
+          final lenXy = math.sqrt(dx3d * dx3d + dy3d * dy3d);
+
+          double uX = 0, uY = 1.0, uZ = 0.0;
+          if (lenXy > 1e-4) {
+            uX = -dy3d / lenXy;
+            uY = dx3d / lenXy;
+          }
+
+          // Half length of the tick in real world units (rough scaling factor for visualization)
+          // Usually, 1mm on paper = scale factor. But pipe DN is in mm, so we approximate
+          // Wait, tick size should be constant on paper, not scale with zoom?
+          // In PDF, we scale everything to sheet Mm. But projector scales 3D coords to raw 2D.
+          // Wait, ViewportTransformService scales raw 2D to sheet mm.
+          // What is the scale factor from 3D to raw 2D? Projector just scales by 1.0 (isometric is 1:1 roughly)
+          // Then ViewportTransformService scales by vp.viewScale.
+          // So 1 unit in 3D = vp.viewScale mm on paper.
+          // We want tickHalfLenMm on paper.
+          final tickHalfLenMm = math.max(
+            0.7,
+            styleConfig.getPipeStrokeWidthMm(seg.dn) * 1.5,
+          );
+          final tickHalfLen3d = tickHalfLenMm / vp.viewScale;
+
+          final p13dx = pos.x + uX * tickHalfLen3d;
+          final p13dy = pos.y + uY * tickHalfLen3d;
+          final p13dz = pos.z + uZ * tickHalfLen3d;
+          final p23dx = pos.x - uX * tickHalfLen3d;
+          final p23dy = pos.y - uY * tickHalfLen3d;
+          final p23dz = pos.z - uZ * tickHalfLen3d;
+
+          final raw1 = projector.projectRaw(p13dx, p13dy, p13dz);
+          final raw2 = projector.projectRaw(p23dx, p23dy, p23dz);
+          final t1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+          final t2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+
+          canvas.setStrokeColor(PdfColors.black);
+          canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
+          canvas.drawLine(
+            t1Mm.dx * mm,
+            (heightMm - t1Mm.dy) * mm,
+            t2Mm.dx * mm,
+            (heightMm - t2Mm.dy) * mm,
+          );
+          canvas.strokePath();
+        }
+      }
+
+      // Векторные линии линейных размеров (ГОСТ 2.307)
+      for (final dim in network.dimensions.values) {
+        final raw1 = projector.projectRaw(
+          dim.startPoint.x,
+          dim.startPoint.y,
+          dim.startPoint.z,
+        );
+        final raw2 = projector.projectRaw(
+          dim.endPoint.x,
+          dim.endPoint.y,
+          dim.endPoint.z,
+        );
+        final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
+        final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
+
+        final delta = p2Mm - p1Mm;
+        final dist2d = delta.distance;
+        if (dist2d < 1.0) continue;
+
+        final u = delta / dist2d;
+        final n = Offset(-u.dy, u.dx);
+        final offsetDist = (dim.offsetDistance == 0.0
+            ? 10.0
+            : dim.offsetDistance * vp.viewScale);
+        final offsetVec = n * offsetDist;
+
+        final d1 = p1Mm + offsetVec;
+        final d2 = p2Mm + offsetVec;
+        final overshoot = (offsetDist >= 0 ? 2.0 : -2.0);
+        final ext1End = d1 + n * overshoot;
+        final ext2End = d2 + n * overshoot;
 
         canvas.setStrokeColor(PdfColors.black);
         canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
-        canvas.drawLine(t1Mm.dx * mm, (heightMm - t1Mm.dy) * mm, t2Mm.dx * mm, (heightMm - t2Mm.dy) * mm);
+
+        // Выносные линии
+        canvas.drawLine(
+          p1Mm.dx * mm,
+          (heightMm - p1Mm.dy) * mm,
+          ext1End.dx * mm,
+          (heightMm - ext1End.dy) * mm,
+        );
+        canvas.drawLine(
+          p2Mm.dx * mm,
+          (heightMm - p2Mm.dy) * mm,
+          ext2End.dx * mm,
+          (heightMm - ext2End.dy) * mm,
+        );
+
+        // Размерная линия
+        canvas.drawLine(
+          d1.dx * mm,
+          (heightMm - d1.dy) * mm,
+          d2.dx * mm,
+          (heightMm - d2.dy) * mm,
+        );
+        canvas.strokePath();
+
+        // Строительные засечки ГОСТ 45°
+        final tickLen = 1.8;
+        final tickDir = (u + n) / math.sqrt(2) * tickLen;
+        canvas.setLineWidth(styleConfig.pipeLineWidthMm * mm);
+        canvas.drawLine(
+          (d1.dx - tickDir.dx) * mm,
+          (heightMm - (d1.dy - tickDir.dy)) * mm,
+          (d1.dx + tickDir.dx) * mm,
+          (heightMm - (d1.dy + tickDir.dy)) * mm,
+        );
+        canvas.drawLine(
+          (d2.dx - tickDir.dx) * mm,
+          (heightMm - (d2.dy - tickDir.dy)) * mm,
+          (d2.dx + tickDir.dx) * mm,
+          (heightMm - (d2.dy + tickDir.dy)) * mm,
+        );
         canvas.strokePath();
       }
+
+      // Векторные линии выносок
+      for (final callout in network.callouts.values) {
+        final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
+        if (anchor3D == null) continue;
+
+        final anchorRaw = projector.projectRaw(
+          anchor3D.x,
+          anchor3D.y,
+          anchor3D.z,
+        );
+        final anchorMm = ViewportTransformService.model2dToSheetMm(
+          anchorRaw,
+          vp,
+        );
+
+        final isRight = callout.shelfDirection == ShelfDirection.right
+            ? true
+            : (callout.shelfDirection == ShelfDirection.left
+                  ? false
+                  : callout.screenOffsetX >= 0);
+
+        // Корректный пересчёт экранного смещения в мм листа
+        final offsetScale = 1.0 / (vp.viewScale * 4.0);
+        final leaderEndMm =
+            anchorMm +
+            Offset(
+              callout.screenOffsetX * offsetScale,
+              callout.screenOffsetY * offsetScale,
+            );
+
+        // Динамическая длина полки по ширине текста
+        final topText = network.generateCalloutText(callout, templates);
+        final bottomText = network.generateCalloutBottomText(
+          callout,
+          templates,
+        );
+        final topMetrics = fontRegular.stringMetrics(topText);
+        final topTextWidthMm = topMetrics.width * 6.5 / mm;
+        double shelfLengthMm = topTextWidthMm + 3.0;
+        if (bottomText != null && bottomText.trim().isNotEmpty) {
+          final bottomMetrics = fontRegular.stringMetrics(bottomText);
+          final bottomTextWidthMm = bottomMetrics.width * 5.5 / mm;
+          shelfLengthMm = math.max(shelfLengthMm, bottomTextWidthMm + 3.0);
+        }
+        shelfLengthMm = math.max(shelfLengthMm, 10.0);
+
+        final shelfDir = isRight ? 1.0 : -1.0;
+        final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
+
+        canvas.setStrokeColor(PdfColors.black);
+        canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
+
+        if (callout.targetType == CalloutTargetType.node ||
+            callout.elevationStyle != null) {
+          // Отрисовка знака отметки высоты
+          final styleName = templates['elevation_style'];
+          final defaultStyle = ElevationMarkStyleExt.fromString(
+            styleName,
+            fallback: ElevationMarkStyle.gostOutline,
+          );
+          final effectiveStyle = callout.elevationStyle ?? defaultStyle;
+
+          final flagSizeMm = 2.0;
+          final flagH = flagSizeMm * 1.3 * mm;
+          final flagW = flagSizeMm * 0.75 * mm;
+
+          if (callout.arrowOnNode) {
+            // РЕЖИМ 1: Знак отметки строго на узле
+            final shelfY = (heightMm - leaderEndMm.dy) * mm;
+            final anchorX = anchorMm.dx * mm;
+            final anchorY = (heightMm - anchorMm.dy) * mm;
+            final isAbove = shelfY <= anchorY;
+            final flagBaseY = isAbove ? anchorY - flagH : anchorY + flagH;
+
+            if (effectiveStyle == ElevationMarkStyle.gostOutline ||
+                effectiveStyle == ElevationMarkStyle.gostFilled) {
+              canvas.moveTo(anchorX, anchorY);
+              canvas.lineTo(anchorX - flagW, flagBaseY);
+              canvas.lineTo(anchorX + flagW, flagBaseY);
+              canvas.lineTo(anchorX, anchorY);
+              if (effectiveStyle == ElevationMarkStyle.gostFilled) {
+                canvas.fillAndStrokePath();
+              } else {
+                canvas.strokePath();
+              }
+              canvas.drawLine(anchorX, flagBaseY, anchorX, shelfY);
+            } else if (effectiveStyle == ElevationMarkStyle.compactFlag) {
+              canvas.drawLine(anchorX, anchorY, anchorX, shelfY);
+              canvas.drawLine(
+                anchorX - 1.0 * mm,
+                anchorY + 1.0 * mm,
+                anchorX + 1.0 * mm,
+                anchorY - 1.0 * mm,
+              );
+            } else if (effectiveStyle == ElevationMarkStyle.isoCircle) {
+              final circleR = 1.2 * mm;
+              canvas.drawEllipse(anchorX, anchorY, circleR, circleR);
+              canvas.strokePath();
+              canvas.drawLine(
+                anchorX - circleR,
+                anchorY,
+                anchorX + circleR,
+                anchorY,
+              );
+              canvas.drawLine(
+                anchorX,
+                anchorY - circleR,
+                anchorX,
+                anchorY + circleR,
+              );
+              final circleEdgeY = isAbove
+                  ? anchorY - circleR
+                  : anchorY + circleR;
+              canvas.drawLine(anchorX, circleEdgeY, anchorX, shelfY);
+            }
+            canvas.drawLine(anchorX, shelfY, shelfEndMm.dx * mm, shelfY);
+            canvas.strokePath();
+          } else {
+            // РЕЖИМ 2: Знак отметки на выносной ножке
+            final textX = leaderEndMm.dx * mm;
+            final textY = (heightMm - leaderEndMm.dy) * mm;
+            final anchorX = anchorMm.dx * mm;
+            final anchorY = (heightMm - anchorMm.dy) * mm;
+            // PdfGraphics ось Y направлена вверх, поэтому верх флага — это textY + flagH
+            final flagTopY = textY + flagH;
+            final shelfY = effectiveStyle == ElevationMarkStyle.compactFlag
+                ? textY + 3.0 * mm
+                : flagTopY + 1.0 * mm;
+
+            canvas.drawLine(anchorX, anchorY, textX, textY); // ножка
+
+            if (effectiveStyle == ElevationMarkStyle.gostOutline ||
+                effectiveStyle == ElevationMarkStyle.gostFilled) {
+              canvas.moveTo(textX, textY);
+              canvas.lineTo(textX - flagW, flagTopY);
+              canvas.lineTo(textX + flagW, flagTopY);
+              canvas.lineTo(textX, textY);
+              if (effectiveStyle == ElevationMarkStyle.gostFilled) {
+                canvas.fillAndStrokePath();
+              } else {
+                canvas.strokePath();
+              }
+              canvas.drawLine(textX, flagTopY, textX, shelfY);
+            } else if (effectiveStyle == ElevationMarkStyle.compactFlag) {
+              canvas.drawLine(textX, textY, textX, shelfY);
+              canvas.drawLine(
+                textX - 1.0 * mm,
+                textY + 1.0 * mm,
+                textX + 1.0 * mm,
+                textY - 1.0 * mm,
+              );
+            } else if (effectiveStyle == ElevationMarkStyle.isoCircle) {
+              final circleR = 1.2 * mm;
+              canvas.drawEllipse(textX, textY, circleR, circleR);
+              canvas.strokePath();
+              canvas.drawLine(textX - circleR, textY, textX + circleR, textY);
+              canvas.drawLine(textX, textY - circleR, textX, textY + circleR);
+              canvas.drawLine(textX, textY + circleR, textX, shelfY);
+            }
+
+            final shelfEnd = isRight
+                ? textX + shelfLengthMm * mm
+                : textX - shelfLengthMm * mm;
+            canvas.drawLine(textX, shelfY, shelfEnd, shelfY);
+            canvas.strokePath();
+          }
+        } else {
+          // Линия выноски и полка (обычная выноска)
+          canvas.drawLine(
+            anchorMm.dx * mm,
+            (heightMm - anchorMm.dy) * mm,
+            leaderEndMm.dx * mm,
+            (heightMm - leaderEndMm.dy) * mm,
+          );
+          canvas.drawLine(
+            leaderEndMm.dx * mm,
+            (heightMm - leaderEndMm.dy) * mm,
+            shelfEndMm.dx * mm,
+            (heightMm - shelfEndMm.dy) * mm,
+          );
+          canvas.strokePath();
+
+          // Точка у основания
+          canvas.setFillColor(PdfColors.black);
+          canvas.drawEllipse(
+            anchorMm.dx * mm,
+            (heightMm - anchorMm.dy) * mm,
+            0.6 * mm,
+            0.6 * mm,
+          );
+          canvas.fillPath();
+        }
+      }
+
+      canvas.restoreContext();
     }
-
-    // Векторные линии линейных размеров (ГОСТ 2.307)
-    for (final dim in network.dimensions.values) {
-      final raw1 = projector.projectRaw(dim.startPoint.x, dim.startPoint.y, dim.startPoint.z);
-      final raw2 = projector.projectRaw(dim.endPoint.x, dim.endPoint.y, dim.endPoint.z);
-      final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
-      final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
-
-      final delta = p2Mm - p1Mm;
-      final dist2d = delta.distance;
-      if (dist2d < 1.0) continue;
-
-      final u = delta / dist2d;
-      final n = Offset(-u.dy, u.dx);
-      final offsetDist = (dim.offsetDistance == 0.0 ? 10.0 : dim.offsetDistance * vp.viewScale);
-      final offsetVec = n * offsetDist;
-
-      final d1 = p1Mm + offsetVec;
-      final d2 = p2Mm + offsetVec;
-      final overshoot = (offsetDist >= 0 ? 2.0 : -2.0);
-      final ext1End = d1 + n * overshoot;
-      final ext2End = d2 + n * overshoot;
-
-      canvas.setStrokeColor(PdfColors.black);
-      canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
-
-      // Выносные линии
-      canvas.drawLine(p1Mm.dx * mm, (heightMm - p1Mm.dy) * mm, ext1End.dx * mm, (heightMm - ext1End.dy) * mm);
-      canvas.drawLine(p2Mm.dx * mm, (heightMm - p2Mm.dy) * mm, ext2End.dx * mm, (heightMm - ext2End.dy) * mm);
-
-      // Размерная линия
-      canvas.drawLine(d1.dx * mm, (heightMm - d1.dy) * mm, d2.dx * mm, (heightMm - d2.dy) * mm);
-      canvas.strokePath();
-
-      // Строительные засечки ГОСТ 45°
-      final tickLen = 1.8;
-      final tickDir = (u + n) / math.sqrt(2) * tickLen;
-      canvas.setLineWidth(styleConfig.pipeLineWidthMm * mm);
-      canvas.drawLine(
-        (d1.dx - tickDir.dx) * mm,
-        (heightMm - (d1.dy - tickDir.dy)) * mm,
-        (d1.dx + tickDir.dx) * mm,
-        (heightMm - (d1.dy + tickDir.dy)) * mm,
-      );
-      canvas.drawLine(
-        (d2.dx - tickDir.dx) * mm,
-        (heightMm - (d2.dy - tickDir.dy)) * mm,
-        (d2.dx + tickDir.dx) * mm,
-        (heightMm - (d2.dy + tickDir.dy)) * mm,
-      );
-      canvas.strokePath();
-    }
-
-    // Векторные линии выносок
-    for (final callout in network.callouts.values) {
-      final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
-      if (anchor3D == null) continue;
-
-      final anchorRaw = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
-      final anchorMm = ViewportTransformService.model2dToSheetMm(anchorRaw, vp);
-
-      final isRight = callout.shelfDirection == ShelfDirection.right
-          ? true
-          : (callout.shelfDirection == ShelfDirection.left
-              ? false
-              : callout.screenOffsetX >= 0);
-      final leaderEndMm = anchorMm + Offset(callout.screenOffsetX * 0.25, callout.screenOffsetY * 0.25);
-      final shelfLengthMm = 18.0;
-      final shelfDir = isRight ? 1.0 : -1.0;
-      final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
-
-      canvas.setStrokeColor(PdfColors.black);
-      canvas.setLineWidth(styleConfig.thinLineWidthMm * mm);
-
-      // Линия выноски и полка
-      canvas.drawLine(anchorMm.dx * mm, (heightMm - anchorMm.dy) * mm, leaderEndMm.dx * mm, (heightMm - leaderEndMm.dy) * mm);
-      canvas.drawLine(leaderEndMm.dx * mm, (heightMm - leaderEndMm.dy) * mm, shelfEndMm.dx * mm, (heightMm - shelfEndMm.dy) * mm);
-      canvas.strokePath();
-
-      // Точка у основания
-      canvas.setFillColor(PdfColors.black);
-      canvas.drawEllipse(anchorMm.dx * mm, (heightMm - anchorMm.dy) * mm, 0.6 * mm, 0.6 * mm);
-      canvas.fillPath();
-    }
-
-    canvas.restoreContext();
   }
 
   /// Генерация текстовых аннотаций видового экрана (размерные числа, тексты выносок)
@@ -919,10 +1572,14 @@ class PdfExportService {
     required Node3D targetCenter,
     required pw.Font fontRegular,
     required pw.Font fontBold,
+    required PdfFont pdfFontRegular,
+    required PdfFont pdfFontBold,
+    Map<String, String>? calloutTemplates,
     required double heightMm,
     required double mm,
   }) {
     final vp = sheet.viewport;
+    final templates = calloutTemplates ?? defaultCalloutTemplates;
     final projector = AxonometryProjector(
       projectionType: projectionType,
       orbitAzimuth: orbitAzimuth,
@@ -933,8 +1590,16 @@ class PdfExportService {
 
     // Размеры (размерные числа над размерной линией)
     for (final dim in network.dimensions.values) {
-      final raw1 = projector.projectRaw(dim.startPoint.x, dim.startPoint.y, dim.startPoint.z);
-      final raw2 = projector.projectRaw(dim.endPoint.x, dim.endPoint.y, dim.endPoint.z);
+      final raw1 = projector.projectRaw(
+        dim.startPoint.x,
+        dim.startPoint.y,
+        dim.startPoint.z,
+      );
+      final raw2 = projector.projectRaw(
+        dim.endPoint.x,
+        dim.endPoint.y,
+        dim.endPoint.z,
+      );
       final p1Mm = ViewportTransformService.model2dToSheetMm(raw1, vp);
       final p2Mm = ViewportTransformService.model2dToSheetMm(raw2, vp);
 
@@ -944,28 +1609,49 @@ class PdfExportService {
 
       final u = delta / dist2d;
       final n = Offset(-u.dy, u.dx);
-      final offsetDist = (dim.offsetDistance == 0.0 ? 10.0 : dim.offsetDistance * vp.viewScale);
+      final offsetDist = (dim.offsetDistance == 0.0
+          ? 10.0
+          : dim.offsetDistance * vp.viewScale);
       final offsetVec = n * offsetDist;
 
       final midMm = (p1Mm + p2Mm) / 2.0 + offsetVec;
       final textPosMm = midMm + n * (offsetDist >= 0 ? 2.5 : -2.5);
 
       // Проверяем попадание в рамку видового экрана
-      if (textPosMm.dx < vp.xMm || textPosMm.dx > vp.xMm + vp.widthMm ||
-          textPosMm.dy < vp.yMm || textPosMm.dy > vp.yMm + vp.heightMm) {
+      if (textPosMm.dx < vp.xMm ||
+          textPosMm.dx > vp.xMm + vp.widthMm ||
+          textPosMm.dy < vp.yMm ||
+          textPosMm.dy > vp.yMm + vp.heightMm) {
         continue;
       }
 
+      // Угол направления размерной линии (ГОСТ 2.307 — текст параллелен линии)
+      // Используем дельту в координатах листа (Y инвертирован для PDF)
+      var angle = math.atan2(-(p2Mm.dy - p1Mm.dy), p2Mm.dx - p1Mm.dx);
+      // Нормализация: текст не должен быть перевёрнут
+      if (angle > math.pi / 2) angle -= math.pi;
+      if (angle < -math.pi / 2) angle += math.pi;
+
+      // Ширина текста для центрирования
+      final dimTextMetrics = pdfFontRegular.stringMetrics(dim.displayText);
+      final textWidthMm = dimTextMetrics.width * 6.5 / mm;
+
       widgets.add(
         pw.Positioned(
-          left: (textPosMm.dx - 12.0) * mm,
+          left: (textPosMm.dx - textWidthMm / 2.0 - 1.5) * mm,
           top: (textPosMm.dy - 3.0) * mm,
-          child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 1.5, vertical: 0.5),
-            color: PdfColors.white,
-            child: pw.Text(
-              dim.displayText,
-              style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
+          child: pw.Transform.rotate(
+            angle: angle,
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 1.5,
+                vertical: 0.5,
+              ),
+              color: PdfColors.white,
+              child: pw.Text(
+                dim.displayText,
+                style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
+              ),
             ),
           ),
         ),
@@ -977,25 +1663,66 @@ class PdfExportService {
       final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;
 
-      final anchorRaw = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+      final anchorRaw = projector.projectRaw(
+        anchor3D.x,
+        anchor3D.y,
+        anchor3D.z,
+      );
       final anchorMm = ViewportTransformService.model2dToSheetMm(anchorRaw, vp);
 
       final isRight = callout.shelfDirection == ShelfDirection.right
           ? true
           : (callout.shelfDirection == ShelfDirection.left
-              ? false
-              : callout.screenOffsetX >= 0);
-      final leaderEndMm = anchorMm + Offset(callout.screenOffsetX * 0.25, callout.screenOffsetY * 0.25);
-      final textX = isRight ? leaderEndMm.dx + 1.0 : leaderEndMm.dx - 22.0;
-      final textY = leaderEndMm.dy - 3.5;
+                ? false
+                : callout.screenOffsetX >= 0);
 
-      if (leaderEndMm.dx < vp.xMm - 20 || leaderEndMm.dx > vp.xMm + vp.widthMm + 20 ||
-          leaderEndMm.dy < vp.yMm - 20 || leaderEndMm.dy > vp.yMm + vp.heightMm + 20) {
+      // Корректный пересчёт экранного смещения (аналогично векторным линиям)
+      final offsetScale = 1.0 / (vp.viewScale * 4.0);
+      final leaderEndMm =
+          anchorMm +
+          Offset(
+            callout.screenOffsetX * offsetScale,
+            callout.screenOffsetY * offsetScale,
+          );
+
+      if (leaderEndMm.dx < vp.xMm - 20 ||
+          leaderEndMm.dx > vp.xMm + vp.widthMm + 20 ||
+          leaderEndMm.dy < vp.yMm - 20 ||
+          leaderEndMm.dy > vp.yMm + vp.heightMm + 20) {
         continue;
       }
 
-      final text = network.generateCalloutText(callout, defaultCalloutTemplates);
+      final topText = network.generateCalloutText(callout, templates);
+      final bottomText = network.generateCalloutBottomText(callout, templates);
 
+      final topMetrics = pdfFontRegular.stringMetrics(topText);
+      final topTextWidthMm = topMetrics.width * 6.5 / mm;
+
+      final textX = isRight
+          ? leaderEndMm.dx + 1.0
+          : leaderEndMm.dx - topTextWidthMm - 2.0;
+
+      double shelfDy = leaderEndMm.dy;
+      if (callout.targetType == CalloutTargetType.node ||
+          callout.elevationStyle != null) {
+        if (!callout.arrowOnNode) {
+          final styleName = templates['elevation_style'];
+          final defaultStyle = ElevationMarkStyleExt.fromString(
+            styleName,
+            fallback: ElevationMarkStyle.gostOutline,
+          );
+          final effectiveStyle = callout.elevationStyle ?? defaultStyle;
+
+          if (effectiveStyle == ElevationMarkStyle.compactFlag) {
+            shelfDy -= 3.0;
+          } else {
+            shelfDy -= 3.6; // flagH (2.6) + 1.0
+          }
+        }
+      }
+
+      final textY = shelfDy - 3.5;
+      final bottomTextY = shelfDy + 0.5; // Верхняя строка (над полкой)
       widgets.add(
         pw.Positioned(
           left: textX * mm,
@@ -1004,12 +1731,133 @@ class PdfExportService {
             padding: const pw.EdgeInsets.symmetric(horizontal: 1.0),
             color: PdfColors.white,
             child: pw.Text(
-              text,
+              topText,
               style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
             ),
           ),
         ),
       );
+
+      // Нижняя строка (под полкой)
+      if (bottomText != null && bottomText.trim().isNotEmpty) {
+        widgets.add(
+          pw.Positioned(
+            left: textX * mm,
+            top: bottomTextY * mm,
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 1.0),
+              color: PdfColors.white,
+              child: pw.Text(
+                bottomText,
+                style: pw.TextStyle(font: fontRegular, fontSize: 5.5),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Подписи штуцеров оборудования
+    for (final eq in network.equipments.values) {
+      final rad = eq.rotationAngleDeg * math.pi / 180.0;
+      final cosA = math.cos(rad);
+      final sinA = math.sin(rad);
+
+      for (final noz in eq.nozzles) {
+        final node = network.nodes[noz.id];
+        final double wx, wy, wz;
+        if (node != null) {
+          wx = node.x;
+          wy = node.y;
+          wz = node.z;
+        } else {
+          wx = eq.x + noz.localX * cosA - noz.localY * sinA;
+          wy = eq.y + noz.localX * sinA + noz.localY * cosA;
+          wz = eq.z + noz.localZ;
+        }
+
+        final effDir = network.getNozzleEffectiveDirection(noz);
+        final spudLenMm = network.getNozzleEffectiveSpudLength(
+          noz,
+          defaultSpudMm: 120.0,
+        );
+
+        final fx = wx + effDir.x * spudLenMm;
+        final fy = wy + effDir.y * spudLenMm;
+        final fz = wz + effDir.z * spudLenMm;
+
+        final rFlange = projector.projectRaw(fx, fy, fz);
+        final pFlangeMm = ViewportTransformService.model2dToSheetMm(
+          rFlange,
+          vp,
+        );
+
+        // Экранное смещение (8, -12) переводим в миллиметры (примерно 2мм вправо, 3мм вверх)
+        final textX = pFlangeMm.dx + 2.0;
+        final textY = pFlangeMm.dy - 3.0;
+
+        final labelText = noz.name.isNotEmpty
+            ? '${noz.name} Ду${noz.dn}'
+            : 'Ду${noz.dn}';
+
+        widgets.add(
+          pw.Positioned(
+            left: textX * mm,
+            top: textY * mm,
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 1.0,
+                vertical: 0.5,
+              ),
+              color: PdfColors.white,
+              child: pw.Text(
+                labelText,
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 6.5,
+                  color: const PdfColor.fromInt(0xFF006064),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (eq.name.isNotEmpty) {
+        final topCenterR = projector.projectRaw(eq.x, eq.y, eq.z + eq.height);
+        final pTopMm = ViewportTransformService.model2dToSheetMm(
+          topCenterR,
+          vp,
+        );
+
+        // Смещение вверх (около 4 мм на листе)
+        final textY = pTopMm.dy - 4.0;
+
+        final eqMetrics = pdfFontBold.stringMetrics(eq.name);
+        final eqWidthMm = eqMetrics.width * 8.0 / mm;
+
+        widgets.add(
+          pw.Positioned(
+            left: (pTopMm.dx - eqWidthMm / 2.0 - 2.0) * mm,
+            top: (textY - 1.0) * mm,
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 2.0,
+                vertical: 1.0,
+              ),
+              color: PdfColors.white,
+              child: pw.Text(
+                eq.name,
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 8.0,
+                  color: const PdfColor.fromInt(0xFF0D47A1),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
     }
 
     return widgets;
@@ -1036,131 +1884,191 @@ class PdfExportService {
     // Шапка таблицы изменений: строка 5 (Y = 20..25 мм)
     final revHeaderTop = stampTop + 20.0 * mm;
 
-    widgets.add(pw.Positioned(
-      left: stampLeft,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 10.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Изм.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Изм.',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: stampLeft + 10.0 * mm,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 10.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Кол. уч.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft + 10.0 * mm,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Кол. уч.',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: stampLeft + 20.0 * mm,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 10.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Лист', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft + 20.0 * mm,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Лист',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: stampLeft + 30.0 * mm,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 10.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('№ док.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft + 30.0 * mm,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            '№ док.',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: stampLeft + 40.0 * mm,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 15.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Подп.', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft + 40.0 * mm,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Подп.',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: stampLeft + 55.0 * mm,
-      top: revHeaderTop,
-      child: pw.Container(
-        width: 10.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Дата', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: stampLeft + 55.0 * mm,
+        top: revHeaderTop,
+        child: pw.Container(
+          width: 10.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Дата',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
+    );
 
     // Отрисовка записей изменений над шапкой (снизу вверх: строки 4, 3, 2, 1)
     for (int r = 0; r < tb.revisions.length && r < 4; r++) {
       final rev = tb.revisions[r];
       final revTop = stampTop + ((3 - r) * 5.0) * mm;
-      widgets.add(pw.Positioned(
-        left: stampLeft,
-        top: revTop,
-        child: pw.Container(
-          width: 10.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.changeIndex, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft,
+          top: revTop,
+          child: pw.Container(
+            width: 10.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.changeIndex,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
-      widgets.add(pw.Positioned(
-        left: stampLeft + 10.0 * mm,
-        top: revTop,
-        child: pw.Container(
-          width: 10.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.changeCount, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      );
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft + 10.0 * mm,
+          top: revTop,
+          child: pw.Container(
+            width: 10.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.changeCount,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
-      widgets.add(pw.Positioned(
-        left: stampLeft + 20.0 * mm,
-        top: revTop,
-        child: pw.Container(
-          width: 10.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.sheetNum, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      );
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft + 20.0 * mm,
+          top: revTop,
+          child: pw.Container(
+            width: 10.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.sheetNum,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
-      widgets.add(pw.Positioned(
-        left: stampLeft + 30.0 * mm,
-        top: revTop,
-        child: pw.Container(
-          width: 10.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.docNum, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      );
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft + 30.0 * mm,
+          top: revTop,
+          child: pw.Container(
+            width: 10.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.docNum,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
-      widgets.add(pw.Positioned(
-        left: stampLeft + 40.0 * mm,
-        top: revTop,
-        child: pw.Container(
-          width: 15.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.signature, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      );
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft + 40.0 * mm,
+          top: revTop,
+          child: pw.Container(
+            width: 15.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.signature,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
-      widgets.add(pw.Positioned(
-        left: stampLeft + 55.0 * mm,
-        top: revTop,
-        child: pw.Container(
-          width: 10.0 * mm,
-          height: 5.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(rev.date, style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+      );
+      widgets.add(
+        pw.Positioned(
+          left: stampLeft + 55.0 * mm,
+          top: revTop,
+          child: pw.Container(
+            width: 10.0 * mm,
+            height: 5.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              rev.date,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5),
+            ),
+          ),
         ),
-      ));
+      );
     }
 
     // Строки согласований: Графы 10..13 (Y = 25..55 мм: 6 строк по 5 мм)
@@ -1180,29 +2088,44 @@ class PdfExportService {
 
       // Должность (20 мм)
       if (app.role.isNotEmpty) {
-        widgets.add(pw.Positioned(
-          left: stampLeft + 1.5 * mm,
-          top: rowTop,
-          child: pw.Text(app.role, style: pw.TextStyle(font: fontRegular, fontSize: 6)),
-        ));
+        widgets.add(
+          pw.Positioned(
+            left: stampLeft + 1.5 * mm,
+            top: rowTop,
+            child: pw.Text(
+              app.role,
+              style: pw.TextStyle(font: fontRegular, fontSize: 6),
+            ),
+          ),
+        );
       }
 
       // Фамилия (20 мм)
       if (app.name.isNotEmpty) {
-        widgets.add(pw.Positioned(
-          left: stampLeft + 21.0 * mm,
-          top: rowTop,
-          child: pw.Text(app.name, style: pw.TextStyle(font: fontRegular, fontSize: 6.5)),
-        ));
+        widgets.add(
+          pw.Positioned(
+            left: stampLeft + 21.0 * mm,
+            top: rowTop,
+            child: pw.Text(
+              app.name,
+              style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
+            ),
+          ),
+        );
       }
 
       // Дата (10 мм)
       if (app.date.isNotEmpty) {
-        widgets.add(pw.Positioned(
-          left: stampLeft + 56.0 * mm,
-          top: rowTop,
-          child: pw.Text(app.date, style: pw.TextStyle(font: fontRegular, fontSize: 5.5)),
-        ));
+        widgets.add(
+          pw.Positioned(
+            left: stampLeft + 56.0 * mm,
+            top: rowTop,
+            child: pw.Text(
+              app.date,
+              style: pw.TextStyle(font: fontRegular, fontSize: 5.5),
+            ),
+          ),
+        );
       }
     }
 
@@ -1212,156 +2135,199 @@ class PdfExportService {
 
     // Строка 1 (0..10 мм, высота 10 мм): Графа 4: Обозначение документа / шифр проекта (120 мм ширина)
     if (tb.documentCode.isNotEmpty) {
-      widgets.add(pw.Positioned(
-        left: xCenter,
-        top: stampTop,
-        child: pw.Container(
-          width: 120.0 * mm,
-          height: 10.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(tb.documentCode, style: pw.TextStyle(font: fontBold, fontSize: 11)),
+      widgets.add(
+        pw.Positioned(
+          left: xCenter,
+          top: stampTop,
+          child: pw.Container(
+            width: 120.0 * mm,
+            height: 10.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              tb.documentCode,
+              style: pw.TextStyle(font: fontBold, fontSize: 11),
+            ),
+          ),
         ),
-      ));
+      );
     }
 
     // Строка 2 (10..25 мм, высота 15 мм): Графа 1: Наименование объекта строительства (120 мм ширина)
     if (tb.projectName.isNotEmpty) {
-      widgets.add(pw.Positioned(
-        left: xCenter + 2.0 * mm,
-        top: stampTop + 10.0 * mm,
-        child: pw.Container(
-          width: 116.0 * mm,
-          height: 15.0 * mm,
-          alignment: pw.Alignment.centerLeft,
-          child: pw.Text(
-            tb.projectName,
-            style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
-            maxLines: 2,
+      widgets.add(
+        pw.Positioned(
+          left: xCenter + 2.0 * mm,
+          top: stampTop + 10.0 * mm,
+          child: pw.Container(
+            width: 116.0 * mm,
+            height: 15.0 * mm,
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text(
+              tb.projectName,
+              style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
+              maxLines: 2,
+            ),
           ),
         ),
-      ));
+      );
     }
 
     // Строка 3 (25..40 мм, высота 15 мм):
     // Слева (65..135 мм, 70 мм): Графа 2: Наименование здания / сооружения
     if (tb.buildingName.isNotEmpty) {
-      widgets.add(pw.Positioned(
-        left: xCenter + 2.0 * mm,
-        top: stampTop + 25.0 * mm,
-        child: pw.Container(
-          width: 66.0 * mm,
-          height: 15.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(
-            tb.buildingName,
-            textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
-            maxLines: 2,
+      widgets.add(
+        pw.Positioned(
+          left: xCenter + 2.0 * mm,
+          top: stampTop + 25.0 * mm,
+          child: pw.Container(
+            width: 66.0 * mm,
+            height: 15.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              tb.buildingName,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
+              maxLines: 2,
+            ),
           ),
         ),
-      ));
+      );
     }
 
     // Справа (135..185 мм, 50 мм): Стадия | Лист | Листов (Y = 25..40 мм)
     // Шапка (25..30 мм: высота 5 мм)
-    widgets.add(pw.Positioned(
-      left: xRight,
-      top: stampTop + 25.0 * mm,
-      child: pw.Container(
-        width: 15.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Стадия', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    widgets.add(
+      pw.Positioned(
+        left: xRight,
+        top: stampTop + 25.0 * mm,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Стадия',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: xRight + 15.0 * mm,
-      top: stampTop + 25.0 * mm,
-      child: pw.Container(
-        width: 15.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Лист', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: xRight + 15.0 * mm,
+        top: stampTop + 25.0 * mm,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Лист',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: xRight + 30.0 * mm,
-      top: stampTop + 25.0 * mm,
-      child: pw.Container(
-        width: 20.0 * mm,
-        height: 5.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text('Листов', style: pw.TextStyle(font: fontRegular, fontSize: 5)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: xRight + 30.0 * mm,
+        top: stampTop + 25.0 * mm,
+        child: pw.Container(
+          width: 20.0 * mm,
+          height: 5.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'Листов',
+            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+          ),
+        ),
       ),
-    ));
+    );
 
     // Значения (30..40 мм: высота 10 мм)
-    widgets.add(pw.Positioned(
-      left: xRight,
-      top: stampTop + 30.0 * mm,
-      child: pw.Container(
-        width: 15.0 * mm,
-        height: 10.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text(tb.stage, style: pw.TextStyle(font: fontBold, fontSize: 8)),
+    widgets.add(
+      pw.Positioned(
+        left: xRight,
+        top: stampTop + 30.0 * mm,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 10.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            tb.stage,
+            style: pw.TextStyle(font: fontBold, fontSize: 8),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: xRight + 15.0 * mm,
-      top: stampTop + 30.0 * mm,
-      child: pw.Container(
-        width: 15.0 * mm,
-        height: 10.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text(tb.sheetNumber.toString(), style: pw.TextStyle(font: fontBold, fontSize: 8)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: xRight + 15.0 * mm,
+        top: stampTop + 30.0 * mm,
+        child: pw.Container(
+          width: 15.0 * mm,
+          height: 10.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            tb.sheetNumber.toString(),
+            style: pw.TextStyle(font: fontBold, fontSize: 8),
+          ),
+        ),
       ),
-    ));
-    widgets.add(pw.Positioned(
-      left: xRight + 30.0 * mm,
-      top: stampTop + 30.0 * mm,
-      child: pw.Container(
-        width: 20.0 * mm,
-        height: 10.0 * mm,
-        alignment: pw.Alignment.center,
-        child: pw.Text(tb.totalSheets.toString(), style: pw.TextStyle(font: fontBold, fontSize: 8)),
+    );
+    widgets.add(
+      pw.Positioned(
+        left: xRight + 30.0 * mm,
+        top: stampTop + 30.0 * mm,
+        child: pw.Container(
+          width: 20.0 * mm,
+          height: 10.0 * mm,
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            tb.totalSheets.toString(),
+            style: pw.TextStyle(font: fontBold, fontSize: 8),
+          ),
+        ),
       ),
-    ));
+    );
 
     // Строка 4 (40..55 мм, высота 15 мм):
     // Слева (65..135 мм, 70 мм): Графа 3: Наименование схемы / чертежа
     if (tb.drawingTitle.isNotEmpty) {
-      widgets.add(pw.Positioned(
-        left: xCenter + 2.0 * mm,
-        top: stampTop + 40.0 * mm,
-        child: pw.Container(
-          width: 66.0 * mm,
-          height: 15.0 * mm,
-          alignment: pw.Alignment.centerLeft,
-          child: pw.Text(
-            tb.drawingTitle,
-            style: pw.TextStyle(font: fontBold, fontSize: 8.5),
-            maxLines: 2,
+      widgets.add(
+        pw.Positioned(
+          left: xCenter + 2.0 * mm,
+          top: stampTop + 40.0 * mm,
+          child: pw.Container(
+            width: 66.0 * mm,
+            height: 15.0 * mm,
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text(
+              tb.drawingTitle,
+              style: pw.TextStyle(font: fontBold, fontSize: 8.5),
+              maxLines: 2,
+            ),
           ),
         ),
-      ));
+      );
     }
 
     // Справа (135..185 мм, 50 мм): Графа 9: Организация
     if (tb.organization.isNotEmpty) {
-      widgets.add(pw.Positioned(
-        left: xRight + 1.0 * mm,
-        top: stampTop + 40.0 * mm,
-        child: pw.Container(
-          width: 48.0 * mm,
-          height: 15.0 * mm,
-          alignment: pw.Alignment.center,
-          child: pw.Text(
-            tb.organization,
-            textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(font: fontBold, fontSize: 8),
+      widgets.add(
+        pw.Positioned(
+          left: xRight + 1.0 * mm,
+          top: stampTop + 40.0 * mm,
+          child: pw.Container(
+            width: 48.0 * mm,
+            height: 15.0 * mm,
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              tb.organization,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontBold, fontSize: 8),
+            ),
           ),
         ),
-      ));
+      );
     }
 
     return widgets;
@@ -1403,7 +2369,11 @@ class PdfExportService {
           child: pw.Text(
             text,
             textAlign: pw.TextAlign.right,
-            style: pw.TextStyle(font: fontRegular, fontSize: 7, fontStyle: pw.FontStyle.italic),
+            style: pw.TextStyle(
+              font: fontRegular,
+              fontSize: 7,
+              fontStyle: pw.FontStyle.italic,
+            ),
           ),
         ),
       ),
@@ -1502,7 +2472,10 @@ class PdfExportService {
                           width: 14.0 * mm,
                           height: 3.5 * mm,
                           decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey500, width: 0.5),
+                            border: pw.Border.all(
+                              color: PdfColors.grey500,
+                              width: 0.5,
+                            ),
                           ),
                           alignment: pw.Alignment.center,
                           child: pw.Text(
@@ -1550,7 +2523,9 @@ class PdfExportService {
 
     // 3. Fallback: Google Fonts онлайн или Helvetica
     try {
-      return isBold ? await PdfGoogleFonts.robotoBold() : await PdfGoogleFonts.robotoRegular();
+      return isBold
+          ? await PdfGoogleFonts.robotoBold()
+          : await PdfGoogleFonts.robotoRegular();
     } catch (_) {
       return isBold ? pw.Font.helveticaBold() : pw.Font.helvetica();
     }
@@ -1566,7 +2541,8 @@ class PdfExportService {
       name = '$name.pdf';
     }
 
-    if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       final uri = await FilePicker.saveFile(
         dialogTitle: 'Сохранить чертеж в формате PDF',
         fileName: name,

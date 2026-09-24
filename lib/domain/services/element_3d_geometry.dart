@@ -88,6 +88,7 @@ class Element3dGeometry {
   static const String layerReducers = 'АКСО_3D_ПЕРЕХОДЫ';
   static const String layerCaps = 'АКСО_3D_ЗАГЛУШКИ';
   static const String layerDirectBranches = 'АКСО_ВРЕЗКИ';
+  static const String layerHandles = 'АКСО_РУЧКИ_АРМАТУРЫ';
 
   /// Генерация 3D линий для арматуры (Valve):
   /// - Два встречных конуса корпуса (от торцов к центру)
@@ -194,7 +195,7 @@ class Element3dGeometry {
       lines.add(WireframeSegment3D(
         center.x, center.y, center.z,
         hwCenter.x, hwCenter.y, hwCenter.z,
-        layer: layerValves,
+        layer: layerHandles,
       ));
 
       if (customDefinition != null &&
@@ -212,7 +213,7 @@ class Element3dGeometry {
         final p101 = hwCenter + bx - by + bz;
         final p110 = hwCenter + bx + by - bz;
         final p111 = hwCenter + bx + by + bz;
-        void addEdge(Vector3D a, Vector3D b) => lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layerValves));
+        void addEdge(Vector3D a, Vector3D b) => lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layerHandles));
         addEdge(p000, p001); addEdge(p010, p011); addEdge(p100, p101); addEdge(p110, p111);
         addEdge(p000, p010); addEdge(p010, p110); addEdge(p110, p100); addEdge(p100, p000);
         addEdge(p001, p011); addEdge(p011, p111); addEdge(p111, p101); addEdge(p101, p001);
@@ -230,7 +231,7 @@ class Element3dGeometry {
           lines.add(WireframeSegment3D(
             hwPts[i].x, hwPts[i].y, hwPts[i].z,
             hwPts[next].x, hwPts[next].y, hwPts[next].z,
-            layer: layerValves,
+            layer: layerHandles,
           ));
         }
 
@@ -239,7 +240,7 @@ class Element3dGeometry {
           lines.add(WireframeSegment3D(
             hwCenter.x, hwCenter.y, hwCenter.z,
             hwPts[i].x, hwPts[i].y, hwPts[i].z,
-            layer: layerValves,
+            layer: layerHandles,
           ));
         }
       }
@@ -1332,95 +1333,98 @@ class Element3dGeometry {
 
     final stemH = w * geo.stemHeightRatio;
     final hwCenter = center + basis.u * stemH;
+    
+    void addHandle(Vector3D a, Vector3D b) =>
+        lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layerHandles));
 
     switch (stemType) {
       case ValveStemSymbolType.none:
         break;
       case ValveStemSymbolType.handwheel:
-        addLine(center, hwCenter);
+        addHandle(center, hwCenter);
         final col = center + basis.u * (stemH * 0.5);
-        addLine(col - basis.t * 2.0, col + basis.t * 2.0);
+        addHandle(col - basis.t * 2.0, col + basis.t * 2.0);
         final hwR = w * 0.8;
-        addLine(hwCenter - basis.t * hwR, hwCenter + basis.t * hwR);
-        addLine(hwCenter - basis.v * hwR, hwCenter + basis.v * hwR);
+        addHandle(hwCenter - basis.t * hwR, hwCenter + basis.t * hwR);
+        addHandle(hwCenter - basis.v * hwR, hwCenter + basis.v * hwR);
         for (int i = 0; i < 8; i++) {
           final ang1 = i * math.pi / 4;
           final ang2 = (i + 1) * math.pi / 4;
           final q1 = hwCenter + basis.t * (hwR * math.cos(ang1)) + basis.v * (hwR * math.sin(ang1));
           final q2 = hwCenter + basis.t * (hwR * math.cos(ang2)) + basis.v * (hwR * math.sin(ang2));
-          addLine(q1, q2);
+          addHandle(q1, q2);
         }
         break;
       case ValveStemSymbolType.lever:
-        addLine(center, hwCenter);
+        addHandle(center, hwCenter);
         final leverLen = w * 1.4;
         final leverEnd = hwCenter + basis.t * leverLen;
-        addLine(hwCenter, leverEnd);
+        addHandle(hwCenter, leverEnd);
         final kr = w * 0.2;
         final k1 = leverEnd + basis.u * kr;
         final k2 = leverEnd + basis.t * kr;
         final k3 = leverEnd - basis.u * kr;
         final k4 = leverEnd - basis.t * kr;
-        addLine(k1, k2);
-        addLine(k2, k3);
-        addLine(k3, k4);
-        addLine(k4, k1);
+        addHandle(k1, k2);
+        addHandle(k2, k3);
+        addHandle(k3, k4);
+        addHandle(k4, k1);
         break;
       case ValveStemSymbolType.boxWithText:
         final boxW = w * 1.3;
         final boxH = w * 1.3;
         final boxCenter = center + basis.u * (stemH + boxH * 0.5);
         final stemEnd = boxCenter - basis.u * (boxH * 0.5);
-        addLine(center, stemEnd);
+        addHandle(center, stemEnd);
         final b1 = boxCenter - basis.t * (boxW * 0.5) - basis.u * (boxH * 0.5);
         final b2 = boxCenter + basis.t * (boxW * 0.5) - basis.u * (boxH * 0.5);
         final b3 = boxCenter + basis.t * (boxW * 0.5) + basis.u * (boxH * 0.5);
         final b4 = boxCenter - basis.t * (boxW * 0.5) + basis.u * (boxH * 0.5);
-        addLine(b1, b2);
-        addLine(b2, b3);
-        addLine(b3, b4);
-        addLine(b4, b1);
+        addHandle(b1, b2);
+        addHandle(b2, b3);
+        addHandle(b3, b4);
+        addHandle(b4, b1);
         _addTextStrokesToWireframe(
           lines: lines,
           center: boxCenter,
           basis: basis,
           boxSize: math.min(boxW, boxH) * 0.65,
           text: symbol.stemText,
-          layer: layer,
+          layer: layerHandles,
         );
         break;
       case ValveStemSymbolType.diaphragm:
-        addLine(center, hwCenter);
+        addHandle(center, hwCenter);
         final diaR = w * 1.1;
-        addLine(hwCenter - basis.t * diaR, hwCenter + basis.t * diaR);
+        addHandle(hwCenter - basis.t * diaR, hwCenter + basis.t * diaR);
         final domeTop = hwCenter + basis.u * (w * 0.45);
         final midL = hwCenter - basis.t * (diaR * 0.6) + basis.u * (w * 0.35);
         final midR = hwCenter + basis.t * (diaR * 0.6) + basis.u * (w * 0.35);
-        addLine(hwCenter - basis.t * diaR, midL);
-        addLine(midL, domeTop);
-        addLine(domeTop, midR);
-        addLine(midR, hwCenter + basis.t * diaR);
+        addHandle(hwCenter - basis.t * diaR, midL);
+        addHandle(midL, domeTop);
+        addHandle(domeTop, midR);
+        addHandle(midR, hwCenter + basis.t * diaR);
         final botMid = hwCenter - basis.u * (w * 0.18);
-        addLine(hwCenter - basis.t * diaR, botMid);
-        addLine(botMid, hwCenter + basis.t * diaR);
+        addHandle(hwCenter - basis.t * diaR, botMid);
+        addHandle(botMid, hwCenter + basis.t * diaR);
         break;
       case ValveStemSymbolType.spring:
-        addLine(center, hwCenter);
+        addHandle(center, hwCenter);
         final bonW = w * 0.65;
         final bonH = w * 1.2;
         final b1 = hwCenter - basis.t * (bonW * 0.5);
         final b2 = hwCenter + basis.t * (bonW * 0.5);
         final b3 = b2 + basis.u * bonH;
         final b4 = b1 + basis.u * bonH;
-        addLine(b1, b2);
-        addLine(b2, b3);
-        addLine(b3, b4);
-        addLine(b4, b1);
+        addHandle(b1, b2);
+        addHandle(b2, b3);
+        addHandle(b3, b4);
+        addHandle(b4, b1);
         final zMid1 = hwCenter + basis.u * (bonH * 0.33) + basis.t * (bonW * 0.3);
         final zMid2 = hwCenter + basis.u * (bonH * 0.66) - basis.t * (bonW * 0.3);
-        addLine(b1, zMid1);
-        addLine(zMid1, zMid2);
-        addLine(zMid2, b3);
+        addHandle(b1, zMid1);
+        addHandle(zMid1, zMid2);
+        addHandle(zMid2, b3);
         break;
     }
 
