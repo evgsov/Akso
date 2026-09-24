@@ -162,6 +162,7 @@ class DesktopCadLayout extends StatelessWidget {
         orbitAzimuth: controller.projector.orbitAzimuth,
         orbitElevation: controller.projector.orbitElevation,
         targetCenter: controller.projector.targetCenter,
+        customValves: controller.customValves,
       );
       final fileName = '${sheet.name.replaceAll(':', '_').replaceAll(' ', '_')}.pdf';
       final ok = await PdfExportService.savePdfFile(
@@ -943,6 +944,7 @@ class DesktopCadLayout extends StatelessWidget {
                   activeProjector: controller.projector,
                   calloutTemplates: controller.currentProject.calloutTemplates,
                   sheets: controller.sheets,
+                  customValves: controller.customValves,
                 ),
               );
             },
@@ -4354,6 +4356,8 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                           valve.id,
                           valve.copyWith(clearCustomDefinition: true),
                         );
+                        widget.controller.network.generateElementWeldJoints();
+                        widget.controller.network.recalculateSpools();
                         widget.controller.history.recordState(widget.controller.network);
                         widget.controller.refresh();
                       },
@@ -4372,10 +4376,16 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                       );
                       if (selected != null) {
                         widget.controller.addOrUpdateCustomValve(selected);
+                        final willBeFlanged = selected.symbol2d.hasBodyFlanges;
                         widget.controller.network.updateValve(
                           valve.id,
-                          valve.copyWith(customDefinitionId: selected.id),
+                          valve.copyWith(
+                            customDefinitionId: selected.id,
+                            isFlanged: willBeFlanged,
+                          ),
                         );
+                        widget.controller.network.generateElementWeldJoints();
+                        widget.controller.network.recalculateSpools();
                         widget.controller.history.recordState(widget.controller.network);
                         widget.controller.refresh();
                       }
@@ -4698,58 +4708,62 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
         ],
 
         // Исполнение: Под приварку vs Фланцы
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: valve.isFlanged ? Colors.indigo.withValues(alpha: 0.05) : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: valve.isFlanged ? Colors.indigo.shade300 : Colors.grey.shade300),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          valve.isFlanged ? Icons.all_inclusive : Icons.linear_scale,
-                          size: 14,
-                          color: valve.isFlanged ? Colors.indigo : Colors.grey.shade700,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            valve.isFlanged ? 'Фланцевая (ГОСТ 33259)' : 'Под приварку / муфтовая',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: valve.isFlanged ? Colors.indigo : Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: valve.isFlanged,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    onChanged: (val) {
-                      widget.controller.network.updateValve(
-                        valve.id,
-                        valve.copyWith(isFlanged: val),
-                      );
-                      widget.controller.network.generateElementWeldJoints();
-                      widget.controller.history.recordState(widget.controller.network);
-                      widget.controller.refresh();
-                    },
-                  ),
-                ],
+        Builder(
+          builder: (context) {
+            final isFlanged = valve.effectiveIsFlanged;
+            return Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isFlanged ? Colors.indigo.withValues(alpha: 0.05) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: isFlanged ? Colors.indigo.shade300 : Colors.grey.shade300),
               ),
-              if (valve.isFlanged) ...[
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(
+                              isFlanged ? Icons.all_inclusive : Icons.linear_scale,
+                              size: 14,
+                              color: isFlanged ? Colors.indigo : Colors.grey.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                isFlanged ? 'Фланцевая (ГОСТ 33259)' : 'Под приварку / муфтовая',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isFlanged ? Colors.indigo : Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: isFlanged,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (val) {
+                          widget.controller.network.updateValve(
+                            valve.id,
+                            valve.copyWith(isFlanged: val),
+                          );
+                          widget.controller.network.generateElementWeldJoints();
+                          widget.controller.network.recalculateSpools();
+                          widget.controller.history.recordState(widget.controller.network);
+                          widget.controller.refresh();
+                        },
+                      ),
+                    ],
+                  ),
+                  if (isFlanged) ...[
                 const SizedBox(height: 6),
                 DropdownButtonFormField<int>(
                   isExpanded: true,
@@ -4934,8 +4948,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               ],
             ],
           ),
-        ),
-        const SizedBox(height: 6),
+        );
+      },
+    ),
+    const SizedBox(height: 6),
 
         // Направление потока / Реверс (особенно важно для обратного клапана, фильтра, счетчика)
         Row(

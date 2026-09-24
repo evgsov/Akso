@@ -14,6 +14,8 @@ import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/title_block_data.dart';
+import '../../domain/models/custom_valve_definition.dart';
+import '../../domain/services/custom_valve_catalog.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
 
@@ -40,6 +42,7 @@ class DxfWriter {
     DxfCalloutOrientation calloutOrientation = DxfCalloutOrientation.cameraFacing,
     AxonometryProjector? activeProjector,
     bool exportInlineDiameters = false,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     final buffer = StringBuffer();
     final extVec = calloutOrientation.getExtrusionVector(activeProjector);
@@ -185,11 +188,17 @@ class DxfWriter {
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
 
-      final valveLines = Element3dGeometry.generateValve3d(
+      final customDef = valve.customDefinitionId != null
+          ? (customValves?[valve.customDefinitionId!] ??
+              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
+          : null;
+
+      final valveLines = Element3dGeometry.generateValveWireframe(
         valve,
         start,
         end,
         pipeOuterDiameter: seg.outerDiameterMm,
+        customDefinition: customDef,
       );
       for (final l in valveLines) {
         _write3dLine(buffer, layer: l.layer, x1: l.x1, y1: l.y1, z1: l.z1, x2: l.x2, y2: l.y2, z2: l.z2);
@@ -513,6 +522,7 @@ class DxfWriter {
     AxonometryProjector? activeProjector,
     Map<String, String>? calloutTemplates,
     bool exportInlineDiameters = false,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     final buffer = StringBuffer();
     final projector = activeProjector ?? AxonometryProjector(projectionType: projection, scale: 1.0);
@@ -530,6 +540,7 @@ class DxfWriter {
       projector: projector,
       calloutBlocks: calloutBlocks,
       exportInlineDiameters: exportInlineDiameters,
+      customValves: customValves,
     );
 
     buffer.writeln('  0\nENDSEC\n  0\nEOF');
@@ -544,6 +555,7 @@ class DxfWriter {
     AxonometryProjector? activeProjector,
     Map<String, String>? calloutTemplates,
     bool exportInlineDiameters = false,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     final buffer = StringBuffer();
     final projector = activeProjector ?? AxonometryProjector(projectionType: projection, scale: 1.0);
@@ -590,6 +602,7 @@ class DxfWriter {
       projector: projector,
       calloutBlocks: calloutBlocks,
       exportInlineDiameters: exportInlineDiameters,
+      customValves: customValves,
     );
 
     // 5.2. Объекты листов (Paper Space): ВЭ, Рамка, Штамп, ТТ, Приложение к акту
@@ -907,6 +920,7 @@ class DxfWriter {
     required AxonometryProjector projector,
     required List<_DxfCalloutBlockDef> calloutBlocks,
     bool exportInlineDiameters = false,
+    Map<String, CustomValveDefinition>? customValves,
   }) {
     // 0. Осевая трасса в 2D проекции ГОСТ (Centerline skeleton)
     for (final seg in network.segments.values) {
@@ -995,14 +1009,34 @@ class DxfWriter {
       final end = network.nodes[seg.endNodeId];
       if (start == null || end == null) continue;
 
-      final p1 = _projectTo2d(projector, start);
-      final p2 = _projectTo2d(projector, end);
+      final customDef = valve.customDefinitionId != null
+          ? (customValves?[valve.customDefinitionId!] ??
+              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
+          : null;
 
-      final vx = p1.dx + (p2.dx - p1.dx) * valve.ratio;
-      final vy = p1.dy + (p2.dy - p1.dy) * valve.ratio;
-      final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
+      if (customDef != null) {
+        final valveLines = Element3dGeometry.generateValveWireframe(
+          valve,
+          start,
+          end,
+          pipeOuterDiameter: seg.outerDiameterMm,
+          customDefinition: customDef,
+        );
+        for (final l in valveLines) {
+          final lp1 = _projectTo2d(projector, Node3D(id: '', x: l.x1, y: l.y1, z: l.z1));
+          final lp2 = _projectTo2d(projector, Node3D(id: '', x: l.x2, y: l.y2, z: l.z2));
+          _write2dLine(buffer, layer: 'АКСО_АРМАТУРА', x1: lp1.dx, y1: lp1.dy, x2: lp2.dx, y2: lp2.dy);
+        }
+      } else {
+        final p1 = _projectTo2d(projector, start);
+        final p2 = _projectTo2d(projector, end);
 
-      _writeGostValve2d(buffer, center: Offset(vx, vy), angle: angle, type: valve.valveType);
+        final vx = p1.dx + (p2.dx - p1.dx) * valve.ratio;
+        final vy = p1.dy + (p2.dy - p1.dy) * valve.ratio;
+        final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
+
+        _writeGostValve2d(buffer, center: Offset(vx, vy), angle: angle, type: valve.valveType);
+      }
     }
 
     // 2b. Опоры и подвески в 2D по ГОСТ
@@ -1550,7 +1584,7 @@ class DxfWriter {
     final counterFlangeMap = <String, int>{};
     int totalGaskets = 0;
     for (final v in network.valves.values) {
-      if (v.isFlanged && v.includeCounterFlanges) {
+      if (v.effectiveIsFlanged && v.includeCounterFlanges) {
         final seg = network.segments[v.segmentId];
         final isTerminalAtStart = seg != null && network.getConnectedSegments(seg.startNodeId).length <= 1 && v.ratio <= 0.35;
         final isTerminalAtEnd = seg != null && network.getConnectedSegments(seg.endNodeId).length <= 1 && v.ratio >= 0.65;

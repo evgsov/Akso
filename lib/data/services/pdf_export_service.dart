@@ -17,6 +17,8 @@ import '../../domain/models/equipment.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/title_block_data.dart';
+import '../../domain/models/custom_valve_definition.dart';
+import '../../domain/services/custom_valve_catalog.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import '../../ui/canvas/painters/callout_painter.dart';
@@ -34,6 +36,7 @@ class PdfExportService {
     double orbitAzimuth = -math.pi / 4,
     double orbitElevation = math.pi / 6,
     Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
+    Map<String, CustomValveDefinition>? customValves,
   }) async {
     final pdf = pw.Document(
       title: sheet.name,
@@ -72,6 +75,7 @@ class PdfExportService {
                     orbitAzimuth: orbitAzimuth,
                     orbitElevation: orbitElevation,
                     targetCenter: targetCenter,
+                    customValves: customValves,
                     heightMm: heightMm,
                     mm: mm,
                   );
@@ -284,6 +288,7 @@ class PdfExportService {
     required double orbitAzimuth,
     required double orbitElevation,
     required Node3D targetCenter,
+    Map<String, CustomValveDefinition>? customValves,
     required double heightMm,
     required double mm,
   }) {
@@ -707,11 +712,17 @@ class PdfExportService {
       final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
       if (!isVisible && !vp.ghostInactiveSystems) continue;
 
+      final customDef = valve.customDefinitionId != null
+          ? (customValves?[valve.customDefinitionId!] ??
+              CustomValveCatalog.instance.getById(valve.customDefinitionId!))
+          : null;
+
       final wireSegments = Element3dGeometry.generateValveWireframe(
         valve,
         start,
         end,
         pipeOuterDiameter: seg.outerDiameterMm,
+        customDefinition: customDef,
       );
 
       final sys = network.systems[seg.systemId];

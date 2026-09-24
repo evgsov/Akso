@@ -11,6 +11,7 @@ import '../../../domain/enums/weld_joint_style.dart';
 export '../../../core/math/vector_3d.dart';
 import '../../../core/math/vector_3d.dart';
 import '../../../domain/models/custom_valve_definition.dart';
+import '../../../domain/models/valve.dart';
 import '../../../domain/services/custom_valve_catalog.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 import 'pipe_painter.dart';
@@ -305,9 +306,8 @@ class Solid3dEngine {
         center: vPos,
         axisDir: dir,
         radius: r,
-        length: valve.lengthMm,
+        valve: valve,
         color: baseColor,
-        isFlanged: valve.isFlanged,
         customDefinition: customDef,
       );
 
@@ -1075,18 +1075,17 @@ class Solid3dEngine {
     }
   }
 
-  /// Построение объемной модели арматуры (корпус, фланцы, шток, штурвал/привод)
   static void _buildValveSolidMesh({
     required List<Polygon3D> polygons,
     required AxonometryProjector projector,
     required Vector3D center,
     required Vector3D axisDir,
     required double radius,
-    required double length,
+    required Valve valve,
     required Color color,
-    required bool isFlanged,
     CustomValveDefinition? customDefinition,
   }) {
+    final length = valve.lengthMm;
     final halfL = length / 2.0;
     final vStart = center - axisDir * halfL;
     final vEnd = center + axisDir * halfL;
@@ -1125,13 +1124,14 @@ class Solid3dEngine {
       );
     }
 
-    // 2. Торцевые фланцы (если фланцевая или указано в семействе)
-    final hasFlanges = isFlanged || (customDefinition?.symbol2d.hasBodyFlanges ?? false);
-    if (hasFlanges) {
+    // 2. Торцевые фланцы и ответные фланцы
+    final isFlanged = valve.effectiveIsFlanged || (customDefinition?.symbol2d.hasBodyFlanges ?? false);
+    if (isFlanged) {
       final flangeR = radius * 1.55;
-      final flangeW = length * 0.12;
+      final flangeW = math.max(10.0, length * 0.12);
       final flangeColor = Color.lerp(color, Colors.black87, 0.25)!;
 
+      // Фланцы корпуса арматуры
       _buildCylinderMesh(
         polygons: polygons,
         projector: projector,
@@ -1150,6 +1150,57 @@ class Solid3dEngine {
         color: flangeColor,
         facets: 8,
       );
+
+      // Ответные фланцы по ГОСТ 33259 с зазором под прокладку
+      if (valve.includeCounterFlanges) {
+        final flLen = valve.effectiveCounterFlangeLengthMm > 0
+            ? valve.effectiveCounterFlangeLengthMm
+            : (valve.isFlatCounterFlange ? 35.0 : 45.0);
+        final gasketGap = math.min(4.0, flLen * 0.1);
+
+        // Прокладки
+        _buildCylinderMesh(
+          polygons: polygons,
+          projector: projector,
+          start: vStart - axisDir * gasketGap,
+          end: vStart,
+          radius: flangeR * 0.95,
+          color: const Color(0xFF263238),
+          facets: 8,
+        );
+        _buildCylinderMesh(
+          polygons: polygons,
+          projector: projector,
+          start: vEnd,
+          end: vEnd + axisDir * gasketGap,
+          radius: flangeR * 0.95,
+          color: const Color(0xFF263238),
+          facets: 8,
+        );
+
+        // Входной ответный фланец
+        _buildFlangeMesh(
+          polygons: polygons,
+          projector: projector,
+          center: vStart - axisDir * gasketGap,
+          axisDir: -axisDir, // Смотрит от арматуры к трубе
+          radius: radius,
+          isFlangePair: false,
+          color: color,
+          facets: 8,
+        );
+        // Выходной ответный фланец
+        _buildFlangeMesh(
+          polygons: polygons,
+          projector: projector,
+          center: vEnd + axisDir * gasketGap,
+          axisDir: axisDir, // Смотрит от арматуры к трубе
+          radius: radius,
+          isFlangePair: false,
+          color: color,
+          facets: 8,
+        );
+      }
     }
 
     // 3. Вертикальный шток / шпиндель и привод

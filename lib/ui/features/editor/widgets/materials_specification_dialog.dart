@@ -463,7 +463,6 @@ class _MaterialsSpecificationDialogState extends State<MaterialsSpecificationDia
                           initialTemplate: _activeTemplate ?? ReportTemplate.defaultMtoGostTemplate,
                           onTemplateChanged: (t) {
                             setState(() => _activeTemplate = t);
-                            _loadTemplates();
                           },
                         ),
                       ),

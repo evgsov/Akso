@@ -1141,7 +1141,6 @@ class _WeldJournalDialogState extends State<WeldJournalDialog> {
                           setState(() {
                             _activeWeldTemplate = updated;
                           });
-                          _loadWeldTemplates();
                         },
                       ),
                     ),

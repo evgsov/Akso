@@ -6,6 +6,7 @@ import '../../../core/math/vector_3d.dart';
 import '../../../domain/enums/fitting_type.dart';
 import '../../../domain/enums/weld_joint_style.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 
 class AnnotationPainter {
@@ -17,7 +18,13 @@ class AnnotationPainter {
     bool showWelds,
     bool showCallouts, {
     String? selectedWeldId,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
+    final baseStroke = (styleConfig != null && sheetZoom != null)
+        ? math.max(0.4, styleConfig.thinLineWidthMm * sheetZoom)
+        : 1.5;
+
     if (showWelds) {
       for (final weld in network.weldJoints.values) {
         final seg = network.segments[weld.segmentId];
@@ -117,7 +124,7 @@ class AnnotationPainter {
             final tickPaint = Paint()
               ..color = strokeColor
               ..style = PaintingStyle.stroke
-              ..strokeWidth = isSelected ? 2.5 : 1.8
+              ..strokeWidth = isSelected ? baseStroke + 0.7 : baseStroke
               ..strokeCap = StrokeCap.round;
             canvas.drawLine(lp1, lp2, tickPaint);
             break;
@@ -149,7 +156,7 @@ class AnnotationPainter {
             final ringPaint = Paint()
               ..color = strokeColor
               ..style = PaintingStyle.stroke
-              ..strokeWidth = isSelected ? 2.0 : 1.4
+              ..strokeWidth = isSelected ? baseStroke + 0.5 : baseStroke
               ..strokeCap = StrokeCap.round;
             for (final line in ringLines) {
               final lp1 = projector.project(line.startNode);
@@ -160,7 +167,7 @@ class AnnotationPainter {
 
           case WeldJointStyle.circle:
             // Кружок (контурный маркер монтажного шва)
-            const r = 4.5;
+            final r = (sheetZoom != null ? 3.5 * sheetZoom : 4.5);
             if (isSelected) {
               final glowPaint = Paint()
                 ..color = Colors.amber.withValues(alpha: 0.35)
@@ -175,13 +182,13 @@ class AnnotationPainter {
             final circlePaint = Paint()
               ..color = strokeColor
               ..style = PaintingStyle.stroke
-              ..strokeWidth = isSelected ? 2.2 : 1.5;
+              ..strokeWidth = isSelected ? baseStroke + 0.7 : baseStroke;
             canvas.drawCircle(weldPos, r, circlePaint);
             break;
 
           case WeldJointStyle.dot:
             // Точка (компактный маркер)
-            const r = 3.5;
+            final r = (sheetZoom != null ? 2.5 * sheetZoom : 3.5);
             if (isSelected) {
               final glowPaint = Paint()
                 ..color = Colors.amber.withValues(alpha: 0.35)
@@ -196,7 +203,7 @@ class AnnotationPainter {
             final borderPaint = Paint()
               ..color = Colors.white
               ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.0;
+              ..strokeWidth = math.max(0.5, baseStroke - 0.5);
             canvas.drawCircle(weldPos, r, borderPaint);
             break;
         }
@@ -206,8 +213,6 @@ class AnnotationPainter {
     for (final node in network.nodes.values) {
       final screenPos = projector.project(node);
       final isSelected = node.id == selectedNodeId;
-      final hasFitting = network.fittings.containsKey(node.id);
-      final connected = network.getConnectedSegments(node.id);
 
       if (isSelected) {
         final glowPaint = Paint()
@@ -225,17 +230,6 @@ class AnnotationPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
         canvas.drawCircle(screenPos, 5.0, borderPaint);
-      } else if (!hasFitting && connected.length <= 1) {
-        final nodePaint = Paint()
-          ..color = const Color(0xFF37474F)
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(screenPos, 3.5, nodePaint);
-
-        final borderPaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0;
-        canvas.drawCircle(screenPos, 3.5, borderPaint);
       }
     }
   }

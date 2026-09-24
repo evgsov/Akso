@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import '../enums/valve_type.dart';
 import '../enums/weld_type.dart';
+import '../services/custom_valve_catalog.dart';
 import 'node_3d.dart';
 
 /// Трубопроводная арматура, установленная на участке трубы
@@ -99,6 +100,16 @@ class Valve {
     this.customDefinitionId,
   });
 
+  /// Является ли арматура фланцевой (с учетом пользовательского семейства арматуры)
+  bool get effectiveIsFlanged {
+    if (isFlanged) return true;
+    if (customDefinitionId != null) {
+      final def = CustomValveCatalog.instance.getById(customDefinitionId!);
+      if (def != null) return def.symbol2d.hasBodyFlanges;
+    }
+    return false;
+  }
+
   /// Является ли ответный фланец плоским (тип 01)
   bool get isFlatCounterFlange =>
       counterFlangeType.contains('тип 01') ||
@@ -106,7 +117,7 @@ class Valve {
 
   /// Эффективная строительная длина одного ответного фланца (воротника/шейки)
   double get effectiveCounterFlangeLengthMm {
-    if (!isFlanged || !includeCounterFlanges) return 0.0;
+    if (!effectiveIsFlanged || !includeCounterFlanges) return 0.0;
     if (counterFlangeLengthMm != null && counterFlangeLengthMm! > 0) {
       return counterFlangeLengthMm!;
     }
@@ -118,7 +129,7 @@ class Valve {
 
   /// Полный строительно-монтажный габарит узла (корпус арматуры + ответные фланцы)
   double get effectiveTotalLengthMm {
-    if (!isFlanged || !includeCounterFlanges) {
+    if (!effectiveIsFlanged || !includeCounterFlanges) {
       return lengthMm;
     }
     return lengthMm + effectiveCounterFlangeLengthMm * 2.0;

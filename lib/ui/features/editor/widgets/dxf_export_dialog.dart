@@ -12,6 +12,7 @@ import '../../../../domain/enums/dxf_callout_options.dart';
 import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/models/piping_network.dart';
 import '../../../../domain/models/drawing_sheet.dart';
+import '../../../../domain/models/custom_valve_definition.dart';
 
 class DxfExportDialog extends StatefulWidget {
   final PipingNetwork network;
@@ -19,6 +20,7 @@ class DxfExportDialog extends StatefulWidget {
   final AxonometryProjector? activeProjector;
   final Map<String, String>? calloutTemplates;
   final List<DrawingSheet>? sheets;
+  final Map<String, CustomValveDefinition>? customValves;
 
   const DxfExportDialog({
     super.key,
@@ -27,6 +29,7 @@ class DxfExportDialog extends StatefulWidget {
     this.activeProjector,
     this.calloutTemplates,
     this.sheets,
+    this.customValves,
   });
 
   @override
@@ -59,6 +62,7 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           calloutType: selectedCalloutType,
           calloutOrientation: selectedCalloutOrientation,
           activeProjector: widget.activeProjector,
+          customValves: widget.customValves,
         );
         fileName = 'akso_scheme_3d.dxf';
       } else if (widget.sheets != null && widget.sheets!.isNotEmpty) {
@@ -68,6 +72,7 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           projection: selectedProjection,
           activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
           calloutTemplates: widget.calloutTemplates,
+          customValves: widget.customValves,
         );
         fileName = 'akso_scheme_${selectedProjection.name}_layouts.dxf';
       } else {
@@ -76,6 +81,7 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
           projection: selectedProjection,
           activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
           calloutTemplates: widget.calloutTemplates,
+          customValves: widget.customValves,
         );
         fileName = 'akso_scheme_${selectedProjection.name}_2d.dxf';
       }
@@ -402,12 +408,14 @@ class _DxfExportDialogState extends State<DxfExportDialog> {
                     calloutType: selectedCalloutType,
                     calloutOrientation: selectedCalloutOrientation,
                     activeProjector: widget.activeProjector,
+                    customValves: widget.customValves,
                   )
                 : DxfWriter.generate2dGostAxonometryDxf(
                     widget.network,
                     projection: selectedProjection,
                     activeProjector: selectedProjection == widget.currentProjection ? widget.activeProjector : null,
                     calloutTemplates: widget.calloutTemplates,
+                    customValves: widget.customValves,
                   );
             Clipboard.setData(ClipboardData(text: content));
             ScaffoldMessenger.of(context).showSnackBar(

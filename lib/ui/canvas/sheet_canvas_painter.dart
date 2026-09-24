@@ -921,6 +921,8 @@ class SheetCanvasPainter extends CustomPainter {
       selectedEquipmentId: isViewportFocused ? selectedEquipmentId : null,
       selectedEquipmentIds: isViewportFocused ? selectedEquipmentIds : null,
       selectedNodeId: isViewportFocused ? selectedNodeId : null,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
     );
 
     // 4. Отрисовка труб (сегментов)
@@ -947,6 +949,7 @@ class SheetCanvasPainter extends CustomPainter {
       0.0,
       styleConfig,
       sheetZoom,
+      customValves,
     );
 
     // 5. Отрисовка арматуры
@@ -993,6 +996,8 @@ class SheetCanvasPainter extends CustomPainter {
       showWelds,
       showCallouts,
       selectedWeldId: isViewportFocused ? selectedWeldId : null,
+      styleConfig: styleConfig,
+      sheetZoom: sheetZoom,
     );
 
     // 9. Отрисовка умных выносок (Callout)

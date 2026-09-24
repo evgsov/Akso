@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/models/equipment.dart';
 import '../../../domain/models/piping_network.dart';
+import '../../../domain/models/drawing_style_config.dart';
 import '../../../domain/services/element_3d_geometry.dart';
 
 /// Отрисовщик технологического оборудования и штуцеров на аксонометрическом холсте
@@ -14,6 +15,8 @@ class EquipmentPainter {
     String? selectedEquipmentId,
     Set<String>? selectedEquipmentIds,
     String? selectedNodeId,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   }) {
     if (network.equipments.isEmpty) return;
 
@@ -23,8 +26,8 @@ class EquipmentPainter {
           (selectedNodeId != null &&
               network.nodes[selectedNodeId]?.equipmentId == eq.id);
 
-      _paintEquipmentBody(canvas, projector, eq, isSelected);
-      _paintNozzles(canvas, projector, eq, network, isSelected);
+      _paintEquipmentBody(canvas, projector, eq, isSelected, styleConfig, sheetZoom);
+      _paintNozzles(canvas, projector, eq, network, isSelected, styleConfig, sheetZoom);
       _paintEquipmentLabel(canvas, projector, eq, isSelected);
     }
   }
@@ -34,6 +37,8 @@ class EquipmentPainter {
     AxonometryProjector projector,
     Equipment eq,
     bool isSelected,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   ) {
     final fillPaint = Paint()
       ..color = isSelected
@@ -41,12 +46,16 @@ class EquipmentPainter {
           : const Color(0x201565C0)
       ..style = PaintingStyle.fill;
 
+    final baseStroke = (styleConfig != null && sheetZoom != null)
+        ? math.max(0.5, styleConfig.thinLineWidthMm * sheetZoom)
+        : 1.4;
+
     final edgePaint = Paint()
       ..color = isSelected
           ? Colors.amber.shade700
           : const Color(0xFF1565C0)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? 2.4 : 1.4;
+      ..strokeWidth = isSelected ? baseStroke + 1.0 : baseStroke;
 
     switch (eq.type) {
       case EquipmentType.box:
@@ -239,18 +248,24 @@ class EquipmentPainter {
     Equipment eq,
     PipingNetwork network,
     bool isSelected,
+    DrawingStyleConfig? styleConfig,
+    double? sheetZoom,
   ) {
     if (eq.nozzles.isEmpty) return;
+
+    final baseStroke = (styleConfig != null && sheetZoom != null)
+        ? math.max(0.5, styleConfig.thinLineWidthMm * sheetZoom)
+        : 1.4;
 
     final spudPaint = Paint()
       ..color = isSelected ? const Color(0xFF00ACC1) : const Color(0xFF0277BD)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4;
+      ..strokeWidth = isSelected ? baseStroke + 1.5 : baseStroke + 0.5;
 
     final flangePaint = Paint()
       ..color = isSelected ? const Color(0xFF00838F) : const Color(0xFF01579B)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5;
+      ..strokeWidth = isSelected ? baseStroke + 3.0 : baseStroke + 2.0;
 
     final rad = eq.rotationAngleDeg * math.pi / 180.0;
     final cosA = math.cos(rad);

@@ -247,7 +247,7 @@ class Element3dGeometry {
 
 
     // Если арматура фланцевая — добавляем фланцевые кольца
-    if (valve.isFlanged) {
+    if (valve.effectiveIsFlanged || (customDefinition?.symbol2d.hasBodyFlanges ?? false)) {
       final flangeR = r * 1.5;
       for (int i = 0; i < segments; i++) {
         final next = (i + 1) % segments;
@@ -267,8 +267,11 @@ class Element3dGeometry {
         ));
 
         if (valve.includeCounterFlanges) {
-          final cInC = cIn - basis.t * 8.0;
-          final cOutC = cOut + basis.t * 8.0;
+          final flLen = valve.effectiveCounterFlangeLengthMm > 0
+              ? valve.effectiveCounterFlangeLengthMm
+              : 45.0;
+          final cInC = cIn - basis.t * flLen;
+          final cOutC = cOut + basis.t * flLen;
           lines.add(WireframeSegment3D(
             (cInC + off1).x, (cInC + off1).y, (cInC + off1).z,
             (cInC + off2).x, (cInC + off2).y, (cInC + off2).z,
@@ -831,125 +834,35 @@ class Element3dGeometry {
 
     final w = math.max(10.0, ((pipeOuterDiameter ?? valve.dn.toDouble()) / 2.0));
 
-    final bodyShape = customDefinition?.geometry3d.bodyShape ?? Valve3dBodyShape.doubleCones;
-
-    // 1. Отрисовка тела арматуры в соответствии с геометрией
-    if (bodyShape == Valve3dBodyShape.bellows) {
-      // Гофрированный сильфонный компенсатор (виброкомпенсатор)
-      const int ripples = 4;
-      for (int i = 0; i <= ripples; i++) {
-        final frac = i / ripples;
-        final pCenter = cIn + (cOut - cIn) * frac;
-        final rRipple = (i % 2 == 1) ? w * 1.35 : w * 0.9;
-        final rTop = pCenter + basis.u * rRipple;
-        final rBottom = pCenter - basis.u * rRipple;
-        final rLeft = pCenter - basis.v * rRipple;
-        final rRight = pCenter + basis.v * rRipple;
-        lines.add(WireframeSegment3D(rTop.x, rTop.y, rTop.z, rRight.x, rRight.y, rRight.z, layer: layer));
-        lines.add(WireframeSegment3D(rRight.x, rRight.y, rRight.z, rBottom.x, rBottom.y, rBottom.z, layer: layer));
-        lines.add(WireframeSegment3D(rBottom.x, rBottom.y, rBottom.z, rLeft.x, rLeft.y, rLeft.z, layer: layer));
-        lines.add(WireframeSegment3D(rLeft.x, rLeft.y, rLeft.z, rTop.x, rTop.y, rTop.z, layer: layer));
-      }
-      lines.add(WireframeSegment3D((cIn + basis.u * w).x, (cIn + basis.u * w).y, (cIn + basis.u * w).z, (cOut + basis.u * w).x, (cOut + basis.u * w).y, (cOut + basis.u * w).z, layer: layer));
-      lines.add(WireframeSegment3D((cIn - basis.u * w).x, (cIn - basis.u * w).y, (cIn - basis.u * w).z, (cOut - basis.u * w).x, (cOut - basis.u * w).y, (cOut - basis.u * w).z, layer: layer));
-    } else if (bodyShape == Valve3dBodyShape.cylinder) {
-      // Прямой цилиндрический корпус
-      final pIn1 = cIn + basis.u * w;
-      final pIn2 = cIn - basis.u * w;
-      final pOut1 = cOut + basis.u * w;
-      final pOut2 = cOut - basis.u * w;
-      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
-      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
-      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pOut1.x, pOut1.y, pOut1.z, layer: layer));
-      lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
-      lines.add(WireframeSegment3D((center + basis.u * (w * 1.1)).x, (center + basis.u * (w * 1.1)).y, (center + basis.u * (w * 1.1)).z, (center - basis.u * (w * 1.1)).x, (center - basis.u * (w * 1.1)).y, (center - basis.u * (w * 1.1)).z, layer: layer));
-    } else if (bodyShape == Valve3dBodyShape.sphere) {
-      // Сферический корпус
-      final rSph = w * 1.2;
-      lines.add(WireframeSegment3D((center - basis.t * rSph).x, (center - basis.t * rSph).y, (center - basis.t * rSph).z, (center + basis.t * rSph).x, (center + basis.t * rSph).y, (center + basis.t * rSph).z, layer: layer));
-      lines.add(WireframeSegment3D((center - basis.u * rSph).x, (center - basis.u * rSph).y, (center - basis.u * rSph).z, (center + basis.u * rSph).x, (center + basis.u * rSph).y, (center + basis.u * rSph).z, layer: layer));
-      lines.add(WireframeSegment3D((center - basis.v * rSph).x, (center - basis.v * rSph).y, (center - basis.v * rSph).z, (center + basis.v * rSph).x, (center + basis.v * rSph).y, (center + basis.v * rSph).z, layer: layer));
-    } else {
-      // Стандартные конусы корпуса («песочные часы»)
-      final pIn1 = cIn + basis.u * w;
-      final pIn2 = cIn - basis.u * w;
-      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
-      lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, center.x, center.y, center.z, layer: layer));
-      lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, center.x, center.y, center.z, layer: layer));
-
-      final pOut1 = cOut + basis.u * w;
-      final pOut2 = cOut - basis.u * w;
-      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
-      lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, center.x, center.y, center.z, layer: layer));
-      lines.add(WireframeSegment3D(pOut2.x, pOut2.y, pOut2.z, center.x, center.y, center.z, layer: layer));
+    if (customDefinition != null) {
+      return _generateCustomValveSymbolWireframe(
+        valve: valve,
+        basis: basis,
+        center: center,
+        halfL: halfL,
+        w: w,
+        layer: layer,
+        customDef: customDefinition,
+      );
     }
 
-    // 2. Шток и привод
-    final stemRatio = customDefinition?.geometry3d.stemHeightRatio ?? 1.55;
+    // Стандартные конусы корпуса («песочные часы»)
+    final pIn1 = cIn + basis.u * w;
+    final pIn2 = cIn - basis.u * w;
+    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, pIn2.x, pIn2.y, pIn2.z, layer: layer));
+    lines.add(WireframeSegment3D(pIn1.x, pIn1.y, pIn1.z, center.x, center.y, center.z, layer: layer));
+    lines.add(WireframeSegment3D(pIn2.x, pIn2.y, pIn2.z, center.x, center.y, center.z, layer: layer));
+
+    final pOut1 = cOut + basis.u * w;
+    final pOut2 = cOut - basis.u * w;
+    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, pOut2.x, pOut2.y, pOut2.z, layer: layer));
+    lines.add(WireframeSegment3D(pOut1.x, pOut1.y, pOut1.z, center.x, center.y, center.z, layer: layer));
+    lines.add(WireframeSegment3D(pOut2.x, pOut2.y, pOut2.z, center.x, center.y, center.z, layer: layer));
+
+    // 2. Шток и привод для стандартной арматуры
+    const stemRatio = 1.55;
     final stemH = w * stemRatio;
     final hwCenter = center + basis.u * stemH;
-
-    if (customDefinition != null) {
-      final act = customDefinition.geometry3d.actuatorType;
-      switch (act) {
-        case Valve3dActuatorType.none:
-          break;
-        case Valve3dActuatorType.handwheel:
-          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
-          final hwR = w * 0.8;
-          lines.add(WireframeSegment3D((hwCenter - basis.t * hwR).x, (hwCenter - basis.t * hwR).y, (hwCenter - basis.t * hwR).z, (hwCenter + basis.t * hwR).x, (hwCenter + basis.t * hwR).y, (hwCenter + basis.t * hwR).z, layer: layer));
-          lines.add(WireframeSegment3D((hwCenter - basis.v * hwR).x, (hwCenter - basis.v * hwR).y, (hwCenter - basis.v * hwR).z, (hwCenter + basis.v * hwR).x, (hwCenter + basis.v * hwR).y, (hwCenter + basis.v * hwR).z, layer: layer));
-          break;
-        case Valve3dActuatorType.lever:
-          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
-          final leverLen = w * 1.4;
-          lines.add(WireframeSegment3D(hwCenter.x, hwCenter.y, hwCenter.z, (hwCenter + basis.t * leverLen).x, (hwCenter + basis.t * leverLen).y, (hwCenter + basis.t * leverLen).z, layer: layer));
-          break;
-        case Valve3dActuatorType.actuatorBox:
-          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
-          final bSize = w * customDefinition.geometry3d.actuatorSizeRatio;
-          final bx = basis.t * (bSize * 0.5);
-          final by = basis.v * (bSize * 0.5);
-          final bz = basis.u * (bSize * 0.5);
-          final p000 = hwCenter - bx - by - bz;
-          final p001 = hwCenter - bx - by + bz;
-          final p010 = hwCenter - bx + by - bz;
-          final p011 = hwCenter - bx + by + bz;
-          final p100 = hwCenter + bx - by - bz;
-          final p101 = hwCenter + bx - by + bz;
-          final p110 = hwCenter + bx + by - bz;
-          final p111 = hwCenter + bx + by + bz;
-          void addEdge(Vector3D a, Vector3D b) => lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layer));
-          addEdge(p000, p001); addEdge(p010, p011); addEdge(p100, p101); addEdge(p110, p111);
-          addEdge(p000, p010); addEdge(p010, p110); addEdge(p110, p100); addEdge(p100, p000);
-          addEdge(p001, p011); addEdge(p011, p111); addEdge(p111, p101); addEdge(p101, p001);
-          break;
-        case Valve3dActuatorType.diaphragm:
-          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
-          final diaR = w * customDefinition.geometry3d.actuatorSizeRatio;
-          final diaP1 = hwCenter + basis.t * diaR;
-          final diaP2 = hwCenter + basis.v * diaR;
-          final diaP3 = hwCenter - basis.t * diaR;
-          final diaP4 = hwCenter - basis.v * diaR;
-          lines.add(WireframeSegment3D(diaP1.x, diaP1.y, diaP1.z, diaP2.x, diaP2.y, diaP2.z, layer: layer));
-          lines.add(WireframeSegment3D(diaP2.x, diaP2.y, diaP2.z, diaP3.x, diaP3.y, diaP3.z, layer: layer));
-          lines.add(WireframeSegment3D(diaP3.x, diaP3.y, diaP3.z, diaP4.x, diaP4.y, diaP4.z, layer: layer));
-          lines.add(WireframeSegment3D(diaP4.x, diaP4.y, diaP4.z, diaP1.x, diaP1.y, diaP1.z, layer: layer));
-          final domeTop = hwCenter + basis.u * (w * 0.4);
-          lines.add(WireframeSegment3D(diaP1.x, diaP1.y, diaP1.z, domeTop.x, domeTop.y, domeTop.z, layer: layer));
-          lines.add(WireframeSegment3D(diaP3.x, diaP3.y, diaP3.z, domeTop.x, domeTop.y, domeTop.z, layer: layer));
-          break;
-        case Valve3dActuatorType.springBonnet:
-          lines.add(WireframeSegment3D(center.x, center.y, center.z, hwCenter.x, hwCenter.y, hwCenter.z, layer: layer));
-          final bonTop = hwCenter + basis.u * (w * 1.2);
-          final bonR = w * 0.5;
-          lines.add(WireframeSegment3D((hwCenter - basis.t * bonR).x, (hwCenter - basis.t * bonR).y, (hwCenter - basis.t * bonR).z, (bonTop - basis.t * bonR).x, (bonTop - basis.t * bonR).y, (bonTop - basis.t * bonR).z, layer: layer));
-          lines.add(WireframeSegment3D((hwCenter + basis.t * bonR).x, (hwCenter + basis.t * bonR).y, (hwCenter + basis.t * bonR).z, (bonTop + basis.t * bonR).x, (bonTop + basis.t * bonR).y, (bonTop + basis.t * bonR).z, layer: layer));
-          lines.add(WireframeSegment3D((bonTop - basis.t * bonR).x, (bonTop - basis.t * bonR).y, (bonTop - basis.t * bonR).z, (bonTop + basis.t * bonR).x, (bonTop + basis.t * bonR).y, (bonTop + basis.t * bonR).z, layer: layer));
-          break;
-      }
-      return lines;
-    }
 
     final hasStem = valve.valveType != ValveType.checkValve &&
         valve.valveType != ValveType.strainer &&
@@ -1168,6 +1081,479 @@ class Element3dGeometry {
     }
 
     return lines;
+  }
+
+  /// Генерация 2D-в-3D УГО по ГОСТ 21.205 для пользовательской арматуры в плоскости трубы
+  static List<WireframeSegment3D> _generateCustomValveSymbolWireframe({
+    required Valve valve,
+    required PipeBasis3D basis,
+    required Vector3D center,
+    required double halfL,
+    required double w,
+    required String layer,
+    required CustomValveDefinition customDef,
+  }) {
+    final lines = <WireframeSegment3D>[];
+    void addLine(Vector3D a, Vector3D b) =>
+        lines.add(WireframeSegment3D(a.x, a.y, a.z, b.x, b.y, b.z, layer: layer));
+
+    final symbol = customDef.symbol2d;
+    final geo = customDef.geometry3d;
+
+    final cIn = center - basis.t * halfL;
+    final cOut = center + basis.t * halfL;
+
+    final pIn1 = cIn + basis.u * w;
+    final pIn2 = cIn - basis.u * w;
+    final pOut1 = cOut + basis.u * w;
+    final pOut2 = cOut - basis.u * w;
+
+    final shape = customDef.effectiveBodyShape;
+    switch (shape) {
+      case Valve3dBodyShape.doubleCones:
+        // 1. Корпус арматуры (встречные треугольники по ГОСТ 21.205)
+        addLine(pIn1, pIn2);
+        addLine(pIn1, center);
+        addLine(pIn2, center);
+
+        addLine(pOut1, pOut2);
+        addLine(pOut1, center);
+        addLine(pOut2, center);
+
+        void addWingHatching(Vector3D vApex, Vector3D vBase1, Vector3D vBase2, ValveWingFillStyle style) {
+          if (style == ValveWingFillStyle.outline) return;
+          final int steps = (style == ValveWingFillStyle.solid) ? 5 : 2;
+          for (int i = 1; i <= steps; i++) {
+            final f = i / (steps + 1);
+            final pt1 = vApex + (vBase1 - vApex) * f;
+            final pt2 = vApex + (vBase2 - vApex) * f;
+            addLine(pt1, pt2);
+          }
+          if (style == ValveWingFillStyle.hatched || style == ValveWingFillStyle.crossHatched) {
+            final m1 = vApex + (vBase1 - vApex) * 0.75;
+            final m2 = vApex + (vBase2 - vApex) * 0.25;
+            addLine(m1, m2);
+            if (style == ValveWingFillStyle.crossHatched) {
+              final n1 = vApex + (vBase1 - vApex) * 0.25;
+              final n2 = vApex + (vBase2 - vApex) * 0.75;
+              addLine(n1, n2);
+            }
+          }
+        }
+
+        addWingHatching(center, pIn1, pIn2, symbol.leftWingStyle);
+        addWingHatching(center, pOut1, pOut2, symbol.rightWingStyle);
+        break;
+
+      case Valve3dBodyShape.cylinder:
+        // Прямоугольный корпус вдоль оси трубы
+        addLine(pIn1, pIn2);
+        addLine(pOut1, pOut2);
+        addLine(pIn1, pOut1);
+        addLine(pIn2, pOut2);
+
+        void addBoxHatching(Vector3D a1, Vector3D a2, Vector3D b1, Vector3D b2, ValveWingFillStyle style) {
+          if (style == ValveWingFillStyle.outline) return;
+          final int steps = (style == ValveWingFillStyle.solid) ? 6 : 3;
+          for (int i = 1; i <= steps; i++) {
+            final f = i / (steps + 1);
+            final pt1 = a1 + (b1 - a1) * f;
+            final pt2 = a2 + (b2 - a2) * f;
+            addLine(pt1, pt2);
+          }
+          if (style == ValveWingFillStyle.hatched || style == ValveWingFillStyle.crossHatched) {
+            addLine(a1, b2);
+            if (style == ValveWingFillStyle.crossHatched) {
+              addLine(a2, b1);
+            }
+          }
+        }
+
+        final pMid1 = center + basis.u * w;
+        final pMid2 = center - basis.u * w;
+        addBoxHatching(pIn1, pIn2, pMid1, pMid2, symbol.leftWingStyle);
+        addBoxHatching(pMid1, pMid2, pOut1, pOut2, symbol.rightWingStyle);
+        break;
+
+      case Valve3dBodyShape.bellows:
+        // Гофрированный сильфон (3 ребра волны)
+        addLine(pIn1, pIn2);
+        addLine(pOut1, pOut2);
+        const ripples = 3;
+        final topPts = <Vector3D>[pIn1];
+        final botPts = <Vector3D>[pIn2];
+        for (int i = 1; i <= ripples * 2 - 1; i++) {
+          final frac = i / (ripples * 2);
+          final pBase = cIn + (cOut - cIn) * frac;
+          final rH = (i % 2 == 1) ? w * 1.35 : w * 0.75;
+          topPts.add(pBase + basis.u * rH);
+          botPts.add(pBase - basis.u * rH);
+        }
+        topPts.add(pOut1);
+        botPts.add(pOut2);
+        for (int i = 0; i < topPts.length - 1; i++) {
+          addLine(topPts[i], topPts[i + 1]);
+          addLine(botPts[i], botPts[i + 1]);
+        }
+        for (int i = 1; i < topPts.length - 1; i += 2) {
+          addLine(topPts[i], botPts[i]);
+        }
+        break;
+
+      case Valve3dBodyShape.sphere:
+        // Сферическое тело на оси трубы
+        final sRadius = w * 1.15;
+        const ptsCount = 16;
+        Vector3D? prevPt;
+        Vector3D? firstPt;
+        for (int i = 0; i < ptsCount; i++) {
+          final angle = (i * 2 * math.pi) / ptsCount;
+          final pt = center + basis.t * (math.cos(angle) * sRadius) + basis.u * (math.sin(angle) * sRadius);
+          if (prevPt != null) addLine(prevPt, pt);
+          firstPt ??= pt;
+          prevPt = pt;
+        }
+        if (prevPt != null && firstPt != null) addLine(prevPt, firstPt);
+
+        // Подводящие патрубки к сфере от торцов
+        addLine(cIn, center - basis.t * sRadius);
+        addLine(center + basis.t * sRadius, cOut);
+        addLine(pIn1, pIn2);
+        addLine(pOut1, pOut2);
+        break;
+    }
+
+    // 2. Фланцевые засечки на торцах и ответные фланцы по ГОСТ 33259
+    final isFlanged = valve.effectiveIsFlanged || symbol.hasBodyFlanges;
+    if (isFlanged) {
+      final flW = w * 1.25;
+      addLine(cIn + basis.u * flW, cIn - basis.u * flW);
+      addLine(cOut + basis.u * flW, cOut - basis.u * flW);
+
+      // Легкая засечка по нормали глубины v для 3D объемности
+      final flV = flW * 0.35;
+      addLine(cIn + basis.v * flV, cIn - basis.v * flV);
+      addLine(cOut + basis.v * flV, cOut - basis.v * flV);
+
+      if (valve.includeCounterFlanges) {
+        final flLen = valve.effectiveCounterFlangeLengthMm > 0
+            ? valve.effectiveCounterFlangeLengthMm
+            : (valve.isFlatCounterFlange ? 35.0 : 45.0);
+        final gasketGap = math.min(4.0, flLen * 0.1);
+
+        // Входной ответный фланец и воротник приварки к трубе
+        final cInC = cIn - basis.t * gasketGap;
+        addLine(cInC + basis.u * flW, cInC - basis.u * flW);
+        addLine(cInC + basis.v * flV, cInC - basis.v * flV);
+
+        final pNeckIn = cIn - basis.t * flLen;
+        addLine(pNeckIn + basis.u * w, pNeckIn - basis.u * w);
+        addLine(cInC + basis.u * flW, pNeckIn + basis.u * w);
+        addLine(cInC - basis.u * flW, pNeckIn - basis.u * w);
+
+        // Выходной ответный фланец и воротник приварки к трубе
+        final cOutC = cOut + basis.t * gasketGap;
+        addLine(cOutC + basis.u * flW, cOutC - basis.u * flW);
+        addLine(cOutC + basis.v * flV, cOutC - basis.v * flV);
+
+        final pNeckOut = cOut + basis.t * flLen;
+        addLine(pNeckOut + basis.u * w, pNeckOut - basis.u * w);
+        addLine(cOutC + basis.u * flW, pNeckOut + basis.u * w);
+        addLine(cOutC - basis.u * flW, pNeckOut - basis.u * w);
+      }
+    }
+
+    // 3. Разделитель по центру
+    var divider = symbol.dividerType;
+    if (divider == ValveDividerType.none && geo.bodyShape == Valve3dBodyShape.bellows) {
+      divider = ValveDividerType.zigzag;
+    }
+    switch (divider) {
+      case ValveDividerType.none:
+        break;
+      case ValveDividerType.line:
+        addLine(center - basis.u * w, center + basis.u * w);
+        break;
+      case ValveDividerType.slantedDisc:
+        addLine(
+          center - basis.t * (halfL * 0.25) - basis.u * (w * 0.9),
+          center + basis.t * (halfL * 0.25) + basis.u * (w * 0.9),
+        );
+        break;
+      case ValveDividerType.zigzag:
+        final z0 = center - basis.u * w;
+        final z1 = center - basis.t * (halfL * 0.18) - basis.u * (w * 0.5);
+        final z2 = center + basis.t * (halfL * 0.18);
+        final z3 = center - basis.t * (halfL * 0.18) + basis.u * (w * 0.5);
+        final z4 = center + basis.u * w;
+        addLine(z0, z1);
+        addLine(z1, z2);
+        addLine(z2, z3);
+        addLine(z3, z4);
+        break;
+      case ValveDividerType.arrow:
+        final dir = valve.isReversed ? -basis.t : basis.t;
+        final aTip = center + dir * (halfL * 0.6);
+        final aBase = center - dir * (halfL * 0.4);
+        addLine(aBase, aTip);
+        final aWing1 = aTip - dir * (w * 0.35) + basis.u * (w * 0.25);
+        final aWing2 = aTip - dir * (w * 0.35) - basis.u * (w * 0.25);
+        addLine(aTip, aWing1);
+        addLine(aTip, aWing2);
+        break;
+      case ValveDividerType.circle:
+        final cr = w * 0.65;
+        const numPts = 8;
+        for (int i = 0; i < numPts; i++) {
+          final ang1 = i * 2 * math.pi / numPts;
+          final ang2 = (i + 1) * 2 * math.pi / numPts;
+          final p1 = center + basis.t * (cr * math.cos(ang1)) + basis.u * (cr * math.sin(ang1));
+          final p2 = center + basis.t * (cr * math.cos(ang2)) + basis.u * (cr * math.sin(ang2));
+          addLine(p1, p2);
+        }
+        break;
+    }
+
+    // 4. Шток и привод
+    var stemType = symbol.stemType;
+    if (stemType == ValveStemSymbolType.handwheel) {
+      if (geo.actuatorType == Valve3dActuatorType.none) {
+        stemType = ValveStemSymbolType.none;
+      } else if (geo.actuatorType == Valve3dActuatorType.actuatorBox) {
+        stemType = ValveStemSymbolType.boxWithText;
+      } else if (geo.actuatorType == Valve3dActuatorType.diaphragm) {
+        stemType = ValveStemSymbolType.diaphragm;
+      } else if (geo.actuatorType == Valve3dActuatorType.springBonnet) {
+        stemType = ValveStemSymbolType.spring;
+      } else if (geo.actuatorType == Valve3dActuatorType.lever) {
+        stemType = ValveStemSymbolType.lever;
+      }
+    }
+
+    final stemH = w * geo.stemHeightRatio;
+    final hwCenter = center + basis.u * stemH;
+
+    switch (stemType) {
+      case ValveStemSymbolType.none:
+        break;
+      case ValveStemSymbolType.handwheel:
+        addLine(center, hwCenter);
+        final col = center + basis.u * (stemH * 0.5);
+        addLine(col - basis.t * 2.0, col + basis.t * 2.0);
+        final hwR = w * 0.8;
+        addLine(hwCenter - basis.t * hwR, hwCenter + basis.t * hwR);
+        addLine(hwCenter - basis.v * hwR, hwCenter + basis.v * hwR);
+        for (int i = 0; i < 8; i++) {
+          final ang1 = i * math.pi / 4;
+          final ang2 = (i + 1) * math.pi / 4;
+          final q1 = hwCenter + basis.t * (hwR * math.cos(ang1)) + basis.v * (hwR * math.sin(ang1));
+          final q2 = hwCenter + basis.t * (hwR * math.cos(ang2)) + basis.v * (hwR * math.sin(ang2));
+          addLine(q1, q2);
+        }
+        break;
+      case ValveStemSymbolType.lever:
+        addLine(center, hwCenter);
+        final leverLen = w * 1.4;
+        final leverEnd = hwCenter + basis.t * leverLen;
+        addLine(hwCenter, leverEnd);
+        final kr = w * 0.2;
+        final k1 = leverEnd + basis.u * kr;
+        final k2 = leverEnd + basis.t * kr;
+        final k3 = leverEnd - basis.u * kr;
+        final k4 = leverEnd - basis.t * kr;
+        addLine(k1, k2);
+        addLine(k2, k3);
+        addLine(k3, k4);
+        addLine(k4, k1);
+        break;
+      case ValveStemSymbolType.boxWithText:
+        final boxW = w * 1.3;
+        final boxH = w * 1.3;
+        final boxCenter = center + basis.u * (stemH + boxH * 0.5);
+        final stemEnd = boxCenter - basis.u * (boxH * 0.5);
+        addLine(center, stemEnd);
+        final b1 = boxCenter - basis.t * (boxW * 0.5) - basis.u * (boxH * 0.5);
+        final b2 = boxCenter + basis.t * (boxW * 0.5) - basis.u * (boxH * 0.5);
+        final b3 = boxCenter + basis.t * (boxW * 0.5) + basis.u * (boxH * 0.5);
+        final b4 = boxCenter - basis.t * (boxW * 0.5) + basis.u * (boxH * 0.5);
+        addLine(b1, b2);
+        addLine(b2, b3);
+        addLine(b3, b4);
+        addLine(b4, b1);
+        _addTextStrokesToWireframe(
+          lines: lines,
+          center: boxCenter,
+          basis: basis,
+          boxSize: math.min(boxW, boxH) * 0.65,
+          text: symbol.stemText,
+          layer: layer,
+        );
+        break;
+      case ValveStemSymbolType.diaphragm:
+        addLine(center, hwCenter);
+        final diaR = w * 1.1;
+        addLine(hwCenter - basis.t * diaR, hwCenter + basis.t * diaR);
+        final domeTop = hwCenter + basis.u * (w * 0.45);
+        final midL = hwCenter - basis.t * (diaR * 0.6) + basis.u * (w * 0.35);
+        final midR = hwCenter + basis.t * (diaR * 0.6) + basis.u * (w * 0.35);
+        addLine(hwCenter - basis.t * diaR, midL);
+        addLine(midL, domeTop);
+        addLine(domeTop, midR);
+        addLine(midR, hwCenter + basis.t * diaR);
+        final botMid = hwCenter - basis.u * (w * 0.18);
+        addLine(hwCenter - basis.t * diaR, botMid);
+        addLine(botMid, hwCenter + basis.t * diaR);
+        break;
+      case ValveStemSymbolType.spring:
+        addLine(center, hwCenter);
+        final bonW = w * 0.65;
+        final bonH = w * 1.2;
+        final b1 = hwCenter - basis.t * (bonW * 0.5);
+        final b2 = hwCenter + basis.t * (bonW * 0.5);
+        final b3 = b2 + basis.u * bonH;
+        final b4 = b1 + basis.u * bonH;
+        addLine(b1, b2);
+        addLine(b2, b3);
+        addLine(b3, b4);
+        addLine(b4, b1);
+        final zMid1 = hwCenter + basis.u * (bonH * 0.33) + basis.t * (bonW * 0.3);
+        final zMid2 = hwCenter + basis.u * (bonH * 0.66) - basis.t * (bonW * 0.3);
+        addLine(b1, zMid1);
+        addLine(zMid1, zMid2);
+        addLine(zMid2, b3);
+        break;
+    }
+
+    return lines;
+  }
+
+  /// Векторные штрихи символов маркировки привода (ГОСТ 21.205) в плоскости (t, u)
+  static void _addTextStrokesToWireframe({
+    required List<WireframeSegment3D> lines,
+    required Vector3D center,
+    required PipeBasis3D basis,
+    required double boxSize,
+    required String text,
+    required String layer,
+  }) {
+    final cleanText = text.trim().toUpperCase();
+    if (cleanText.isEmpty) return;
+
+    final chars = cleanText.split('').take(3).toList();
+    final count = chars.length;
+    final charScale = count == 1 ? boxSize * 0.8 : boxSize * (0.85 / count);
+    final spacing = count == 1 ? 0.0 : (boxSize * 0.8) / count;
+
+    for (int i = 0; i < count; i++) {
+      final ch = chars[i];
+      final offsetT = count == 1 ? 0.0 : (-boxSize * 0.4 + spacing * (i + 0.5));
+      final chCenter = center + basis.t * offsetT;
+
+      void addStroke(double x1, double y1, double x2, double y2) {
+        final p1 = chCenter + basis.t * (x1 * charScale) + basis.u * (y1 * charScale);
+        final p2 = chCenter + basis.t * (x2 * charScale) + basis.u * (y2 * charScale);
+        lines.add(WireframeSegment3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, layer: layer));
+      }
+
+      switch (ch) {
+        case 'Э':
+          addStroke(-0.35, 0.4, 0.35, 0.4);
+          addStroke(-0.35, 0.4, -0.35, -0.4);
+          addStroke(-0.35, -0.4, 0.35, -0.4);
+          addStroke(-0.35, 0.0, 0.2, 0.0);
+          break;
+        case 'М':
+        case 'M':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, 0.0, 0.0);
+          addStroke(0.0, 0.0, 0.35, 0.4);
+          addStroke(0.35, 0.4, 0.35, -0.4);
+          break;
+        case 'А':
+        case 'A':
+          addStroke(-0.35, -0.4, 0.0, 0.4);
+          addStroke(0.0, 0.4, 0.35, -0.4);
+          addStroke(-0.2, -0.1, 0.2, -0.1);
+          break;
+        case 'В':
+        case 'B':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, 0.25, 0.4);
+          addStroke(0.25, 0.4, 0.25, 0.0);
+          addStroke(0.25, 0.0, -0.35, 0.0);
+          addStroke(0.25, 0.0, 0.35, 0.0);
+          addStroke(0.35, 0.0, 0.35, -0.4);
+          addStroke(0.35, -0.4, -0.35, -0.4);
+          break;
+        case 'Р':
+        case 'P':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, 0.3, 0.4);
+          addStroke(0.3, 0.4, 0.3, 0.0);
+          addStroke(0.3, 0.0, -0.35, 0.0);
+          break;
+        case 'Д':
+        case 'D':
+          addStroke(-0.25, 0.4, 0.25, 0.4);
+          addStroke(-0.25, 0.4, -0.35, -0.2);
+          addStroke(0.25, 0.4, 0.35, -0.2);
+          addStroke(-0.45, -0.2, 0.45, -0.2);
+          addStroke(-0.35, -0.2, -0.35, -0.45);
+          addStroke(0.35, -0.2, 0.35, -0.45);
+          break;
+        case 'П':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, 0.35, 0.4);
+          addStroke(0.35, 0.4, 0.35, -0.4);
+          break;
+        case 'К':
+        case 'K':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.0, 0.35, 0.4);
+          addStroke(-0.1, 0.1, 0.35, -0.4);
+          break;
+        case 'Н':
+        case 'H':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(0.35, -0.4, 0.35, 0.4);
+          addStroke(-0.35, 0.0, 0.35, 0.0);
+          break;
+        case 'С':
+        case 'C':
+          addStroke(0.35, 0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, -0.35, -0.4);
+          addStroke(-0.35, -0.4, 0.35, -0.4);
+          break;
+        case 'Т':
+        case 'T':
+          addStroke(-0.35, 0.4, 0.35, 0.4);
+          addStroke(0.0, 0.4, 0.0, -0.4);
+          break;
+        case 'О':
+        case 'O':
+        case '0':
+          addStroke(-0.35, -0.4, -0.35, 0.4);
+          addStroke(-0.35, 0.4, 0.35, 0.4);
+          addStroke(0.35, 0.4, 0.35, -0.4);
+          addStroke(0.35, -0.4, -0.35, -0.4);
+          break;
+        case '1':
+          addStroke(-0.2, 0.2, 0.0, 0.4);
+          addStroke(0.0, 0.4, 0.0, -0.4);
+          addStroke(-0.2, -0.4, 0.2, -0.4);
+          break;
+        case '2':
+          addStroke(-0.35, 0.4, 0.35, 0.4);
+          addStroke(0.35, 0.4, 0.35, 0.0);
+          addStroke(0.35, 0.0, -0.35, -0.4);
+          addStroke(-0.35, -0.4, 0.35, -0.4);
+          break;
+        default:
+          addStroke(-0.2, 0.0, 0.2, 0.0);
+          addStroke(0.0, -0.2, 0.0, 0.2);
+          break;
+      }
+    }
   }
 
   /// Генерация 3D-векторного обозначения заглушки (купольная дуга на торце трубы)
@@ -1491,7 +1877,9 @@ class Element3dGeometry {
     if (bendAngleRad < 0.05) return lines;
 
     final radMm = fitting.effectiveRadiusMm;
-    final t = (radMm * math.tan(bendAngleRad / 2.0)).clamp(0.0, math.min(len1, len2) * 0.45);
+    // Клампинг 0.95 согласован с pipe_painter и генерацией швов,
+    // чтобы дуга отвода начиналась там же, где ставится стык
+    final t = (radMm * math.tan(bendAngleRad / 2.0)).clamp(0.0, math.min(len1, len2) * 0.95);
 
     final t1 = vNode + u1 * t;
     final t2 = vNode + u2 * t;
@@ -1568,7 +1956,7 @@ class Element3dGeometry {
     final cutIntervals = <(double, double)>[];
     for (final v in inlineValves) {
       final cDist = v.ratio * totalLen;
-      final halfL = math.max(12.0, v.lengthMm / 2.0);
+      final halfL = math.max(12.0, v.effectiveHalfLengthMm);
       final vIn = (cDist - halfL).clamp(dMin, dMax);
       final vOut = (cDist + halfL).clamp(dMin, dMax);
       if (vOut > vIn + 0.1) {

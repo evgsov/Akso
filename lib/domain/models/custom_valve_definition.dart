@@ -103,8 +103,37 @@ enum ValveStemSymbolType {
 }
 
 
+/// Форма тела корпуса арматуры в 2D УГО и 3D аксонометрии
+enum Valve3dBodyShape {
+  /// Встречные усеченные конусы (стандарт ГОСТ 21.205)
+  doubleCones,
+
+  /// Цилиндрический / прямоугольный корпус
+  cylinder,
+
+  /// Цилиндрический корпус с сильфоном / выступающими гофрами (виброкомпенсатор)
+  bellows,
+
+  /// Сферический / круглый корпус
+  sphere;
+
+  String get displayName {
+    switch (this) {
+      case Valve3dBodyShape.doubleCones:
+        return 'Двойные конусы';
+      case Valve3dBodyShape.cylinder:
+        return 'Цилиндр';
+      case Valve3dBodyShape.bellows:
+        return 'Сильфон (гофра)';
+      case Valve3dBodyShape.sphere:
+        return 'Сфера';
+    }
+  }
+}
+
 /// Конфигурация 2D условного графического обозначения (УГО) арматуры
 class ValveSymbolConfig {
+  final Valve3dBodyShape bodyShape;
   final ValveWingFillStyle leftWingStyle;
   final ValveWingFillStyle rightWingStyle;
   final ValveDividerType dividerType;
@@ -113,6 +142,7 @@ class ValveSymbolConfig {
   final bool hasBodyFlanges;
 
   const ValveSymbolConfig({
+    this.bodyShape = Valve3dBodyShape.doubleCones,
     this.leftWingStyle = ValveWingFillStyle.outline,
     this.rightWingStyle = ValveWingFillStyle.outline,
     this.dividerType = ValveDividerType.none,
@@ -122,6 +152,7 @@ class ValveSymbolConfig {
   });
 
   ValveSymbolConfig copyWith({
+    Valve3dBodyShape? bodyShape,
     ValveWingFillStyle? leftWingStyle,
     ValveWingFillStyle? rightWingStyle,
     ValveDividerType? dividerType,
@@ -130,6 +161,7 @@ class ValveSymbolConfig {
     bool? hasBodyFlanges,
   }) {
     return ValveSymbolConfig(
+      bodyShape: bodyShape ?? this.bodyShape,
       leftWingStyle: leftWingStyle ?? this.leftWingStyle,
       rightWingStyle: rightWingStyle ?? this.rightWingStyle,
       dividerType: dividerType ?? this.dividerType,
@@ -140,6 +172,7 @@ class ValveSymbolConfig {
   }
 
   Map<String, dynamic> toJson() => {
+        'bodyShape': bodyShape.name,
         'leftWingStyle': leftWingStyle.name,
         'rightWingStyle': rightWingStyle.name,
         'dividerType': dividerType.name,
@@ -150,6 +183,9 @@ class ValveSymbolConfig {
 
   factory ValveSymbolConfig.fromJson(Map<String, dynamic> json) {
     return ValveSymbolConfig(
+      bodyShape: Valve3dBodyShape.values.byName(
+        json['bodyShape'] as String? ?? Valve3dBodyShape.doubleCones.name,
+      ),
       leftWingStyle: ValveWingFillStyle.values.byName(
         json['leftWingStyle'] as String? ?? ValveWingFillStyle.outline.name,
       ),
@@ -165,34 +201,6 @@ class ValveSymbolConfig {
       stemText: json['stemText'] as String? ?? 'Э',
       hasBodyFlanges: json['hasBodyFlanges'] as bool? ?? false,
     );
-  }
-}
-
-/// Форма тела корпуса арматуры в 3D
-enum Valve3dBodyShape {
-  /// Встречные усеченные конусы (стандарт)
-  doubleCones,
-
-  /// Цилиндрический корпус
-  cylinder,
-
-  /// Цилиндрический корпус с сильфоном / выступающими гофрами (виброкомпенсатор)
-  bellows,
-
-  /// Сферический корпус
-  sphere;
-
-  String get displayName {
-    switch (this) {
-      case Valve3dBodyShape.doubleCones:
-        return 'Двойные конусы';
-      case Valve3dBodyShape.cylinder:
-        return 'Цилиндр';
-      case Valve3dBodyShape.bellows:
-        return 'Сильфон (гофра)';
-      case Valve3dBodyShape.sphere:
-        return 'Сфера';
-    }
   }
 }
 
@@ -306,6 +314,14 @@ class CustomValveDefinition {
     this.isBuiltin = false,
   });
 
+  /// Эффективная форма корпуса арматуры (с приоритетом 2D УГО или 3D геометрии)
+  Valve3dBodyShape get effectiveBodyShape {
+    if (symbol2d.bodyShape != Valve3dBodyShape.doubleCones) {
+      return symbol2d.bodyShape;
+    }
+    return geometry3d.bodyShape;
+  }
+
   CustomValveDefinition copyWith({
     String? id,
     String? name,
@@ -340,18 +356,27 @@ class CustomValveDefinition {
       };
 
   factory CustomValveDefinition.fromJson(Map<String, dynamic> json) {
+    var symbol = json['symbol2d'] != null
+        ? ValveSymbolConfig.fromJson(json['symbol2d'] as Map<String, dynamic>)
+        : const ValveSymbolConfig();
+    final geom = json['geometry3d'] != null
+        ? ValveGeometry3dConfig.fromJson(json['geometry3d'] as Map<String, dynamic>)
+        : const ValveGeometry3dConfig();
+
+    // Синхронизация формы корпуса для старых файлов, где bodyShape был только в geometry3d
+    if (symbol.bodyShape == Valve3dBodyShape.doubleCones &&
+        geom.bodyShape != Valve3dBodyShape.doubleCones) {
+      symbol = symbol.copyWith(bodyShape: geom.bodyShape);
+    }
+
     return CustomValveDefinition(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       defaultLengthFactor: (json['defaultLengthFactor'] as num?)?.toDouble() ?? 1.5,
       minLengthMm: (json['minLengthMm'] as num?)?.toDouble() ?? 80.0,
-      symbol2d: json['symbol2d'] != null
-          ? ValveSymbolConfig.fromJson(json['symbol2d'] as Map<String, dynamic>)
-          : const ValveSymbolConfig(),
-      geometry3d: json['geometry3d'] != null
-          ? ValveGeometry3dConfig.fromJson(json['geometry3d'] as Map<String, dynamic>)
-          : const ValveGeometry3dConfig(),
+      symbol2d: symbol,
+      geometry3d: geom,
       isBuiltin: json['isBuiltin'] as bool? ?? false,
     );
   }

@@ -273,23 +273,88 @@ class ValveSymbolPainter {
     final halfL = size * 0.9;
     final halfH = size * 0.45;
 
-    // Левое и правое крылья (треугольники)
-    final leftWing = Path()
-      ..moveTo(-halfL, -halfH)
-      ..lineTo(0, 0)
-      ..lineTo(-halfL, halfH)
-      ..close();
+    switch (symbolConfig.bodyShape) {
+      case Valve3dBodyShape.doubleCones:
+        // Левое и правое крылья (треугольники)
+        final leftWing = Path()
+          ..moveTo(-halfL, -halfH)
+          ..lineTo(0, 0)
+          ..lineTo(-halfL, halfH)
+          ..close();
 
-    final rightWing = Path()
-      ..moveTo(halfL, -halfH)
-      ..lineTo(0, 0)
-      ..lineTo(halfL, halfH)
-      ..close();
+        final rightWing = Path()
+          ..moveTo(halfL, -halfH)
+          ..lineTo(0, 0)
+          ..lineTo(halfL, halfH)
+          ..close();
 
-    _drawWing(canvas, leftWing, symbolConfig.leftWingStyle, halfL, halfH,
-        whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
-    _drawWing(canvas, rightWing, symbolConfig.rightWingStyle, halfL, halfH,
-        whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        _drawWing(canvas, leftWing, symbolConfig.leftWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        _drawWing(canvas, rightWing, symbolConfig.rightWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        break;
+
+      case Valve3dBodyShape.cylinder:
+        // Прямоугольный корпус (цилиндр) вдоль оси трубы
+        final leftCylinder = Path()
+          ..moveTo(-halfL, -halfH)
+          ..lineTo(0, -halfH)
+          ..lineTo(0, halfH)
+          ..lineTo(-halfL, halfH)
+          ..close();
+
+        final rightCylinder = Path()
+          ..moveTo(0, -halfH)
+          ..lineTo(halfL, -halfH)
+          ..lineTo(halfL, halfH)
+          ..lineTo(0, halfH)
+          ..close();
+
+        _drawWing(canvas, leftCylinder, symbolConfig.leftWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        _drawWing(canvas, rightCylinder, symbolConfig.rightWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        break;
+
+      case Valve3dBodyShape.bellows:
+        // Гофрированный сильфон (зигзагообразный контур)
+        final bellowsPath = Path();
+        const ripples = 3;
+        final dx = (halfL * 2) / (ripples * 2);
+        bellowsPath.moveTo(-halfL, -halfH * 0.8);
+        for (int i = 0; i < ripples * 2; i++) {
+          final x = -halfL + dx * (i + 1);
+          final y = (i % 2 == 0) ? -halfH * 1.35 : -halfH * 0.65;
+          bellowsPath.lineTo(x, y);
+        }
+        bellowsPath.lineTo(halfL, halfH * 0.8);
+        for (int i = ripples * 2 - 1; i >= 0; i--) {
+          final x = -halfL + dx * i;
+          final y = (i % 2 == 0) ? halfH * 0.65 : halfH * 1.35;
+          bellowsPath.lineTo(x, y);
+        }
+        bellowsPath.close();
+
+        _drawWing(canvas, bellowsPath, symbolConfig.leftWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+        break;
+
+      case Valve3dBodyShape.sphere:
+        // Круглое/сферическое тело на оси трубы
+        final sphereRadius = halfH * 1.15;
+        final spherePath = Path()
+          ..addOval(Rect.fromCircle(center: Offset.zero, radius: sphereRadius));
+
+        _drawWing(canvas, spherePath, symbolConfig.leftWingStyle, halfL, halfH,
+            whiteFillPaint, solidFillPaint, strokePaint, hatchPaint);
+
+        // Подводящие патрубки к сфере от торцов арматуры
+        canvas.drawLine(Offset(-halfL, 0), Offset(-sphereRadius, 0), strokePaint);
+        canvas.drawLine(Offset(sphereRadius, 0), Offset(halfL, 0), strokePaint);
+        canvas.drawLine(Offset(-halfL, -halfH * 0.5), Offset(-halfL, halfH * 0.5), strokePaint);
+        canvas.drawLine(Offset(halfL, -halfH * 0.5), Offset(halfL, halfH * 0.5), strokePaint);
+        break;
+    }
 
     // Фланцевые торцевые засечки
     if (symbolConfig.hasBodyFlanges) {

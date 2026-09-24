@@ -45,6 +45,40 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
   final ScrollController _previewVerticalController = ScrollController();
   final ScrollController _previewHorizontalController = ScrollController();
 
+  TextEditingController? _headerController;
+  TextEditingController? _groupController;
+  TextEditingController? _templateController;
+  TextEditingController? _widthController;
+  String? _lastControllerColId;
+
+  void _syncControllersForActiveColumn() {
+    if (_activeColumnIndex >= 0 && _activeColumnIndex < _activeTemplate.columns.length) {
+      final col = _activeTemplate.columns[_activeColumnIndex];
+      if (_lastControllerColId != col.id) {
+        _lastControllerColId = col.id;
+        _headerController?.dispose();
+        _groupController?.dispose();
+        _templateController?.dispose();
+        _widthController?.dispose();
+
+        _headerController = TextEditingController(text: col.header);
+        _groupController = TextEditingController(text: col.groupHeader ?? '');
+        _templateController = TextEditingController(text: col.template);
+        _widthController = TextEditingController(text: col.width.round().toString());
+      }
+    } else {
+      _lastControllerColId = null;
+      _headerController?.dispose();
+      _groupController?.dispose();
+      _templateController?.dispose();
+      _widthController?.dispose();
+      _headerController = null;
+      _groupController = null;
+      _templateController = null;
+      _widthController = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +86,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     if (widget.initialTemplate != null) {
       _activeTemplate = widget.initialTemplate!;
       _availableTemplates = [_activeTemplate];
+      _syncControllersForActiveColumn();
       _isLoading = false;
     }
     _loadTemplates();
@@ -62,6 +97,10 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     _columnsScrollController.dispose();
     _previewVerticalController.dispose();
     _previewHorizontalController.dispose();
+    _headerController?.dispose();
+    _groupController?.dispose();
+    _templateController?.dispose();
+    _widthController?.dispose();
     super.dispose();
   }
 
@@ -91,6 +130,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
         _availableTemplates = templates;
         _activeTemplate = initial;
         _activeColumnIndex = 0;
+        _lastControllerColId = null;
+        _syncControllersForActiveColumn();
         _isLoading = false;
       });
       widget.onTemplateChanged?.call(_activeTemplate);
@@ -115,6 +156,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     updatedColumns[_activeColumnIndex] = col.copyWith(template: newTemplateStr);
 
     _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
+    _syncControllersForActiveColumn();
+    _templateController?.text = newTemplateStr;
     _notifyChange();
   }
 
@@ -129,6 +172,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..add(newCol);
     _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
     _activeColumnIndex = updatedColumns.length - 1;
+    _lastControllerColId = null;
+    _syncControllersForActiveColumn();
     _notifyChange();
   }
 
@@ -150,6 +195,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..add(newCol);
     _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
     _activeColumnIndex = updatedColumns.length - 1;
+    _lastControllerColId = null;
+    _syncControllersForActiveColumn();
     _notifyChange();
   }
 
@@ -163,6 +210,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     final updatedColumns = List<ReportColumn>.from(_activeTemplate.columns)..insert(idx + 1, copy);
     _activeTemplate = _activeTemplate.copyWith(columns: updatedColumns);
     _activeColumnIndex = idx + 1;
+    _lastControllerColId = null;
+    _syncControllersForActiveColumn();
     _notifyChange();
   }
 
@@ -174,6 +223,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     cols.insert(newIndex, moved);
     _activeTemplate = _activeTemplate.copyWith(columns: cols);
     _activeColumnIndex = newIndex;
+    _lastControllerColId = null;
+    _syncControllersForActiveColumn();
     _notifyChange();
   }
 
@@ -185,6 +236,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
     cols[colIdx] = col.copyWith(template: newTemplateStr);
     _activeTemplate = _activeTemplate.copyWith(columns: cols);
     _activeColumnIndex = colIdx;
+    _syncControllersForActiveColumn();
+    _templateController?.text = newTemplateStr;
     _notifyChange();
   }
 
@@ -200,6 +253,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
       _availableTemplates = [..._availableTemplates, copyTemplate];
       _activeTemplate = copyTemplate;
       _activeColumnIndex = 0;
+      _lastControllerColId = null;
+      _syncControllersForActiveColumn();
     });
     _notifyChange();
   }
@@ -343,6 +398,8 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                     setState(() {
                       _activeTemplate = selected;
                       _activeColumnIndex = 0;
+                      _lastControllerColId = null;
+                      _syncControllersForActiveColumn();
                     });
                     _notifyChange();
                   }
@@ -682,6 +739,7 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                 : ReorderableListView.builder(
                     scrollController: _columnsScrollController,
                     primary: false,
+                    buildDefaultDragHandles: false,
                     padding: const EdgeInsets.all(8),
                     itemCount: _activeTemplate.columns.length,
                     onReorder: (oldIndex, newIndex) {
@@ -703,343 +761,375 @@ class _ReportTemplateBuilderWidgetState extends State<ReportTemplateBuilderWidge
                             width: isSelected ? 1.5 : 1.0,
                           ),
                         ),
-                        child: ExpansionTile(
-                          key: PageStorageKey(col.id),
-                          initiallyExpanded: isSelected,
-                          onExpansionChanged: (exp) {
-                            if (exp) setState(() => _activeColumnIndex = idx);
-                          },
-                          leading: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.drag_indicator, size: 18, color: Colors.grey),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${idx + 1}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
-                              ),
-                              const SizedBox(width: 4),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: idx > 0 ? () => _moveColumn(idx, idx - 1) : null,
-                                    child: Icon(Icons.arrow_drop_up, size: 18, color: idx > 0 ? Colors.indigo : Colors.grey.shade300),
-                                  ),
-                                  InkWell(
-                                    onTap: idx < _activeTemplate.columns.length - 1 ? () => _moveColumn(idx, idx + 1) : null,
-                                    child: Icon(Icons.arrow_drop_down, size: 18, color: idx < _activeTemplate.columns.length - 1 ? Colors.indigo : Colors.grey.shade300),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  col.header,
-                                  style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (col.groupHeader != null && col.groupHeader!.isNotEmpty)
-                                Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueGrey.shade50,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: Colors.blueGrey.shade200),
-                                  ),
-                                  child: Text(
-                                    col.groupHeader!,
-                                    style: TextStyle(fontSize: 10, color: Colors.blueGrey.shade800),
-                                  ),
-                                ),
-                              Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Text(
-                                  '${col.width.round()} px',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Text(
-                            col.template,
-                            style: TextStyle(fontSize: 11, color: Colors.indigo.shade700, fontFamily: 'monospace'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.copy_rounded, size: 17, color: Colors.indigo),
-                                tooltip: 'Дублировать столбец',
-                                onPressed: () => _duplicateColumn(idx),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                                tooltip: 'Удалить столбец',
-                                onPressed: () {
-                                  if (_activeTemplate.columns.length <= 1) return;
-                                  final cols = List<ReportColumn>.from(_activeTemplate.columns)..removeAt(idx);
-                                  _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                  if (_activeColumnIndex >= cols.length) {
-                                    _activeColumnIndex = cols.length - 1;
-                                  }
-                                  _notifyChange();
-                                },
-                              ),
-                            ],
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextFormField(
-                                          key: ValueKey('header_${col.id}_${col.header}'),
-                                          initialValue: col.header,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Заголовок столбца',
-                                            isDense: true,
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          style: const TextStyle(fontSize: 12),
-                                          onChanged: (val) {
-                                            final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                            cols[idx] = col.copyWith(header: val);
-                                            _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                            _notifyChange();
-                                          },
+                            InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () {
+                                setState(() {
+                                  _activeColumnIndex = isSelected ? -1 : idx;
+                                  _syncControllersForActiveColumn();
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    ReorderableDragStartListener(
+                                      index: idx,
+                                      child: MouseRegion(
+                                        cursor: SystemMouseCursors.grab,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4.0),
+                                          child: Icon(Icons.drag_indicator, size: 18, color: Colors.grey.shade600),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: TextFormField(
-                                          key: ValueKey('group_${col.id}_${col.groupHeader}'),
-                                          initialValue: col.groupHeader ?? '',
-                                          decoration: const InputDecoration(
-                                            labelText: 'Группа (шапка Excel)',
-                                            hintText: 'Элемент №1, Заключения',
-                                            isDense: true,
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          style: const TextStyle(fontSize: 12),
-                                          onChanged: (val) {
-                                            final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                            cols[idx] = col.copyWith(
-                                              groupHeader: val.trim().isEmpty ? null : val.trim(),
-                                              clearGroupHeader: val.trim().isEmpty,
-                                            );
-                                            _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                            _notifyChange();
-                                          },
-                                        ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${idx + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: isSelected ? Colors.indigo.shade900 : Colors.grey.shade600,
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextFormField(
-                                          key: ValueKey('template_${col.id}_${col.template}'),
-                                          initialValue: col.template,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Формула / Токены',
-                                            hintText: '{elem1_name} Ду{elem1_dn}',
-                                            isDense: true,
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                                          onChanged: (val) {
-                                            final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                            cols[idx] = col.copyWith(template: val);
-                                            _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                            _notifyChange();
-                                          },
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        InkWell(
+                                          onTap: idx > 0 ? () => _moveColumn(idx, idx - 1) : null,
+                                          child: Icon(Icons.arrow_drop_up, size: 18, color: idx > 0 ? Colors.indigo : Colors.grey.shade300),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      PopupMenuButton<String>(
-                                        tooltip: 'Вставить токен в формулу',
-                                        onSelected: (code) => _insertTokenToColumn(idx, code),
-                                        itemBuilder: (ctx) {
-                                          final allTokens = ReportTokenDefinition.getTokensForType(widget.reportType);
-                                          return allTokens.map((t) {
-                                            return PopupMenuItem<String>(
-                                              value: t.code,
-                                              height: 32,
-                                              child: Row(
-                                                children: [
-                                                  Text(t.label, style: const TextStyle(fontSize: 12)),
-                                                  const Spacer(),
-                                                  Text(
-                                                    t.code,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontFamily: 'monospace',
-                                                      color: Colors.indigo.shade700,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList();
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.indigo.shade50,
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: Colors.indigo.shade200),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                        InkWell(
+                                          onTap: idx < _activeTemplate.columns.length - 1 ? () => _moveColumn(idx, idx + 1) : null,
+                                          child: Icon(Icons.arrow_drop_down, size: 18, color: idx < _activeTemplate.columns.length - 1 ? Colors.indigo : Colors.grey.shade300),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
                                             children: [
-                                              Icon(Icons.add_link, size: 16, color: Colors.indigo),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                '+ Токен',
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Text('Ширина:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                      const SizedBox(width: 8),
-                                      SizedBox(
-                                        width: 75,
-                                        height: 32,
-                                        child: TextFormField(
-                                          key: ValueKey('width_${col.id}_${col.width}'),
-                                          initialValue: col.width.round().toString(),
-                                          keyboardType: TextInputType.number,
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(),
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                            suffixText: 'px',
-                                          ),
-                                          style: const TextStyle(fontSize: 11),
-                                          onChanged: (val) {
-                                            final w = double.tryParse(val.trim());
-                                            if (w != null && w >= 40 && w <= 600) {
-                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                              cols[idx] = col.copyWith(width: w);
-                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                              _notifyChange();
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Wrap(
-                                        spacing: 4,
-                                        children: [80, 100, 120, 150, 180, 220].map((presetW) {
-                                          final isCurrent = col.width.round() == presetW;
-                                          return InkWell(
-                                            onTap: () {
-                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                              cols[idx] = col.copyWith(width: presetW.toDouble());
-                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
-                                              _notifyChange();
-                                            },
-                                            borderRadius: BorderRadius.circular(4),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: isCurrent ? Colors.indigo : Colors.grey.shade100,
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: isCurrent ? Colors.indigo : Colors.grey.shade300),
-                                              ),
-                                              child: Text(
-                                                '$presetW',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isCurrent ? Colors.white : Colors.black87,
+                                              Expanded(
+                                                child: Text(
+                                                  col.header,
+                                                  style: TextStyle(
+                                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                    fontSize: 13,
+                                                    color: isSelected ? Colors.indigo.shade900 : Colors.black87,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
-                                            ),
-                                          );
-                                        }).toList(),
+                                              if (col.groupHeader != null && col.groupHeader!.isNotEmpty)
+                                                Container(
+                                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.blueGrey.shade50,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: Colors.blueGrey.shade200),
+                                                  ),
+                                                  child: Text(
+                                                    col.groupHeader!,
+                                                    style: TextStyle(fontSize: 10, color: Colors.blueGrey.shade800),
+                                                  ),
+                                                ),
+                                              Container(
+                                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade100,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: Colors.grey.shade300),
+                                                ),
+                                                child: Text(
+                                                  '${col.width.round()} px',
+                                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            col.template,
+                                            style: TextStyle(fontSize: 11, color: Colors.indigo.shade700, fontFamily: 'monospace'),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 12,
-                                    runSpacing: 4,
-                                    crossAxisAlignment: WrapCrossAlignment.center,
-                                    alignment: WrapAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Checkbox(
-                                            value: col.isNumeric,
-                                            visualDensity: VisualDensity.compact,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.copy_rounded, size: 17, color: Colors.indigo),
+                                      tooltip: 'Дублировать столбец',
+                                      onPressed: () => _duplicateColumn(idx),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                      tooltip: 'Удалить столбец',
+                                      onPressed: () {
+                                        if (_activeTemplate.columns.length <= 1) return;
+                                        final cols = List<ReportColumn>.from(_activeTemplate.columns)..removeAt(idx);
+                                        _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                        if (_activeColumnIndex >= cols.length) {
+                                          _activeColumnIndex = cols.length - 1;
+                                        }
+                                        _syncControllersForActiveColumn();
+                                        _notifyChange();
+                                      },
+                                    ),
+                                    Icon(
+                                      isSelected ? Icons.expand_less : Icons.expand_more,
+                                      size: 20,
+                                      color: isSelected ? Colors.indigo : Colors.grey.shade600,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                                child: Column(
+                                  children: [
+                                    const Divider(height: 1),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _headerController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Заголовок столбца',
+                                              isDense: true,
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            style: const TextStyle(fontSize: 12),
                                             onChanged: (val) {
                                               final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                              cols[idx] = col.copyWith(isNumeric: val ?? false);
+                                              cols[idx] = col.copyWith(header: val);
                                               _activeTemplate = _activeTemplate.copyWith(columns: cols);
                                               _notifyChange();
                                             },
                                           ),
-                                          const Text('Числовой (Excel)', style: TextStyle(fontSize: 11)),
-                                        ],
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Text('Выравнивание: ', style: TextStyle(fontSize: 11)),
-                                          DropdownButton<TextAlign>(
-                                            value: col.alignment,
-                                            isDense: true,
-                                            items: const [
-                                              DropdownMenuItem(value: TextAlign.left, child: Text('По левому', style: TextStyle(fontSize: 11))),
-                                              DropdownMenuItem(value: TextAlign.center, child: Text('По центру', style: TextStyle(fontSize: 11))),
-                                              DropdownMenuItem(value: TextAlign.right, child: Text('По правому', style: TextStyle(fontSize: 11))),
-                                            ],
-                                            onChanged: (align) {
-                                              if (align != null) {
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _groupController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Группа (шапка Excel)',
+                                              hintText: 'Элемент №1, Заключения',
+                                              isDense: true,
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            style: const TextStyle(fontSize: 12),
+                                            onChanged: (val) {
+                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                              cols[idx] = col.copyWith(
+                                                groupHeader: val.trim().isEmpty ? null : val.trim(),
+                                                clearGroupHeader: val.trim().isEmpty,
+                                              );
+                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                              _notifyChange();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _templateController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Формула / Токены',
+                                              hintText: '{elem1_name} Ду{elem1_dn}',
+                                              isDense: true,
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                                            onChanged: (val) {
+                                              final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                              cols[idx] = col.copyWith(template: val);
+                                              _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                              _notifyChange();
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        PopupMenuButton<String>(
+                                          tooltip: 'Вставить токен в формулу',
+                                          onSelected: (code) => _insertTokenToColumn(idx, code),
+                                          itemBuilder: (ctx) {
+                                            final allTokens = ReportTokenDefinition.getTokensForType(widget.reportType);
+                                            return allTokens.map((t) {
+                                              return PopupMenuItem<String>(
+                                                value: t.code,
+                                                height: 32,
+                                                child: Row(
+                                                  children: [
+                                                    Text(t.label, style: const TextStyle(fontSize: 12)),
+                                                    const Spacer(),
+                                                    Text(
+                                                      t.code,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontFamily: 'monospace',
+                                                        color: Colors.indigo.shade700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList();
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.indigo.shade50,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: Colors.indigo.shade200),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.add_link, size: 16, color: Colors.indigo),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  '+ Токен',
+                                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Text('Ширина:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                        const SizedBox(width: 8),
+                                        SizedBox(
+                                          width: 75,
+                                          height: 36,
+                                          child: TextField(
+                                            controller: _widthController,
+                                            keyboardType: TextInputType.number,
+                                            decoration: const InputDecoration(
+                                              isDense: true,
+                                              border: OutlineInputBorder(),
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                              suffixText: 'px',
+                                            ),
+                                            style: const TextStyle(fontSize: 11),
+                                            onChanged: (val) {
+                                              final w = double.tryParse(val.trim());
+                                              if (w != null && w >= 40 && w <= 600) {
                                                 final cols = List<ReportColumn>.from(_activeTemplate.columns);
-                                                cols[idx] = col.copyWith(alignment: align);
+                                                cols[idx] = col.copyWith(width: w);
                                                 _activeTemplate = _activeTemplate.copyWith(columns: cols);
                                                 _notifyChange();
                                               }
                                             },
                                           ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Wrap(
+                                          spacing: 4,
+                                          children: [80, 100, 120, 150, 180, 220].map((presetW) {
+                                            final isCurrent = col.width.round() == presetW;
+                                            return InkWell(
+                                              onTap: () {
+                                                final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                                cols[idx] = col.copyWith(width: presetW.toDouble());
+                                                _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                                _widthController?.text = presetW.toString();
+                                                _notifyChange();
+                                              },
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: isCurrent ? Colors.indigo : Colors.grey.shade100,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: isCurrent ? Colors.indigo : Colors.grey.shade300),
+                                                ),
+                                                child: Text(
+                                                  '$presetW',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isCurrent ? Colors.white : Colors.black87,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      alignment: WrapAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Checkbox(
+                                              value: col.isNumeric,
+                                              visualDensity: VisualDensity.compact,
+                                              onChanged: (val) {
+                                                final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                                cols[idx] = col.copyWith(isNumeric: val ?? false);
+                                                _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                                _notifyChange();
+                                              },
+                                            ),
+                                            const Text('Числовой (Excel)', style: TextStyle(fontSize: 11)),
+                                          ],
+                                        ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Text('Выравнивание: ', style: TextStyle(fontSize: 11)),
+                                            DropdownButton<TextAlign>(
+                                              value: col.alignment,
+                                              isDense: true,
+                                              items: const [
+                                                DropdownMenuItem(value: TextAlign.left, child: Text('По левому', style: TextStyle(fontSize: 11))),
+                                                DropdownMenuItem(value: TextAlign.center, child: Text('По центру', style: TextStyle(fontSize: 11))),
+                                                DropdownMenuItem(value: TextAlign.right, child: Text('По правому', style: TextStyle(fontSize: 11))),
+                                              ],
+                                              onChanged: (align) {
+                                                if (align != null) {
+                                                  final cols = List<ReportColumn>.from(_activeTemplate.columns);
+                                                  cols[idx] = col.copyWith(alignment: align);
+                                                  _activeTemplate = _activeTemplate.copyWith(columns: cols);
+                                                  _notifyChange();
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       );

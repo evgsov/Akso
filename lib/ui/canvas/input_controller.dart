@@ -24,6 +24,7 @@ import '../../domain/models/piping_network.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/models/project_model.dart';
+import '../../domain/services/custom_valve_catalog.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/callout_layout_engine.dart';
 import '../../domain/services/fitting_detector.dart';
@@ -5934,6 +5935,11 @@ class PipingInputController extends ChangeNotifier {
         currentProject = result.project;
         network = result.project.network;
         currentFilePath = result.filePath.isNotEmpty ? result.filePath : null;
+
+        if (currentProject.customValves.isNotEmpty) {
+          await CustomValveCatalog.instance.registerProjectDefinitions(currentProject.customValves);
+        }
+
         history.clear();
         history.recordState(network);
         hasUnsavedChanges = false;

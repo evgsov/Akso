@@ -28,11 +28,12 @@ class CustomValveCatalog {
       id: 'preset_anti_vibration_valve',
       name: 'Клапан антивибрационный',
       description:
-          'Антивибрационный клапан с зигзагообразной разделительной линией и сильфонным компенсатором в 3D',
+          'Антивибрационный клапан с зигзагообразной разделительной линией и сильфонным компенсатором',
       isBuiltin: true,
       defaultLengthFactor: 1.5,
       minLengthMm: 120.0,
       symbol2d: ValveSymbolConfig(
+        bodyShape: Valve3dBodyShape.bellows,
         leftWingStyle: ValveWingFillStyle.hatched,
         rightWingStyle: ValveWingFillStyle.hatched,
         dividerType: ValveDividerType.zigzag,
@@ -53,6 +54,7 @@ class CustomValveCatalog {
       defaultLengthFactor: 1.8,
       minLengthMm: 140.0,
       symbol2d: ValveSymbolConfig(
+        bodyShape: Valve3dBodyShape.doubleCones,
         leftWingStyle: ValveWingFillStyle.outline,
         rightWingStyle: ValveWingFillStyle.outline,
         dividerType: ValveDividerType.slantedDisc,
@@ -74,11 +76,32 @@ class CustomValveCatalog {
       defaultLengthFactor: 1.2,
       minLengthMm: 100.0,
       symbol2d: ValveSymbolConfig(
+        bodyShape: Valve3dBodyShape.doubleCones,
         leftWingStyle: ValveWingFillStyle.outline,
         rightWingStyle: ValveWingFillStyle.solid,
         dividerType: ValveDividerType.arrow,
         stemType: ValveStemSymbolType.none,
         hasBodyFlanges: false,
+      ),
+      geometry3d: ValveGeometry3dConfig(
+        bodyShape: Valve3dBodyShape.doubleCones,
+        actuatorType: Valve3dActuatorType.none,
+      ),
+    ),
+    const CustomValveDefinition(
+      id: 'preset_strainer_valve',
+      name: 'Фильтр сетчатый (грязевик)',
+      description: 'Фильтр сетчатый в цилиндрическом корпусе с наклонной сеткой',
+      isBuiltin: true,
+      defaultLengthFactor: 1.4,
+      minLengthMm: 110.0,
+      symbol2d: ValveSymbolConfig(
+        bodyShape: Valve3dBodyShape.cylinder,
+        leftWingStyle: ValveWingFillStyle.outline,
+        rightWingStyle: ValveWingFillStyle.hatched,
+        dividerType: ValveDividerType.slantedDisc,
+        stemType: ValveStemSymbolType.none,
+        hasBodyFlanges: true,
       ),
       geometry3d: ValveGeometry3dConfig(
         bodyShape: Valve3dBodyShape.cylinder,
@@ -93,6 +116,7 @@ class CustomValveCatalog {
       defaultLengthFactor: 1.6,
       minLengthMm: 130.0,
       symbol2d: ValveSymbolConfig(
+        bodyShape: Valve3dBodyShape.doubleCones,
         leftWingStyle: ValveWingFillStyle.outline,
         rightWingStyle: ValveWingFillStyle.outline,
         dividerType: ValveDividerType.none,
@@ -207,6 +231,22 @@ class CustomValveCatalog {
     }
     if (_userDefinitions.containsKey(id)) {
       _userDefinitions.remove(id);
+      await persist();
+    }
+  }
+
+  /// Регистрирует пользовательские арматуры, загруженные из файла проекта.
+  /// Это необходимо для того, чтобы при открытии проекта с другого компьютера,
+  /// арматуры добавлялись в глобальный каталог пользователя и корректно отрисовывались.
+  Future<void> registerProjectDefinitions(Map<String, CustomValveDefinition> projectValves) async {
+    bool hasNew = false;
+    for (final def in projectValves.values) {
+      if (!_userDefinitions.containsKey(def.id) && !_builtInPresets.any((p) => p.id == def.id)) {
+        _userDefinitions[def.id] = def.copyWith(isBuiltin: false);
+        hasNew = true;
+      }
+    }
+    if (hasNew) {
       await persist();
     }
   }

@@ -1898,7 +1898,7 @@ class PipingNetwork {
     }
 
     // Если арматура фланцевая и ответные фланцы отключены, стыки приварки не формируются
-    if (v.isFlanged && !v.includeCounterFlanges) {
+    if (v.effectiveIsFlanged && !v.includeCounterFlanges) {
       weldJoints.removeWhere((_, w) => w.sourceElementId != null && w.sourceElementId!.startsWith(v.id));
       return 0;
     }
@@ -1931,7 +1931,7 @@ class PipingNetwork {
     final isTerminalAtStart = connStart.length <= 1 && (v.ratio - halfRatio) <= 0.05;
     final isTerminalAtEnd = connEnd.length <= 1 && (v.ratio + halfRatio) >= 0.95;
 
-    final weldType = v.isFlanged ? v.counterFlangeWeldType : WeldType.c17;
+    final weldType = v.effectiveIsFlanged ? v.counterFlangeWeldType : WeldType.c17;
 
     int added = 0;
     if (!isTerminalAtStart && r1 > 0.001) {
@@ -1998,7 +1998,9 @@ class PipingNetwork {
               continue;
             } else {
               final t = getElbowTangentMm(nodeId);
-              final safeT = t.clamp(0.0, totalLen * 0.45);
+              // Клампинг 0.95 — согласован с pipe_painter.calcPipeTrimmedPoint,
+              // чтобы стык совпадал с визуальной точкой тангенса отвода
+              final safeT = t.clamp(0.0, totalLen * 0.95);
               final deltaR = safeT / totalLen;
               final r = seg.startNodeId == nodeId ? deltaR : (1.0 - deltaR);
               if (ensureWeldExists(seg.id, r, fit.weldType, sourceElementId: 'fit_${nodeId}_${seg.id}') != null) added++;
@@ -2257,7 +2259,7 @@ class PipingNetwork {
             vId = vId.substring(0, vId.length - 4);
           }
           final v = valves[vId];
-          if (v == null || (v.isFlanged && !v.includeCounterFlanges) || v.segmentId != w.segmentId) {
+          if (v == null || (v.effectiveIsFlanged && !v.includeCounterFlanges) || v.segmentId != w.segmentId) {
             toRemove.add(w.id);
             continue;
           }
@@ -2394,7 +2396,7 @@ class PipingNetwork {
         if (conn.length <= 1) {
           final hasTerminalValve = valves.values.any((v) =>
               v.segmentId == seg.id &&
-              (!v.isFlanged || v.includeCounterFlanges) &&
+              (!v.effectiveIsFlanged || v.includeCounterFlanges) &&
               (isNearStart ? v.ratio <= 0.4 : v.ratio >= 0.6));
 
           if (hasTerminalValve) {

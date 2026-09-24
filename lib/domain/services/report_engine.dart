@@ -180,7 +180,7 @@ class ReportEngine {
           : '${connectedValve.valveType.displayName} Ду${connectedValve.dn}';
       context['elem2_dn'] = connectedValve.dn;
       context['elem2_wall'] = wall1;
-      context['elem2_standard'] = connectedValve.isFlanged ? 'ГОСТ 33259-2015' : 'ГОСТ 12815-80';
+      context['elem2_standard'] = connectedValve.effectiveIsFlanged ? 'ГОСТ 33259-2015' : 'ГОСТ 12815-80';
       context['elem2_steel'] = 'Чугун / Сталь';
       context['elem2_serial'] = connectedValve.serialNumber ?? '16234-24';
       context['elem2_length'] = connectedValve.lengthMm.toInt();
@@ -421,7 +421,7 @@ class ReportEngine {
     }
     // Добавляем ответные фланцы от фланцевой арматуры в общую спецификацию фланцев
     for (final v in network.valves.values) {
-      if (v.isFlanged && v.includeCounterFlanges) {
+      if (v.effectiveIsFlanged && v.includeCounterFlanges) {
         final flName = 'Фланец ${v.isFlatCounterFlange ? 'плоский (тип 01)' : 'воротниковый (тип 11)'} Ду${v.dn} Ру${v.flangePressurePn}';
         final key = '$flName|${v.counterFlangeType}|${v.counterFlangeMaterial}';
         fittingMap[key] = (fittingMap[key] ?? 0) + 2;
@@ -478,7 +478,7 @@ class ReportEngine {
         'category': 'Арматура',
         'name': parts[0],
         'type_mark': parts[1],
-        'standard': v.isFlanged ? 'ГОСТ 33259-2015' : 'ГОСТ 12815-80',
+        'standard': v.effectiveIsFlanged ? 'ГОСТ 33259-2015' : 'ГОСТ 12815-80',
         'material': 'Чугун / Сталь',
         'qty': entry.value,
         'unit': 'шт.',
