@@ -8,6 +8,7 @@ import '../models/fitting.dart';
 import '../models/node_3d.dart';
 import '../models/pipe_segment.dart';
 import '../models/pipe_spool.dart';
+import '../models/pipe_support.dart';
 import '../models/piping_network.dart';
 import '../models/report_template.dart';
 import '../models/valve.dart';
@@ -444,11 +445,13 @@ class ReportEngine {
     for (final entry in fittingMap.entries) {
       final parts = entry.key.split('|');
       final fit = fittingData[entry.key]!;
+      final fitMark = (fit.mark != null && fit.mark!.isNotEmpty) ? fit.mark! : fit.fittingType.displayName;
       final ctx = {
         'pos': itemNum++,
         'category': 'Фасонные детали',
         'name': parts[0],
-        'type_mark': fit.fittingType.displayName,
+        'type_mark': fitMark,
+        'mark': fit.mark ?? '—',
         'standard': parts[1],
         'material': parts[2],
         'qty': entry.value,
@@ -466,18 +469,20 @@ class ReportEngine {
     final valveData = <String, Valve>{};
     for (final v in network.valves.values) {
       final name = v.name.isNotEmpty ? v.name : v.valveType.displayName;
-      final key = '$name|${v.valveType.displayName}|Ду${v.dn}';
+      final key = '$name|${v.valveType.displayName}|Ду${v.dn}|${v.mark ?? ""}';
       valveMap[key] = (valveMap[key] ?? 0) + 1;
       valveData[key] = v;
     }
     for (final entry in valveMap.entries) {
       final parts = entry.key.split('|');
       final v = valveData[entry.key]!;
+      final valveMark = (v.mark != null && v.mark!.isNotEmpty) ? v.mark! : parts[1];
       final ctx = {
         'pos': itemNum++,
         'category': 'Арматура',
         'name': parts[0],
-        'type_mark': parts[1],
+        'type_mark': valveMark,
+        'mark': v.mark ?? '—',
         'standard': v.effectiveIsFlanged ? 'ГОСТ 33259-2015' : 'ГОСТ 12815-80',
         'material': 'Чугун / Сталь',
         'qty': entry.value,
@@ -485,6 +490,35 @@ class ReportEngine {
         'mass_kg': 18.0,
         'notes': 'Запорно-регулирующая арматура',
         'dn': v.dn,
+        'wall': '—',
+      };
+      rows.add(_evaluateRow(template.columns, ctx));
+    }
+
+    // 5. Опоры и подвески
+    final supportMap = <String, int>{};
+    final supportData = <String, PipeSupport>{};
+    for (final sup in network.supports.values) {
+      final key = '${sup.type.displayName}|${sup.name}|${sup.mark ?? sup.type.shortCode}';
+      supportMap[key] = (supportMap[key] ?? 0) + 1;
+      supportData[key] = sup;
+    }
+    for (final entry in supportMap.entries) {
+      final sup = supportData[entry.key]!;
+      final markStr = sup.mark ?? sup.type.shortCode;
+      final ctx = {
+        'pos': itemNum++,
+        'category': 'Опоры и подвески',
+        'name': 'Опора трубопровода ${sup.type.displayName.toLowerCase()}',
+        'type_mark': markStr,
+        'mark': markStr,
+        'standard': 'ГОСТ 14911-82',
+        'material': 'Сталь 3сп5',
+        'qty': entry.value,
+        'unit': 'шт.',
+        'mass_kg': 5.0,
+        'notes': sup.name.isNotEmpty ? sup.name : 'Подвижные и неподвижные опоры',
+        'dn': '—',
         'wall': '—',
       };
       rows.add(_evaluateRow(template.columns, ctx));
@@ -500,8 +534,19 @@ class ReportEngine {
     final rows = <List<dynamic>>[];
     final spools = network.spools.values.toList();
 
-    int idx = 1;
+    // Группировка одинаковых катушек по марке sp.number
+    final groupedSpools = <String, List<PipeSpool>>{};
     for (final sp in spools) {
+      groupedSpools.putIfAbsent(sp.number, () => []).add(sp);
+    }
+
+    int idx = 1;
+    for (final entry in groupedSpools.entries) {
+      final group = entry.value;
+      final sp = group.first;
+      final count = group.length;
+      final totalCutLength = (sp.cutLengthMm * count).round();
+
       final seg = network.segments[sp.segmentId];
       final startNode = seg != null ? network.nodes[seg.startNodeId] : null;
       final endNode = seg != null ? network.nodes[seg.endNodeId] : null;
@@ -524,16 +569,18 @@ class ReportEngine {
       final ctx = {
         'pos': idx++,
         'spool_num': sp.number,
+        'qty': count,
         'system': seg?.systemId ?? 'В1',
         'dn': sp.dn,
         'wall': sp.wallThickness,
         'cut_length': sp.cutLengthMm.round(),
+        'total_cut_length': totalCutLength,
         'theoretical_length': theoLen,
         'start_element': startElem,
         'end_element': endElem,
         'material': sp.material,
         'standard': 'ГОСТ 8732-78',
-        'notes': 'Длина реза',
+        'notes': count > 1 ? 'Длина реза (повторяемость: $count шт.)' : 'Длина реза',
       };
       rows.add(_evaluateRow(template.columns, ctx));
     }

@@ -109,9 +109,9 @@ void main() {
       // Генерируем выноски
       final count = network.generateMissingCallouts();
 
-      // Должна быть выноска для трубы и выноска для задвижки, но никаких выносок для стыков
-      expect(count, equals(2));
-      expect(network.callouts.values.any((c) => c.targetId == 'seg1'), isTrue);
+      // Должны быть выноски для двух катушек (до и после арматуры) и для задвижки, но никаких выносок для стыков
+      expect(count, equals(3));
+      expect(network.callouts.values.any((c) => network.spools.containsKey(c.targetId)), isTrue);
       expect(network.callouts.values.any((c) => c.targetId.startsWith('valve_')), isTrue);
       expect(network.callouts.values.any((c) => c.targetId.startsWith('weld_')), isFalse);
       expect(network.weldJoints, isEmpty);

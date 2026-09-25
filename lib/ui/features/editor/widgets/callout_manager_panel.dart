@@ -150,6 +150,8 @@ String formatPreviewCalloutText(
       final sStr = wall.truncateToDouble() == wall ? wall.toStringAsFixed(0) : wall.toStringAsFixed(1);
 
       return text
+          .replaceAll('{MARK}', spoolMark)
+          .replaceAll('{POS}', spoolMark)
           .replaceAll('{SPOOL}', spoolMark)
           .replaceAll('{NUM}', spoolMark)
           .replaceAll('{ID}', spoolMark)
@@ -186,8 +188,11 @@ String formatPreviewCalloutText(
       final wallStr = wallMm.truncateToDouble() == wallMm ? wallMm.toStringAsFixed(0) : wallMm.toStringAsFixed(1);
       final odMm = weldSeg?.outerDiameterMm ?? 89.0;
       final odStr = odMm.truncateToDouble() == odMm ? odMm.toStringAsFixed(0) : odMm.toStringAsFixed(1);
+      final weldMark = 'С-$numStr';
 
       return text
+          .replaceAll('{MARK}', weldMark)
+          .replaceAll('{POS}', numStr)
           .replaceAll('{NUM}', numStr)
           .replaceAll('{NUMBER}', numStr)
           .replaceAll('{ID}', numStr)
@@ -213,8 +218,14 @@ String formatPreviewCalloutText(
       final typeStr = realValve != null ? realValve.valveType.displayName : 'Задвижка';
       final len = realValve != null ? realValve.lengthMm.round() : 210;
       final serial = realValve?.serialNumber?.isNotEmpty == true ? realValve!.serialNumber! : '48219';
+      final valveMark = realValve?.mark?.isNotEmpty == true
+          ? realValve!.mark!
+          : (realValve?.name.isNotEmpty == true ? realValve!.name : 'А-1');
 
       return text
+          .replaceAll('{MARK}', valveMark)
+          .replaceAll('{POS}', valveMark)
+          .replaceAll('{NUM}', valveMark)
           .replaceAll('{NAME}', name)
           .replaceAll('{TAG}', tag)
           .replaceAll('{TYPE}', typeStr)
@@ -227,7 +238,7 @@ String formatPreviewCalloutText(
           .replaceAll('{SERIAL}', serial)
           .replaceAll('{SERIAL_NUMBER}', serial)
           .replaceAll('{BATCH}', serial)
-          .replaceAll('{ID}', name)
+          .replaceAll('{ID}', valveMark)
           .replaceAll('{TECH_ID}', realValve?.id ?? 'valve_001');
 
     case CalloutTargetType.fitting:
@@ -240,10 +251,14 @@ String formatPreviewCalloutText(
       final standard = realFitting?.standard?.isNotEmpty == true ? realFitting!.standard! : 'ГОСТ 17375-2001';
       final mat = realFitting?.material.isNotEmpty == true ? realFitting!.material : 'Сталь 20';
       final serial = realFitting?.serialNumber?.isNotEmpty == true ? realFitting!.serialNumber! : '48219';
+      final fitMark = realFitting?.mark?.isNotEmpty == true ? realFitting!.mark! : 'Ф-1';
 
       return text
+          .replaceAll('{MARK}', fitMark)
+          .replaceAll('{POS}', fitMark)
+          .replaceAll('{NUM}', fitMark)
           .replaceAll('{NAME}', name)
-          .replaceAll('{TAG}', 'ОТ-1')
+          .replaceAll('{TAG}', fitMark)
           .replaceAll('{TYPE}', typeStr)
           .replaceAll('{STANDARD}', standard)
           .replaceAll('{MATERIAL}', mat)
@@ -253,7 +268,7 @@ String formatPreviewCalloutText(
           .replaceAll('{SERIAL}', serial)
           .replaceAll('{SERIAL_NUMBER}', serial)
           .replaceAll('{BATCH}', serial)
-          .replaceAll('{ID}', name)
+          .replaceAll('{ID}', fitMark)
           .replaceAll('{TECH_ID}', realFitting?.id ?? 'fit_001');
 
     case CalloutTargetType.equipment:
@@ -266,6 +281,9 @@ String formatPreviewCalloutText(
       final serial = realEquipment?.serialNumber?.isNotEmpty == true ? realEquipment!.serialNumber! : 'Е-014';
 
       return text
+          .replaceAll('{MARK}', tag)
+          .replaceAll('{POS}', tag)
+          .replaceAll('{NUM}', tag)
           .replaceAll('{NAME}', name)
           .replaceAll('{TAG}', tag)
           .replaceAll('{TYPE}', typeStr)
@@ -284,6 +302,9 @@ String formatPreviewCalloutText(
       final face = realNozzle?.face?.name ?? 'top';
 
       return text
+          .replaceAll('{MARK}', name)
+          .replaceAll('{POS}', name)
+          .replaceAll('{NUM}', name)
           .replaceAll('{NAME}', name)
           .replaceAll('{TAG}', name)
           .replaceAll('{DN}', '$dn')
@@ -299,13 +320,17 @@ String formatPreviewCalloutText(
           : (realSupport != null ? realSupport.type.shortCode : 'ОП-1');
       final typeStr = realSupport != null ? realSupport.type.displayName : 'Опора подвижная';
       final code = realSupport != null ? realSupport.type.shortCode : 'ОП';
+      final supMark = realSupport?.mark?.isNotEmpty == true ? realSupport!.mark! : (name.isNotEmpty ? name : code);
 
       return text
+          .replaceAll('{MARK}', supMark)
+          .replaceAll('{POS}', supMark)
+          .replaceAll('{NUM}', supMark)
           .replaceAll('{NAME}', name)
           .replaceAll('{TAG}', name)
           .replaceAll('{TYPE}', typeStr)
           .replaceAll('{CODE}', code)
-          .replaceAll('{ID}', name)
+          .replaceAll('{ID}', supMark)
           .replaceAll('{TECH_ID}', realSupport?.id ?? 'sup_001');
 
     case CalloutTargetType.node:
@@ -470,6 +495,20 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       _selectedArrowOnNode = true;
     }
     _saveCurrentTemplate();
+  }
+
+  void _applyPreset(Map<String, String> presetMap, String presetName) {
+    for (final entry in presetMap.entries) {
+      widget.controller.updateCalloutTemplate(entry.key, entry.value);
+    }
+    _loadTemplateForType(_templateType);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Применен пресет: $presetName для всех категорий'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -1309,9 +1348,47 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  PopupMenuButton<String>(
+                    tooltip: 'Пресеты оформления',
+                    onSelected: (val) {
+                      if (val == 'compact') {
+                        _applyPreset(compactCalloutTemplates, 'Компактный (Марки позиций)');
+                      } else if (val == 'default') {
+                        _applyPreset(defaultCalloutTemplates, 'Стандартный (ГОСТ)');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'compact',
+                        child: Row(
+                          children: [
+                            Icon(Icons.compress, size: 18, color: Colors.indigo),
+                            SizedBox(width: 8),
+                            Text('Компактный (Марки позиций: К-1, А-1, 1...)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'default',
+                        child: Row(
+                          children: [
+                            Icon(Icons.description_outlined, size: 18),
+                            SizedBox(width: 8),
+                            Text('Стандартный (ГОСТ 2.316 с диаметрами и ТТ)'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.style_outlined, size: 18),
+                      label: const Text('Пресеты'),
+                      onPressed: null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.restart_alt, size: 18),
-                    label: const Text('Сбросить к ГОСТ'),
+                    label: const Text('Сбросить текущий'),
                     onPressed: _resetTemplateToDefault,
                   ),
                   const SizedBox(width: 8),
@@ -1804,6 +1881,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     switch (type) {
       case CalloutTargetType.segment:
         return {
+          '{MARK}': 'Марка позиции катушки/трубы (напр. К-1)',
+          '{POS}': 'Номер позиции катушки (напр. 1)',
           '{SPOOL}': 'Марка катушки из ведомости (напр. К-1)',
           '{NUM}': 'Номер катушки или трубы (К-1)',
           '{DN}': 'Диаметр условный (напр. 80)',
@@ -1818,6 +1897,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.valve:
         return {
+          '{MARK}': 'Марка позиции арматуры (напр. А-1)',
+          '{POS}': 'Номер позиции арматуры (напр. 1)',
           '{NAME}': 'Наименование арматуры',
           '{TAG}': 'Позиция арматуры',
           '{SERIAL}': 'Заводской номер арматуры',
@@ -1828,6 +1909,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.weld:
         return {
+          '{MARK}': 'Марка стыка (напр. С-1 или 1)',
+          '{POS}': 'Номер шва в журнале (напр. 1)',
           '{NUM}': 'Номер шва в журнале (напр. 1)',
           '{DATE}': 'Дата выполнения шва (напр. 18.09.2024)',
           '{STAMP}': 'Клеймо сварщика (напр. СВ-01)',
@@ -1839,6 +1922,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.fitting:
         return {
+          '{MARK}': 'Марка позиции фитинга (напр. Ф-1)',
+          '{POS}': 'Номер позиции детали (напр. 1)',
           '{NAME}': 'Наименование детали',
           '{TAG}': 'Марка детали',
           '{SERIAL}': 'Зав. № / партия детали',
@@ -1851,6 +1936,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.equipment:
         return {
+          '{MARK}': 'Марка аппарата (напр. Е-1, Н-1)',
+          '{POS}': 'Номер позиции аппарата (напр. 1)',
           '{TAG}': 'Короткая позиция/тег (напр. Е-1, Н-1)',
           '{NAME}': 'Полное наименование оборудования',
           '{TYPE}': 'Тип (насос/бак/емкость)',
@@ -1860,6 +1947,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.nozzle:
         return {
+          '{MARK}': 'Обозначение штуцера (напр. Ш-1)',
+          '{POS}': 'Номер штуцера (напр. 1)',
           '{NAME}': 'Обозначение штуцера (напр. Ш-1, А1)',
           '{DN}': 'Диаметр условный (напр. 80)',
           '{EQUIPMENT}': 'Наименование аппарата (Емкость Е-1)',
@@ -1869,6 +1958,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.support:
         return {
+          '{MARK}': 'Марка позиции опоры (напр. ОП-1, НО-1)',
+          '{POS}': 'Номер позиции опоры (напр. 1)',
           '{NAME}': 'Наименование / марка опоры (напр. ОП-1)',
           '{TYPE}': 'Тип опоры (скользящая/неподвижная)',
           '{CODE}': 'Код типа (ОП/НО/ПП)',
@@ -1876,6 +1967,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         };
       case CalloutTargetType.node:
         return {
+          '{MARK}': 'Обозначение узла',
+          '{POS}': 'Номер узла',
           '{Z_M}': 'Отметка в метрах по ГОСТ (напр. +2.400)',
           '{TOP}': 'Верх трубы (напр. В.Т. +2.445)',
           '{BOP}': 'Низ трубы (напр. Н.Т. +2.355)',
@@ -1895,13 +1988,16 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
     final net = widget.controller.network;
     switch (callout.targetType) {
       case CalloutTargetType.segment:
-        final s = net.segments[callout.targetId];
-        final spool = net.spools.values.where((sp) => sp.segmentId == callout.targetId).firstOrNull;
+        final spool = net.spools[callout.targetId] ??
+            net.spools.values.where((sp) => sp.segmentId == callout.targetId).firstOrNull;
+        final s = spool != null ? net.segments[spool.segmentId] : net.segments[callout.targetId];
         final mark = spool?.number ?? s?.id ?? callout.targetId;
-        return s != null ? '$mark (DN${s.dn})' : callout.targetId;
+        final lenStr = spool != null ? ', L=${spool.cutLengthMm.round()}' : '';
+        return s != null ? '$mark (DN${s.dn}$lenStr)' : callout.targetId;
       case CalloutTargetType.valve:
         final v = net.valves[callout.targetId];
-        return v != null ? '${v.name} Ду${v.dn}' : callout.targetId;
+        final markStr = v?.mark != null ? '${v!.mark}: ' : '';
+        return v != null ? '$markStr${v.name} Ду${v.dn}' : callout.targetId;
       case CalloutTargetType.weld:
         final w = net.weldJoints[callout.targetId];
         return w != null ? 'Стык №${w.number > 0 ? w.number : w.id}' : callout.targetId;
@@ -1920,10 +2016,12 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
       case CalloutTargetType.fitting:
         final f = net.fittings[callout.targetId] ??
             net.fittings.values.where((fit) => fit.id == callout.targetId).firstOrNull;
-        return f != null ? (f.name ?? f.fittingType.displayName) : callout.targetId;
+        final markStr = f?.mark != null ? '${f!.mark}: ' : '';
+        return f != null ? '$markStr${f.name ?? f.fittingType.displayName}' : callout.targetId;
       case CalloutTargetType.support:
         final sup = net.supports[callout.targetId];
-        return sup != null ? (sup.name.isNotEmpty ? sup.name : sup.type.displayName) : callout.targetId;
+        final markStr = sup?.mark != null ? '${sup!.mark}: ' : '';
+        return sup != null ? '$markStr${sup.name.isNotEmpty ? sup.name : sup.type.displayName}' : callout.targetId;
       case CalloutTargetType.node:
         return 'Узел ${callout.targetId}';
     }

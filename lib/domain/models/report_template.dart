@@ -230,10 +230,12 @@ class ReportTemplate {
     isBuiltIn: true,
     columns: const [
       ReportColumn(id: 's_pos', header: '№ катушки', template: '{spool_num}', width: 90, alignment: TextAlign.center),
+      ReportColumn(id: 's_qty', header: 'Кол-во', template: '{qty}', width: 70, isNumeric: true, alignment: TextAlign.center),
       ReportColumn(id: 's_sys', header: 'Система / Линия', template: '{system}', width: 110, alignment: TextAlign.center),
       ReportColumn(id: 's_dn', header: 'Диаметр DN', template: 'Ду{dn}', width: 90, alignment: TextAlign.center),
       ReportColumn(id: 's_wall', header: 'Стенка S (мм)', template: '{wall}', width: 100, isNumeric: true, alignment: TextAlign.right),
       ReportColumn(id: 's_cut', header: 'Длина реза (мм)', template: '{cut_length}', width: 120, isNumeric: true, alignment: TextAlign.right),
+      ReportColumn(id: 's_total_cut', header: 'Общая длина (мм)', template: '{total_cut_length}', width: 120, isNumeric: true, alignment: TextAlign.right),
       ReportColumn(id: 's_elem1', header: 'Сопряжение 1', template: '{start_element}', width: 130),
       ReportColumn(id: 's_elem2', header: 'Сопряжение 2', template: '{end_element}', width: 130),
       ReportColumn(id: 's_mat', header: 'Марка стали', template: '{material}', width: 110, alignment: TextAlign.center),

@@ -172,6 +172,29 @@ const Map<String, String> defaultCalloutTemplates = {
   'elevation_arrow_on_node': 'true',
 };
 
+/// Компактные шаблоны выносок (только буквенно-цифровые марки позиций для плотных чертежей)
+const Map<String, String> compactCalloutTemplates = {
+  'segment': '{MARK}',
+  'segment_bottom': '',
+  'weld': '№{ID}',
+  'weld_bottom': '',
+  'valve': '{MARK}',
+  'valve_bottom': '',
+  'fitting': '{MARK}',
+  'fitting_bottom': '',
+  'equipment': '{TAG}',
+  'equipment_bottom': '',
+  'nozzle': '{NAME}',
+  'nozzle_bottom': '',
+  'support': '{MARK}',
+  'support_bottom': '',
+  'node': '+{Z_M}',
+  'node_bottom': '',
+  'elevation_style': 'gostOutline',
+  'elevation_shelf_direction': 'auto',
+  'elevation_arrow_on_node': 'true',
+};
+
 /// Умная выноска (Screen-Aligned Billboard Annotation),
 /// привязанная к 3D-объекту сети, но со смещением на 2D-экране.
 class Callout {

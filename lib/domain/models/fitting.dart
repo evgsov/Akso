@@ -59,6 +59,9 @@ class Fitting {
   /// Заводской номер или номер партии/плавки детали
   final String? serialNumber;
 
+  /// Марка / позиционное обозначение на схеме (например, "Ф-1", "Ф-2")
+  final String? mark;
+
   const Fitting({
     required this.id,
     required this.nodeId,
@@ -82,6 +85,7 @@ class Fitting {
     this.rotationAngleDeg = 0.0,
     this.isFlipped = false,
     this.serialNumber,
+    this.mark,
   });
 
   /// Отображаемое имя фитинга
@@ -172,6 +176,8 @@ class Fitting {
     bool? isFlipped,
     String? serialNumber,
     bool clearSerialNumber = false,
+    String? mark,
+    bool clearMark = false,
   }) {
     return Fitting(
       id: id ?? this.id,
@@ -196,6 +202,7 @@ class Fitting {
       rotationAngleDeg: rotationAngleDeg ?? this.rotationAngleDeg,
       isFlipped: isFlipped ?? this.isFlipped,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
+      mark: clearMark ? null : (mark ?? this.mark),
     );
   }
 
@@ -222,6 +229,7 @@ class Fitting {
         if (rotationAngleDeg != 0.0) 'rotationAngleDeg': rotationAngleDeg,
         if (isFlipped) 'isFlipped': true,
         if (serialNumber != null) 'serialNumber': serialNumber,
+        if (mark != null) 'mark': mark,
       };
 
   factory Fitting.fromJson(Map<String, dynamic> json) {
@@ -255,6 +263,7 @@ class Fitting {
       rotationAngleDeg: (json['rotationAngleDeg'] as num?)?.toDouble() ?? 0.0,
       isFlipped: json['isFlipped'] as bool? ?? false,
       serialNumber: json['serialNumber'] as String?,
+      mark: json['mark'] as String?,
     );
   }
 }

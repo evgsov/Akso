@@ -1286,6 +1286,7 @@ class PipingNetwork {
     String? electrodeGrade,
     String? sourceElementId,
     bool isManual = false,
+    bool recalculate = true,
   }) {
     final nextNumber = weldJoints.length + 1;
     final id = 'weld_${_uuid.v4()}_$nextNumber';
@@ -1307,7 +1308,9 @@ class PipingNetwork {
       isManual: isManual,
     );
     weldJoints[id] = weld;
-    recalculateSpools();
+    if (recalculate) {
+      recalculateSpools();
+    }
     return weld;
   }
 
@@ -1885,6 +1888,7 @@ class PipingNetwork {
       weldType: weldType,
       sourceElementId: sourceElementId,
       isManual: isManual,
+      recalculate: false,
     );
   }
 
@@ -1968,12 +1972,12 @@ class PipingNetwork {
     int added = 0;
 
     // 1. Арматура (Valves): синхронизируем стыки по краям строительной длины
-    for (final v in valves.values) {
+    for (final v in valves.values.toList()) {
       added += syncValveWelds(v, createIfMissing: true);
     }
 
     // 2. Фасонные элементы (Fittings)
-    for (final entry in fittings.entries) {
+    for (final entry in fittings.entries.toList()) {
       final nodeId = entry.key;
       final fit = entry.value;
       final connected = getConnectedSegments(nodeId);
@@ -2173,7 +2177,7 @@ class PipingNetwork {
     }
 
     // 3. Соосные стыки двух прямых труб (без фитинга)
-    for (final node in nodes.values) {
+    for (final node in nodes.values.toList()) {
       if (fittings.containsKey(node.id)) continue;
       final conn = getConnectedSegments(node.id);
       if (conn.length == 2) {
@@ -2235,7 +2239,7 @@ class PipingNetwork {
   int validateAndCleanWeldJoints() {
     final toRemove = <String>{};
 
-    for (final w in weldJoints.values) {
+    for (final w in weldJoints.values.toList()) {
       final seg = segments[w.segmentId];
       if (seg == null) {
         toRemove.add(w.id);
@@ -2589,11 +2593,79 @@ class PipingNetwork {
     FittingDetector.autoDetectAllFittings(this);
   }
 
-  /// 6. Пересчет длин катушек (трубных заготовок) для всей сети
+  /// 6. Пересчет длин катушек (трубных заготовок) и сквозных марок для всей сети
   /// Вычитает строительные длины отводов, задвижек, затворов и сварочные зазоры
   void recalculateSpools() {
-    cleanOrphanedCallouts();
     SpoolCalculator.recalculateSpools(this);
+    recalculateValveMarks();
+    recalculateFittingMarks();
+    recalculateSupportMarks();
+    cleanOrphanedCallouts();
+  }
+
+  /// Маркировка арматуры: одинаковая арматура группируется под одной маркой А-1, А-2...
+  void recalculateValveMarks() {
+    final markCache = <String, String>{};
+    int counter = 1;
+    final sortedValves = valves.values.toList()
+      ..sort((a, b) {
+        final sa = segments[a.segmentId];
+        final sb = segments[b.segmentId];
+        final sysCmp = (sa?.systemId ?? '').compareTo(sb?.systemId ?? '');
+        if (sysCmp != 0) return sysCmp;
+        return a.id.compareTo(b.id);
+      });
+
+    for (final v in sortedValves) {
+      final key = '${v.valveType.name}_${v.name}_${v.dn}_${v.effectiveIsFlanged}_${v.flangePressurePn}_${v.counterFlangeType}_${v.customDefinitionId ?? ""}';
+      final mark = markCache.putIfAbsent(key, () => 'А-${counter++}');
+      if (v.mark != mark) {
+        valves[v.id] = v.copyWith(mark: mark);
+      }
+    }
+  }
+
+  /// Маркировка фасонных деталей: одинаковые фитинги группируются под одной маркой Ф-1, Ф-2...
+  void recalculateFittingMarks() {
+    final markCache = <String, String>{};
+    int counter = 1;
+    final sortedEntries = fittings.entries.toList()
+      ..sort((a, b) => a.value.id.compareTo(b.value.id));
+
+    for (final entry in sortedEntries) {
+      final f = entry.value;
+      final key = '${f.fittingType.name}_${f.name ?? ""}_${f.dn}_${f.dnSecondary ?? 0}_${f.material}_${f.standard ?? ""}_${f.isFlangePair}';
+      final mark = markCache.putIfAbsent(key, () => 'Ф-${counter++}');
+      if (f.mark != mark) {
+        fittings[entry.key] = f.copyWith(mark: mark);
+      }
+    }
+  }
+
+  /// Маркировка опор трубопроводов: опоры группируются по типу под марками ОП-1, НО-1...
+  void recalculateSupportMarks() {
+    final markCache = <String, String>{};
+    final typeCounters = <PipeSupportType, int>{};
+
+    final sortedSupports = supports.values.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+
+    for (final s in sortedSupports) {
+      final key = '${s.type.name}_${s.name}';
+      final mark = markCache.putIfAbsent(key, () {
+        final c = (typeCounters[s.type] ?? 0) + 1;
+        typeCounters[s.type] = c;
+        return '${s.type.shortCode}-$c';
+      });
+      if (s.mark != mark) {
+        supports[s.id] = s.copyWith(mark: mark);
+      }
+    }
+  }
+
+  /// Полный пересчет всех марок элементов и катушек сети
+  void recalculateAllMarks() {
+    recalculateSpools();
   }
 
   Map<String, dynamic> toJson() => {
@@ -2789,7 +2861,7 @@ class PipingNetwork {
           seg = segments[spool.segmentId] ?? seg;
         } else if (seg != null) {
           final segSpools = spools.values.where((s) => s.segmentId == targetId).toList();
-          if (segSpools.length == 1) {
+          if (segSpools.isNotEmpty) {
             spool = segSpools.first;
           }
         }
@@ -2839,6 +2911,8 @@ class PipingNetwork {
             .replaceAll('{SERIAL}', serialStr)
             .replaceAll('{SERIAL_NUMBER}', serialStr)
             .replaceAll('{BATCH}', serialStr)
+            .replaceAll('{MARK}', spoolMark)
+            .replaceAll('{POS}', spoolMark)
             .replaceAll('{SPOOL}', spoolMark)
             .replaceAll('{NUM}', spoolMark)
             .replaceAll('{ID}', spoolMark)
@@ -2875,8 +2949,12 @@ class PipingNetwork {
         final zMeters = zVal / 1000.0;
         final sign = zMeters >= 0 ? '+' : '-';
         final zStr = '$sign${zMeters.abs().toStringAsFixed(3)}';
+        final valveMark = (v.mark != null && v.mark!.isNotEmpty) ? v.mark! : (v.name.isNotEmpty ? v.name : 'А-1');
 
         text = text
+            .replaceAll('{MARK}', valveMark)
+            .replaceAll('{POS}', valveMark)
+            .replaceAll('{NUM}', valveMark)
             .replaceAll('{NAME}', v.name)
             .replaceAll('{TAG}', v.name)
             .replaceAll('{SERIAL}', v.serialNumber ?? '')
@@ -2894,7 +2972,7 @@ class PipingNetwork {
             .replaceAll('+{Z}', zStr)
             .replaceAll('{Z}', zStr)
             .replaceAll('{ELEVATION}', zStr)
-            .replaceAll('{ID}', v.name.isNotEmpty ? v.name : v.id)
+            .replaceAll('{ID}', valveMark)
             .replaceAll('{TECH_ID}', v.id);
         break;
 
@@ -2910,7 +2988,11 @@ class PipingNetwork {
         final standard = (fit.standard != null && fit.standard!.isNotEmpty) ? fit.standard! : 'ГОСТ 17375';
 
         final fitName = fit.name ?? fit.fittingType.displayName;
+        final fitMark = (fit.mark != null && fit.mark!.isNotEmpty) ? fit.mark! : 'Ф-1';
         text = text
+            .replaceAll('{MARK}', fitMark)
+            .replaceAll('{POS}', fitMark)
+            .replaceAll('{NUM}', fitMark)
             .replaceAll('{NAME}', fitName)
             .replaceAll('{TAG}', fitName)
             .replaceAll('{SERIAL}', fit.serialNumber ?? '')
@@ -2922,7 +3004,7 @@ class PipingNetwork {
             .replaceAll('{SYSTEM}', sysCode)
             .replaceAll('{DN}', '${fit.dn}')
             .replaceAll('{DN2}', fit.dnSecondary != null ? '${fit.dnSecondary}' : '${fit.dn}')
-            .replaceAll('{ID}', fitName)
+            .replaceAll('{ID}', fitMark)
             .replaceAll('{TECH_ID}', fit.id);
         break;
 
@@ -2931,6 +3013,7 @@ class PipingNetwork {
         if (w == null) return 'Стык (удален)';
 
         final numStr = w.number > 0 ? '${w.number}' : '1';
+        final weldMark = 'С-$numStr';
         final seg = segments[w.segmentId];
         final dStr = seg != null
             ? (seg.outerDiameterMm.truncateToDouble() == seg.outerDiameterMm
@@ -2945,6 +3028,8 @@ class PipingNetwork {
         final dnStr = seg != null ? '${seg.dn}' : '';
 
         text = text
+            .replaceAll('{MARK}', weldMark)
+            .replaceAll('{POS}', numStr)
             .replaceAll('{ID}', numStr)
             .replaceAll('{NUM}', numStr)
             .replaceAll('{NUMBER}', numStr)
@@ -3001,6 +3086,9 @@ class PipingNetwork {
         final dimsStr = '${eq.width.round()}x${eq.length.round()}x${eq.height.round()}';
 
         text = text
+            .replaceAll('{MARK}', tagStr)
+            .replaceAll('{POS}', tagStr)
+            .replaceAll('{NUM}', tagStr)
             .replaceAll('{NAME}', eq.name)
             .replaceAll('{TAG}', tagStr)
             .replaceAll('{SERIAL}', eq.serialNumber ?? '')
@@ -3035,6 +3123,9 @@ class PipingNetwork {
             : '';
 
         text = text
+            .replaceAll('{MARK}', noz.name)
+            .replaceAll('{POS}', noz.name)
+            .replaceAll('{NUM}', noz.name)
             .replaceAll('{NAME}', noz.name)
             .replaceAll('{TAG}', noz.name)
             .replaceAll('{DN}', '${noz.dn}')
@@ -3050,12 +3141,16 @@ class PipingNetwork {
         if (sup == null) return 'Опора (удалена)';
 
         final supName = sup.name.isNotEmpty ? sup.name : sup.type.shortCode;
+        final supMark = (sup.mark != null && sup.mark!.isNotEmpty) ? sup.mark! : (sup.name.isNotEmpty ? sup.name : sup.type.shortCode);
         text = text
+            .replaceAll('{MARK}', supMark)
+            .replaceAll('{POS}', supMark)
+            .replaceAll('{NUM}', supMark)
             .replaceAll('{NAME}', supName)
             .replaceAll('{TAG}', supName)
             .replaceAll('{TYPE}', sup.type.displayName)
             .replaceAll('{CODE}', sup.type.shortCode)
-            .replaceAll('{ID}', supName)
+            .replaceAll('{ID}', supMark)
             .replaceAll('{TECH_ID}', sup.id);
         break;
 
@@ -3228,6 +3323,8 @@ class PipingNetwork {
   String? getTargetSegmentId(CalloutTargetType type, String targetId) {
     switch (type) {
       case CalloutTargetType.segment:
+        final spool = spools[targetId];
+        if (spool != null) return spool.segmentId;
         return targetId;
       case CalloutTargetType.valve:
         return valves[targetId]?.segmentId;
@@ -3250,7 +3347,7 @@ class PipingNetwork {
     }
   }
 
-  /// Автогенерация недостающих выносок для сегментов, арматуры и сварных стыков
+  /// Автогенерация недостающих выносок для сегментов/катушек, арматуры и сварных стыков
   /// с предотвращением наложения (Collision Avoidance) смещений текста.
   /// При передаче [targetTypes] генерируются выноски только для указанных типов.
   int generateMissingCallouts({
@@ -3278,20 +3375,39 @@ class PipingNetwork {
     }
 
     if (targetTypes == null || targetTypes.contains(CalloutTargetType.segment)) {
-      for (final seg in segments.values) {
-        if (!existingTargetIds.contains(seg.id)) {
-          final id = 'callout_${_uuid.v4()}';
-          final resolvedY = resolveNonCollidingOffsetY(seg.id, offsetY);
-          callouts[id] = Callout(
-            id: id,
-            targetId: seg.id,
-            targetType: CalloutTargetType.segment,
-            screenOffsetX: offsetX,
-            screenOffsetY: resolvedY,
-            textHeight: textHeight,
-          );
-          existingTargetIds.add(seg.id);
-          addedCount++;
+      if (spools.isNotEmpty) {
+        for (final spool in spools.values) {
+          if (!existingTargetIds.contains(spool.id)) {
+            final id = 'callout_${_uuid.v4()}';
+            final resolvedY = resolveNonCollidingOffsetY(spool.segmentId, offsetY);
+            callouts[id] = Callout(
+              id: id,
+              targetId: spool.id,
+              targetType: CalloutTargetType.segment,
+              screenOffsetX: offsetX,
+              screenOffsetY: resolvedY,
+              textHeight: textHeight,
+            );
+            existingTargetIds.add(spool.id);
+            addedCount++;
+          }
+        }
+      } else {
+        for (final seg in segments.values) {
+          if (!existingTargetIds.contains(seg.id)) {
+            final id = 'callout_${_uuid.v4()}';
+            final resolvedY = resolveNonCollidingOffsetY(seg.id, offsetY);
+            callouts[id] = Callout(
+              id: id,
+              targetId: seg.id,
+              targetType: CalloutTargetType.segment,
+              screenOffsetX: offsetX,
+              screenOffsetY: resolvedY,
+              textHeight: textHeight,
+            );
+            existingTargetIds.add(seg.id);
+            addedCount++;
+          }
         }
       }
     }
@@ -3461,7 +3577,7 @@ class PipingNetwork {
       bool exists = true;
       switch (c.targetType) {
         case CalloutTargetType.segment:
-          exists = segments.containsKey(c.targetId);
+          exists = segments.containsKey(c.targetId) || spools.containsKey(c.targetId);
           break;
         case CalloutTargetType.valve:
           exists = valves.containsKey(c.targetId);

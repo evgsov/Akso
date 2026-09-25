@@ -25,7 +25,7 @@ void main() {
   group('CustomValveEditorDialog Widget Tests', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
-      binding.platformDispatcher.views.first.physicalSize = const Size(1280, 800);
+      binding.platformDispatcher.views.first.physicalSize = const Size(1600, 1000);
       binding.platformDispatcher.views.first.devicePixelRatio = 1.0;
     });
 

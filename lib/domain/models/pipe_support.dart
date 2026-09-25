@@ -32,12 +32,16 @@ class PipeSupport {
   /// Маркировка или наименование опоры (напр. "ОП-1", "НО-2")
   final String name;
 
+  /// Марка / позиционное обозначение на схеме (например, "ОП-1", "НО-1")
+  final String? mark;
+
   const PipeSupport({
     required this.id,
     required this.segmentId,
     required this.distanceRatio,
     this.type = PipeSupportType.sliding,
     this.name = '',
+    this.mark,
   });
 
   /// Вычисление 3D координат центра опоры в пространстве
@@ -55,6 +59,8 @@ class PipeSupport {
     PipeSupportType? type,
     double? distanceRatio,
     String? name,
+    String? mark,
+    bool clearMark = false,
   }) {
     return PipeSupport(
       id: id ?? this.id,
@@ -62,6 +68,7 @@ class PipeSupport {
       type: type ?? this.type,
       distanceRatio: distanceRatio ?? this.distanceRatio,
       name: name ?? this.name,
+      mark: clearMark ? null : (mark ?? this.mark),
     );
   }
 
@@ -71,6 +78,7 @@ class PipeSupport {
         'type': type.index,
         'distanceRatio': distanceRatio,
         'name': name,
+        if (mark != null) 'mark': mark,
       };
 
   factory PipeSupport.fromJson(Map<String, dynamic> json) {
@@ -85,6 +93,7 @@ class PipeSupport {
       distanceRatio: (json['distanceRatio'] as num).toDouble(),
       type: supportType,
       name: json['name'] as String? ?? '',
+      mark: json['mark'] as String?,
     );
   }
 
@@ -97,12 +106,13 @@ class PipeSupport {
           segmentId == other.segmentId &&
           type == other.type &&
           distanceRatio == other.distanceRatio &&
-          name == other.name;
+          name == other.name &&
+          mark == other.mark;
 
   @override
-  int get hashCode => Object.hash(id, segmentId, type, distanceRatio, name);
+  int get hashCode => Object.hash(id, segmentId, type, distanceRatio, name, mark);
 
   @override
   String toString() =>
-      'PipeSupport(id: $id, segmentId: $segmentId, type: ${type.name}, ratio: $distanceRatio, name: $name)';
+      'PipeSupport(id: $id, segmentId: $segmentId, type: ${type.name}, ratio: $distanceRatio, name: $name, mark: $mark)';
 }

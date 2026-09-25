@@ -80,6 +80,9 @@ class Valve {
   /// Идентификатор пользовательского семейства арматуры (CustomValveDefinition)
   final String? customDefinitionId;
 
+  /// Марка / позиционное обозначение на схеме (например, "А-1", "А-2")
+  final String? mark;
+
   const Valve({
     required this.id,
     required this.segmentId,
@@ -98,6 +101,7 @@ class Valve {
     this.counterFlangeMaterial = 'Сталь 20',
     this.serialNumber,
     this.customDefinitionId,
+    this.mark,
   });
 
   /// Является ли арматура фланцевой (с учетом пользовательского семейства арматуры)
@@ -174,6 +178,8 @@ class Valve {
     bool clearSerialNumber = false,
     String? customDefinitionId,
     bool clearCustomDefinition = false,
+    String? mark,
+    bool clearMark = false,
   }) {
     return Valve(
       id: id ?? this.id,
@@ -193,6 +199,7 @@ class Valve {
       counterFlangeMaterial: counterFlangeMaterial ?? this.counterFlangeMaterial,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
       customDefinitionId: clearCustomDefinition ? null : (customDefinitionId ?? this.customDefinitionId),
+      mark: clearMark ? null : (mark ?? this.mark),
     );
   }
 
@@ -214,6 +221,7 @@ class Valve {
         'counterFlangeMaterial': counterFlangeMaterial,
         if (serialNumber != null) 'serialNumber': serialNumber,
         if (customDefinitionId != null) 'customDefinitionId': customDefinitionId,
+        if (mark != null) 'mark': mark,
       };
 
   factory Valve.fromJson(Map<String, dynamic> json) {
@@ -246,6 +254,7 @@ class Valve {
       counterFlangeMaterial: json['counterFlangeMaterial'] as String? ?? 'Сталь 20',
       serialNumber: json['serialNumber'] as String?,
       customDefinitionId: json['customDefinitionId'] as String?,
+      mark: json['mark'] as String?,
     );
   }
 }

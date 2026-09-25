@@ -222,6 +222,20 @@ class SpoolCalculator {
         );
       }
     }
+
+    // 4. Пост-обработка: группировка одинаковых катушек под одной буквенно-цифровой маркой (К-1, К-2...)
+    // Одинаковыми считаются катушки с одинаковым DN, толщиной стенки, материалом и длиной реза (округленной до 1 мм).
+    final signatureToMark = <String, String>{};
+    int markIndex = 1;
+
+    for (final entry in network.spools.entries) {
+      final sp = entry.value;
+      final sig = '${sp.dn}_${sp.wallThickness.toStringAsFixed(1)}_${sp.material}_${sp.cutLengthMm.round()}';
+      final mark = signatureToMark.putIfAbsent(sig, () => 'К-${markIndex++}');
+      if (sp.number != mark) {
+        network.spools[entry.key] = sp.copyWith(number: mark);
+      }
+    }
   }
 
   static bool _isDirectBranchRun(PipingNetwork network, String nodeId, String segId) {
