@@ -197,6 +197,8 @@ const Map<String, String> compactCalloutTemplates = {
   'elevation_arrow_on_node': 'true',
 };
 
+typedef ElevationCalloutStyle = ElevationMarkStyle;
+
 /// Умная выноска (Screen-Aligned Billboard Annotation),
 /// привязанная к 3D-объекту сети, но со смещением на 2D-экране.
 class Callout {
@@ -221,7 +223,8 @@ class Callout {
     required this.id,
     required this.targetId,
     required this.targetType,
-    this.customText,
+    String? text,
+    String? customText,
     this.customBottomText,
     this.screenOffsetX = 50.0,
     this.screenOffsetY = -50.0,
@@ -232,7 +235,10 @@ class Callout {
     this.arrowOnNode = true,
     this.isPinned = false,
     this.sheetOffsets = const {},
-  });
+  }) : customText = text ?? customText;
+
+  /// Алиас для customText
+  String? get text => customText;
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
   bool get isCustom =>

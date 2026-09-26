@@ -107,6 +107,40 @@ class SheetViewport {
       ghostInactiveSystems: ghostInactiveSystems ?? this.ghostInactiveSystems,
     );
   }
+
+  /// Масштаб видового экрана (алиас для viewScale)
+  double get scale => viewScale;
+
+  /// Координата X центра модели (алиас для modelCenterX)
+  double get centerX => modelCenterX;
+
+  /// Координата Y центра модели (алиас для modelCenterY)
+  double get centerY => modelCenterY;
+
+  /// Координата Z центра модели (алиас для modelCenterZ)
+  double get centerZ => modelCenterZ;
+}
+
+/// Настройки видового экрана для обратной совместимости и быстрого создания в тестах/сервисах
+class ViewportSettings extends SheetViewport {
+  const ViewportSettings({
+    double scale = 0.02,
+    double centerX = 0.0,
+    double centerY = 0.0,
+    double centerZ = 0.0,
+    super.xMm,
+    super.yMm,
+    super.widthMm,
+    super.heightMm,
+    super.autoFit,
+    super.visibleSystemIds,
+    super.ghostInactiveSystems,
+  }) : super(
+          viewScale: scale,
+          modelCenterX: centerX,
+          modelCenterY: centerY,
+          modelCenterZ: centerZ,
+        );
 }
 
 /// Тип встроенной таблицы на листе
@@ -252,7 +286,7 @@ class DrawingSheet {
   const DrawingSheet({
     required this.id,
     required this.name,
-    required this.sheetNumber,
+    this.sheetNumber = 1,
     this.format = const SheetFormat(type: SheetFormatType.a3, orientation: SheetOrientation.landscape),
     this.titleBlockForm = TitleBlockForm.form3,
     this.titleBlockData = const TitleBlockData(),
