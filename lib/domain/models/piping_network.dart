@@ -3354,12 +3354,12 @@ class PipingNetwork {
     Set<CalloutTargetType>? targetTypes,
     double offsetX = 50.0,
     double offsetY = -50.0,
-    double textHeight = 12.0,
-    double margin = 8.0,
+    double textHeight = 2.5,
+    double margin = 20.0,
   }) {
     int addedCount = 0;
     final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
-    final step = textHeight + margin;
+    const step = 25.0;
 
     double resolveNonCollidingOffsetY(String? segmentId, double initialOffsetY) {
       double curY = initialOffsetY;

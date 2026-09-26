@@ -220,7 +220,7 @@ class Callout {
     this.customBottomText,
     this.screenOffsetX = 50.0,
     this.screenOffsetY = -50.0,
-    this.textHeight = 12.0,
+    this.textHeight = 2.5,
     this.textColor = 0xFF1E293B,
     this.elevationStyle,
     this.shelfDirection = ShelfDirection.auto,
@@ -325,7 +325,11 @@ class Callout {
       customBottomText: json['customBottomText'] as String? ?? json['bottomText'] as String?,
       screenOffsetX: (json['screenOffsetX'] as num?)?.toDouble() ?? 50.0,
       screenOffsetY: (json['screenOffsetY'] as num?)?.toDouble() ?? -50.0,
-      textHeight: (json['textHeight'] as num?)?.toDouble() ?? 12.0,
+      textHeight: () {
+        final val = (json['textHeight'] as num?)?.toDouble();
+        if (val == null || val >= 10.0) return 2.5;
+        return val;
+      }(),
       textColor: (json['textColor'] as num?)?.toInt() ?? 0xFF1E293B,
       elevationStyle: parsedElevStyle,
       shelfDirection: parsedShelfDir,
