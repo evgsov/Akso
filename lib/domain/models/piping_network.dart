@@ -3611,6 +3611,45 @@ class PipingNetwork {
     }
     return toRemove.length;
   }
+
+  /// Возвращает статистику только по реально существующим в проекте категориям выносок
+  List<CalloutCategoryStats> getExistingCalloutCategories() {
+    final counts = <CalloutTargetType, int>{};
+    final elevationCounts = <CalloutTargetType, int>{};
+
+    for (final c in callouts.values) {
+      counts[c.targetType] = (counts[c.targetType] ?? 0) + 1;
+      if (c.elevationStyle != null) {
+        elevationCounts[c.targetType] = (elevationCounts[c.targetType] ?? 0) + 1;
+      }
+    }
+
+    return counts.entries
+        .map((e) => CalloutCategoryStats(
+              type: e.key,
+              count: e.value,
+              elevationCount: elevationCounts[e.key] ?? 0,
+            ))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+  }
+
+  /// Общее количество высотных отметок в проекте
+  int get totalElevationCalloutsCount =>
+      callouts.values.where((c) => c.elevationStyle != null).length;
+}
+
+/// Статистика по категории выносок в проекте (для динамического фильтра без хардкода)
+class CalloutCategoryStats {
+  final CalloutTargetType type;
+  final int count;
+  final int elevationCount;
+
+  const CalloutCategoryStats({
+    required this.type,
+    required this.count,
+    this.elevationCount = 0,
+  });
 }
 
 /// Форматирование даты выполнения сварного шва в заданный формат

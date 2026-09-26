@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 /// Тип объекта, к которому привязана умная выноска
 enum CalloutTargetType {
   segment,
@@ -212,6 +214,9 @@ class Callout {
   final bool arrowOnNode;
   final bool isPinned;
 
+  /// Индивидуальные смещения выноски для конкретных листов чертежа (sheetId -> Offset(dx, dy))
+  final Map<String, Offset> sheetOffsets;
+
   const Callout({
     required this.id,
     required this.targetId,
@@ -226,12 +231,27 @@ class Callout {
     this.shelfDirection = ShelfDirection.auto,
     this.arrowOnNode = true,
     this.isPinned = false,
+    this.sheetOffsets = const {},
   });
 
   /// Флаг: использует ли выноска пользовательский текст или шаблон
   bool get isCustom =>
       (customText != null && customText!.trim().isNotEmpty) ||
       (customBottomText != null && customBottomText!.trim().isNotEmpty);
+
+  /// Возвращает эффективное смещение выноски с учетом указанного листа чертежа
+  Offset getEffectiveOffset(String? sheetId) {
+    if (sheetId != null && sheetOffsets.containsKey(sheetId)) {
+      return sheetOffsets[sheetId]!;
+    }
+    return Offset(screenOffsetX, screenOffsetY);
+  }
+
+  /// Эффективный X для указанного листа
+  double getEffectiveOffsetX(String? sheetId) => getEffectiveOffset(sheetId).dx;
+
+  /// Эффективный Y для указанного листа
+  double getEffectiveOffsetY(String? sheetId) => getEffectiveOffset(sheetId).dy;
 
   Callout copyWith({
     String? id,
@@ -250,6 +270,7 @@ class Callout {
     ShelfDirection? shelfDirection,
     bool? arrowOnNode,
     bool? isPinned,
+    Map<String, Offset>? sheetOffsets,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -265,6 +286,7 @@ class Callout {
       shelfDirection: shelfDirection ?? this.shelfDirection,
       arrowOnNode: arrowOnNode ?? this.arrowOnNode,
       isPinned: isPinned ?? this.isPinned,
+      sheetOffsets: sheetOffsets ?? this.sheetOffsets,
     );
   }
 
@@ -282,6 +304,8 @@ class Callout {
         'shelfDirection': shelfDirection.name,
         'arrowOnNode': arrowOnNode,
         'isPinned': isPinned,
+        if (sheetOffsets.isNotEmpty)
+          'sheetOffsets': sheetOffsets.map((k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy})),
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -317,6 +341,19 @@ class Callout {
     final parsedArrowOnNode = rawArrowOnNode is bool ? rawArrowOnNode : true;
     final parsedIsPinned = (json['isPinned'] as bool?) ?? false;
 
+    final rawSheetOffsets = json['sheetOffsets'];
+    final parsedSheetOffsets = <String, Offset>{};
+    if (rawSheetOffsets is Map) {
+      for (final entry in rawSheetOffsets.entries) {
+        final val = entry.value;
+        if (val is Map) {
+          final dx = (val['dx'] as num?)?.toDouble() ?? 0.0;
+          final dy = (val['dy'] as num?)?.toDouble() ?? 0.0;
+          parsedSheetOffsets[entry.key.toString()] = Offset(dx, dy);
+        }
+      }
+    }
+
     return Callout(
       id: json['id'] as String,
       targetId: json['targetId'] as String,
@@ -335,6 +372,7 @@ class Callout {
       shelfDirection: parsedShelfDir,
       arrowOnNode: parsedArrowOnNode,
       isPinned: parsedIsPinned,
+      sheetOffsets: parsedSheetOffsets,
     );
   }
 

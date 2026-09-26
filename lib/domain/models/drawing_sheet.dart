@@ -1,5 +1,6 @@
 import '../enums/sheet_format_type.dart';
 import '../enums/viewport_layout_preset.dart';
+import 'callout.dart';
 import 'drawing_legend.dart';
 import 'sheet_format.dart';
 import 'title_block_data.dart';
@@ -235,6 +236,12 @@ class DrawingSheet {
   final TechnicalRequirements? technicalRequirements;
   final DrawingLegend? legend;
 
+  /// Разрешенные категории выносок на листе (null = показывать все существующие)
+  final Set<CalloutTargetType>? enabledCalloutTypes;
+
+  /// Показывать ли высотные отметки на этом листе
+  final bool showElevationCallouts;
+
   const DrawingSheet({
     required this.id,
     required this.name,
@@ -246,7 +253,20 @@ class DrawingSheet {
     this.tables = const [],
     this.technicalRequirements,
     this.legend,
+    this.enabledCalloutTypes,
+    this.showElevationCallouts = true,
   });
+
+  /// Проверяет, должна ли отображаться данная выноска на текущем листе
+  bool isCalloutVisible(Callout callout) {
+    if (callout.elevationStyle != null && !showElevationCallouts) {
+      return false;
+    }
+    if (enabledCalloutTypes != null && !enabledCalloutTypes!.contains(callout.targetType)) {
+      return false;
+    }
+    return true;
+  }
 
   /// Расчет координат и габаритов видового экрана по выбранному пресету
   static SheetViewport calculatePresetViewport(
@@ -365,6 +385,9 @@ class DrawingSheet {
         'tables': tables.map((t) => t.toJson()).toList(),
         if (technicalRequirements != null) 'technicalRequirements': technicalRequirements!.toJson(),
         if (legend != null) 'legend': legend!.toJson(),
+        if (enabledCalloutTypes != null)
+          'enabledCalloutTypes': enabledCalloutTypes!.map((e) => e.name).toList(),
+        'showElevationCallouts': showElevationCallouts,
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -395,6 +418,15 @@ class DrawingSheet {
         legend: json['legend'] != null
             ? DrawingLegend.fromJson(json['legend'] as Map<String, dynamic>)
             : null,
+        enabledCalloutTypes: json['enabledCalloutTypes'] is List
+            ? (json['enabledCalloutTypes'] as List)
+                .map((e) => CalloutTargetType.values.firstWhere(
+                      (t) => t.name == e.toString(),
+                      orElse: () => CalloutTargetType.segment,
+                    ))
+                .toSet()
+            : null,
+        showElevationCallouts: json['showElevationCallouts'] as bool? ?? true,
       );
 
   DrawingSheet copyWith({
@@ -410,6 +442,9 @@ class DrawingSheet {
     bool clearTechnicalRequirements = false,
     DrawingLegend? legend,
     bool clearLegend = false,
+    Set<CalloutTargetType>? enabledCalloutTypes,
+    bool clearEnabledCalloutTypes = false,
+    bool? showElevationCallouts,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -424,6 +459,10 @@ class DrawingSheet {
           ? null
           : (technicalRequirements ?? this.technicalRequirements),
       legend: clearLegend ? null : (legend ?? this.legend),
+      enabledCalloutTypes: clearEnabledCalloutTypes
+          ? null
+          : (enabledCalloutTypes ?? this.enabledCalloutTypes),
+      showElevationCallouts: showElevationCallouts ?? this.showElevationCallouts,
     );
   }
 }
