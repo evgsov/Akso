@@ -43,6 +43,94 @@ class CalloutObstacleMap {
     leaderLines.add(SegmentObstacle(start, end, radius: 0.0, id: id));
   }
 
+  RectObstacle? getRect(String id) => rects.where((r) => r.id == id).firstOrNull;
+
+  SegmentObstacle? getPipe(String id) => pipes.where((p) => p.id == id).firstOrNull;
+
+  /// Создает полную карту препятствий чертежного листа (трубы, арматура, оборудование, штамп, таблицы)
+  static CalloutObstacleMap buildSheetMap({
+    required DrawingSheet sheet,
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+  }) {
+    final map = CalloutObstacleMap();
+    final vp = sheet.viewport;
+    final fmt = sheet.format;
+
+    // 1. Запретная зона: Штамп (Форма 3: 185x55 мм) в правом нижнем углу
+    final stampRect = Rect.fromLTWH(
+      fmt.widthMm - fmt.frameRightMm - 185.0 - 2.0,
+      fmt.heightMm - fmt.frameBottomMm - 55.0 - 2.0,
+      185.0 + 4.0,
+      55.0 + 4.0,
+    );
+    map.addRect(stampRect, 'stamp');
+
+    // 2. Таблицы спецификаций и экспликаций
+    for (final t in sheet.tables) {
+      final tRect = Rect.fromLTWH(t.xMm - 2.0, t.yMm - 2.0, t.widthMm + 4.0, t.heightMm + 4.0);
+      map.addRect(tRect, 'table_${t.id}');
+    }
+    if (sheet.technicalRequirements != null) {
+      final tr = sheet.technicalRequirements!;
+      final trRect = Rect.fromLTWH(tr.xMm - 2.0, tr.yMm - 2.0, tr.widthMm + 4.0, tr.heightMm + 4.0);
+      map.addRect(trRect, 'tech_reqs');
+    }
+
+    // 3. Коридоры трубопроводов с учетом внешнего диаметра
+    final visibleSys = vp.visibleSystemIds;
+    for (final seg in network.segments.values) {
+      if (visibleSys != null && visibleSys.isNotEmpty && !visibleSys.contains(seg.systemId)) {
+        continue;
+      }
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final p1Raw = projector.projectRaw(start.x, start.y, start.z);
+      final p2Raw = projector.projectRaw(end.x, end.y, end.z);
+      final p1Mm = ViewportTransformService.model2dToSheetMm(p1Raw, vp);
+      final p2Mm = ViewportTransformService.model2dToSheetMm(p2Raw, vp);
+
+      // Радиус на листе (в мм) с защитным зазором 2.5 мм
+      final radiusMm = math.max(3.0, (seg.outerDiameterMm / 2.0) * vp.scale + 2.5);
+      map.addPipe(p1Mm, p2Mm, radiusMm, seg.id);
+    }
+
+    // 4. Оборудование
+    for (final eq in network.equipments.values) {
+      final centerRaw = projector.projectRaw(eq.x, eq.y, eq.z + eq.height / 2.0);
+      final centerMm = ViewportTransformService.model2dToSheetMm(centerRaw, vp);
+      final wMm = math.max(12.0, eq.diameter * vp.scale) + 6.0;
+      final hMm = math.max(12.0, eq.height * vp.scale) + 6.0;
+      final eqRect = Rect.fromCenter(center: centerMm, width: wMm, height: hMm);
+      map.addRect(eqRect, 'eq_${eq.id}');
+    }
+
+    // 5. Арматура (габариты корпусов задвижек и приводов)
+    for (final valve in network.valves.values) {
+      final seg = network.segments[valve.segmentId];
+      if (seg == null) continue;
+      if (visibleSys != null && visibleSys.isNotEmpty && !visibleSys.contains(seg.systemId)) {
+        continue;
+      }
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final vx = start.x + (end.x - start.x) * valve.ratio;
+      final vy = start.y + (end.y - start.y) * valve.ratio;
+      final vz = start.z + (end.z - start.z) * valve.ratio;
+
+      final raw = projector.projectRaw(vx, vy, vz);
+      final vMm = ViewportTransformService.model2dToSheetMm(raw, vp);
+      final valveRect = Rect.fromCenter(center: vMm, width: 14.0, height: 14.0);
+      map.addRect(valveRect, 'valve_${valve.id}');
+    }
+
+    return map;
+  }
+
   /// Проверяет пересечение полочки с другими прямоугольниками выносок
   bool testShelfRectOverlap(Rect shelfRect) {
     for (final r in rects) {

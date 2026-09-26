@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 enum EquipmentType {
   box,
   cylinderVertical,
@@ -180,6 +182,9 @@ class Equipment {
 
   /// Заводской номер оборудования (аппарата, насоса, емкости)
   final String? serialNumber;
+
+  /// Эффективный диаметр или габарит в плане (максимум из ширины и длины)
+  double get diameter => math.max(width, length);
 
   const Equipment({
     required this.id,
