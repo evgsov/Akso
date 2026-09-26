@@ -239,7 +239,8 @@ class CalloutObstacleMap {
     return false;
   }
 
-  static bool _segmentsIntersect(
+  /// Проверяет пересечение двух 2D отрезков [a1, a2] и [b1, b2] с заданным допуском на концах
+  static bool segmentsIntersect(
     Offset a1,
     Offset a2,
     Offset b1,
@@ -259,6 +260,14 @@ class CalloutObstacleMap {
 
     return t >= tolerance && t <= (1.0 - tolerance) && u >= 0.0 && u <= 1.0;
   }
+
+  static bool _segmentsIntersect(
+    Offset a1,
+    Offset a2,
+    Offset b1,
+    Offset b2, {
+    double tolerance = 0.02,
+  }) => segmentsIntersect(a1, a2, b1, b2, tolerance: tolerance);
 }
 
 /// Кандидат расположения выноски с рассчитанной стоимостью (штрафом)
@@ -919,7 +928,7 @@ class CalloutLayoutEngine {
 
       for (final normal in [branch.normal1, branch.normal2]) {
         for (final clearance in [18.0, 22.0, 26.0]) {
-          if (normal.dx.abs() < 0.25) {
+          if (branch.branchVector2D.dy.abs() < 0.25) {
             // Ветка почти горизонтальна: пробуем выравнивание справа и слева
             final candRight = _evaluateCandidateStack(
               branch: branch,
@@ -1131,7 +1140,14 @@ class CalloutLayoutEngine {
       }
       if (tier == 0) firstTierX = tierX;
 
-      final shiftY = normal.dy.abs() >= 0.25 ? normal.dy * clearance : (normal.dy < 0 ? -clearance : clearance);
+      final double shiftY;
+      if (normal.dy.abs() >= 0.25) {
+        shiftY = normal.dy * clearance;
+      } else if (normal.dy == 0.0 || normal.dy.abs() < 1e-6) {
+        shiftY = 0.0;
+      } else {
+        shiftY = normal.dy < 0 ? -clearance : clearance;
+      }
       final yCenter = tierMeanY + shiftY;
 
       double topLimit = frameTop + avgTextH + 2.0;
@@ -1226,15 +1242,20 @@ class CalloutLayoutEngine {
             totalCost += 15000.0;
           }
 
-          // Штраф за пересечение стрелки-выноски с чужими трубами
-          int crosses = 0;
+          // Штраф за пересечение стрелки-выноски с чужими трубами и другими линиями-выносками
+          int leaderIntersections = 0;
           for (final p in obstacleMap.pipes) {
             if (p.id != null && branchSegIds.contains(p.id)) continue;
-            if (CalloutObstacleMap._segmentsIntersect(item.anchorMm, shelfStart, p.p1, p.p2)) {
-              crosses++;
+            if (CalloutObstacleMap.segmentsIntersect(item.anchorMm, shelfStart, p.p1, p.p2)) {
+              leaderIntersections++;
             }
           }
-          totalCost += crosses * 2000.0;
+          for (final leader in obstacleMap.leaderLines) {
+            if (CalloutObstacleMap.segmentsIntersect(item.anchorMm, shelfStart, leader.p1, leader.p2)) {
+              leaderIntersections++;
+            }
+          }
+          totalCost += leaderIntersections * leaderCrossPenalty;
 
           // Штраф за удаленность
           totalCost += (shelfStart - item.anchorMm).distance * 0.5;
