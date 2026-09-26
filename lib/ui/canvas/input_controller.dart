@@ -5948,8 +5948,8 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Автоматическая расстановка выносок конкретного листа
-  /// с учетом границ видового экрана, штампа 185х55 и таблиц
-  int runSheetCalloutAutoLayout(String sheetId) {
+  /// методом периферийных упорядоченных колонок без пересечений
+  int runSheetCalloutAutoLayout(String sheetId, {bool? groupMultiLevel}) {
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     if (sheet == null || network.callouts.isEmpty) return 0;
 
@@ -5957,6 +5957,7 @@ class PipingInputController extends ChangeNotifier {
       network: network,
       sheet: sheet,
       projector: projector,
+      groupMultiLevel: groupMultiLevel,
     );
 
     int updatedCount = 0;
@@ -5981,14 +5982,19 @@ class PipingInputController extends ChangeNotifier {
     return updatedCount;
   }
 
-  /// Настройка фильтра видимости выносок на листе (категории и высотные отметки)
-  void setSheetCalloutFilter(String sheetId, {Set<CalloutTargetType>? types, bool? showElevations}) {
+  /// Настройка фильтра видимости выносок на листе (категории, высотные отметки и этажерки)
+  void setSheetCalloutFilter(String sheetId, {
+    Set<CalloutTargetType>? types,
+    bool? showElevations,
+    bool? groupMultiLevel,
+  }) {
     final sheetIndex = currentProject.sheets.indexWhere((s) => s.id == sheetId);
     if (sheetIndex == -1) return;
     final current = currentProject.sheets[sheetIndex];
     final updated = current.copyWith(
       enabledCalloutTypes: types,
       showElevationCallouts: showElevations ?? current.showElevationCallouts,
+      groupMultiLevelCallouts: groupMultiLevel ?? current.groupMultiLevelCallouts,
     );
     updateSheet(updated);
   }

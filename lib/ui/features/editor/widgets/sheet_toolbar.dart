@@ -316,13 +316,25 @@ class SheetToolbar extends StatelessWidget {
                     color: const Color(0xFF1E293B),
                     icon: const Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
                     onSelected: (action) {
-                      if (action == 'auto_layout') {
-                        final updated = controller.runSheetCalloutAutoLayout(sheet.id);
+                      if (action == 'auto_grouped') {
+                        final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               updated > 0
-                                  ? 'Авто-расстановка листа: оптимизировано выносок: $updated'
+                                  ? 'Авторасстановка (с этажерками): оптимизировано: $updated'
+                                  : 'Все выноски листа уже расположены оптимально',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      } else if (action == 'auto_single') {
+                        final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              updated > 0
+                                  ? 'Авторасстановка (построчно): оптимизировано: $updated'
                                   : 'Все выноски листа уже расположены оптимально',
                             ),
                             duration: const Duration(seconds: 2),
@@ -340,15 +352,26 @@ class SheetToolbar extends StatelessWidget {
                     },
                     itemBuilder: (ctx) => [
                       const PopupMenuItem(
-                        value: 'auto_layout',
+                        value: 'auto_grouped',
                         child: Row(
                           children: [
                             Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
                             SizedBox(width: 8),
-                            Text('Авторасстановка листа (ГОСТ)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            Text('Авторасстановка (с этажерками)', style: TextStyle(color: Colors.white, fontSize: 12)),
                           ],
                         ),
                       ),
+                      const PopupMenuItem(
+                        value: 'auto_single',
+                        child: Row(
+                          children: [
+                            Icon(Icons.view_headline, size: 16, color: Colors.cyanAccent),
+                            SizedBox(width: 8),
+                            Text('Авторасстановка (построчно)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'reset_sheet',
                         child: Row(
@@ -511,6 +534,7 @@ class SheetToolbar extends StatelessWidget {
         ? Set<CalloutTargetType>.from(sheet.enabledCalloutTypes!)
         : categories.map((c) => c.type).toSet();
     bool showElevations = sheet.showElevationCallouts;
+    bool groupMultiLevel = sheet.groupMultiLevelCallouts;
 
     showDialog(
       context: context,
@@ -632,7 +656,7 @@ class SheetToolbar extends StatelessWidget {
                             },
                           ),
                         CheckboxListTile(
-                          dense: true,
+                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Высотные отметки (Z)', style: TextStyle(color: Colors.white, fontSize: 13)),
                           secondary: Container(
@@ -655,6 +679,20 @@ class SheetToolbar extends StatelessWidget {
                             });
                           },
                         ),
+                        const Divider(color: Color(0xFF334155)),
+                        SwitchListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Группировать узлы в этажерки', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          subtitle: const Text('Объединять кран, фланцы и стыки в одну выноску', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          value: groupMultiLevel,
+                          activeThumbColor: Colors.tealAccent,
+                          onChanged: (val) {
+                            setState(() {
+                              groupMultiLevel = val;
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -673,6 +711,7 @@ class SheetToolbar extends StatelessWidget {
                   sheet.id,
                   types: isAllSelected ? null : selected,
                   showElevations: showElevations,
+                  groupMultiLevel: groupMultiLevel,
                 );
                 Navigator.of(ctx).pop();
               },
