@@ -46,6 +46,7 @@ class CalloutPainter {
     String? selectedCalloutId,
     double annotationScale = 1.0,
     bool isPaperSpace = false,
+    String? activeSheetId,
   }) {
     if (network.callouts.isEmpty) return;
 
@@ -67,6 +68,7 @@ class CalloutPainter {
         isSelected,
         annotationScale: annotationScale,
         isPaperSpace: isPaperSpace,
+        activeSheetId: activeSheetId,
       );
     }
   }
@@ -213,17 +215,20 @@ class CalloutPainter {
     ProjectModel? project,
     bool isPaperSpace = false,
     double annotationScale = 1.0,
+    String? activeSheetId,
   }) {
     final anchor3D = getTarget3DPoint(network, callout);
     if (anchor3D == null) return null;
 
     final anchorScreen = projector.project(anchor3D);
+    final effOffsetX = activeSheetId != null ? callout.getEffectiveOffsetX(activeSheetId) : callout.screenOffsetX;
+    final effOffsetY = activeSheetId != null ? callout.getEffectiveOffsetY(activeSheetId) : callout.screenOffsetY;
     final scaledOffsetX = isPaperSpace
-        ? callout.screenOffsetX * 0.35 * annotationScale
-        : callout.screenOffsetX * annotationScale;
+        ? effOffsetX * 0.35 * annotationScale
+        : effOffsetX * annotationScale;
     final scaledOffsetY = isPaperSpace
-        ? callout.screenOffsetY * 0.35 * annotationScale
-        : callout.screenOffsetY * annotationScale;
+        ? effOffsetY * 0.35 * annotationScale
+        : effOffsetY * annotationScale;
     final textPos = Offset(
       anchorScreen.dx + scaledOffsetX,
       anchorScreen.dy + scaledOffsetY,
@@ -350,6 +355,7 @@ class CalloutPainter {
     double hitTolerance = 6.0,
     bool isPaperSpace = false,
     double annotationScale = 1.0,
+    String? activeSheetId,
   }) {
     // Проверяем в обратном порядке (верхние выноски первыми)
     final calloutList = network.callouts.values.toList().reversed;
@@ -362,6 +368,7 @@ class CalloutPainter {
         project: project,
         isPaperSpace: isPaperSpace,
         annotationScale: annotationScale,
+        activeSheetId: activeSheetId,
       );
       if (bounds != null && bounds.inflate(hitTolerance).contains(screenPos)) {
         return callout.id;
@@ -379,13 +386,16 @@ class CalloutPainter {
     bool isSelected, {
     double annotationScale = 1.0,
     bool isPaperSpace = false,
+    String? activeSheetId,
   }) {
+    final effOffsetX = activeSheetId != null ? callout.getEffectiveOffsetX(activeSheetId) : callout.screenOffsetX;
+    final effOffsetY = activeSheetId != null ? callout.getEffectiveOffsetY(activeSheetId) : callout.screenOffsetY;
     final scaledOffsetX = isPaperSpace
-        ? callout.screenOffsetX * 0.35 * annotationScale
-        : callout.screenOffsetX * annotationScale;
+        ? effOffsetX * 0.35 * annotationScale
+        : effOffsetX * annotationScale;
     final scaledOffsetY = isPaperSpace
-        ? callout.screenOffsetY * 0.35 * annotationScale
-        : callout.screenOffsetY * annotationScale;
+        ? effOffsetY * 0.35 * annotationScale
+        : effOffsetY * annotationScale;
     final textPos = Offset(
       anchorScreen.dx + scaledOffsetX,
       anchorScreen.dy + scaledOffsetY,

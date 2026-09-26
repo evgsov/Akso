@@ -1039,7 +1039,23 @@ class PipingInputController extends ChangeNotifier {
           return;
         }
 
-        // 6. Клик по Видовому экрану
+        // 6. Клик по умной выноске на листе
+        final hitCalloutId = _findCalloutAtScreenPos(screenPos);
+        if (hitCalloutId != null) {
+          selectedCalloutId = hitCalloutId;
+          selectedSheetBlock = null;
+          isViewportSelected = false;
+          activeViewportGrip = null;
+          isDraggingCallout = true;
+          _dragCalloutStartScreenPos = screenPos;
+          final c = network.callouts[hitCalloutId]!;
+          _dragCalloutInitialOffsetX = c.getEffectiveOffsetX(activeSheet!.id);
+          _dragCalloutInitialOffsetY = c.getEffectiveOffsetY(activeSheet!.id);
+          notifyListeners();
+          return;
+        }
+
+        // 7. Клик по Видовому экрану
         if (hitTestSheetViewport(screenPos)) {
           selectedSheetBlock = 'viewport';
           isViewportSelected = true;
@@ -1442,8 +1458,13 @@ class PipingInputController extends ChangeNotifier {
           isDraggingCallout = true;
           _dragCalloutStartScreenPos = screenPos;
           final c = network.callouts[hitCalloutId]!;
-          _dragCalloutInitialOffsetX = c.screenOffsetX;
-          _dragCalloutInitialOffsetY = c.screenOffsetY;
+          if (!isModelSpaceActive && activeSheet != null) {
+            _dragCalloutInitialOffsetX = c.getEffectiveOffsetX(activeSheet!.id);
+            _dragCalloutInitialOffsetY = c.getEffectiveOffsetY(activeSheet!.id);
+          } else {
+            _dragCalloutInitialOffsetX = c.screenOffsetX;
+            _dragCalloutInitialOffsetY = c.screenOffsetY;
+          }
           notifyListeners();
           break;
         }
@@ -2231,12 +2252,24 @@ class PipingInputController extends ChangeNotifier {
       final callout = network.callouts[selectedCalloutId!];
       if (callout != null) {
         final d = screenPos - _dragCalloutStartScreenPos!;
-        final newX = _dragCalloutInitialOffsetX + d.dx;
-        final newY = _dragCalloutInitialOffsetY + d.dy;
-        network.callouts[selectedCalloutId!] = callout.copyWith(
-          screenOffsetX: newX,
-          screenOffsetY: newY,
-        );
+        if (!isModelSpaceActive && activeSheet != null) {
+          final deltaStoredX = (d.dx / sheetZoom) / 0.35;
+          final deltaStoredY = (d.dy / sheetZoom) / 0.35;
+          final newX = _dragCalloutInitialOffsetX + deltaStoredX;
+          final newY = _dragCalloutInitialOffsetY + deltaStoredY;
+          final updatedOffsets = Map<String, Offset>.from(callout.sheetOffsets);
+          updatedOffsets[activeSheet!.id] = Offset(newX, newY);
+          network.callouts[selectedCalloutId!] = callout.copyWith(
+            sheetOffsets: updatedOffsets,
+          );
+        } else {
+          final newX = _dragCalloutInitialOffsetX + d.dx;
+          final newY = _dragCalloutInitialOffsetY + d.dy;
+          network.callouts[selectedCalloutId!] = callout.copyWith(
+            screenOffsetX: newX,
+            screenOffsetY: newY,
+          );
+        }
         notifyListeners();
       }
       return;
@@ -5850,6 +5883,21 @@ class PipingInputController extends ChangeNotifier {
 
   /// Поиск выноски под курсором (hit-test по тексту и полочке)
   String? _findCalloutAtScreenPos(Offset screenPos) {
+    if (!isModelSpaceActive && activeSheet != null) {
+      final vpProjector = getActiveSheetViewportProjector();
+      if (vpProjector != null) {
+        return CalloutPainter.hitTest(
+          screenPos,
+          network,
+          vpProjector,
+          templates: currentProject.calloutTemplates,
+          project: currentProject,
+          annotationScale: sheetZoom,
+          isPaperSpace: true,
+          activeSheetId: activeSheet!.id,
+        );
+      }
+    }
     final zoomFactor = (projector.scale / 0.2).clamp(0.65, 1.8);
     return CalloutPainter.hitTest(
       screenPos,
@@ -5860,6 +5908,89 @@ class PipingInputController extends ChangeNotifier {
       annotationScale: zoomFactor,
       isPaperSpace: false,
     );
+  }
+
+  /// Обновление индивидуального смещения выноски для конкретного листа чертежа
+  void updateCalloutSheetOffset(String calloutId, String sheetId, Offset offset) {
+    final callout = network.callouts[calloutId];
+    if (callout == null) return;
+    final updatedMap = Map<String, Offset>.from(callout.sheetOffsets);
+    updatedMap[sheetId] = offset;
+    network.callouts[calloutId] = callout.copyWith(sheetOffsets: updatedMap);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Сброс смещения выноски на листе к позиции 3D-модели
+  void resetCalloutSheetOffset(String calloutId, String sheetId) {
+    final callout = network.callouts[calloutId];
+    if (callout == null || !callout.sheetOffsets.containsKey(sheetId)) return;
+    final updatedMap = Map<String, Offset>.from(callout.sheetOffsets)..remove(sheetId);
+    network.callouts[calloutId] = callout.copyWith(sheetOffsets: updatedMap);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Сброс смещений всех выносок на листе к положению 3D-модели
+  void resetAllSheetCalloutOffsets(String sheetId) {
+    bool changed = false;
+    for (final entry in network.callouts.entries.toList()) {
+      if (entry.value.sheetOffsets.containsKey(sheetId)) {
+        final updatedMap = Map<String, Offset>.from(entry.value.sheetOffsets)..remove(sheetId);
+        network.callouts[entry.key] = entry.value.copyWith(sheetOffsets: updatedMap);
+        changed = true;
+      }
+    }
+    if (changed) {
+      history.recordState(network);
+      notifyListeners();
+    }
+  }
+
+  /// Автоматическая расстановка выносок конкретного листа
+  /// с учетом границ видового экрана, штампа 185х55 и таблиц
+  int runSheetCalloutAutoLayout(String sheetId) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null || network.callouts.isEmpty) return 0;
+
+    final sheetLayout = CalloutLayoutEngine.calculateSheetLayout(
+      network: network,
+      sheet: sheet,
+      projector: projector,
+    );
+
+    int updatedCount = 0;
+    for (final entry in sheetLayout.entries) {
+      final callout = network.callouts[entry.key];
+      if (callout == null) continue;
+      final currentSheetOffset = callout.sheetOffsets[sheetId];
+      if (currentSheetOffset == null ||
+          (currentSheetOffset.dx - entry.value.dx).abs() > 0.01 ||
+          (currentSheetOffset.dy - entry.value.dy).abs() > 0.01) {
+        final updatedMap = Map<String, Offset>.from(callout.sheetOffsets);
+        updatedMap[sheetId] = entry.value;
+        network.callouts[callout.id] = callout.copyWith(sheetOffsets: updatedMap);
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updatedCount;
+  }
+
+  /// Настройка фильтра видимости выносок на листе (категории и высотные отметки)
+  void setSheetCalloutFilter(String sheetId, {Set<CalloutTargetType>? types, bool? showElevations}) {
+    final sheetIndex = currentProject.sheets.indexWhere((s) => s.id == sheetId);
+    if (sheetIndex == -1) return;
+    final current = currentProject.sheets[sheetIndex];
+    final updated = current.copyWith(
+      enabledCalloutTypes: types,
+      showElevationCallouts: showElevations ?? current.showElevationCallouts,
+    );
+    updateSheet(updated);
   }
 
   /// Явный выбор выноски по ID
@@ -6094,6 +6225,20 @@ class PipingInputController extends ChangeNotifier {
   void addOrUpdateCustomValve(CustomValveDefinition definition) {
     currentProject.customValves[definition.id] = definition;
     notifyListeners();
+  }
+
+  AxonometryProjector? getActiveSheetViewportProjector() {
+    final sheet = activeSheet;
+    if (sheet == null) return null;
+    return ViewportTransformService.createViewportProjector(
+      viewport: sheet.viewport,
+      sheetPanPx: sheetPan,
+      sheetZoom: sheetZoom,
+      projectionType: projector.projectionType,
+      orbitAzimuth: projector.orbitAzimuth,
+      orbitElevation: projector.orbitElevation,
+      targetCenter: projector.targetCenter,
+    );
   }
 
   Rect? getActiveSheetPaperRect() {
