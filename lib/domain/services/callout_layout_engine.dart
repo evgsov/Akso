@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/node_3d.dart';
+import 'package:akso/domain/models/drawing_sheet.dart';
+import 'package:akso/domain/services/viewport_transform_service.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 
 /// Прямоугольное препятствие (полочка выноски, оборудование и т.д.)
@@ -605,6 +607,311 @@ class CalloutLayoutEngine {
           // Применяем выравнивание, если полочка не падает на трубу
           if (!obstacleMap.testShelfPipeCollision(candidateRect)) {
             result[item.callout.id] = Offset(avgX - item.anchor.dx, targetY - item.anchor.dy);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Выполняет контекстную авто-расстановку выносок для конкретного чертежного листа
+  /// с учетом фильтра видимых категорий листа, масштаба видового экрана и запретных зон (штамп, таблицы).
+  static Map<String, Offset> calculateSheetLayout({
+    required DrawingSheet sheet,
+    required PipingNetwork network,
+    required AxonometryProjector projector,
+    bool onlyUnpinned = true,
+    double minRadiusMm = 12.0,
+    double maxRadiusMm = 35.0,
+  }) {
+    final result = <String, Offset>{};
+    final obstacleMap = CalloutObstacleMap();
+    final vp = sheet.viewport;
+    final fmt = sheet.format;
+
+    // 1. Регистрируем препятствия: штамп (Форма 3: 185x55 мм)
+    final stampRect = Rect.fromLTWH(
+      fmt.widthMm - fmt.frameRightMm - 185.0 - 2.0,
+      fmt.heightMm - fmt.frameBottomMm - 55.0 - 2.0,
+      185.0 + 4.0,
+      55.0 + 4.0,
+    );
+    obstacleMap.addRect(stampRect, 'stamp_keepout');
+
+    // 2. Препятствия: таблицы спецификации и журнала сварки
+    for (final t in sheet.tables) {
+      final tableRect = Rect.fromLTWH(t.xMm - 2.0, t.yMm - 2.0, t.widthMm + 4.0, t.heightMm + 4.0);
+      obstacleMap.addRect(tableRect, 'table_${t.id}');
+    }
+
+    // 3. Препятствия: технические требования
+    if (sheet.technicalRequirements != null) {
+      final tr = sheet.technicalRequirements!;
+      final trRect = Rect.fromLTWH(tr.xMm - 2.0, tr.yMm - 2.0, tr.widthMm + 4.0, tr.heightMm + 4.0);
+      obstacleMap.addRect(trRect, 'tech_req_keepout');
+    }
+
+    // 4. Регистрируем трубы активных систем в миллиметрах листа
+    final visibleSys = vp.visibleSystemIds;
+    for (final seg in network.segments.values) {
+      if (visibleSys != null && visibleSys.isNotEmpty && !visibleSys.contains(seg.systemId)) {
+        continue;
+      }
+      final start = network.nodes[seg.startNodeId];
+      final end = network.nodes[seg.endNodeId];
+      if (start == null || end == null) continue;
+
+      final p1Raw = projector.projectRaw(start.x, start.y, start.z);
+      final p2Raw = projector.projectRaw(end.x, end.y, end.z);
+      final p1Mm = ViewportTransformService.model2dToSheetMm(p1Raw, vp);
+      final p2Mm = ViewportTransformService.model2dToSheetMm(p2Raw, vp);
+
+      final radiusMm = math.max(1.0, seg.outerDiameterMm * vp.viewScale * 0.5 + 0.8);
+      obstacleMap.addPipe(p1Mm, p2Mm, radiusMm, seg.id);
+    }
+
+    // 5. Отбираем выноски, разрешенные для данного листа
+    final visibleCallouts = <Callout>[];
+    final anchorMmMap = <String, Offset>{};
+
+    for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout)) continue;
+
+      // Проверка системы родительского объекта
+      final segId = network.getTargetSegmentId(callout.targetType, callout.targetId);
+      if (segId != null && visibleSys != null && visibleSys.isNotEmpty) {
+        final seg = network.segments[segId];
+        if (seg != null && !visibleSys.contains(seg.systemId)) {
+          continue;
+        }
+      }
+
+      final anchor3D = computeAnchorNode(callout, network);
+      if (anchor3D == null) continue;
+
+      final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+      final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
+      anchorMmMap[callout.id] = anchorMm;
+
+      // Если выноска закреплена (isPinned)
+      if (onlyUnpinned && callout.isPinned) {
+        final effectiveOffset = callout.getEffectiveOffset(sheet.id);
+        result[callout.id] = effectiveOffset;
+        final offsetMm = effectiveOffset * 0.35;
+        final shelfStart = anchorMm + offsetMm;
+        final shelfWidthMm = math.max(10.0, callout.textHeight * 3.5);
+        final shelfHeightMm = callout.textHeight + 3.0;
+        final shelfRect = Rect.fromLTWH(
+          shelfStart.dx,
+          shelfStart.dy - callout.textHeight - 2.0,
+          shelfWidthMm,
+          shelfHeightMm,
+        );
+        obstacleMap.addRect(shelfRect, callout.id);
+        obstacleMap.addLeaderLine(anchorMm, shelfStart, callout.id);
+      } else {
+        visibleCallouts.add(callout);
+      }
+    }
+
+    if (visibleCallouts.isEmpty) {
+      return result;
+    }
+
+    // 6. Сортируем незакрепленные выноски по локальной плотности в мм листа
+    visibleCallouts.sort((a, b) {
+      final anchA = anchorMmMap[a.id]!;
+      final anchB = anchorMmMap[b.id]!;
+      int countNearA = 0;
+      int countNearB = 0;
+      for (final other in anchorMmMap.values) {
+        if ((other - anchA).distance < 45.0) countNearA++;
+        if ((other - anchB).distance < 45.0) countNearB++;
+      }
+      return countNearB.compareTo(countNearA);
+    });
+
+    // 7. Границы листа: видовой экран и рамка чертежа
+    final frameBounds = Rect.fromLTWH(
+      fmt.frameLeftMm + 2.0,
+      fmt.frameTopMm + 2.0,
+      fmt.printableWidthMm - 4.0,
+      fmt.printableHeightMm - 4.0,
+    );
+
+    // 8. Размещение кандидатов в мм
+    final placedShelfX = <double>[];
+    final placedInfo = <_PlacedCalloutInfo>[];
+
+    // Динамические радиусы веера в миллиметрах листа
+    final radiiMm = <double>[
+      minRadiusMm,
+      minRadiusMm + 4.0,
+      minRadiusMm + 8.0,
+      minRadiusMm + 14.0,
+      minRadiusMm + 20.0,
+      maxRadiusMm,
+    ];
+
+    final angleDegrees = <double>[
+      // Квадрант I: Вверх-вправо
+      -45.0, -30.0, -60.0, -15.0, -75.0,
+      // Квадрант IV: Вниз-вправо
+      45.0, 30.0, 60.0, 15.0, 75.0,
+      // Квадрант II: Вверх-влево
+      -135.0, -150.0, -120.0, -165.0, -105.0,
+      // Квадрант III: Вниз-влево
+      135.0, 150.0, 120.0, 165.0, 105.0,
+    ];
+
+    for (final callout in visibleCallouts) {
+      final anchorMm = anchorMmMap[callout.id]!;
+      final charWidthMm = callout.textHeight * 0.65;
+      final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
+      final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+      final textHeightMm = callout.textHeight;
+      final shelfWidthMm = textWidthMm + 3.0;
+      final totalHeightMm = textHeightMm + 3.0;
+
+      CalloutCandidate? bestCandidate;
+      double lowestCost = double.infinity;
+
+      for (final r in radiiMm) {
+        for (final deg in angleDegrees) {
+          final rad = deg * math.pi / 180.0;
+          final dxMm = r * math.cos(rad);
+          final dyMm = r * math.sin(rad);
+          final offsetMm = Offset(dxMm, dyMm);
+
+          final shelfStart = anchorMm + offsetMm;
+          final bounds = Rect.fromLTWH(
+            shelfStart.dx,
+            shelfStart.dy - textHeightMm - 2.0,
+            shelfWidthMm,
+            totalHeightMm,
+          );
+
+          double cost = 0.0;
+
+          // Жесткий штраф за выход за пределы рамки листа
+          if (!frameBounds.contains(bounds.topLeft) ||
+              !frameBounds.contains(bounds.bottomRight)) {
+            cost += 100000.0;
+          }
+
+          // Штраф за перекрытие текста/штампа/таблиц
+          if (obstacleMap.testShelfRectOverlap(bounds)) {
+            cost += shelfTextOverlapPenalty;
+          }
+
+          // Штраф за перекрытие трубы
+          if (obstacleMap.testShelfPipeCollision(bounds)) {
+            cost += shelfPipeOverlapPenalty;
+          }
+
+          // Штраф за пересечение стрелки-выноски
+          final crosses = obstacleMap.countLeaderLineIntersections(anchorMm, shelfStart);
+          cost += crosses * leaderCrossPenalty;
+
+          // Штраф за удаленность
+          cost += (r / minRadiusMm) * distancePenaltyWeight;
+
+          // Приоритет чертежного направления (вверх-вправо)
+          if (dyMm > 0) cost += 30.0;
+          if (dxMm < 0) cost += 25.0;
+
+          // Выравнивание в колонки
+          for (final colX in placedShelfX) {
+            if ((shelfStart.dx - colX).abs() <= 3.0) {
+              cost -= columnAlignmentReward;
+              break;
+            }
+          }
+
+          if (cost < lowestCost) {
+            lowestCost = cost;
+            bestCandidate = CalloutCandidate(
+              offset: offsetMm,
+              shelfBounds: bounds,
+              cost: cost,
+            );
+          }
+        }
+      }
+
+      final chosenOffsetMm = bestCandidate?.offset ?? const Offset(16.0, -12.0);
+      final storedOffset = Offset(chosenOffsetMm.dx / 0.35, chosenOffsetMm.dy / 0.35);
+      result[callout.id] = storedOffset;
+
+      final shelfStart = anchorMm + chosenOffsetMm;
+      final bounds = bestCandidate?.shelfBounds ??
+          Rect.fromLTWH(
+            shelfStart.dx,
+            shelfStart.dy - textHeightMm - 2.0,
+            shelfWidthMm,
+            totalHeightMm,
+          );
+
+      obstacleMap.addRect(bounds, callout.id);
+      obstacleMap.addLeaderLine(anchorMm, shelfStart, callout.id);
+      placedShelfX.add(shelfStart.dx);
+
+      placedInfo.add(_PlacedCalloutInfo(
+        callout: callout,
+        anchor: anchorMm,
+        shelfStart: shelfStart,
+        bounds: bounds,
+      ));
+    }
+
+    // 9. Выравнивание колонок (Column Stacking) в мм листа
+    final stepYMm = 2.5 + 4.0;
+    final processedIds = <String>{};
+
+    for (int i = 0; i < placedInfo.length; i++) {
+      final infoA = placedInfo[i];
+      if (processedIds.contains(infoA.callout.id)) continue;
+
+      final cluster = <_PlacedCalloutInfo>[infoA];
+
+      for (int j = i + 1; j < placedInfo.length; j++) {
+        final infoB = placedInfo[j];
+        if (processedIds.contains(infoB.callout.id)) continue;
+
+        if ((infoA.shelfStart.dx - infoB.shelfStart.dx).abs() <= 12.0 &&
+            (infoA.anchor.dx - infoB.anchor.dx).abs() <= 50.0) {
+          cluster.add(infoB);
+        }
+      }
+
+      if (cluster.length >= 2) {
+        cluster.sort((a, b) => a.shelfStart.dy.compareTo(b.shelfStart.dy));
+
+        double avgX = 0.0;
+        for (final item in cluster) {
+          avgX += item.shelfStart.dx;
+        }
+        avgX /= cluster.length;
+
+        double currentY = cluster.first.shelfStart.dy;
+        for (int k = 0; k < cluster.length; k++) {
+          final item = cluster[k];
+          processedIds.add(item.callout.id);
+
+          final targetY = k == 0 ? item.shelfStart.dy : math.max(item.shelfStart.dy, currentY + stepYMm);
+          currentY = targetY;
+
+          final candidateRect = Rect.fromLTWH(
+            avgX,
+            targetY - item.callout.textHeight - 2.0,
+            math.max(10.0, item.callout.textHeight * 3.5),
+            item.callout.textHeight + 3.0,
+          );
+
+          if (!obstacleMap.testShelfCollision(candidateRect) && frameBounds.contains(candidateRect.topLeft) && frameBounds.contains(candidateRect.bottomRight)) {
+            final offsetMm = Offset(avgX - item.anchor.dx, targetY - item.anchor.dy);
+            result[item.callout.id] = Offset(offsetMm.dx / 0.35, offsetMm.dy / 0.35);
           }
         }
       }

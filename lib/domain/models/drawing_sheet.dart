@@ -125,6 +125,7 @@ class SheetTableItem {
   final double xMm;
   final double yMm;
   final double widthMm;
+  final double heightMm;
   final String? templateId;
   final bool filterBySheetSystems;
 
@@ -134,6 +135,7 @@ class SheetTableItem {
     this.xMm = 25.0,
     this.yMm = 10.0,
     this.widthMm = 185.0,
+    this.heightMm = 60.0,
     this.templateId,
     this.filterBySheetSystems = true,
   });
@@ -144,6 +146,7 @@ class SheetTableItem {
         'xMm': xMm,
         'yMm': yMm,
         'widthMm': widthMm,
+        'heightMm': heightMm,
         if (templateId != null) 'templateId': templateId,
         'filterBySheetSystems': filterBySheetSystems,
       };
@@ -157,6 +160,7 @@ class SheetTableItem {
         xMm: (json['xMm'] as num?)?.toDouble() ?? 25.0,
         yMm: (json['yMm'] as num?)?.toDouble() ?? 10.0,
         widthMm: (json['widthMm'] as num?)?.toDouble() ?? 185.0,
+        heightMm: (json['heightMm'] as num?)?.toDouble() ?? 60.0,
         templateId: json['templateId'] as String?,
         filterBySheetSystems: json['filterBySheetSystems'] as bool? ?? true,
       );
