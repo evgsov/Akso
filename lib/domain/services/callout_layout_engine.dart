@@ -923,81 +923,102 @@ class CalloutLayoutEngine {
 
       clusters.sort((a, b) => a.t.compareTo(b.t));
 
-      // 6. Оценка нормалей +90 и -90 градусов при зазорах 16..26 мм
-      final candidates = <_CandidateStack>[];
-
-      for (final normal in [branch.normal1, branch.normal2]) {
-        for (final clearance in [18.0, 22.0, 26.0]) {
-          if (branch.branchVector2D.dy.abs() < 0.25) {
-            // Ветка почти горизонтальна: пробуем выравнивание справа и слева
-            final candRight = _evaluateCandidateStack(
-              branch: branch,
-              clusters: clusters,
-              normal: normal,
-              clearance: clearance,
-              customPitchMm: customPitchMm,
-              obstacleMap: obstacleMap,
-              frameLeft: frameLeft,
-              frameRight: frameRight,
-              frameTop: frameTop,
-              frameBottom: frameBottom,
-              stampRect: stampRect,
-              forceRight: true,
-            );
-            if (candRight != null) candidates.add(candRight);
-
-            final candLeft = _evaluateCandidateStack(
-              branch: branch,
-              clusters: clusters,
-              normal: normal,
-              clearance: clearance,
-              customPitchMm: customPitchMm,
-              obstacleMap: obstacleMap,
-              frameLeft: frameLeft,
-              frameRight: frameRight,
-              frameTop: frameTop,
-              frameBottom: frameBottom,
-              stampRect: stampRect,
-              forceRight: false,
-            );
-            if (candLeft != null) candidates.add(candLeft);
+      // Разбиваем кластеры ветки на локальные группы близости (Local Proximity Groups).
+      // Элементы объединяются в один мини-столбик, только если расстояние между их анкерами вдоль ветки <= 28.0 мм.
+      // Если расстояние больше — следующий элемент/узел получает свой собственный локальный столбик.
+      final localGroups = <List<_SheetNodeCluster>>[];
+      if (clusters.isNotEmpty) {
+        List<_SheetNodeCluster> curGroup = [clusters.first];
+        for (int i = 1; i < clusters.length; i++) {
+          final prev = clusters[i - 1];
+          final curr = clusters[i];
+          if ((curr.t - prev.t).abs() <= 28.0) {
+            curGroup.add(curr);
           } else {
-            final cand = _evaluateCandidateStack(
-              branch: branch,
-              clusters: clusters,
-              normal: normal,
-              clearance: clearance,
-              customPitchMm: customPitchMm,
-              obstacleMap: obstacleMap,
-              frameLeft: frameLeft,
-              frameRight: frameRight,
-              frameTop: frameTop,
-              frameBottom: frameBottom,
-              stampRect: stampRect,
-            );
-            if (cand != null) candidates.add(cand);
+            localGroups.add(curGroup);
+            curGroup = [curr];
           }
         }
+        localGroups.add(curGroup);
       }
 
-      if (candidates.isEmpty) continue;
+      for (final groupClusters in localGroups) {
+        // 6. Оценка нормалей +90 и -90 градусов при зазорах 16..26 мм для локальной группы
+        final candidates = <_CandidateStack>[];
 
-      candidates.sort((a, b) => a.cost.compareTo(b.cost));
-      final bestCandidate = candidates.first;
+        for (final normal in [branch.normal1, branch.normal2]) {
+          for (final clearance in [18.0, 22.0, 26.0]) {
+            if (branch.branchVector2D.dy.abs() < 0.25) {
+              // Ветка почти горизонтальна: пробуем выравнивание справа и слева
+              final candRight = _evaluateCandidateStack(
+                branch: branch,
+                clusters: groupClusters,
+                normal: normal,
+                clearance: clearance,
+                customPitchMm: customPitchMm,
+                obstacleMap: obstacleMap,
+                frameLeft: frameLeft,
+                frameRight: frameRight,
+                frameTop: frameTop,
+                frameBottom: frameBottom,
+                stampRect: stampRect,
+                forceRight: true,
+              );
+              if (candRight != null) candidates.add(candRight);
 
-      // Применяем оптимальный кандидат
-      for (int i = 0; i < bestCandidate.items.length; i++) {
-        final item = bestCandidate.items[i];
-        final shelfStart = bestCandidate.shelfStarts[i];
-        final shelfRect = bestCandidate.shelfRects[i];
+              final candLeft = _evaluateCandidateStack(
+                branch: branch,
+                clusters: groupClusters,
+                normal: normal,
+                clearance: clearance,
+                customPitchMm: customPitchMm,
+                obstacleMap: obstacleMap,
+                frameLeft: frameLeft,
+                frameRight: frameRight,
+                frameTop: frameTop,
+                frameBottom: frameBottom,
+                stampRect: stampRect,
+                forceRight: false,
+              );
+              if (candLeft != null) candidates.add(candLeft);
+            } else {
+              final cand = _evaluateCandidateStack(
+                branch: branch,
+                clusters: groupClusters,
+                normal: normal,
+                clearance: clearance,
+                customPitchMm: customPitchMm,
+                obstacleMap: obstacleMap,
+                frameLeft: frameLeft,
+                frameRight: frameRight,
+                frameTop: frameTop,
+                frameBottom: frameBottom,
+                stampRect: stampRect,
+              );
+              if (cand != null) candidates.add(cand);
+            }
+          }
+        }
 
-        final offMm = shelfStart - item.anchorMm;
-        final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
-        result[item.callout.id] = storedOff;
-        handledCalloutIds.add(item.callout.id);
+        if (candidates.isEmpty) continue;
 
-        obstacleMap.addRect(shelfRect, item.callout.id);
-        obstacleMap.addLeaderLine(item.anchorMm, shelfStart, item.callout.id);
+        candidates.sort((a, b) => a.cost.compareTo(b.cost));
+        final bestCandidate = candidates.first;
+
+        // Применяем оптимальный кандидат
+        for (int i = 0; i < bestCandidate.items.length; i++) {
+          final item = bestCandidate.items[i];
+          final shelfStart = bestCandidate.shelfStarts[i];
+          final shelfRect = bestCandidate.shelfRects[i];
+
+          final offMm = shelfStart - item.anchorMm;
+          final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+          result[item.callout.id] = storedOff;
+          handledCalloutIds.add(item.callout.id);
+
+          obstacleMap.addRect(shelfRect, item.callout.id);
+          obstacleMap.addLeaderLine(item.anchorMm, shelfStart, item.callout.id);
+        }
       }
     }
 
@@ -1129,26 +1150,30 @@ class CalloutLayoutEngine {
       final tierMeanX = tierSumX / tClusters.length;
       final tierMeanY = tierSumY / tClusters.length;
 
-      final shiftX = normal.dx.abs() >= 0.25 ? normal.dx.abs() * clearance : clearance;
       final double tierX;
-      if (isRight) {
-        final baseX = math.max(tierMaxX + 16.0, tierMeanX + shiftX);
-        tierX = baseX + tier * (maxTierTextW + 8.0);
+      final double yCenter;
+
+      if (branch.branchVector2D.dy.abs() < 0.25) {
+        // Почти горизонтальная ветка: полочки размещаются над/под трубой со стандартным ГОСТ-изломом ~8 мм
+        final baseX = isRight
+            ? math.max(tierMeanX + 8.0, tierMaxX + 6.0)
+            : math.min(tierMeanX - 8.0, tierMinX - 6.0);
+        tierX = isRight
+            ? baseX + tier * (maxTierTextW + 8.0)
+            : baseX - tier * (maxTierTextW + 8.0);
+        final shiftY = normal.dy < 0 ? -clearance : clearance;
+        yCenter = tierMeanY + shiftY;
       } else {
-        final baseX = math.min(tierMinX - 16.0, tierMeanX - shiftX);
-        tierX = baseX - tier * (maxTierTextW + 8.0);
+        // Наклонная или вертикальная ветка: смещение строго вдоль 2D-нормали ветки
+        final shiftX = normal.dx * clearance;
+        final shiftY = normal.dy * clearance;
+        final baseX = tierMeanX + shiftX;
+        tierX = isRight
+            ? baseX + tier * (maxTierTextW + 8.0)
+            : baseX - tier * (maxTierTextW + 8.0);
+        yCenter = tierMeanY + shiftY;
       }
       if (tier == 0) firstTierX = tierX;
-
-      final double shiftY;
-      if (normal.dy.abs() >= 0.25) {
-        shiftY = normal.dy * clearance;
-      } else if (normal.dy == 0.0 || normal.dy.abs() < 1e-6) {
-        shiftY = 0.0;
-      } else {
-        shiftY = normal.dy < 0 ? -clearance : clearance;
-      }
-      final yCenter = tierMeanY + shiftY;
 
       double topLimit = frameTop + avgTextH + 2.0;
       double bottomLimit = frameBottom - 2.0;
@@ -1182,14 +1207,17 @@ class CalloutLayoutEngine {
       final idealStartY = yCenter - stackH / 2.0;
       final startY = idealStartY.clamp(topLimit, math.max(topLimit, bottomLimit - stackH));
 
-      // Направление слотов по вертикали для исключения пересечений
+      // Направление слотов по вертикали для исключения пересечений линий-выносок
       bool slotYIncreasesWithT;
       final dyBranch = branch.endSheetMm.dy - branch.startSheetMm.dy;
       if (dyBranch.abs() > 1.0) {
         slotYIncreasesWithT = dyBranch > 0;
       } else {
+        final dxBranch = branch.endSheetMm.dx - branch.startSheetMm.dx;
+        final xIncreasesWithT = dxBranch >= 0;
         final isAbovePipe = yCenter < tierMeanY;
-        slotYIncreasesWithT = isRight ? isAbovePipe : !isAbovePipe;
+        final inc = (isRight == isAbovePipe);
+        slotYIncreasesWithT = xIncreasesWithT ? inc : !inc;
       }
 
       int slotIndex = 0;
@@ -1255,10 +1283,14 @@ class CalloutLayoutEngine {
               leaderIntersections++;
             }
           }
-          totalCost += leaderIntersections * leaderCrossPenalty;
+          totalCost += leaderIntersections * 5000.0;
 
-          // Штраф за удаленность
-          totalCost += (shelfStart - item.anchorMm).distance * 0.5;
+          // Штраф за удаленность линии-выноски (ГОСТ требует компактные выноски 15..25 мм)
+          final leaderDist = (shelfStart - item.anchorMm).distance;
+          totalCost += leaderDist * 15.0;
+          if (leaderDist > 30.0) {
+            totalCost += (leaderDist - 30.0) * 100.0;
+          }
         }
       }
     }

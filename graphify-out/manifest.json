@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790441900.242099,
-    "seen": 1790441933.407966,
-    "ast_hash": "b2cf564828d005007d96ee297428f323",
+    "mtime": 1790448362.6588666,
+    "seen": 1790448382.753925,
+    "ast_hash": "dbb4295678208b9f09c557649bddade9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2214,9 +2214,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_layout_engine.dart": {
-    "mtime": 1790440982.8007743,
-    "seen": 1790441143.5208786,
-    "ast_hash": "245af1fdd74e2dc78369db5cdd2992ae",
+    "mtime": 1790448206.3606396,
+    "seen": 1790448382.75363,
+    "ast_hash": "8de2ce3c43673e1d782a0b8b24baf480",
     "semantic_hash": ""
   },
   "test/callout_layout_engine_test.dart": {
@@ -2550,9 +2550,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/pipeline_branch_extractor.dart": {
-    "mtime": 1790438616.939134,
-    "seen": 1790440310.340481,
-    "ast_hash": "7f3cf6e3c44fc388efacf82cb85b23b6",
+    "mtime": 1790447812.0891373,
+    "seen": 1790448382.7536361,
+    "ast_hash": "a68203ff641069b0f5e3d2625804754e",
     "semantic_hash": ""
   },
   "test/callout_branch_oriented_layout_test.dart": {
@@ -2568,9 +2568,9 @@
     "semantic_hash": ""
   },
   "test/pipeline_branch_extractor_test.dart": {
-    "mtime": 1790438688.7128634,
-    "seen": 1790440310.3406477,
-    "ast_hash": "83b425ba1f22c2133602f280542a3ce2",
+    "mtime": 1790448256.4071286,
+    "seen": 1790448382.7537928,
+    "ast_hash": "e799944e07f369ee9e5d6fb90974ff80",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-09-26-branch-oriented-callout-layout.md": {
@@ -2586,9 +2586,9 @@
     "semantic_hash": ""
   },
   "test/callout_branch_layout_suite_test.dart": {
-    "mtime": 1790441098.028423,
-    "seen": 1790441143.5209634,
-    "ast_hash": "0e9a4be21a8352fe46d5a10e9fc172fd",
+    "mtime": 1790448292.1114347,
+    "seen": 1790448382.753713,
+    "ast_hash": "280fba766b57e35c0ea3bf6f19dac254",
     "semantic_hash": ""
   }
 }

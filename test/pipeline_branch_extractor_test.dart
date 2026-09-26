@@ -189,5 +189,37 @@ void main() {
       expect(branches.length, equals(1));
       expect(branches.first.segments.single.id, equals('s1'));
     });
+
+    test('splits continuous run at 90-degree bend/elbow into separate straight branches', () {
+      final net = PipingNetwork(
+        nodes: {
+          'n1': Node3D(id: 'n1', x: 0, y: 0, z: 0),
+          'n2': Node3D(id: 'n2', x: 1000, y: 0, z: 0),
+          'n3': Node3D(id: 'n3', x: 1000, y: 1000, z: 0), // 90 degree turn
+        },
+        segments: {
+          's1': Segment3D(id: 's1', startNodeId: 'n1', endNodeId: 'n2'),
+          's2': Segment3D(id: 's2', startNodeId: 'n2', endNodeId: 'n3'),
+        },
+      );
+
+      final sheet = DrawingSheet(
+        id: 'sheet_1',
+        name: 'Sheet 1',
+        viewport: ViewportSettings(scale: 0.1, centerX: 500, centerY: 500),
+      );
+      final projector = AxonometryProjector();
+
+      final branches = PipelineBranchExtractor.extractBranches(
+        network: net,
+        sheet: sheet,
+        projector: projector,
+      );
+
+      // Node n2 is a bend, so it must split into 2 branches
+      expect(branches.length, equals(2));
+      expect(branches.any((b) => b.segments.length == 1 && b.segments.first.id == 's1'), isTrue);
+      expect(branches.any((b) => b.segments.length == 1 && b.segments.first.id == 's2'), isTrue);
+    });
   });
 }

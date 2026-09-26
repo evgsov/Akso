@@ -58,8 +58,37 @@ class PipelineBranchExtractor {
       return network.equipments.values.any((eq) => eq.nozzles.any((noz) => noz.id == nId));
     }
 
+    bool isBendNode(String nId) {
+      if ((nodeDegrees[nId] ?? 0) != 2) return false;
+      final incident = nodeToSegments[nId];
+      if (incident == null || incident.length != 2) return false;
+      final segA = incident[0];
+      final segB = incident[1];
+      final nAId = segA.startNodeId == nId ? segA.endNodeId : segA.startNodeId;
+      final nBId = segB.startNodeId == nId ? segB.endNodeId : segB.startNodeId;
+      final node = network.nodes[nId];
+      final nodeA = network.nodes[nAId];
+      final nodeB = network.nodes[nBId];
+      if (node == null || nodeA == null || nodeB == null) return false;
+
+      final vAx = nodeA.x - node.x;
+      final vAy = nodeA.y - node.y;
+      final vAz = nodeA.z - node.z;
+      final vBx = nodeB.x - node.x;
+      final vBy = nodeB.y - node.y;
+      final vBz = nodeB.z - node.z;
+
+      final lenA = math.sqrt(vAx * vAx + vAy * vAy + vAz * vAz);
+      final lenB = math.sqrt(vBx * vBx + vBy * vBy + vBz * vBz);
+      if (lenA < 1e-4 || lenB < 1e-4) return false;
+
+      final cosAngle = (vAx * vBx + vAy * vBy + vAz * vBz) / (lenA * lenB);
+      // Если угол отклонения от прямой линии больше ~15 градусов — это отвод/поворот трассы
+      return cosAngle > -0.965;
+    }
+
     bool isBoundaryNode(String nId) {
-      return (nodeDegrees[nId] ?? 0) != 2 || isEquipmentNode(nId);
+      return (nodeDegrees[nId] ?? 0) != 2 || isEquipmentNode(nId) || isBendNode(nId);
     }
 
     // 3. Выделяем непрерывные цепочки сегментов между тройниками/концами/оборудованием

@@ -634,5 +634,48 @@ void main() {
       // and NOT shifted arbitrarily down by clearance (+18..26 mm)!
       expect((meanShelfY - meanAnchorY).abs(), lessThanOrEqualTo(2.0));
     });
+
+    test('Local proximity clustering: distant elements on a long pipe get local stacks with leader lines <= 28mm', () {
+      final net = PipingNetwork(
+        nodes: {
+          'n1': const Node3D(id: 'n1', x: 0, y: 0, z: 0),
+          'n2': const Node3D(id: 'n2', x: 4000, y: 0, z: 0),
+        },
+        segments: {
+          's1': const PipeSegment(id: 's1', startNodeId: 'n1', endNodeId: 'n2', dn: 100, systemId: 'T1'),
+        },
+        valves: {
+          'v1': const Valve(id: 'v1', segmentId: 's1', ratio: 0.15, name: 'К1', dn: 100, lengthMm: 150, valveType: ValveType.ballValve),
+          'v2': const Valve(id: 'v2', segmentId: 's1', ratio: 0.85, name: 'К2', dn: 100, lengthMm: 150, valveType: ValveType.ballValve),
+        },
+        callouts: {
+          'c1': const Callout(id: 'c1', targetType: CalloutTargetType.valve, targetId: 'v1', textHeight: 3.5),
+          'c2': const Callout(id: 'c2', targetType: CalloutTargetType.valve, targetId: 'v2', textHeight: 3.5),
+        },
+      );
+
+      final sheet = DrawingSheet(
+        id: 'sheet_proximity',
+        name: 'Proximity Test',
+        sheetNumber: 1,
+        format: const SheetFormat(type: SheetFormatType.a3, orientation: SheetOrientation.landscape),
+        viewport: const SheetViewport(viewScale: 0.05, modelCenterX: 2000, modelCenterY: 0),
+      );
+
+      final layout = CalloutLayoutEngine.calculateSheetLayout(
+        sheet: sheet,
+        network: net,
+        projector: projector,
+      );
+
+      expect(layout.length, equals(2));
+
+      for (final cid in ['c1', 'c2']) {
+        final off = layout[cid]!;
+        final leaderDistMm = Offset(off.dx * 0.35, off.dy * 0.35).distance;
+        // Leader lines must be compact ГОСТ callouts (<= 28 mm), never 100+ mm laser lines
+        expect(leaderDistMm, lessThanOrEqualTo(28.0), reason: 'Callout $cid leader line ($leaderDistMm mm) is too long');
+      }
+    });
   });
 }
