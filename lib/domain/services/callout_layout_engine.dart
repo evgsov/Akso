@@ -6,6 +6,8 @@ import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/services/viewport_transform_service.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
+import 'package:akso/domain/models/pipeline_branch.dart';
+import 'package:akso/domain/services/pipeline_branch_extractor.dart';
 
 /// Прямоугольное препятствие (полочка выноски, оборудование и т.д.)
 class RectObstacle {
@@ -704,10 +706,9 @@ class CalloutLayoutEngine {
   }
 
   /// Выполняет контекстную авто-расстановку выносок для конкретного чертежного листа
-  /// с учетом фильтра видимых категорий листа, масштаба видового экрана и запретных зон (штамп, таблицы).
-  /// Выполняет контекстную авто-расстановку выносок для конкретного чертежного листа
-  /// методом периферийных упорядоченных колонок (Boundary Column Stacking) с 0 пересечений,
-  /// адаптивным динамическим шагом, изоляцией высотных отметок и опциональными этажерками.
+  /// методом локальных вертикальных мини-стеков (Branch-Oriented Local Mini-Stack Layout)
+  /// вдоль каждой ветки трубопровода с гарантией 0 пересечений линий, адаптивным шагом полочек,
+  /// изоляцией высотных отметок и обходом запретных зон (штамп Форма 3, таблицы).
   static Map<String, Offset> calculateSheetLayout({
     required DrawingSheet sheet,
     required PipingNetwork network,
@@ -722,64 +723,278 @@ class CalloutLayoutEngine {
     final vp = sheet.viewport;
     final fmt = sheet.format;
 
-    // 1. Границы рабочей рамки чертежного листа
+    // 1. Создаем карту препятствий листа (трубы, арматура, оборудование, штамп, таблицы)
+    final obstacleMap = CalloutObstacleMap.buildSheetMap(
+      sheet: sheet,
+      network: network,
+      projector: projector,
+    );
+
+    // 2. Границы рабочей рамки чертежного листа (с 2 мм отступом безопасности)
     final frameLeft = fmt.frameLeftMm + 2.0;
     final frameRight = fmt.widthMm - fmt.frameRightMm - 2.0;
     final frameTop = fmt.frameTopMm + 2.0;
     final frameBottom = fmt.heightMm - fmt.frameBottomMm - 2.0;
 
-    // 2. Запретные зоны: штамп (Форма 3: 185x55 мм в правом нижнем углу) и таблицы
-    final stampTop = fmt.heightMm - fmt.frameBottomMm - 55.0 - 2.0;
-    double minTableY = double.infinity;
-    for (final t in sheet.tables) {
-      if (t.yMm < minTableY) minTableY = t.yMm;
-    }
-    if (sheet.technicalRequirements != null) {
-      if (sheet.technicalRequirements!.yMm < minTableY) {
-        minTableY = sheet.technicalRequirements!.yMm;
-      }
-    }
+    // Штамп (185x55 мм)
+    final stampRect = Rect.fromLTWH(
+      fmt.widthMm - fmt.frameRightMm - 185.0 - 2.0,
+      fmt.heightMm - fmt.frameBottomMm - 55.0 - 2.0,
+      185.0 + 4.0,
+      55.0 + 4.0,
+    );
 
-    final rightColMaxY = math.min(stampTop - 4.0, minTableY - 4.0);
-    final leftColMaxY = frameBottom - 4.0;
-    final colMinY = frameTop + 4.0;
-
-    // 3. Вычисляем охватывающий прямоугольник (AABB) активных трубопроводов на листе
     final visibleSys = vp.visibleSystemIds;
-    double minNetX = double.infinity, maxNetX = -double.infinity;
-    double minNetY = double.infinity, maxNetY = -double.infinity;
+    final handledCalloutIds = <String>{};
 
-    for (final seg in network.segments.values) {
-      if (visibleSys != null && visibleSys.isNotEmpty && !visibleSys.contains(seg.systemId)) {
+    // 3. Предварительная обработка: закрепленные выноски и изоляция высотных отметок
+    for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout)) continue;
+
+      final segId = network.getTargetSegmentId(callout.targetType, callout.targetId);
+      if (segId != null && visibleSys != null && visibleSys.isNotEmpty) {
+        final seg = network.segments[segId];
+        if (seg != null && !visibleSys.contains(seg.systemId)) continue;
+      }
+
+      // Закрепленные выноски (isPinned)
+      if (onlyUnpinned && callout.isPinned) {
+        final effOffset = callout.getEffectiveOffset(sheet.id);
+        result[callout.id] = effOffset;
+        handledCalloutIds.add(callout.id);
+
+        final anchor3D = computeAnchorNode(callout, network);
+        if (anchor3D != null) {
+          final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+          final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
+          final offMm = Offset(effOffset.dx * 0.35, effOffset.dy * 0.35);
+          final shelfStart = anchorMm + offMm;
+          final charWidthMm = callout.textHeight * 0.65;
+          final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
+          final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+          final isRight = effOffset.dx >= 0;
+          final shelfRect = isRight
+              ? Rect.fromLTWH(shelfStart.dx, shelfStart.dy - callout.textHeight - 1.0, textWidthMm, callout.textHeight + 2.0)
+              : Rect.fromLTWH(shelfStart.dx - textWidthMm, shelfStart.dy - callout.textHeight - 1.0, textWidthMm, callout.textHeight + 2.0);
+          obstacleMap.addRect(shelfRect, callout.id);
+          obstacleMap.addLeaderLine(anchorMm, shelfStart, callout.id);
+        }
         continue;
       }
-      final start = network.nodes[seg.startNodeId];
-      final end = network.nodes[seg.endNodeId];
-      if (start == null || end == null) continue;
 
-      final p1Raw = projector.projectRaw(start.x, start.y, start.z);
-      final p2Raw = projector.projectRaw(end.x, end.y, end.z);
-      final p1Mm = ViewportTransformService.model2dToSheetMm(p1Raw, vp);
-      final p2Mm = ViewportTransformService.model2dToSheetMm(p2Raw, vp);
+      // Изоляция высотных отметок (Elevation): остаются компактно прямо у своих узлов
+      if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
+        final dyMm = -(callout.textHeight * 2.2 + 3.0);
+        result[callout.id] = Offset(0.0, dyMm / 0.35);
+        handledCalloutIds.add(callout.id);
 
-      minNetX = math.min(minNetX, math.min(p1Mm.dx, p2Mm.dx));
-      maxNetX = math.max(maxNetX, math.max(p1Mm.dx, p2Mm.dx));
-      minNetY = math.min(minNetY, math.min(p1Mm.dy, p2Mm.dy));
-      maxNetY = math.max(maxNetY, math.max(p1Mm.dy, p2Mm.dy));
+        final anchor3D = computeAnchorNode(callout, network);
+        if (anchor3D != null) {
+          final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+          final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
+          final shelfStart = Offset(anchorMm.dx, anchorMm.dy + dyMm);
+          final charWidthMm = callout.textHeight * 0.65;
+          final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
+          final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+          final shelfRect = Rect.fromLTWH(
+            shelfStart.dx,
+            shelfStart.dy - callout.textHeight - 1.0,
+            textWidthMm,
+            callout.textHeight + 2.0,
+          );
+          obstacleMap.addRect(shelfRect, callout.id);
+          obstacleMap.addLeaderLine(anchorMm, shelfStart, callout.id);
+        }
+        continue;
+      }
     }
 
-    if (minNetX.isInfinite) {
-      minNetX = frameLeft + 35.0;
-      maxNetX = frameRight - 35.0;
-      minNetY = frameTop + 30.0;
-      maxNetY = frameBottom - 30.0;
+    // 4. Извлечение веток трубопроводов
+    final branches = PipelineBranchExtractor.extractBranches(
+      network: network,
+      sheet: sheet,
+      projector: projector,
+    );
+
+    final effectiveGroup = groupMultiLevel ?? sheet.groupMultiLevelCallouts;
+
+    // 5. Обработка каждой ветки
+    for (final branch in branches) {
+      final branchCallouts = branch.callouts.where((c) {
+        if (handledCalloutIds.contains(c.id)) return false;
+        if (onlyUnpinned && c.isPinned) return false;
+        return true;
+      }).toList();
+
+      if (branchCallouts.isEmpty) continue;
+
+      final pStart = branch.startSheetMm;
+      final v = branch.branchVector2D;
+      final branchItems = <_SheetCalloutItem>[];
+
+      for (final callout in branchCallouts) {
+        final anchor3D = computeAnchorNode(callout, network);
+        if (anchor3D == null) continue;
+
+        final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+        final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
+
+        final charWidthMm = callout.textHeight * 0.65;
+        final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
+        final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+        final textHeightMm = callout.textHeight;
+
+        final t = (anchorMm.dx - pStart.dx) * v.dx + (anchorMm.dy - pStart.dy) * v.dy;
+
+        branchItems.add(_SheetCalloutItem(
+          callout: callout,
+          anchorMm: anchorMm,
+          textWidthMm: textWidthMm,
+          textHeightMm: textHeightMm,
+          t: t,
+        ));
+      }
+
+      if (branchItems.isEmpty) continue;
+
+      // Монотонная сортировка вдоль ветки
+      branchItems.sort((a, b) => a.t.compareTo(b.t));
+
+      // Группировка в этажерки (кластеры)
+      List<_SheetNodeCluster> clusters;
+      if (effectiveGroup) {
+        clusters = [];
+        final visited = <String>{};
+        for (int i = 0; i < branchItems.length; i++) {
+          final itemA = branchItems[i];
+          if (visited.contains(itemA.callout.id)) continue;
+
+          final clusterItems = <_SheetCalloutItem>[itemA];
+          visited.add(itemA.callout.id);
+
+          for (int j = i + 1; j < branchItems.length; j++) {
+            final itemB = branchItems[j];
+            if (visited.contains(itemB.callout.id)) continue;
+
+            if ((itemA.anchorMm - itemB.anchorMm).distance < 4.5) {
+              clusterItems.add(itemB);
+              visited.add(itemB.callout.id);
+            }
+          }
+
+          // Сортировка по приоритету ГОСТ
+          clusterItems.sort((a, b) {
+            int priority(Callout c) {
+              switch (c.targetType) {
+                case CalloutTargetType.valve: return 1;
+                case CalloutTargetType.fitting: return 2;
+                case CalloutTargetType.weld: return 3;
+                case CalloutTargetType.nozzle: return 4;
+                case CalloutTargetType.equipment: return 5;
+                case CalloutTargetType.support: return 6;
+                default: return 7;
+              }
+            }
+            return priority(a.callout).compareTo(priority(b.callout));
+          });
+
+          clusters.add(_SheetNodeCluster(
+            anchorMm: itemA.anchorMm,
+            items: clusterItems,
+            t: itemA.t,
+          ));
+        }
+      } else {
+        clusters = branchItems.map((item) => _SheetNodeCluster(
+          anchorMm: item.anchorMm,
+          items: [item],
+          t: item.t,
+        )).toList();
+      }
+
+      clusters.sort((a, b) => a.t.compareTo(b.t));
+
+      // 6. Оценка нормалей +90 и -90 градусов при зазорах 16..26 мм
+      final candidates = <_CandidateStack>[];
+
+      for (final normal in [branch.normal1, branch.normal2]) {
+        for (final clearance in [18.0, 22.0, 26.0]) {
+          if (normal.dx.abs() < 0.25) {
+            // Ветка почти горизонтальна: пробуем выравнивание справа и слева
+            final candRight = _evaluateCandidateStack(
+              branch: branch,
+              clusters: clusters,
+              normal: normal,
+              clearance: clearance,
+              customPitchMm: customPitchMm,
+              obstacleMap: obstacleMap,
+              frameLeft: frameLeft,
+              frameRight: frameRight,
+              frameTop: frameTop,
+              frameBottom: frameBottom,
+              stampRect: stampRect,
+              forceRight: true,
+            );
+            if (candRight != null) candidates.add(candRight);
+
+            final candLeft = _evaluateCandidateStack(
+              branch: branch,
+              clusters: clusters,
+              normal: normal,
+              clearance: clearance,
+              customPitchMm: customPitchMm,
+              obstacleMap: obstacleMap,
+              frameLeft: frameLeft,
+              frameRight: frameRight,
+              frameTop: frameTop,
+              frameBottom: frameBottom,
+              stampRect: stampRect,
+              forceRight: false,
+            );
+            if (candLeft != null) candidates.add(candLeft);
+          } else {
+            final cand = _evaluateCandidateStack(
+              branch: branch,
+              clusters: clusters,
+              normal: normal,
+              clearance: clearance,
+              customPitchMm: customPitchMm,
+              obstacleMap: obstacleMap,
+              frameLeft: frameLeft,
+              frameRight: frameRight,
+              frameTop: frameTop,
+              frameBottom: frameBottom,
+              stampRect: stampRect,
+            );
+            if (cand != null) candidates.add(cand);
+          }
+        }
+      }
+
+      if (candidates.isEmpty) continue;
+
+      candidates.sort((a, b) => a.cost.compareTo(b.cost));
+      final bestCandidate = candidates.first;
+
+      // Применяем оптимальный кандидат
+      for (int i = 0; i < bestCandidate.items.length; i++) {
+        final item = bestCandidate.items[i];
+        final shelfStart = bestCandidate.shelfStarts[i];
+        final shelfRect = bestCandidate.shelfRects[i];
+
+        final offMm = shelfStart - item.anchorMm;
+        final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+        result[item.callout.id] = storedOff;
+        handledCalloutIds.add(item.callout.id);
+
+        obstacleMap.addRect(shelfRect, item.callout.id);
+        obstacleMap.addLeaderLine(item.anchorMm, shelfStart, item.callout.id);
+      }
     }
-    final midX = (minNetX + maxNetX) / 2.0;
 
-    // 4. Отбор видимых выносок листа
-    final columnCalloutItems = <_SheetCalloutItem>[];
-
+    // 7. Обработка неназначенных выносок (например, автономное оборудование)
     for (final callout in network.callouts.values) {
+      if (handledCalloutIds.contains(callout.id)) continue;
       if (!sheet.isCalloutVisible(callout)) continue;
 
       final segId = network.getTargetSegmentId(callout.targetType, callout.targetId);
@@ -794,203 +1009,269 @@ class CalloutLayoutEngine {
       final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
       final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
 
-      // Закрепленные выноски (isPinned)
-      if (onlyUnpinned && callout.isPinned) {
-        result[callout.id] = callout.getEffectiveOffset(sheet.id);
-        continue;
-      }
-
-      // 5. Изоляция высотных отметок (Elevation): остаются прямо у своих узлов
-      if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
-        final dyMm = -(callout.textHeight * 2.2 + 3.0);
-        result[callout.id] = Offset(0.0, dyMm / 0.35);
-        continue;
-      }
-
       final charWidthMm = callout.textHeight * 0.65;
       final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
       final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+      final textHeightMm = callout.textHeight;
 
-      columnCalloutItems.add(_SheetCalloutItem(
-        callout: callout,
-        anchorMm: anchorMm,
-        textWidthMm: textWidthMm,
-        textHeightMm: callout.textHeight,
-      ));
+      final candidate = findBestCandidate(
+        anchor: anchorMm,
+        textWidth: textWidthMm,
+        textHeight: textHeightMm,
+        obstacleMap: obstacleMap,
+        existingShelfXPositions: null,
+        minRadius: minRadiusMm,
+        maxRadius: maxRadiusMm,
+      );
+
+      final offMm = candidate?.offset ?? const Offset(20.0, -15.0);
+      result[callout.id] = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+      handledCalloutIds.add(callout.id);
+
+      final shelfStart = anchorMm + offMm;
+      final shelfRect = candidate?.shelfBounds ?? Rect.fromLTWH(
+        shelfStart.dx,
+        shelfStart.dy - textHeightMm - 1.0,
+        textWidthMm,
+        textHeightMm + 2.0,
+      );
+      obstacleMap.addRect(shelfRect, callout.id);
+      obstacleMap.addLeaderLine(anchorMm, shelfStart, callout.id);
     }
-
-    if (columnCalloutItems.isEmpty) {
-      return result;
-    }
-
-    // 6. Группировка по сторонам (Left vs Right)
-    final leftItems = columnCalloutItems.where((c) => c.anchorMm.dx <= midX).toList();
-    final rightItems = columnCalloutItems.where((c) => c.anchorMm.dx > midX).toList();
-
-    final effectiveGroup = groupMultiLevel ?? sheet.groupMultiLevelCallouts;
-
-    List<_SheetNodeCluster> buildClusters(List<_SheetCalloutItem> items) {
-      if (items.isEmpty) return [];
-
-      if (!effectiveGroup) {
-        return items.map((item) => _SheetNodeCluster(anchorMm: item.anchorMm, items: [item])).toList();
-      }
-
-      final clusters = <_SheetNodeCluster>[];
-      final visited = <String>{};
-
-      for (int i = 0; i < items.length; i++) {
-        final itemA = items[i];
-        if (visited.contains(itemA.callout.id)) continue;
-
-        final clusterItems = <_SheetCalloutItem>[itemA];
-        visited.add(itemA.callout.id);
-
-        for (int j = i + 1; j < items.length; j++) {
-          final itemB = items[j];
-          if (visited.contains(itemB.callout.id)) continue;
-
-          if ((itemA.anchorMm - itemB.anchorMm).distance < 4.5) {
-            clusterItems.add(itemB);
-            visited.add(itemB.callout.id);
-          }
-        }
-
-        // Сортировка внутри этажерки по приоритету УГО по ГОСТ:
-        // Арматура (А) -> Фасонина -> Сварные стыки (К) -> Штуцеры -> Оборудование -> Опоры -> Прочее
-        clusterItems.sort((a, b) {
-          int priority(Callout c) {
-            switch (c.targetType) {
-              case CalloutTargetType.valve: return 1;
-              case CalloutTargetType.fitting: return 2;
-              case CalloutTargetType.weld: return 3;
-              case CalloutTargetType.nozzle: return 4;
-              case CalloutTargetType.equipment: return 5;
-              case CalloutTargetType.support: return 6;
-              default: return 7;
-            }
-          }
-          return priority(a.callout).compareTo(priority(b.callout));
-        });
-
-        clusters.add(_SheetNodeCluster(
-          anchorMm: itemA.anchorMm,
-          items: clusterItems,
-        ));
-      }
-
-      return clusters;
-    }
-
-    final leftClusters = buildClusters(leftItems);
-    final rightClusters = buildClusters(rightItems);
-
-    // 7. Позиционирование направляющих X
-    final colLeftX = (minNetX - 22.0).clamp(frameLeft + 26.0, midX - 35.0);
-    final colRightX = (maxNetX + 18.0).clamp(midX + 35.0, frameRight - 28.0);
-
-    // 8. Sweep-Line раскладка колонки с гарантией 0 пересечений
-    void layoutColumn({
-      required List<_SheetNodeCluster> clusters,
-      required double colX,
-      required double minY,
-      required double maxY,
-      required bool isLeft,
-    }) {
-      if (clusters.isEmpty) return;
-
-      // Монотонная сортировка вдоль оси Y для исключения пересечений линий
-      clusters.sort((a, b) => a.anchorY.compareTo(b.anchorY));
-
-      final totalShelves = clusters.fold<int>(0, (sum, c) => sum + c.items.length);
-      final availHeight = math.max(10.0, maxY - minY);
-      final avgTextH = clusters.first.items.first.textHeightMm;
-
-      final idealPitch = customPitchMm ?? (avgTextH * 2.2);
-      final minPitch = avgTextH + 1.2;
-
-      // Проверка на необходимость двухрядной колонки (Multi-Tier)
-      final maxShelvesSingleTier = (availHeight / minPitch).floor();
-      if (totalShelves > maxShelvesSingleTier && totalShelves > 1) {
-        final outerClusters = <_SheetNodeCluster>[];
-        final innerClusters = <_SheetNodeCluster>[];
-
-        for (int i = 0; i < clusters.length; i++) {
-          if (i % 2 == 0) {
-            outerClusters.add(clusters[i]);
-          } else {
-            innerClusters.add(clusters[i]);
-          }
-        }
-
-        final outerX = isLeft
-            ? math.max(frameLeft + 12.0, colX - 28.0)
-            : math.min(frameRight - 12.0, colX + 28.0);
-
-        layoutColumn(
-          clusters: outerClusters,
-          colX: outerX,
-          minY: minY,
-          maxY: maxY,
-          isLeft: isLeft,
-        );
-        layoutColumn(
-          clusters: innerClusters,
-          colX: colX,
-          minY: minY,
-          maxY: maxY,
-          isLeft: isLeft,
-        );
-        return;
-      }
-
-      // Адаптивный динамический шаг полочек
-      final effectivePitch = totalShelves * idealPitch <= availHeight
-          ? idealPitch
-          : math.max(minPitch, availHeight / totalShelves);
-
-      // Центрирование блока полочек по средней высоте анкеров, если места достаточно
-      double startY = minY;
-      final blockHeight = totalShelves * effectivePitch;
-      if (blockHeight < availHeight) {
-        final avgAnchorY = clusters.map((c) => c.anchorY).reduce((a, b) => a + b) / clusters.length;
-        final idealStart = avgAnchorY - blockHeight / 2.0;
-        startY = idealStart.clamp(minY, maxY - blockHeight);
-      }
-
-      double currentY = startY;
-      for (final cluster in clusters) {
-        for (int k = 0; k < cluster.items.length; k++) {
-          final item = cluster.items[k];
-          final slotY = currentY;
-          currentY += effectivePitch;
-
-          final offMm = Offset(colX - item.anchorMm.dx, slotY - item.anchorMm.dy);
-          final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
-          result[item.callout.id] = storedOff;
-        }
-      }
-    }
-
-    // Раскладываем левую и правую колонки
-    layoutColumn(
-      clusters: leftClusters,
-      colX: colLeftX,
-      minY: colMinY,
-      maxY: leftColMaxY,
-      isLeft: true,
-    );
-
-    layoutColumn(
-      clusters: rightClusters,
-      colX: colRightX,
-      minY: colMinY,
-      maxY: rightColMaxY,
-      isLeft: false,
-    );
 
     return result;
   }
+
+  static _CandidateStack? _evaluateCandidateStack({
+    required PipelineBranch branch,
+    required List<_SheetNodeCluster> clusters,
+    required Offset normal,
+    required double clearance,
+    required double? customPitchMm,
+    required CalloutObstacleMap obstacleMap,
+    required double frameLeft,
+    required double frameRight,
+    required double frameTop,
+    required double frameBottom,
+    required Rect stampRect,
+    bool? forceRight,
+  }) {
+    if (clusters.isEmpty) return null;
+
+    final totalItems = clusters.fold<int>(0, (sum, c) => sum + c.items.length);
+    final avgTextH = clusters.first.items.first.textHeightMm;
+    final idealPitch = customPitchMm ?? (avgTextH * 2.1);
+    final minPitch = avgTextH + 1.2;
+
+    // Определяем горизонтальную сторону размещения (справа / слева)
+    final bool isRight;
+    if (forceRight != null) {
+      isRight = forceRight;
+    } else if (normal.dx.abs() >= 0.25) {
+      isRight = normal.dx > 0;
+    } else {
+      isRight = true;
+    }
+
+    // Многоярусное разбиение при числе выносок > 6
+    final numTiers = totalItems > 6 ? (totalItems / 6.0).ceil() : 1;
+    final tierClusters = List.generate(numTiers, (_) => <_SheetNodeCluster>[]);
+
+    if (numTiers == 1) {
+      tierClusters[0].addAll(clusters);
+    } else {
+      final itemsPerTier = (totalItems / numTiers.toDouble()).ceil();
+      int curTier = 0;
+      int curTierCount = 0;
+      for (final cl in clusters) {
+        if (curTierCount >= itemsPerTier && curTier < numTiers - 1) {
+          curTier++;
+          curTierCount = 0;
+        }
+        tierClusters[curTier].add(cl);
+        curTierCount += cl.items.length;
+      }
+    }
+
+    double totalCost = 0.0;
+    final allShelfStarts = <Offset>[];
+    final allShelfRects = <Rect>[];
+    final allPlacedItems = <_SheetCalloutItem>[];
+    final branchSegIds = branch.segments.map((s) => s.id).toSet();
+
+    double effectivePitch = idealPitch;
+    double firstTierX = 0.0;
+
+    for (int tier = 0; tier < numTiers; tier++) {
+      final tClusters = tierClusters[tier];
+      if (tClusters.isEmpty) continue;
+
+      final tItemCount = tClusters.fold<int>(0, (sum, c) => sum + c.items.length);
+      final maxTierTextW = tClusters.expand((c) => c.items).map((i) => i.textWidthMm).reduce(math.max);
+
+      double tierMinX = double.infinity, tierMaxX = -double.infinity;
+      double tierSumX = 0.0, tierSumY = 0.0;
+      for (final cl in tClusters) {
+        tierMinX = math.min(tierMinX, cl.anchorX);
+        tierMaxX = math.max(tierMaxX, cl.anchorX);
+        tierSumX += cl.anchorX;
+        tierSumY += cl.anchorY;
+      }
+      final tierMeanX = tierSumX / tClusters.length;
+      final tierMeanY = tierSumY / tClusters.length;
+
+      final shiftX = normal.dx.abs() >= 0.25 ? normal.dx.abs() * clearance : clearance;
+      final double tierX;
+      if (isRight) {
+        final baseX = math.max(tierMaxX + 16.0, tierMeanX + shiftX);
+        tierX = baseX + tier * (maxTierTextW + 8.0);
+      } else {
+        final baseX = math.min(tierMinX - 16.0, tierMeanX - shiftX);
+        tierX = baseX - tier * (maxTierTextW + 8.0);
+      }
+      if (tier == 0) firstTierX = tierX;
+
+      final shiftY = normal.dy.abs() >= 0.25 ? normal.dy * clearance : (normal.dy < 0 ? -clearance : clearance);
+      final yCenter = tierMeanY + shiftY;
+
+      double topLimit = frameTop + avgTextH + 2.0;
+      double bottomLimit = frameBottom - 2.0;
+
+      final shelfLeft = isRight ? tierX : tierX - maxTierTextW;
+      final shelfRight = isRight ? tierX + maxTierTextW : tierX;
+
+      if (shelfRight >= stampRect.left && shelfLeft <= stampRect.right) {
+        bottomLimit = math.min(bottomLimit, stampRect.top - 4.0);
+      }
+
+      for (final r in obstacleMap.rects) {
+        if (r.id != null && (r.id!.startsWith('table_') || r.id == 'tech_reqs')) {
+          if (shelfRight >= r.rect.left && shelfLeft <= r.rect.right) {
+            if (yCenter < r.rect.center.dy) {
+              bottomLimit = math.min(bottomLimit, r.rect.top - 4.0);
+            } else {
+              topLimit = math.max(topLimit, r.rect.bottom + 4.0);
+            }
+          }
+        }
+      }
+
+      final availH = math.max(10.0, bottomLimit - topLimit);
+      final tierPitch = (tItemCount - 1) * idealPitch <= availH
+          ? idealPitch
+          : math.max(minPitch, availH / math.max(1, tItemCount - 1));
+      effectivePitch = tierPitch;
+
+      final stackH = (tItemCount - 1) * tierPitch;
+      final idealStartY = yCenter - stackH / 2.0;
+      final startY = idealStartY.clamp(topLimit, math.max(topLimit, bottomLimit - stackH));
+
+      // Направление слотов по вертикали для исключения пересечений
+      bool slotYIncreasesWithT;
+      final dyBranch = branch.endSheetMm.dy - branch.startSheetMm.dy;
+      if (dyBranch.abs() > 1.0) {
+        slotYIncreasesWithT = dyBranch > 0;
+      } else {
+        final isAbovePipe = yCenter < tierMeanY;
+        slotYIncreasesWithT = isRight ? isAbovePipe : !isAbovePipe;
+      }
+
+      int slotIndex = 0;
+      final clusterSlotStarts = <int>[];
+      for (final cl in tClusters) {
+        clusterSlotStarts.add(slotIndex);
+        slotIndex += cl.items.length;
+      }
+
+      for (int ci = 0; ci < tClusters.length; ci++) {
+        final cl = tClusters[ci];
+        final baseSlot = slotYIncreasesWithT
+            ? clusterSlotStarts[ci]
+            : (tItemCount - clusterSlotStarts[ci] - cl.items.length);
+
+        for (int k = 0; k < cl.items.length; k++) {
+          final item = cl.items[k];
+          final currentSlot = baseSlot + k;
+          final slotY = startY + currentSlot * tierPitch;
+          final shelfStart = Offset(tierX, slotY);
+
+          final shelfRect = isRight
+              ? Rect.fromLTWH(shelfStart.dx, shelfStart.dy - item.textHeightMm - 1.0, item.textWidthMm, item.textHeightMm + 2.0)
+              : Rect.fromLTWH(shelfStart.dx - item.textWidthMm, shelfStart.dy - item.textHeightMm - 1.0, item.textWidthMm, item.textHeightMm + 2.0);
+
+          allShelfStarts.add(shelfStart);
+          allShelfRects.add(shelfRect);
+          allPlacedItems.add(item);
+
+          // Штрафы за выход за рамку чертежа
+          if (shelfRect.left < frameLeft) totalCost += (frameLeft - shelfRect.left) * 2000.0 + 20000.0;
+          if (shelfRect.right > frameRight) totalCost += (shelfRect.right - frameRight) * 2000.0 + 20000.0;
+          if (shelfRect.top < frameTop) totalCost += (frameTop - shelfRect.top) * 2000.0 + 20000.0;
+          if (shelfRect.bottom > frameBottom) totalCost += (shelfRect.bottom - frameBottom) * 2000.0 + 20000.0;
+
+          // Штрафы за штамп и таблицы
+          if (stampRect.overlaps(shelfRect)) totalCost += 100000.0;
+
+          for (final r in obstacleMap.rects) {
+            if (r.id == 'stamp') continue;
+            if (r.id != null && (r.id!.startsWith('table_') || r.id == 'tech_reqs')) {
+              if (r.rect.overlaps(shelfRect)) totalCost += 100000.0;
+            } else {
+              if (r.rect.overlaps(shelfRect)) totalCost += 8000.0;
+            }
+          }
+
+          // Штраф за наложение на трубу
+          if (obstacleMap.testShelfPipeCollision(shelfRect)) {
+            totalCost += 15000.0;
+          }
+
+          // Штраф за пересечение стрелки-выноски с чужими трубами
+          int crosses = 0;
+          for (final p in obstacleMap.pipes) {
+            if (p.id != null && branchSegIds.contains(p.id)) continue;
+            if (CalloutObstacleMap._segmentsIntersect(item.anchorMm, shelfStart, p.p1, p.p2)) {
+              crosses++;
+            }
+          }
+          totalCost += crosses * 2000.0;
+
+          // Штраф за удаленность
+          totalCost += (shelfStart - item.anchorMm).distance * 0.5;
+        }
+      }
+    }
+
+    if (normal.dy < 0) totalCost -= 25.0; // приоритет вверх
+    if (isRight) totalCost -= 15.0; // приоритет вправо
+
+    return _CandidateStack(
+      xStack: firstTierX,
+      pitch: effectivePitch,
+      shelfStarts: allShelfStarts,
+      shelfRects: allShelfRects,
+      items: allPlacedItems,
+      cost: totalCost,
+    );
+  }
+}
+
+class _CandidateStack {
+  final double xStack;
+  final double pitch;
+  final List<Offset> shelfStarts;
+  final List<Rect> shelfRects;
+  final List<_SheetCalloutItem> items;
+  final double cost;
+
+  _CandidateStack({
+    required this.xStack,
+    required this.pitch,
+    required this.shelfStarts,
+    required this.shelfRects,
+    required this.items,
+    required this.cost,
+  });
 }
 
 class _SheetCalloutItem {
@@ -998,22 +1279,26 @@ class _SheetCalloutItem {
   final Offset anchorMm;
   final double textWidthMm;
   final double textHeightMm;
+  final double t;
 
   _SheetCalloutItem({
     required this.callout,
     required this.anchorMm,
     required this.textWidthMm,
     required this.textHeightMm,
+    this.t = 0.0,
   });
 }
 
 class _SheetNodeCluster {
   final Offset anchorMm;
   final List<_SheetCalloutItem> items;
+  final double t;
 
   _SheetNodeCluster({
     required this.anchorMm,
     required this.items,
+    this.t = 0.0,
   });
 
   double get anchorY => anchorMm.dy;
