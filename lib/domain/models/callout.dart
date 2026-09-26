@@ -239,6 +239,9 @@ class Callout {
       (customText != null && customText!.trim().isNotEmpty) ||
       (customBottomText != null && customBottomText!.trim().isNotEmpty);
 
+  /// Проверяет, задано ли индивидуальное смещение для конкретного листа
+  bool hasSheetOffset(String sheetId) => sheetOffsets.containsKey(sheetId);
+
   /// Возвращает эффективное смещение выноски с учетом указанного листа чертежа
   Offset getEffectiveOffset(String? sheetId) {
     if (sheetId != null && sheetOffsets.containsKey(sheetId)) {

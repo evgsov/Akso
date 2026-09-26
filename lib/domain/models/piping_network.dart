@@ -3650,6 +3650,27 @@ class CalloutCategoryStats {
     required this.count,
     this.elevationCount = 0,
   });
+
+  String get nameRu {
+    switch (type) {
+      case CalloutTargetType.segment:
+        return 'Трубы (диаметры)';
+      case CalloutTargetType.weld:
+        return 'Сварные стыки';
+      case CalloutTargetType.fitting:
+        return 'Отводы и тройники';
+      case CalloutTargetType.valve:
+        return 'Трубопроводная арматура';
+      case CalloutTargetType.support:
+        return 'Опоры и подвески';
+      case CalloutTargetType.equipment:
+        return 'Оборудование';
+      case CalloutTargetType.nozzle:
+        return 'Штуцеры оборудования';
+      case CalloutTargetType.node:
+        return 'Узлы и точки';
+    }
+  }
 }
 
 /// Форматирование даты выполнения сварного шва в заданный формат

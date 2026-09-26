@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/viewport_layout_preset.dart';
+import '../../../../domain/models/callout.dart';
 import '../../../../domain/models/drawing_legend.dart';
 import '../../../../domain/models/drawing_sheet.dart';
 import '../../../../domain/services/viewport_transform_service.dart';
@@ -172,6 +173,21 @@ class SheetToolbar extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
 
+                      // Фильтр выносок для данного листа
+                      ActionChip(
+                        key: const Key('sheet_callout_filter_chip'),
+                        avatar: const Icon(Icons.label_outlined, size: 15, color: Colors.tealAccent),
+                        label: Text(
+                          sheet.enabledCalloutTypes == null
+                              ? 'Все выноски'
+                              : 'Выноски (${sheet.enabledCalloutTypes!.length})',
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                        backgroundColor: const Color(0xFF334155),
+                        onPressed: () => _showCalloutFilterDialog(context, sheet),
+                      ),
+                      const SizedBox(width: 8),
+
                       Container(width: 1, height: 20, color: const Color(0xFF334155)),
                       const SizedBox(width: 8),
 
@@ -293,24 +309,57 @@ class SheetToolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
 
-                  // Кнопка Авто-расстановка выносок (ГОСТ)
-                  IconButton(
+                  // Кнопка Авто-расстановка выносок листа (ГОСТ) и сброс
+                  PopupMenuButton<String>(
                     key: const Key('sheet_auto_layout_callouts_button'),
+                    tooltip: 'Выноски листа: авторасстановка / сброс',
+                    color: const Color(0xFF1E293B),
                     icon: const Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
-                    tooltip: 'Авто-расстановка выносок (ГОСТ)',
-                    onPressed: () {
-                      final updated = controller.autoLayoutCallouts();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            updated > 0
-                                ? 'Авто-расстановка выполнена для $updated выносок'
-                                : 'Все выноски уже расположены оптимально',
+                    onSelected: (action) {
+                      if (action == 'auto_layout') {
+                        final updated = controller.runSheetCalloutAutoLayout(sheet.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              updated > 0
+                                  ? 'Авто-расстановка листа: оптимизировано выносок: $updated'
+                                  : 'Все выноски листа уже расположены оптимально',
+                            ),
+                            duration: const Duration(seconds: 2),
                           ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
+                        );
+                      } else if (action == 'reset_sheet') {
+                        controller.resetAllSheetCalloutOffsets(sheet.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Позиции выносок на листе сброшены к 3D-модели'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'auto_layout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
+                            SizedBox(width: 8),
+                            Text('Авторасстановка листа (ГОСТ)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'reset_sheet',
+                        child: Row(
+                          children: [
+                            Icon(Icons.restore, size: 16, color: Colors.orangeAccent),
+                            SizedBox(width: 8),
+                            Text('Сбросить выноски к 3D-модели', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 6),
 
@@ -442,6 +491,189 @@ class SheetToolbar extends StatelessWidget {
                   ghostInactiveSystems: ghost,
                 );
                 controller.updateSheet(sheet.copyWith(viewport: updatedVp));
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Применить'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCalloutFilterDialog(BuildContext context, DrawingSheet sheet) {
+    final categories = controller.network.getExistingCalloutCategories();
+    final totalElevations = controller.network.totalElevationCalloutsCount;
+
+    // Инициализация выбранных категорий
+    // Если sheet.enabledCalloutTypes == null, значит включены все существующие
+    Set<CalloutTargetType> selected = sheet.enabledCalloutTypes != null
+        ? Set<CalloutTargetType>.from(sheet.enabledCalloutTypes!)
+        : categories.map((c) => c.type).toSet();
+    bool showElevations = sheet.showElevationCallouts;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: Row(
+            children: [
+              const Icon(Icons.label_outlined, color: Colors.tealAccent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Фильтр выносок: ${sheet.name}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Быстрые пресеты схемы:',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ActionChip(
+                      label: const Text('Монтажная схема', style: TextStyle(fontSize: 11)),
+                      backgroundColor: const Color(0xFF334155),
+                      avatar: const Icon(Icons.architecture, size: 14, color: Colors.cyanAccent),
+                      onPressed: () {
+                        setState(() {
+                          selected = {
+                            CalloutTargetType.segment,
+                            CalloutTargetType.fitting,
+                            CalloutTargetType.valve,
+                            CalloutTargetType.equipment,
+                          };
+                          showElevations = true;
+                        });
+                      },
+                    ),
+                    ActionChip(
+                      label: const Text('Схема сварки', style: TextStyle(fontSize: 11)),
+                      backgroundColor: const Color(0xFF334155),
+                      avatar: const Icon(Icons.join_inner, size: 14, color: Colors.orangeAccent),
+                      onPressed: () {
+                        setState(() {
+                          selected = {CalloutTargetType.weld};
+                          showElevations = false;
+                        });
+                      },
+                    ),
+                    ActionChip(
+                      label: const Text('Все выноски', style: TextStyle(fontSize: 11)),
+                      backgroundColor: const Color(0xFF334155),
+                      avatar: const Icon(Icons.select_all, size: 14, color: Colors.greenAccent),
+                      onPressed: () {
+                        setState(() {
+                          selected = categories.map((c) => c.type).toSet();
+                          showElevations = true;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFF334155)),
+                if (categories.isEmpty && totalElevations == 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text(
+                        'В проекте пока нет созданных выносок.\nСоздайте выноски в 3D-модели.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final cat in categories)
+                          CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(cat.nameRu, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            secondary: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${cat.count}',
+                                style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            value: selected.contains(cat.type),
+                            activeColor: Colors.tealAccent,
+                            checkColor: Colors.black,
+                            onChanged: (checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  selected.add(cat.type);
+                                } else {
+                                  selected.remove(cat.type);
+                                }
+                              });
+                            },
+                          ),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Высотные отметки (Z)', style: TextStyle(color: Colors.white, fontSize: 13)),
+                          secondary: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '$totalElevations',
+                              style: const TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          value: showElevations,
+                          activeColor: Colors.cyanAccent,
+                          checkColor: Colors.black,
+                          onChanged: (checked) {
+                            setState(() {
+                              showElevations = checked ?? true;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Отмена', style: TextStyle(color: Colors.white70)),
+            ),
+            FilledButton(
+              onPressed: () {
+                final isAllSelected = selected.length == categories.length;
+                controller.setSheetCalloutFilter(
+                  sheet.id,
+                  types: isAllSelected ? null : selected,
+                  showElevations: showElevations,
+                );
                 Navigator.of(ctx).pop();
               },
               child: const Text('Применить'),

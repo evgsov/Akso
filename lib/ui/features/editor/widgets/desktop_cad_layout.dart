@@ -2538,7 +2538,59 @@ class DesktopCadLayout extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
+
+        // 1.1. Статус положения выноски на листе
+        if (!controller.isModelSpaceActive && controller.activeSheet != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.blueGrey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      callout.hasSheetOffset(controller.activeSheet!.id)
+                          ? 'Смещение листа: задано'
+                          : 'Смещение: от 3D-модели',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: callout.hasSheetOffset(controller.activeSheet!.id)
+                            ? Colors.teal.shade800
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                    if (callout.hasSheetOffset(controller.activeSheet!.id))
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                        ),
+                        icon: const Icon(Icons.restore, size: 12),
+                        label: const Text('Сбросить', style: TextStyle(fontSize: 10)),
+                        onPressed: () {
+                          controller.resetCalloutSheetOffset(callout.id, controller.activeSheet!.id);
+                        },
+                      ),
+                  ],
+                ),
+                Text(
+                  'Лист: ${controller.activeSheet!.name}',
+                  style: const TextStyle(fontSize: 9, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
 
         // 2. Высота текста (мм)
         Row(
