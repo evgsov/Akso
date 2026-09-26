@@ -983,6 +983,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                 DataColumn(label: Text('Объект', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Режим', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Текст над/под полкой', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Высота', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Смещение', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
@@ -1061,7 +1062,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         // 4. Текст выноски (двухполочный)
         DataCell(
           SizedBox(
-            width: 320,
+            width: 300,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1095,7 +1096,21 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
             ),
           ),
         ),
-        // 5. Смещение
+        // 5. Высота шрифта (мм)
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '${callout.textHeight.toStringAsFixed(1)} мм',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey),
+            ),
+          ),
+        ),
+        // 6. Смещение
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -1155,53 +1170,118 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
   void _showEditCalloutDialog(BuildContext context, Callout callout) {
     final topCtrl = TextEditingController(text: callout.customText ?? widget.controller.getCalloutText(callout));
     final bottomCtrl = TextEditingController(text: callout.customBottomText ?? widget.controller.getCalloutBottomText(callout) ?? '');
+    final heightCtrl = TextEditingController(text: callout.textHeight.toString());
+    ShelfDirection selectedDirection = callout.shelfDirection;
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Редактирование выноски (${callout.targetType.displayName})'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: topCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Текст над полкой (основной)',
-                  border: OutlineInputBorder(),
-                ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Редактирование выноски (${callout.targetType.displayName})'),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: topCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Текст над полкой (основной)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: bottomCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Текст под полкой (дополнительный)',
+                      hintText: 'Оставьте пустым, если не требуется',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: heightCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Высота шрифта (мм)',
+                            hintText: '2.1, 2.3, 2.5...',
+                            border: OutlineInputBorder(),
+                            suffixText: 'мм',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<ShelfDirection>(
+                          initialValue: selectedDirection,
+                          decoration: const InputDecoration(
+                            labelText: 'Полка',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: ShelfDirection.auto, child: Text('Авто')),
+                            DropdownMenuItem(value: ShelfDirection.left, child: Text('Влево')),
+                            DropdownMenuItem(value: ShelfDirection.right, child: Text('Вправо')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setDialogState(() => selectedDirection = val);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Text('Пресеты (мм):', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      for (final p in [2.1, 2.3, 2.5, 3.0, 3.5])
+                        ActionChip(
+                          label: Text('$p'),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            setDialogState(() {
+                              heightCtrl.text = p.toString();
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: bottomCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Текст под полкой (дополнительный)',
-                  hintText: 'Оставьте пустым, если не требуется',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () {
+                widget.controller.updateCalloutCustomText(callout.id, topCtrl.text);
+                widget.controller.updateCalloutCustomBottomText(
+                  callout.id,
+                  bottomCtrl.text.trim().isEmpty ? null : bottomCtrl.text,
+                );
+                final parsedH = double.tryParse(heightCtrl.text.replaceAll(',', '.'));
+                if (parsedH != null && parsedH > 0) {
+                  widget.controller.updateCalloutTextHeight(callout.id, parsedH);
+                }
+                widget.controller.updateCalloutShelfDirection(callout.id, selectedDirection);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () {
-              widget.controller.updateCalloutCustomText(callout.id, topCtrl.text);
-              widget.controller.updateCalloutCustomBottomText(
-                callout.id,
-                bottomCtrl.text.trim().isEmpty ? null : bottomCtrl.text,
-              );
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Сохранить'),
-          ),
-        ],
       ),
     );
   }

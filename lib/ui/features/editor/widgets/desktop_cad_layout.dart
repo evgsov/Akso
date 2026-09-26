@@ -127,6 +127,7 @@ class DesktopCadLayout extends StatelessWidget {
                         controller.selectedValveId != null ||
                         controller.selectedSupportId != null ||
                         controller.selectedWeldId != null ||
+                        controller.selectedCalloutId != null ||
                         controller.selectedNodeIds.length > 1 ||
                         controller.selectedSegmentIds.length > 1)
                       Positioned(
@@ -1642,19 +1643,24 @@ class DesktopCadLayout extends StatelessWidget {
         controller.selectedAxisIds.length +
         controller.selectedDimensionIds.length;
     final isMultiSelect = totalSelected > 1;
-    final isValve = !isDimension && !isAxis && !isMultiSelect && controller.selectedValveId != null;
-    final isSupport = !isDimension && !isAxis && !isMultiSelect && !isValve && controller.selectedSupportId != null;
-    final isWeld = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && controller.selectedWeldId != null;
-    final isSpool = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && controller.selectedSpoolId != null;
-    final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedSegmentId != null;
-    final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && controller.selectedEquipmentId != null;
-    final selectedFit = (!isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isSegment && !isEquipment && controller.selectedNodeId != null)
+    final isCallout = !isDimension && !isAxis && !isMultiSelect && controller.selectedCalloutId != null;
+    final isValve = !isDimension && !isAxis && !isMultiSelect && !isCallout && controller.selectedValveId != null;
+    final isSupport = !isDimension && !isAxis && !isMultiSelect && !isValve && !isCallout && controller.selectedSupportId != null;
+    final isWeld = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isCallout && controller.selectedWeldId != null;
+    final isSpool = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isCallout && controller.selectedSpoolId != null;
+    final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isCallout && controller.selectedSegmentId != null;
+    final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isCallout && controller.selectedEquipmentId != null;
+    final selectedFit = (!isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isSegment && !isEquipment && !isCallout && controller.selectedNodeId != null)
         ? controller.network.fittings[controller.selectedNodeId]
         : null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
-    if (isDimension) {
+    if (isCallout) {
+      final callout = controller.network.callouts[controller.selectedCalloutId!];
+      title = 'Выноска: ${callout?.targetType.displayName ?? ""}';
+      icon = Icons.label_important_outline;
+    } else if (isDimension) {
       title = 'Размерная линия';
       icon = Icons.straighten;
     } else if (isAxis) {
@@ -1750,6 +1756,7 @@ class DesktopCadLayout extends StatelessWidget {
                     controller.selectedValveId = null;
                     controller.selectedSupportId = null;
                     controller.selectedWeldId = null;
+                    controller.selectedCalloutId = null;
                     controller.selectedNodeIds.clear();
                     controller.selectedSegmentIds.clear();
                     controller.selectedSpoolIds.clear();
@@ -1759,7 +1766,9 @@ class DesktopCadLayout extends StatelessWidget {
               ],
             ),
             const Divider(height: 14),
-            if (isDimension) ...[
+            if (isCallout) ...[
+              _buildCalloutInspector(context),
+            ] else if (isDimension) ...[
               () {
                 final dim = controller.network.dimensions[controller.selectedDimensionId!];
                 if (dim == null) return const Text('Размер не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
@@ -2485,6 +2494,197 @@ class DesktopCadLayout extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCalloutInspector(BuildContext context) {
+    final calloutId = controller.selectedCalloutId;
+    final callout = calloutId != null ? controller.network.callouts[calloutId] : null;
+    if (callout == null) {
+      return const Text('Выноска не найдена', style: TextStyle(fontSize: 11, color: Colors.grey));
+    }
+
+    final topText = controller.getCalloutText(callout);
+    final bottomText = controller.getCalloutBottomText(callout);
+    const presets = [2.1, 2.3, 2.5, 3.0, 3.5];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Предпросмотр текста выноски
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                topText.isEmpty ? '—' : topText,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              if (bottomText != null && bottomText.isNotEmpty) ...[
+                const Divider(height: 6, thickness: 1),
+                Text(
+                  bottomText,
+                  style: const TextStyle(fontSize: 11, color: Colors.black87),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // 2. Высота текста (мм)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Высота шрифта:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              '${callout.textHeight.toStringAsFixed(1)} мм',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        // 3. Поле ввода + кнопки шага +/- 0.1 мм
+        Row(
+          children: [
+            IconButton.filledTonal(
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.remove, size: 14),
+              tooltip: '-0.1 мм',
+              onPressed: () {
+                final newH = (callout.textHeight - 0.1).clamp(0.5, 50.0);
+                controller.updateCalloutTextHeight(callout.id, double.parse(newH.toStringAsFixed(1)));
+              },
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: SizedBox(
+                height: 28,
+                child: TextFormField(
+                  key: ValueKey('callout_th_${callout.id}_${callout.textHeight}'),
+                  initialValue: callout.textHeight.toString(),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    border: OutlineInputBorder(),
+                    suffixText: 'мм',
+                    suffixStyle: TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                  onFieldSubmitted: (val) {
+                    final parsed = double.tryParse(val.replaceAll(',', '.'));
+                    if (parsed != null && parsed > 0) {
+                      controller.updateCalloutTextHeight(callout.id, parsed);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton.filledTonal(
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.add, size: 14),
+              tooltip: '+0.1 мм',
+              onPressed: () {
+                final newH = (callout.textHeight + 0.1).clamp(0.5, 50.0);
+                controller.updateCalloutTextHeight(callout.id, double.parse(newH.toStringAsFixed(1)));
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        // 4. Быстрые пресеты высоты шрифта
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: presets.map((p) {
+            final isSelected = (callout.textHeight - p).abs() < 0.05;
+            return ChoiceChip(
+              visualDensity: VisualDensity.compact,
+              label: Text('$p', style: const TextStyle(fontSize: 10)),
+              selected: isSelected,
+              onSelected: (_) => controller.updateCalloutTextHeight(callout.id, p),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 10),
+
+        // 5. Направление полки
+        const Text('Направление полки:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ShelfDirection>(
+            segments: const [
+              ButtonSegment(value: ShelfDirection.auto, label: Text('Авто', style: TextStyle(fontSize: 10))),
+              ButtonSegment(value: ShelfDirection.left, label: Text('Влево', style: TextStyle(fontSize: 10))),
+              ButtonSegment(value: ShelfDirection.right, label: Text('Вправо', style: TextStyle(fontSize: 10))),
+            ],
+            selected: {callout.shelfDirection},
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onSelectionChanged: (val) {
+              controller.updateCalloutShelfDirection(callout.id, val.first);
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // 6. Закрепление позиции (Pin)
+        SwitchListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          title: const Text('Закрепить (Pin)', style: TextStyle(fontSize: 11)),
+          subtitle: const Text('Защитить от авто-расстановки', style: TextStyle(fontSize: 9, color: Colors.grey)),
+          value: callout.isPinned,
+          onChanged: (_) => controller.toggleCalloutPinning(callout.id),
+        ),
+        const SizedBox(height: 6),
+
+        // 7. Кнопка открытия менеджера
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.table_chart_outlined, size: 15),
+            label: const Text('Таблица всех выносок', style: TextStyle(fontSize: 11)),
+            onPressed: () => CalloutManagerPanel.show(context, controller: controller),
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // 8. Кнопка удаления
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: BorderSide(color: Colors.red.shade300),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Удалить выноску (Del)', style: TextStyle(fontSize: 11)),
+            onPressed: controller.deleteSelected,
+          ),
+        ),
+      ],
     );
   }
 

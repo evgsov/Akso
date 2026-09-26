@@ -5813,6 +5813,24 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Обновление высоты шрифта выноски (в мм бумаги, например 2.1, 2.3, 3.5)
+  void updateCalloutTextHeight(String id, double textHeightMm) {
+    final callout = network.callouts[id];
+    if (callout == null || (callout.textHeight - textHeightMm).abs() < 0.001) return;
+    network.callouts[id] = callout.copyWith(textHeight: textHeightMm);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Обновление направления полки выноски (влево, вправо, авто)
+  void updateCalloutShelfDirection(String id, ShelfDirection direction) {
+    final callout = network.callouts[id];
+    if (callout == null || callout.shelfDirection == direction) return;
+    network.callouts[id] = callout.copyWith(shelfDirection: direction);
+    history.recordState(network);
+    notifyListeners();
+  }
+
   /// Получение итогового текста выноски для отображения над полкой
   String getCalloutText(Callout callout) {
     return network.generateCalloutText(callout, currentProject.calloutTemplates);
