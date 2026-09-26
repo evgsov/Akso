@@ -929,7 +929,7 @@ class SheetGeometryBuilder {
       if (anchor3D == null) continue;
 
       final anchorMm = _projectPoint(anchor3D.x, anchor3D.y, anchor3D.z, projector, vp);
-      final offsetScale = 1.0 / (vp.viewScale * 4.0);
+      const offsetScale = 0.35;
       final leaderEndMm = anchorMm + Offset(callout.screenOffsetX * offsetScale, callout.screenOffsetY * offsetScale);
 
       final isRight = callout.screenOffsetX >= 0;
@@ -937,9 +937,10 @@ class SheetGeometryBuilder {
       final topText = network.generateCalloutText(callout, templates);
       final bottomText = network.generateCalloutBottomText(callout, templates);
 
-      double shelfLengthMm = math.max(10.0, topText.length * 2.2);
+      final charWidthMm = callout.textHeight * 0.65;
+      double shelfLengthMm = math.max(8.0, topText.length * charWidthMm + 3.0);
       if (bottomText != null && bottomText.trim().isNotEmpty) {
-        shelfLengthMm = math.max(shelfLengthMm, bottomText.length * 2.0);
+        shelfLengthMm = math.max(shelfLengthMm, bottomText.length * (charWidthMm * 0.9) + 3.0);
       }
       final shelfDir = isRight ? 1.0 : -1.0;
       final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
@@ -978,7 +979,7 @@ class SheetGeometryBuilder {
           layer: VectorSceneLayer.callouts,
           text: topText,
           position: Offset(isRight ? leaderEndMm.dx + 1.0 : shelfEndMm.dx + 1.0, leaderEndMm.dy - 1.2),
-          fontSizePt: 7.0,
+          fontSizePt: callout.textHeight * 2.83465,
           colorValue: 0xFF263238,
         );
       }

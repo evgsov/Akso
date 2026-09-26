@@ -549,8 +549,8 @@ class PdfExportService {
                 ? false
                 : callout.screenOffsetX >= 0);
 
-      // Корректный пересчёт экранного смещения (аналогично векторным линиям)
-      final offsetScale = 1.0 / (vp.viewScale * 4.0);
+      // Корректный пересчёт экранного смещения на миллиметры листа
+      const offsetScale = 0.35;
       final leaderEndMm =
           anchorMm +
           Offset(
@@ -568,8 +568,11 @@ class PdfExportService {
       final topText = network.generateCalloutText(callout, templates);
       final bottomText = network.generateCalloutBottomText(callout, templates);
 
+      final fontSizePt = callout.textHeight * 2.83465;
+      final bottomFontSizePt = callout.textHeight * 0.85 * 2.83465;
+
       final topMetrics = pdfFontRegular.stringMetrics(topText);
-      final topTextWidthMm = topMetrics.width * 6.5 / mm;
+      final topTextWidthMm = topMetrics.width * fontSizePt / mm;
 
       final textX = isRight
           ? leaderEndMm.dx + 1.0
@@ -587,14 +590,14 @@ class PdfExportService {
           final effectiveStyle = callout.elevationStyle ?? defaultStyle;
 
           if (effectiveStyle == ElevationMarkStyle.compactFlag) {
-            shelfDy -= 3.0;
+            shelfDy -= (callout.textHeight * 1.1);
           } else {
-            shelfDy -= 3.6; // flagH (2.6) + 1.0
+            shelfDy -= (callout.textHeight * 1.3);
           }
         }
       }
 
-      final textY = shelfDy - 3.5;
+      final textY = shelfDy - (callout.textHeight * 1.05);
       final bottomTextY = shelfDy + 0.5; // Верхняя строка (над полкой)
       widgets.add(
         pw.Positioned(
@@ -605,7 +608,7 @@ class PdfExportService {
             color: PdfColors.white,
             child: pw.Text(
               topText,
-              style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
+              style: pw.TextStyle(font: fontRegular, fontSize: fontSizePt),
             ),
           ),
         ),
@@ -622,7 +625,7 @@ class PdfExportService {
               color: PdfColors.white,
               child: pw.Text(
                 bottomText,
-                style: pw.TextStyle(font: fontRegular, fontSize: 5.5),
+                style: pw.TextStyle(font: fontRegular, fontSize: bottomFontSizePt),
               ),
             ),
           ),
