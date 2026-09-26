@@ -72,7 +72,7 @@ class SheetGeometryBuilder {
     _buildDimensions(scene, network, vp, projector, styleConfig);
 
     // 9. Выноски
-    _buildCallouts(scene, network, vp, projector, styleConfig, calloutTemplates);
+    _buildCallouts(scene, network, sheet, vp, projector, styleConfig, calloutTemplates);
 
     // 10. Рамка листа (20-5-5-5) и штамп Форма 3 (ГОСТ 21.101-2020)
     _buildFrameAndStamp(scene, sheet, styleConfig);
@@ -919,20 +919,25 @@ class SheetGeometryBuilder {
   static void _buildCallouts(
     VectorScene scene,
     PipingNetwork network,
+    DrawingSheet sheet,
     dynamic vp,
     AxonometryProjector projector,
     DrawingStyleConfig styleConfig,
     Map<String, String>? calloutTemplates,
   ) {
     for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout)) continue;
+
       final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;
 
       final anchorMm = _projectPoint(anchor3D.x, anchor3D.y, anchor3D.z, projector, vp);
       const offsetScale = 0.35;
-      final leaderEndMm = anchorMm + Offset(callout.screenOffsetX * offsetScale, callout.screenOffsetY * offsetScale);
+      final effOffsetX = callout.getEffectiveOffsetX(sheet.id);
+      final effOffsetY = callout.getEffectiveOffsetY(sheet.id);
+      final leaderEndMm = anchorMm + Offset(effOffsetX * offsetScale, effOffsetY * offsetScale);
 
-      final isRight = callout.screenOffsetX >= 0;
+      final isRight = effOffsetX >= 0;
       final templates = calloutTemplates ?? defaultCalloutTemplates;
       final topText = network.generateCalloutText(callout, templates);
       final bottomText = network.generateCalloutBottomText(callout, templates);

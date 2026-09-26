@@ -533,6 +533,8 @@ class PdfExportService {
 
     // Выноски (текст на полке)
     for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout)) continue;
+
       final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;
 
@@ -543,19 +545,22 @@ class PdfExportService {
       );
       final anchorMm = ViewportTransformService.model2dToSheetMm(anchorRaw, vp);
 
+      final effOffsetX = callout.getEffectiveOffsetX(sheet.id);
+      final effOffsetY = callout.getEffectiveOffsetY(sheet.id);
+
       final isRight = callout.shelfDirection == ShelfDirection.right
           ? true
           : (callout.shelfDirection == ShelfDirection.left
                 ? false
-                : callout.screenOffsetX >= 0);
+                : effOffsetX >= 0);
 
       // Корректный пересчёт экранного смещения на миллиметры листа
       const offsetScale = 0.35;
       final leaderEndMm =
           anchorMm +
           Offset(
-            callout.screenOffsetX * offsetScale,
-            callout.screenOffsetY * offsetScale,
+            effOffsetX * offsetScale,
+            effOffsetY * offsetScale,
           );
 
       if (leaderEndMm.dx < vp.xMm - 20 ||

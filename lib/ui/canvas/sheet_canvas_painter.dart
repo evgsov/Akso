@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
+import '../../domain/models/callout.dart';
 import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
@@ -1007,9 +1008,10 @@ class SheetCanvasPainter extends CustomPainter {
         vpProjector,
         effectiveNetwork,
         templates: calloutTemplates,
-        selectedCalloutId: isViewportFocused ? selectedCalloutId : null,
+        selectedCalloutId: selectedCalloutId,
         annotationScale: sheetZoom,
         isPaperSpace: true,
+        activeSheetId: sheet.id,
       );
     }
 
@@ -1045,36 +1047,43 @@ class SheetCanvasPainter extends CustomPainter {
   }
 
   PipingNetwork _getEffectiveNetwork(PipingNetwork baseNetwork, SheetViewport vp) {
-    if (vp.visibleSystemIds == null) return baseNetwork;
-    final visibleSys = vp.visibleSystemIds!;
-    final visibleSegs = Map<String, PipeSegment>.fromEntries(
-      baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
-    );
-    final visibleSegIds = visibleSegs.keys.toSet();
-    final visibleValves = Map<String, Valve>.fromEntries(
-      baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-    );
-    final visibleSupports = Map<String, PipeSupport>.fromEntries(
-      baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-    );
-    final visibleWelds = Map<String, WeldJoint>.fromEntries(
-      baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-    );
-    final visibleSpools = Map<String, PipeSpool>.fromEntries(
-      baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-    );
-    final visibleFittings = Map<String, Fitting>.fromEntries(
-      baseNetwork.fittings.entries.where((e) => baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id))),
-    );
+    var net = baseNetwork;
+    if (vp.visibleSystemIds != null) {
+      final visibleSys = vp.visibleSystemIds!;
+      final visibleSegs = Map<String, PipeSegment>.fromEntries(
+        baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
+      );
+      final visibleSegIds = visibleSegs.keys.toSet();
+      final visibleValves = Map<String, Valve>.fromEntries(
+        baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSupports = Map<String, PipeSupport>.fromEntries(
+        baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleWelds = Map<String, WeldJoint>.fromEntries(
+        baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSpools = Map<String, PipeSpool>.fromEntries(
+        baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleFittings = Map<String, Fitting>.fromEntries(
+        baseNetwork.fittings.entries.where((e) => baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id))),
+      );
 
-    return baseNetwork.copyWith(
-      segments: visibleSegs,
-      valves: visibleValves,
-      supports: visibleSupports,
-      weldJoints: visibleWelds,
-      spools: visibleSpools,
-      fittings: visibleFittings,
+      net = baseNetwork.copyWith(
+        segments: visibleSegs,
+        valves: visibleValves,
+        supports: visibleSupports,
+        weldJoints: visibleWelds,
+        spools: visibleSpools,
+        fittings: visibleFittings,
+      );
+    }
+
+    final visibleCallouts = Map<String, Callout>.fromEntries(
+      net.callouts.entries.where((e) => sheet.isCalloutVisible(e.value)),
     );
+    return net.copyWith(callouts: visibleCallouts);
   }
 
   void _paintGhostInactiveSystems(
