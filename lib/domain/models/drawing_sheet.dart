@@ -246,6 +246,9 @@ class DrawingSheet {
   /// Показывать ли высотные отметки на этом листе
   final bool showElevationCallouts;
 
+  /// Группировать ли элементы одного узла в многополочные этажерки
+  final bool groupMultiLevelCallouts;
+
   const DrawingSheet({
     required this.id,
     required this.name,
@@ -259,6 +262,7 @@ class DrawingSheet {
     this.legend,
     this.enabledCalloutTypes,
     this.showElevationCallouts = true,
+    this.groupMultiLevelCallouts = true,
   });
 
   /// Проверяет, должна ли отображаться данная выноска на текущем листе
@@ -392,6 +396,7 @@ class DrawingSheet {
         if (enabledCalloutTypes != null)
           'enabledCalloutTypes': enabledCalloutTypes!.map((e) => e.name).toList(),
         'showElevationCallouts': showElevationCallouts,
+        'groupMultiLevelCallouts': groupMultiLevelCallouts,
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -431,6 +436,7 @@ class DrawingSheet {
                 .toSet()
             : null,
         showElevationCallouts: json['showElevationCallouts'] as bool? ?? true,
+        groupMultiLevelCallouts: json['groupMultiLevelCallouts'] as bool? ?? true,
       );
 
   DrawingSheet copyWith({
@@ -449,6 +455,7 @@ class DrawingSheet {
     Set<CalloutTargetType>? enabledCalloutTypes,
     bool clearEnabledCalloutTypes = false,
     bool? showElevationCallouts,
+    bool? groupMultiLevelCallouts,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -467,6 +474,7 @@ class DrawingSheet {
           ? null
           : (enabledCalloutTypes ?? this.enabledCalloutTypes),
       showElevationCallouts: showElevationCallouts ?? this.showElevationCallouts,
+      groupMultiLevelCallouts: groupMultiLevelCallouts ?? this.groupMultiLevelCallouts,
     );
   }
 }
