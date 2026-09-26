@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790413913.560748,
-    "seen": 1790414507.3906307,
-    "ast_hash": "fb396d2c7a81242a1262fe1b3ca4ff84",
+    "mtime": 1790432587.7882092,
+    "seen": 1790432801.0278883,
+    "ast_hash": "9b997afc4d22b2c0c13c60747ac25ea2",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790414447.4572184,
-    "seen": 1790414507.390895,
-    "ast_hash": "7b991f0e442a03699cd0301c5f46b108",
+    "mtime": 1790432775.9923997,
+    "seen": 1790432801.0284157,
+    "ast_hash": "cee9a2cdd7fbcb4c1ef9dd516679fa70",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2070,9 +2070,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_sheet.dart": {
-    "mtime": 1790413457.5876057,
-    "seen": 1790414507.3905902,
-    "ast_hash": "fc60ff2e573e9901dd2f7b29f70c0569",
+    "mtime": 1790431954.4019825,
+    "seen": 1790432801.0278068,
+    "ast_hash": "a603e5f412d9b139551f3c071eb0c1ea",
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_style_config.dart": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
-    "mtime": 1790414227.952141,
-    "seen": 1790414507.3906693,
-    "ast_hash": "56fb4b98a52d973be23245c6548f2f44",
+    "mtime": 1790432697.7779174,
+    "seen": 1790432801.0279632,
+    "ast_hash": "48f4345242d73c97a704f6d02827fa7d",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
@@ -2214,9 +2214,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_layout_engine.dart": {
-    "mtime": 1790413345.4745507,
-    "seen": 1790414507.3906147,
-    "ast_hash": "65fac8014291492359c31b95fbc8268e",
+    "mtime": 1790432280.5316305,
+    "seen": 1790432801.0278566,
+    "ast_hash": "f839c8a21c11e209bd0fc6a51a043d2d",
     "semantic_hash": ""
   },
   "test/callout_layout_engine_test.dart": {
@@ -2511,6 +2511,30 @@
     "mtime": 1790411858.3237464,
     "seen": 1790414507.390921,
     "ast_hash": "4e9930b54623ba329b2591a475db7c89",
+    "semantic_hash": ""
+  },
+  "test/callout_boundary_column_layout_test.dart": {
+    "mtime": 1790432407.982851,
+    "seen": 1790432801.0280094,
+    "ast_hash": "a231b6e8b009d13de6f2ebd5fcd49f43",
+    "semantic_hash": ""
+  },
+  "test/drawing_sheet_multilevel_test.dart": {
+    "mtime": 1790431981.4241416,
+    "seen": 1790432801.0280776,
+    "ast_hash": "220066cb75536501d5ce717dbca172ee",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-26-boundary-column-callout-layout.md": {
+    "mtime": 1790429761.1464326,
+    "seen": 1790432801.0284464,
+    "ast_hash": "f051cef0aab9a9b8557a8344db639dc2",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-26-boundary-column-callout-layout-design.md": {
+    "mtime": 1790429701.500062,
+    "seen": 1790432801.0284681,
+    "ast_hash": "f004ae1ad94b7d28c20314ff60092f89",
     "semantic_hash": ""
   }
 }
