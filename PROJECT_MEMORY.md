@@ -2845,5 +2845,41 @@
   - Проверена регрессия всех смежных тестов (41+ тестов: соединение узлов, прямые врезки, ветвления, отводы, генерация стыков).
   - Статический анализ `flutter analyze`: **0 замечаний** (`No issues found!`).
 
+---
+
+### Этап: Адаптивные динамические выноски (Adaptive Smart Callouts), физические размеры шрифтов в мм бумаги и ручное управление высотой текста (Phase 50)
+
+- **Проблема и контекст:**
+  - Размер умных выносок (текста и полочек) ранее определялся в экранных пикселях и был жестко привязан к общему масштабу 3D-модели.
+  - При выводе модели в видовой экран чертежного листа (`SheetCanvasPainter`) или при экспорте в PDF через `SheetGeometryBuilder` и `PdfExportService` выноски приобретали гигантские нечитаемые габариты (формула `1.0 / (vp.viewScale * 4.0)` увеличивала оффсеты в 25–50 раз при масштабе 1:100, превращая смещение 50 px в 1.25 метра на чертеже), перекрывали геометрию трубопроводов и вылетали за пределы листа А3/А4.
+  - Пользователю требовался гибкий и свободный инструмент для ручной и адаптивной подгонки выносок под реальные плотные схемы: возможность задавать произвольную высоту шрифта в миллиметрах бумаги (например, 2.1 мм, 2.3 мм, 2.5 мм, 3.5 мм) без жестких блокировок со стороны ГОСТ, раздельное поведение рендеринга на листе (Paper Space) и в 3D-модели (Model Space), а также удобный инспектор свойств выноски прямо на главном CAD-экране.
+
+- **Реализованные изменения:**
+  - **1. Физическая размерность в миллиметрах бумаги (`Callout.textHeight`):**
+    - Базовая единица измерения `textHeight` в [Callout](file:///c:/Budget/Akso/lib/domain/models/callout.dart) переведена из абстрактных экранных пикселей в физические миллиметры на чертежном листе (по умолчанию 2.5 мм).
+    - В `Callout.fromJson` встроена бесшовная автоматическая миграция старых файлов проектов `.akso`: если сохраненное значение `textHeight >= 10.0` (старый дефолт был 12.0 px), оно автоматически конвертируется в 2.5 мм, а любые пользовательские кастомные значения в мм сохраняются.
+    - В [PipingNetwork.generateMissingCallouts](file:///c:/Budget/Akso/lib/domain/models/piping_network.dart) шаг смещения нормализован до 25.0 мм, базовый `textHeight` установлен в 2.5 мм.
+  - **2. Исправление масштабирования видового экрана и экспорта в PDF:**
+    - В [SheetGeometryBuilder](file:///c:/Budget/Akso/lib/domain/services/sheet_geometry_builder.dart) устранена ошибка обратной пропорции масштаба `1.0 / (vp.viewScale * 4.0)`. Вместо нее введен фиксированный масштаб выносной линии `offsetScale = 0.35` (переводящий экранные 50 px в 17.5 мм чертежа). Длина полки и высота знака отметки теперь динамически масштабируются от `callout.textHeight`, а высота текста точно переводится в типографские пункты (`textHeight * 2.83465 pt`).
+    - В [PdfExportService](file:///c:/Budget/Akso/lib/data/services/pdf_export_service.dart) параметры выносок и высотных отметок синхронизированы с `SheetGeometryBuilder`: единый `offsetScale = 0.35`, вычисление высоты шрифта и полочек в пунктах от `callout.textHeight`.
+  - **3. Раздельный рендеринг Paper Space vs Model Space в `CalloutPainter`:**
+    - В [CalloutPainter](file:///c:/Budget/Akso/lib/ui/canvas/painters/callout_painter.dart) (`paint`, `getCalloutBounds`, `hitTest`, `_paintSingleCallout`) добавлен флаг `isPaperSpace` и параметр `annotationScale`.
+    - В режиме чертежного листа (`isPaperSpace: true` в [SheetCanvasPainter](file:///c:/Budget/Akso/lib/ui/canvas/sheet_canvas_painter.dart)): точный рендеринг в миллиметрах бумаги с учетом экранного зума листа (`fontSize = textHeight * sheetZoom`, `offset = screenOffset * 0.35 * sheetZoom`, толщина линий пропорциональна зуму).
+    - В режиме 3D-модели (`isPaperSpace: false` в [PipingCanvas](file:///c:/Budget/Akso/lib/ui/canvas/piping_canvas.dart)): динамический расчет шрифта `(textHeight * 4.4) * zoomFactor` с clamp-ограничением `zoomFactor = (projector.scale / 0.2).clamp(0.65, 1.8)` для предотвращения гигантизма выносок при сильном отдалении модели.
+  - **4. Инспектор свойств выноски и ручное редактирование высоты в UI:**
+    - В [PipingInputController](file:///c:/Budget/Akso/lib/ui/canvas/input_controller.dart) добавлены методы `updateCalloutTextHeight(id, textHeightMm)` и `updateCalloutShelfDirection(id, direction)`.
+    - В [CalloutManagerPanel](file:///c:/Budget/Akso/lib/ui/features/editor/widgets/callout_manager_panel.dart):
+      - В таблицу всех выносок добавлена колонка с индикатором высоты шрифта (в мм).
+      - В диалог редактирования выноски `_showEditCalloutDialog` добавлены поле ввода высоты (с поддержкой дробных мм, напр. 2.1, 2.3), чипы быстрых пресетов `[2.1, 2.3, 2.5, 3.0, 3.5]` и выпадающий список направления полки (Авто / Влево / Вправо).
+    - В [DesktopCadLayout](file:///c:/Budget/Akso/lib/ui/features/editor/widgets/desktop_cad_layout.dart):
+      - В правую панель инспектора свойств добавлен специализированный блок «Выноска: {Цель}» при клике на выноску на холсте (`selectedCalloutId != null`).
+      - В инспекторе реализованы: предпросмотр текста над и под полкой, шаговые кнопки `+0.1 / -0.1 мм` и поле ввода произвольной высоты текста, быстрые пресеты `[2.1, 2.3, 2.5, 3.0, 3.5]`, `SegmentedButton` направления полки (Авто / Влево / Вправо), тумблер закрепления позиции `Pin`, переход в таблицу всех выносок и кнопка удаления.
+
+- **Верификация:**
+  - `flutter analyze` — 0 ошибок и предупреждений (`No issues found!`).
+  - Устранен deprecated warning `value` в `DropdownButtonFormField`.
+  - Успешно проверена сквозная целостность архитектуры и сериализации.
+
+
 
 
