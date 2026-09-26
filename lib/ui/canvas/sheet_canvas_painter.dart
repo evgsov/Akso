@@ -1008,7 +1008,8 @@ class SheetCanvasPainter extends CustomPainter {
         effectiveNetwork,
         templates: calloutTemplates,
         selectedCalloutId: isViewportFocused ? selectedCalloutId : null,
-        annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
+        annotationScale: sheetZoom,
+        isPaperSpace: true,
       );
     }
 

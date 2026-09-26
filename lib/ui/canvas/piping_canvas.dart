@@ -223,12 +223,15 @@ class PipingCanvasPainter extends CustomPainter {
 
     // 6.1. Отрисовка умных выносок сети (Callout) поверх графа
     if (showCallouts) {
+      final zoomFactor = (projector.scale / 0.2).clamp(0.65, 1.8);
       CalloutPainter.paint(
         canvas,
         projector,
         network,
         templates: calloutTemplates,
         selectedCalloutId: selectedCalloutId,
+        annotationScale: zoomFactor,
+        isPaperSpace: false,
       );
     }
 

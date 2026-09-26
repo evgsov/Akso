@@ -5832,12 +5832,15 @@ class PipingInputController extends ChangeNotifier {
 
   /// Поиск выноски под курсором (hit-test по тексту и полочке)
   String? _findCalloutAtScreenPos(Offset screenPos) {
+    final zoomFactor = (projector.scale / 0.2).clamp(0.65, 1.8);
     return CalloutPainter.hitTest(
       screenPos,
       network,
       projector,
       templates: currentProject.calloutTemplates,
       project: currentProject,
+      annotationScale: zoomFactor,
+      isPaperSpace: false,
     );
   }
 

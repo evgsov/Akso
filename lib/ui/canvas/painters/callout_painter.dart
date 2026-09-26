@@ -45,6 +45,7 @@ class CalloutPainter {
     Map<String, String>? templates,
     String? selectedCalloutId,
     double annotationScale = 1.0,
+    bool isPaperSpace = false,
   }) {
     if (network.callouts.isEmpty) return;
 
@@ -65,6 +66,7 @@ class CalloutPainter {
         effectiveTemplates,
         isSelected,
         annotationScale: annotationScale,
+        isPaperSpace: isPaperSpace,
       );
     }
   }
@@ -209,25 +211,40 @@ class CalloutPainter {
     Callout callout, {
     Map<String, String>? templates,
     ProjectModel? project,
+    bool isPaperSpace = false,
+    double annotationScale = 1.0,
   }) {
     final anchor3D = getTarget3DPoint(network, callout);
     if (anchor3D == null) return null;
 
     final anchorScreen = projector.project(anchor3D);
+    final scaledOffsetX = isPaperSpace
+        ? callout.screenOffsetX * 0.35 * annotationScale
+        : callout.screenOffsetX * annotationScale;
+    final scaledOffsetY = isPaperSpace
+        ? callout.screenOffsetY * 0.35 * annotationScale
+        : callout.screenOffsetY * annotationScale;
     final textPos = Offset(
-      anchorScreen.dx + callout.screenOffsetX,
-      anchorScreen.dy + callout.screenOffsetY,
+      anchorScreen.dx + scaledOffsetX,
+      anchorScreen.dy + scaledOffsetY,
     );
 
     final effectiveTemplates = templates ?? project?.calloutTemplates ?? defaultCalloutTemplates;
     final topText = network.generateCalloutText(callout, effectiveTemplates);
     final bottomText = network.generateCalloutBottomText(callout, effectiveTemplates);
 
+    final fontSize = isPaperSpace
+        ? callout.textHeight * annotationScale
+        : (callout.textHeight * 4.4) * annotationScale;
+    final bottomFontSize = isPaperSpace
+        ? callout.textHeight * 0.85 * annotationScale
+        : (callout.textHeight * 3.8) * annotationScale;
+
     final topTp = TextPainter(
       text: TextSpan(
         text: topText,
         style: TextStyle(
-          fontSize: callout.textHeight,
+          fontSize: fontSize,
           fontFamily: 'monospace',
           fontWeight: FontWeight.w600,
         ),
@@ -242,7 +259,7 @@ class CalloutPainter {
         text: TextSpan(
           text: bottomText,
           style: TextStyle(
-            fontSize: callout.textHeight * 0.9,
+            fontSize: bottomFontSize,
             fontFamily: 'monospace',
             fontWeight: FontWeight.w500,
           ),
@@ -257,11 +274,11 @@ class CalloutPainter {
         ? true
         : (callout.shelfDirection == ShelfDirection.left
             ? false
-            : callout.screenOffsetX >= 0);
+            : scaledOffsetX >= 0);
 
     if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
       if (callout.arrowOnNode) {
-        final shelfY = anchorScreen.dy + callout.screenOffsetY;
+        final shelfY = anchorScreen.dy + scaledOffsetY;
         final bgTop = shelfY - topTp.height - 4.0;
         final totalTextH = topTp.height + 4.0 + bottomHeight;
         final minY = math.min(bgTop, math.min(shelfY, anchorScreen.dy)) - 2.0;
@@ -331,6 +348,8 @@ class CalloutPainter {
     Map<String, String>? templates,
     ProjectModel? project,
     double hitTolerance = 6.0,
+    bool isPaperSpace = false,
+    double annotationScale = 1.0,
   }) {
     // Проверяем в обратном порядке (верхние выноски первыми)
     final calloutList = network.callouts.values.toList().reversed;
@@ -341,6 +360,8 @@ class CalloutPainter {
         callout,
         templates: templates,
         project: project,
+        isPaperSpace: isPaperSpace,
+        annotationScale: annotationScale,
       );
       if (bounds != null && bounds.inflate(hitTolerance).contains(screenPos)) {
         return callout.id;
@@ -357,9 +378,14 @@ class CalloutPainter {
     Map<String, String> templates,
     bool isSelected, {
     double annotationScale = 1.0,
+    bool isPaperSpace = false,
   }) {
-    final scaledOffsetX = callout.screenOffsetX * annotationScale;
-    final scaledOffsetY = callout.screenOffsetY * annotationScale;
+    final scaledOffsetX = isPaperSpace
+        ? callout.screenOffsetX * 0.35 * annotationScale
+        : callout.screenOffsetX * annotationScale;
+    final scaledOffsetY = isPaperSpace
+        ? callout.screenOffsetY * 0.35 * annotationScale
+        : callout.screenOffsetY * annotationScale;
     final textPos = Offset(
       anchorScreen.dx + scaledOffsetX,
       anchorScreen.dy + scaledOffsetY,
@@ -377,17 +403,26 @@ class CalloutPainter {
 
     final linePaint = Paint()
       ..color = primaryColor
-      ..strokeWidth = (isSelected ? 2.0 : 1.2) * annotationScale
+      ..strokeWidth = isPaperSpace
+          ? math.max(0.6, (isSelected ? 0.5 : 0.25) * annotationScale)
+          : (isSelected ? 2.0 : 1.2) * annotationScale
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.square
       ..strokeJoin = StrokeJoin.miter;
+
+    final fontSize = isPaperSpace
+        ? callout.textHeight * annotationScale
+        : (callout.textHeight * 4.4) * annotationScale;
+    final bottomFontSize = isPaperSpace
+        ? callout.textHeight * 0.85 * annotationScale
+        : (callout.textHeight * 3.8) * annotationScale;
 
     final topTp = TextPainter(
       text: TextSpan(
         text: topText,
         style: TextStyle(
           color: primaryColor,
-          fontSize: callout.textHeight * annotationScale,
+          fontSize: fontSize,
           fontFamily: 'monospace',
           fontWeight: FontWeight.w600,
         ),
@@ -402,7 +437,7 @@ class CalloutPainter {
           text: bottomText,
           style: TextStyle(
             color: primaryColor.withValues(alpha: 0.9),
-            fontSize: callout.textHeight * 0.9 * annotationScale,
+            fontSize: bottomFontSize,
             fontFamily: 'monospace',
             fontWeight: FontWeight.w500,
           ),
@@ -412,7 +447,7 @@ class CalloutPainter {
     }
 
     final maxTextWidth = math.max(topTp.width, bottomTp?.width ?? 0.0);
-    final shelfLength = maxTextWidth + 8.0;
+    final shelfLength = maxTextWidth + (isPaperSpace ? 2.5 * annotationScale : 8.0 * annotationScale);
     final shelfEnd = Offset(
       isRight ? textPos.dx + shelfLength : textPos.dx - shelfLength,
       textPos.dy,
@@ -423,7 +458,9 @@ class CalloutPainter {
       final defaultStyle = ElevationMarkStyleExt.fromString(styleName, fallback: ElevationMarkStyle.gostOutline);
       final effectiveStyle = callout.elevationStyle ?? defaultStyle;
 
-      final flagSize = 8.0 * annotationScale;
+      final flagSize = isPaperSpace
+          ? (callout.textHeight * 1.5) * annotationScale
+          : 8.0 * annotationScale;
       final flagH = flagSize * 1.3;
       final flagW = flagSize * 0.75;
 
@@ -648,14 +685,19 @@ class CalloutPainter {
     final dotPaint = Paint()
       ..color = primaryColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(anchorScreen, 3.0 * annotationScale, dotPaint);
+    canvas.drawCircle(
+      anchorScreen,
+      isPaperSpace ? math.max(0.8, 0.45 * annotationScale) : 3.0 * annotationScale,
+      dotPaint,
+    );
 
     // 2. Наклонная линия-ножка от объекта до излома (textPos)
     canvas.drawLine(anchorScreen, textPos, linePaint);
 
     // 3. Фон для текста над и под полочкой (рисуем ДО линии полочки для четкости)
-    final bgTop = textPos.dy - topTp.height - 4.0;
-    final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+    final bgTopPad = isPaperSpace ? 1.5 * annotationScale : 4.0;
+    final bgTop = textPos.dy - topTp.height - bgTopPad;
+    final totalHeight = topTp.height + bgTopPad + (bottomTp != null ? bottomTp.height + (isPaperSpace ? 1.5 * annotationScale : 4.0) : 0.0);
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         isRight ? textPos.dx : textPos.dx - shelfLength,
