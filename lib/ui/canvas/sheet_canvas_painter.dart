@@ -2,21 +2,18 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
-import '../../domain/models/callout.dart';
 import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/linear_dimension.dart';
 import '../../domain/models/node_3d.dart';
 import '../../domain/models/pipe_segment.dart';
-import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
 import '../../domain/models/piping_system.dart';
 import '../../domain/models/title_block_data.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/custom_valve_definition.dart';
-import '../../domain/models/weld_joint.dart';
 import '../../domain/models/fitting.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import 'painters/annotation_painter.dart';
@@ -1047,43 +1044,7 @@ class SheetCanvasPainter extends CustomPainter {
   }
 
   PipingNetwork _getEffectiveNetwork(PipingNetwork baseNetwork, SheetViewport vp) {
-    var net = baseNetwork;
-    if (vp.visibleSystemIds != null) {
-      final visibleSys = vp.visibleSystemIds!;
-      final visibleSegs = Map<String, PipeSegment>.fromEntries(
-        baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
-      );
-      final visibleSegIds = visibleSegs.keys.toSet();
-      final visibleValves = Map<String, Valve>.fromEntries(
-        baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-      );
-      final visibleSupports = Map<String, PipeSupport>.fromEntries(
-        baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-      );
-      final visibleWelds = Map<String, WeldJoint>.fromEntries(
-        baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-      );
-      final visibleSpools = Map<String, PipeSpool>.fromEntries(
-        baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
-      );
-      final visibleFittings = Map<String, Fitting>.fromEntries(
-        baseNetwork.fittings.entries.where((e) => baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id))),
-      );
-
-      net = baseNetwork.copyWith(
-        segments: visibleSegs,
-        valves: visibleValves,
-        supports: visibleSupports,
-        weldJoints: visibleWelds,
-        spools: visibleSpools,
-        fittings: visibleFittings,
-      );
-    }
-
-    final visibleCallouts = Map<String, Callout>.fromEntries(
-      net.callouts.entries.where((e) => sheet.isCalloutVisible(e.value, net)),
-    );
-    return net.copyWith(callouts: visibleCallouts);
+    return sheet.getEffectiveNetwork(baseNetwork);
   }
 
   void _paintGhostInactiveSystems(

@@ -104,6 +104,17 @@
       - **Исправление Y-координат каскада («друг над другом»):** В `_PlacedGenerativeShelf` теперь сохраняются честные границы всего блока выноски `topY` и `bottomY` (с учетом верхней и нижней строк текста и зазора). Новая полка встает строго над `placed.topY` или под `placed.bottomY` с чистым шагом 1.2 мм, исключая пересечение текста и гарантируя идеальный каскад по единому $X$.
       - **Иерархия штрафов с абсолютным вето:** Наложение выноски на выноску карается 1 000 000 очков, перекрещивание стрелок — 500 000 очков, пересечение ножки с чужой трубой — 150 000 очков, наложение на трубу — 60 000 очков.
       - **Ультра-компактные радиусы и штраф за дальность:** Введены радиусы `[7.0, 9.0, 11.0, 13.0, 16.0, 20.0, 26.0, 32.0]`. Свыше 11 мм действует жесткий квадратичный штраф `(dist - 11.0)^2 * 70.0`, стимулирующий прижимать выноски максимально близко к трассе.
+- **Унифицированное ядро геометрии листа и 100% паритет холста и PDF (Unified Sheet Geometry & PDF Parity):**
+  - **Корневые причины дефектов PDF:**
+    1. **Отсутствие текста выносок в PDF:** В `PdfExportService._renderVectorSceneToPdf` слой `VectorSceneLayer.callouts` (и `supports`) был отключен проверкой `if (item.layer == VectorSceneLayer.axes || item.layer == VectorSceneLayer.frameAndStamp)`. Геометрия полочек и стрелок отрисовывалась в PDF, но весь векторный текст выносок отбрасывался.
+    2. **Утечка элементов скрытых систем:** В генератор PDF передавалась сырая сеть `network` без предварительной фильтрации по `sheet.viewport.visibleSystemIds`. В `DrawingSheet.isCalloutVisible` при `systemId == null` (для фитингов с targetId узла или промежуточных элементов) возвращался `true`, из-за чего скрытые системы утекали в PDF и на холст. Размеры (`LinearDimension`) вообще не фильтровались по видимым системам.
+  - **Архитектурное решение без костылей (Unified Core Architecture):**
+    - `DrawingSheet.getEffectiveNetwork(PipingNetwork baseNetwork)`: канонический доменный метод, возвращающий отфильтрованную сеть листа, содержащую строго видимые сегменты, катушки, арматуру, фасонину, опоры, стыки, размеры и выноски.
+    - И холст (`SheetCanvasPainter`), и экспорт PDF (`SheetGeometryBuilder.buildScene`, `PdfExportService._buildViewportAnnotationTexts`) теперь используют единый вызов `sheet.getEffectiveNetwork(network)`.
+    - В `PdfExportService._renderVectorSceneToPdf` включена отрисовка слоев `VectorSceneLayer.callouts` и `VectorSceneLayer.supports` с субмиллиметровым расчетом базовой линии шрифта (`yPt = (heightMm - position.dy) * mm`) и точным перекрытием подложки (`totalH = textH + descent`).
+    - В `SheetGeometryBuilder._buildCallouts` добавлена полная поддержка ГОСТ-знаков высотных отметок (флажок на узле или на ножке).
+    - В `DrawingSheet.isCalloutVisible` и `PipingNetwork.getCalloutSystemId` закрыты все утечки (фитинги и узлы проверяют связность с видимыми сегментами, `systemId == null` строго для оборудования/штуцеров).
+    - Фильтрация размеров (`LinearDimension`): размеры, не связанные ни с одним видимым сегментом, исключаются из `effectiveNetwork`.
 - **Централизованная фильтрация выносок по видимым системам (System Visibility Filtering for Callouts):**
   - **Корневая проблема:**
     - `DrawingSheet.isCalloutVisible` проверял только `enabledCalloutTypes` и `showElevationCallouts`, но **не проверял** `viewport.visibleSystemIds`. Выноски скрытых систем:

@@ -3,8 +3,16 @@ import '../enums/sheet_format_type.dart';
 import '../enums/viewport_layout_preset.dart';
 import 'callout.dart';
 import 'drawing_legend.dart';
+import 'fitting.dart';
+import 'linear_dimension.dart';
+import 'pipe_segment.dart';
+import 'pipe_spool.dart';
+import 'pipe_support.dart';
+import 'piping_network.dart';
 import 'sheet_format.dart';
 import 'title_block_data.dart';
+import 'valve.dart';
+import 'weld_joint.dart';
 
 /// Видовой экран модели на листе
 class SheetViewport {
@@ -321,13 +329,98 @@ class DrawingSheet {
     // Фильтрация по видимым системам видового экрана
     final visibleSys = viewport.visibleSystemIds;
     if (visibleSys != null && visibleSys.isNotEmpty && network != null) {
+      // Оборудование и штуцеры не привязаны к конкретной системе — всегда видны
+      if (callout.targetType == CalloutTargetType.equipment || callout.targetType == CalloutTargetType.nozzle) {
+        return true;
+      }
+
+      // Для фитингов: проверяем, видна ли хотя бы одна подключенная труба
+      if (callout.targetType == CalloutTargetType.fitting) {
+        final fit = network.fittings[callout.targetId] ??
+            network.fittings.values.where((f) => f.id == callout.targetId || f.nodeId == callout.targetId).firstOrNull;
+        final nodeId = fit?.nodeId ?? callout.targetId;
+        final conn = network.getConnectedSegments(nodeId);
+        if (conn.isEmpty || !conn.any((s) => visibleSys.contains(s.systemId))) {
+          return false;
+        }
+        return true;
+      }
+
+      // Для отметок уровня (узлов): проверяем подключенные сегменты
+      if (callout.targetType == CalloutTargetType.node) {
+        final conn = network.getConnectedSegments(callout.targetId);
+        if (conn.isEmpty || !conn.any((s) => visibleSys.contains(s.systemId))) {
+          return false;
+        }
+        return true;
+      }
+
       final systemId = network.getCalloutSystemId(callout.targetType, callout.targetId);
-      // systemId == null означает оборудование/штуцер — они всегда видны
-      if (systemId != null && !visibleSys.contains(systemId)) {
+      if (systemId == null || !visibleSys.contains(systemId)) {
         return false;
       }
     }
     return true;
+  }
+
+  /// Возвращает эффективную сеть для текущего листа с учетом фильтра видимых систем
+  /// видового экрана ([viewport.visibleSystemIds]) и фильтра выносок ([isCalloutVisible]).
+  PipingNetwork getEffectiveNetwork(PipingNetwork baseNetwork) {
+    final visibleSys = viewport.visibleSystemIds;
+    var net = baseNetwork;
+
+    if (visibleSys != null && visibleSys.isNotEmpty) {
+      final visibleSegs = Map<String, PipeSegment>.fromEntries(
+        baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
+      );
+      final visibleSegIds = visibleSegs.keys.toSet();
+
+      final visibleValves = Map<String, Valve>.fromEntries(
+        baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSupports = Map<String, PipeSupport>.fromEntries(
+        baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleWelds = Map<String, WeldJoint>.fromEntries(
+        baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSpools = Map<String, PipeSpool>.fromEntries(
+        baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleFittings = Map<String, Fitting>.fromEntries(
+        baseNetwork.fittings.entries.where((e) =>
+          e.value.fittingType != FittingType.directBranch &&
+          baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id)),
+        ),
+      );
+      final visibleDimensions = Map<String, LinearDimension>.fromEntries(
+        baseNetwork.dimensions.entries.where((e) {
+          final dim = e.value;
+          if (dim.startNodeId == null && dim.endNodeId == null) return true;
+          final s1 = dim.startNodeId != null ? baseNetwork.getConnectedSegments(dim.startNodeId!) : const <PipeSegment>[];
+          final s2 = dim.endNodeId != null ? baseNetwork.getConnectedSegments(dim.endNodeId!) : const <PipeSegment>[];
+          final allConn = [...s1, ...s2];
+          if (allConn.isEmpty) return true;
+          return allConn.any((s) => visibleSegIds.contains(s.id));
+        }),
+      );
+
+      net = baseNetwork.copyWith(
+        segments: visibleSegs,
+        valves: visibleValves,
+        supports: visibleSupports,
+        weldJoints: visibleWelds,
+        spools: visibleSpools,
+        fittings: visibleFittings,
+        dimensions: visibleDimensions,
+      );
+    }
+
+    final visibleCallouts = Map<String, Callout>.fromEntries(
+      baseNetwork.callouts.entries.where((e) => isCalloutVisible(e.value, baseNetwork)),
+    );
+
+    return net.copyWith(callouts: visibleCallouts);
   }
 
   /// Расчет координат и габаритов видового экрана по выбранному пресету

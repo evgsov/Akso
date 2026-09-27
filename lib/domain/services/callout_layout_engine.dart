@@ -1605,8 +1605,9 @@ class CalloutLayoutEngine {
       final clusterTargetSegIds = <String>{};
       final clusterTargetElementIds = <String>{};
       for (final item in cluster.items) {
-        if (item.callout.targetType == CalloutTargetType.segment) {
-          clusterTargetSegIds.add(item.callout.targetId);
+        final sId = network.getTargetSegmentId(item.callout.targetType, item.callout.targetId);
+        if (sId != null) {
+          clusterTargetSegIds.add(sId);
         }
         clusterTargetElementIds.add('${item.callout.targetType.name}_${item.callout.targetId}');
       }

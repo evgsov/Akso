@@ -3323,23 +3323,29 @@ class PipingNetwork {
   String? getTargetSegmentId(CalloutTargetType type, String targetId) {
     switch (type) {
       case CalloutTargetType.segment:
-        final spool = spools[targetId];
+        final spool = spools[targetId] ??
+            spools.values.where((s) => s.id == targetId).firstOrNull;
         if (spool != null) return spool.segmentId;
-        return targetId;
+        if (segments.containsKey(targetId)) return targetId;
+        return null;
       case CalloutTargetType.valve:
-        return valves[targetId]?.segmentId;
+        return valves[targetId]?.segmentId ??
+            valves.values.where((v) => v.id == targetId).firstOrNull?.segmentId;
       case CalloutTargetType.weld:
-        return weldJoints[targetId]?.segmentId;
+        return weldJoints[targetId]?.segmentId ??
+            weldJoints.values.where((w) => w.id == targetId).firstOrNull?.segmentId;
       case CalloutTargetType.fitting:
         final fit = fittings[targetId] ??
-            fittings.values.where((f) => f.id == targetId).firstOrNull;
+            fittings.values.where((f) => f.id == targetId || f.nodeId == targetId).firstOrNull;
         if (fit != null) {
           final conn = getConnectedSegments(fit.nodeId);
           return conn.isNotEmpty ? conn.first.id : null;
         }
-        return null;
+        final conn = getConnectedSegments(targetId);
+        return conn.isNotEmpty ? conn.first.id : null;
       case CalloutTargetType.support:
-        return supports[targetId]?.segmentId;
+        return supports[targetId]?.segmentId ??
+            supports.values.where((s) => s.id == targetId).firstOrNull?.segmentId;
       case CalloutTargetType.nozzle:
       case CalloutTargetType.node:
       case CalloutTargetType.equipment:
@@ -3351,6 +3357,10 @@ class PipingNetwork {
   /// Для оборудования и штуцеров возвращает null (они не привязаны к конкретной системе).
   /// Для узлов (node) определяет систему через подключенные сегменты.
   String? getCalloutSystemId(CalloutTargetType type, String targetId) {
+    // Оборудование и штуцеры не привязаны к системе
+    if (type == CalloutTargetType.equipment || type == CalloutTargetType.nozzle) {
+      return null;
+    }
     // Для типов, у которых можно получить сегмент напрямую
     final segId = getTargetSegmentId(type, targetId);
     if (segId != null) {
@@ -3358,15 +3368,21 @@ class PipingNetwork {
     }
     // Узлы: определяем систему через подключенные сегменты
     if (type == CalloutTargetType.node) {
-      final node = nodes[targetId];
-      if (node != null) {
-        final conn = getConnectedSegments(node.id);
-        if (conn.isNotEmpty) return conn.first.systemId;
-      }
+      final conn = getConnectedSegments(targetId);
+      if (conn.isNotEmpty) return conn.first.systemId;
       return null;
     }
-    // Equipment и Nozzle не привязаны к системе — всегда видны
     return null;
+  }
+
+  /// Возвращает эффективную сеть для чертежного листа с учетом фильтра видимых систем
+  PipingNetwork getEffectiveNetworkForSheet(dynamic sheet) {
+    if (sheet == null) return this;
+    try {
+      return (sheet as dynamic).getEffectiveNetwork(this) as PipingNetwork;
+    } catch (_) {
+      return this;
+    }
   }
 
   /// Автогенерация недостающих выносок для сегментов/катушек, арматуры и сварных стыков

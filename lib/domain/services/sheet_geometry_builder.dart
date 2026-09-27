@@ -35,6 +35,7 @@ class SheetGeometryBuilder {
     Map<String, CustomValveDefinition>? customValves,
     Map<String, String>? calloutTemplates,
   }) {
+    final effectiveNetwork = sheet.getEffectiveNetwork(network);
     final widthMm = sheet.format.widthMm;
     final heightMm = sheet.format.heightMm;
     final scene = VectorScene(widthMm: widthMm, heightMm: heightMm);
@@ -48,31 +49,31 @@ class SheetGeometryBuilder {
     );
 
     // 1. Строительные оси здания
-    _buildAxes(scene, network, vp, projector, styleConfig);
+    _buildAxes(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 2. Технологическое оборудование
-    _buildEquipment(scene, network, vp, projector, styleConfig);
+    _buildEquipment(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 3. Трассы трубопроводов (катушки / сегменты)
-    _buildPipes(scene, network, vp, projector, styleConfig);
+    _buildPipes(scene, effectiveNetwork, vp, projector, styleConfig, rawNetwork: network);
 
     // 4. Фасонные детали (отводы, тройники, переходы, фланцы, заглушки)
-    _buildFittings(scene, network, vp, projector, styleConfig);
+    _buildFittings(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 5. Арматура
-    _buildValves(scene, network, vp, projector, styleConfig, customValves);
+    _buildValves(scene, effectiveNetwork, vp, projector, styleConfig, customValves);
 
     // 6. Опоры и подвески
-    _buildSupports(scene, network, vp, projector, styleConfig);
+    _buildSupports(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 7. Сварные стыки (ГОСТ / 3D-кольца / засечки)
-    _buildWelds(scene, network, vp, projector, styleConfig);
+    _buildWelds(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 8. Размеры (ГОСТ 2.307)
-    _buildDimensions(scene, network, vp, projector, styleConfig);
+    _buildDimensions(scene, effectiveNetwork, vp, projector, styleConfig);
 
     // 9. Выноски
-    _buildCallouts(scene, network, sheet, vp, projector, styleConfig, calloutTemplates);
+    _buildCallouts(scene, effectiveNetwork, sheet, vp, projector, styleConfig, calloutTemplates);
 
     // 10. Рамка листа (20-5-5-5) и штамп Форма 3 (ГОСТ 21.101-2020)
     _buildFrameAndStamp(scene, sheet, styleConfig);
@@ -296,22 +297,24 @@ class SheetGeometryBuilder {
     PipingNetwork network,
     dynamic vp,
     AxonometryProjector projector,
-    DrawingStyleConfig styleConfig,
-  ) {
-    if (network.spools.isNotEmpty) {
-      for (final spool in network.spools.values) {
-        final seg = network.segments[spool.segmentId];
+    DrawingStyleConfig styleConfig, {
+    PipingNetwork? rawNetwork,
+  }) {
+    final net = (vp.ghostInactiveSystems && rawNetwork != null) ? rawNetwork : network;
+    if (net.spools.isNotEmpty) {
+      for (final spool in net.spools.values) {
+        final seg = net.segments[spool.segmentId];
         if (seg == null) continue;
-        if (network.isButtJoint(seg.id)) continue;
+        if (net.isButtJoint(seg.id)) continue;
 
         final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
         if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-        final start = spool.startPoint ?? network.nodes[seg.startNodeId];
-        final end = spool.endPoint ?? network.nodes[seg.endNodeId];
+        final start = spool.startPoint ?? net.nodes[seg.startNodeId];
+        final end = spool.endPoint ?? net.nodes[seg.endNodeId];
         if (start == null || end == null) continue;
 
-        final sys = network.systems[seg.systemId];
+        final sys = net.systems[seg.systemId];
         final color = isVisible ? (sys?.colorValue ?? 0xFF000000) : 0xFFBDBDBD;
         final strokeW = isVisible ? styleConfig.getPipeStrokeWidthMm(spool.dn) : styleConfig.thinLineWidthMm;
 
@@ -329,19 +332,19 @@ class SheetGeometryBuilder {
       }
     } else {
       // Fallback: отрисовка по сегментам сети
-      for (final seg in network.segments.values) {
+      for (final seg in net.segments.values) {
         final isVisible = vp.visibleSystemIds == null || vp.visibleSystemIds!.contains(seg.systemId);
         if (!isVisible && !vp.ghostInactiveSystems) continue;
 
-        final n1 = network.nodes[seg.startNodeId];
-        final n2 = network.nodes[seg.endNodeId];
+        final n1 = net.nodes[seg.startNodeId];
+        final n2 = net.nodes[seg.endNodeId];
         if (n1 == null || n2 == null) continue;
 
-        final sys = network.systems[seg.systemId];
+        final sys = net.systems[seg.systemId];
         final color = isVisible ? (sys?.colorValue ?? 0xFF000000) : 0xFFBDBDBD;
         final strokeW = isVisible ? styleConfig.getPipeStrokeWidthMm(seg.dn) : styleConfig.thinLineWidthMm;
 
-        final segValves = network.valves.values.where((v) => v.segmentId == seg.id).toList();
+        final segValves = net.valves.values.where((v) => v.segmentId == seg.id).toList();
         final intervals = Element3dGeometry.calcPipeDrawableIntervals3d(n1, n2, segValves);
 
         for (final interval in intervals) {
@@ -938,7 +941,6 @@ class SheetGeometryBuilder {
       final anchorMm = _projectPoint(anchor3D.x, anchor3D.y, anchor3D.z, projector, vp);
       final effOffsetX = callout.getEffectiveOffsetX(sheet.id);
       final effOffsetY = callout.getEffectiveOffsetY(sheet.id);
-      final leaderEndMm = anchorMm + Offset(effOffsetX * offsetScale, effOffsetY * offsetScale);
 
       final isRight = effOffsetX >= 0;
       final topText = network.generateCalloutText(callout, templates);
@@ -950,55 +952,175 @@ class SheetGeometryBuilder {
         shelfLengthMm = math.max(shelfLengthMm, bottomText.length * (charWidthMm * 0.9) + 3.0);
       }
       final shelfDir = isRight ? 1.0 : -1.0;
-      final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
 
-      drawItems.add(_SheetCalloutDrawItem(
-        callout: callout,
-        anchorMm: anchorMm,
-        leaderEndMm: leaderEndMm,
-        shelfEndMm: shelfEndMm,
-        shelfLengthMm: shelfLengthMm,
-        isRight: isRight,
-        topText: topText,
-        bottomText: bottomText,
-      ));
+      final isElevation = callout.targetType == CalloutTargetType.node || callout.elevationStyle != null;
+      if (isElevation) {
+        final flagH = callout.textHeight * 1.5 * 1.3;
+        final flagW = callout.textHeight * 1.5 * 0.75;
+        if (callout.arrowOnNode) {
+          final shelfY = anchorMm.dy + effOffsetY * offsetScale;
+          final isAbove = shelfY <= anchorMm.dy;
+          final flagBaseY = isAbove ? anchorMm.dy - flagH : anchorMm.dy + flagH;
+          final leaderEndMm = Offset(anchorMm.dx, shelfY);
+          final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
+
+          // Стрелка знака отметки на узле (ГОСТ 21.101)
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [
+              anchorMm,
+              Offset(anchorMm.dx - flagW, flagBaseY),
+              Offset(anchorMm.dx + flagW, flagBaseY),
+              anchorMm,
+            ],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: false,
+          );
+          // Вертикальная ножка от стрелки к полочке
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [Offset(anchorMm.dx, flagBaseY), leaderEndMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: false,
+          );
+          // Полочка
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [leaderEndMm, shelfEndMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: true,
+          );
+
+          drawItems.add(_SheetCalloutDrawItem(
+            callout: callout,
+            anchorMm: anchorMm,
+            leaderEndMm: leaderEndMm,
+            shelfEndMm: shelfEndMm,
+            shelfLengthMm: shelfLengthMm,
+            isRight: isRight,
+            topText: topText,
+            bottomText: bottomText,
+          ));
+        } else {
+          final leaderEndMm = anchorMm + Offset(effOffsetX * offsetScale, effOffsetY * offsetScale);
+          final flagTopY = leaderEndMm.dy - flagH;
+          final shelfY = flagTopY - 1.5;
+          final shelfStartMm = Offset(leaderEndMm.dx, shelfY);
+          final shelfEndMm = shelfStartMm + Offset(shelfLengthMm * shelfDir, 0);
+
+          // Выносная ножка от объекта к стрелке
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [anchorMm, leaderEndMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: true,
+          );
+          // Стрелка знака отметки
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [
+              leaderEndMm,
+              Offset(leaderEndMm.dx - flagW, flagTopY),
+              Offset(leaderEndMm.dx + flagW, flagTopY),
+              leaderEndMm,
+            ],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: false,
+          );
+          // Вертикальный отрезок к полке
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [Offset(leaderEndMm.dx, flagTopY), shelfStartMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: false,
+          );
+          // Полочка
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [shelfStartMm, shelfEndMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: true,
+          );
+
+          drawItems.add(_SheetCalloutDrawItem(
+            callout: callout,
+            anchorMm: anchorMm,
+            leaderEndMm: shelfStartMm,
+            shelfEndMm: shelfEndMm,
+            shelfLengthMm: shelfLengthMm,
+            isRight: isRight,
+            topText: topText,
+            bottomText: bottomText,
+          ));
+        }
+      } else {
+        final leaderEndMm = anchorMm + Offset(effOffsetX * offsetScale, effOffsetY * offsetScale);
+        final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
+
+        // Линия выноски
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [anchorMm, leaderEndMm],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+        // Горизонтальная полка
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [leaderEndMm, shelfEndMm],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+        // Засечка/точка привязки
+        scene.addCircle(
+          layer: VectorSceneLayer.callouts,
+          center: anchorMm,
+          radiusMm: 0.6,
+          isFilled: true,
+          strokeColorValue: 0xFF37474F,
+          fillColorValue: 0xFF37474F,
+        );
+
+        drawItems.add(_SheetCalloutDrawItem(
+          callout: callout,
+          anchorMm: anchorMm,
+          leaderEndMm: leaderEndMm,
+          shelfEndMm: shelfEndMm,
+          shelfLengthMm: shelfLengthMm,
+          isRight: isRight,
+          topText: topText,
+          bottomText: bottomText,
+        ));
+      }
     }
 
-    // Отрисовываем каждую выноску индивидуально с собственной стрелкой-ножкой
+    // Отрисовываем тексты выносок
     for (final item in drawItems) {
-      scene.addPolyline(
-        layer: VectorSceneLayer.callouts,
-        points: [item.anchorMm, item.leaderEndMm],
-        strokeWidthMm: styleConfig.thinLineWidthMm,
-        colorValue: 0xFF37474F,
-        smoothJoin: true,
-      );
-      scene.addPolyline(
-        layer: VectorSceneLayer.callouts,
-        points: [item.leaderEndMm, item.shelfEndMm],
-        strokeWidthMm: styleConfig.thinLineWidthMm,
-        colorValue: 0xFF37474F,
-        smoothJoin: true,
-      );
-      scene.addCircle(
-        layer: VectorSceneLayer.callouts,
-        center: item.anchorMm,
-        radiusMm: 0.6,
-        isFilled: true,
-        strokeColorValue: 0xFF37474F,
-        fillColorValue: 0xFF37474F,
-      );
       _renderVectorCalloutTexts(scene, item);
     }
   }
 
   static void _renderVectorCalloutTexts(VectorScene scene, _SheetCalloutDrawItem item) {
     final textX = item.isRight ? item.leaderEndMm.dx + 1.0 : item.shelfEndMm.dx + 1.0;
+    final shelfY = item.leaderEndMm.dy;
+    final topBaselineMm = shelfY - 0.6;
+    final bottomAscentMm = (item.callout.textHeight * 0.85) * 0.75;
+    final bottomBaselineMm = shelfY + 0.6 + bottomAscentMm;
+
     if (item.topText.isNotEmpty) {
       scene.addText(
         layer: VectorSceneLayer.callouts,
         text: item.topText,
-        position: Offset(textX, item.leaderEndMm.dy - 1.2),
+        position: Offset(textX, topBaselineMm),
         fontSizePt: item.callout.textHeight * 2.83465,
         colorValue: 0xFF263238,
         isLeftAligned: true,
@@ -1010,7 +1132,7 @@ class SheetGeometryBuilder {
       scene.addText(
         layer: VectorSceneLayer.callouts,
         text: item.bottomText!,
-        position: Offset(textX, item.leaderEndMm.dy + item.callout.textHeight * 0.85 * 0.8),
+        position: Offset(textX, bottomBaselineMm),
         fontSizePt: item.callout.textHeight * 0.85 * 2.83465,
         colorValue: 0xFF263238,
         isLeftAligned: true,

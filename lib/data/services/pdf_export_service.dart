@@ -55,6 +55,7 @@ class PdfExportService {
         build: (context) {
           final pdfFontRegular = fontRegular.getFont(context);
           final pdfFontBold = fontBold.getFont(context);
+          final effectiveNetwork = sheet.getEffectiveNetwork(network);
 
           return pw.Stack(
             children: [
@@ -89,7 +90,7 @@ class PdfExportService {
               // 2. Текстовые аннотации видового экрана (размерные числа, полки выносок)
               ..._buildViewportAnnotationTexts(
                 sheet: sheet,
-                network: network,
+                network: effectiveNetwork,
                 projectionType: projectionType,
                 orbitAzimuth: orbitAzimuth,
                 orbitElevation: orbitElevation,
@@ -213,8 +214,10 @@ class PdfExportService {
       } else if (prim is VectorRect) {
         _renderRect(canvas, prim, heightMm, mm);
       } else if (prim is VectorText) {
-        // Тексты размеров и выносок рендерятся как высокоточные виджеты pw.Positioned с автоповоротом
-        if (item.layer == VectorSceneLayer.axes || item.layer == VectorSceneLayer.frameAndStamp) {
+        if (item.layer == VectorSceneLayer.axes ||
+            item.layer == VectorSceneLayer.frameAndStamp ||
+            item.layer == VectorSceneLayer.callouts ||
+            item.layer == VectorSceneLayer.supports) {
           _renderText(canvas, prim, fontRegular, fontBold, heightMm, mm);
         }
       }
@@ -418,16 +421,21 @@ class PdfExportService {
     final metrics = font.stringMetrics(text.text);
     final textW = metrics.width * text.fontSizePt;
     final textH = metrics.ascent * text.fontSizePt;
+    final descent = metrics.descent.abs() * text.fontSizePt;
 
     final xPt = text.isLeftAligned
         ? text.position.dx * mm
         : text.position.dx * mm - textW / 2.0;
-    final yPt = (heightMm - text.position.dy) * mm - textH / 2.0;
+    final yPt = text.isLeftAligned
+        ? (heightMm - text.position.dy) * mm
+        : (heightMm - text.position.dy) * mm - textH / 2.0;
 
     if (text.maskFillColorValue != null) {
       final pad = (text.maskPaddingMm ?? 0.5) * mm;
+      final totalH = textH + descent;
+      final rectY = text.isLeftAligned ? yPt - descent : yPt;
       canvas.setFillColor(PdfColor.fromInt(text.maskFillColorValue!));
-      canvas.drawRect(xPt - pad, yPt - pad, textW + pad * 2, textH + pad * 2);
+      canvas.drawRect(xPt - pad, rectY - pad, textW + pad * 2, totalH + pad * 2);
       canvas.fillPath();
     }
 
