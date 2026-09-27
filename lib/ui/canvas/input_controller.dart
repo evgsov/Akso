@@ -6029,6 +6029,19 @@ class PipingInputController extends ChangeNotifier {
     updateSheet(updated);
   }
 
+  /// Переключение отладочного слоя препятствий для выносок (Debug Obstacle Overlay)
+  void toggleDebugObstacles([String? sheetId]) {
+    final targetSheetId = sheetId ?? activeSheetId;
+    if (targetSheetId == null) return;
+    final sheetIndex = currentProject.sheets.indexWhere((s) => s.id == targetSheetId);
+    if (sheetIndex == -1) return;
+    final current = currentProject.sheets[sheetIndex];
+    final updated = current.copyWith(
+      debugShowObstacles: !current.debugShowObstacles,
+    );
+    updateSheet(updated);
+  }
+
   /// Явный выбор выноски по ID
   void selectCallout(String? calloutId) {
     selectedCalloutId = calloutId;

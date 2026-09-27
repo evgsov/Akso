@@ -15,6 +15,7 @@ import '../../domain/models/title_block_data.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/models/fitting.dart';
+import '../../domain/services/callout_layout_engine.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import 'painters/annotation_painter.dart';
 import 'painters/callout_painter.dart';
@@ -155,6 +156,127 @@ class SheetCanvasPainter extends CustomPainter {
     if (!isViewportFocused) {
       _drawActiveElementGrips(canvas, paperRect, frameRect);
     }
+
+    // 12. Отладочный визуальный слой препятствий для выносок (Debug Obstacle Overlay)
+    if (sheet.debugShowObstacles) {
+      _drawDebugObstacles(canvas, paperRect);
+    }
+  }
+
+  void _drawDebugObstacles(Canvas canvas, Rect paperRect) {
+    final baseProjector = AxonometryProjector(
+      projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
+    );
+
+    final obstacleMap = CalloutObstacleMap.buildSheetMap(
+      sheet: sheet,
+      network: network,
+      projector: baseProjector,
+    );
+
+    // 1. Отрисовка коридоров трубопроводов (красные полупрозрачные полосы шириной 2.0 мм)
+    final pipePaint = Paint()
+      ..color = const Color(0x66F44336)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    for (final pipe in obstacleMap.pipes) {
+      final p1 = Offset(
+        paperRect.left + pipe.p1.dx * sheetZoom,
+        paperRect.top + pipe.p1.dy * sheetZoom,
+      );
+      final p2 = Offset(
+        paperRect.left + pipe.p2.dx * sheetZoom,
+        paperRect.top + pipe.p2.dy * sheetZoom,
+      );
+      pipePaint.strokeWidth = math.max(2.0, pipe.radius * 2.0 * sheetZoom);
+      canvas.drawLine(p1, p2, pipePaint);
+    }
+
+    // 2. Отрисовка прямоугольников препятствий (штамп, таблицы, элементы, выноски)
+    final stampFill = Paint()
+      ..color = const Color(0x359C27B0)
+      ..style = PaintingStyle.fill;
+    final stampStroke = Paint()
+      ..color = const Color(0xAA9C27B0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final elementFill = Paint()
+      ..color = const Color(0x40FFC107)
+      ..style = PaintingStyle.fill;
+    final elementStroke = Paint()
+      ..color = const Color(0xAAFF9800)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final calloutFill = Paint()
+      ..color = const Color(0x3003A9F4)
+      ..style = PaintingStyle.fill;
+    final calloutStroke = Paint()
+      ..color = const Color(0x8803A9F4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (final obs in obstacleMap.rects) {
+      final r = Rect.fromLTRB(
+        paperRect.left + obs.rect.left * sheetZoom,
+        paperRect.top + obs.rect.top * sheetZoom,
+        paperRect.left + obs.rect.right * sheetZoom,
+        paperRect.top + obs.rect.bottom * sheetZoom,
+      );
+
+      final isStampOrTable = obs.id != null &&
+          (obs.id == 'stamp' || obs.id!.startsWith('table_') || obs.id == 'tech_reqs');
+      final isCallout = obs.id != null && obs.id!.startsWith('callout_');
+
+      if (isStampOrTable) {
+        canvas.drawRect(r, stampFill);
+        canvas.drawRect(r, stampStroke);
+      } else if (isCallout) {
+        canvas.drawRect(r, calloutFill);
+        canvas.drawRect(r, calloutStroke);
+      } else {
+        canvas.drawRect(r, elementFill);
+        canvas.drawRect(r, elementStroke);
+      }
+    }
+
+    // 3. Отрисовка зарегистрированных стрелок и полок выносок
+    final leaderPaint = Paint()
+      ..color = const Color(0x994CAF50)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    for (final line in obstacleMap.leaderLines) {
+      final p1 = Offset(
+        paperRect.left + line.p1.dx * sheetZoom,
+        paperRect.top + line.p1.dy * sheetZoom,
+      );
+      final p2 = Offset(
+        paperRect.left + line.p2.dx * sheetZoom,
+        paperRect.top + line.p2.dy * sheetZoom,
+      );
+      canvas.drawLine(p1, p2, leaderPaint);
+    }
+
+    // 4. Информационный бейдж в верхнем левом углу
+    final badgeBg = Paint()..color = const Color(0xDD263238);
+    final badgeRect = Rect.fromLTWH(paperRect.left + 10, paperRect.top + 10, 240, 22);
+    canvas.drawRRect(RRect.fromRectAndRadius(badgeRect, const Radius.circular(4)), badgeBg);
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: 'DEBUG: Сетка препятствий выносок',
+        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(paperRect.left + 16, paperRect.top + 14));
   }
 
   void _drawPaperWithShadow(Canvas canvas, Rect paperRect) {

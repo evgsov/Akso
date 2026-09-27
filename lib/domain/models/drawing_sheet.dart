@@ -292,6 +292,9 @@ class DrawingSheet {
   /// Группировать ли элементы одного узла в многополочные этажерки
   final bool groupMultiLevelCallouts;
 
+  /// Показывать ли визуальный отладочный слой препятствий (коридоры труб, боксы деталей)
+  final bool debugShowObstacles;
+
   const DrawingSheet({
     required this.id,
     required this.name,
@@ -306,6 +309,7 @@ class DrawingSheet {
     this.enabledCalloutTypes,
     this.showElevationCallouts = true,
     this.groupMultiLevelCallouts = true,
+    this.debugShowObstacles = false,
   });
 
   /// Проверяет, должна ли отображаться данная выноска на текущем листе.
@@ -557,6 +561,7 @@ class DrawingSheet {
           'enabledCalloutTypes': enabledCalloutTypes!.map((e) => e.name).toList(),
         'showElevationCallouts': showElevationCallouts,
         'groupMultiLevelCallouts': groupMultiLevelCallouts,
+        'debugShowObstacles': debugShowObstacles,
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -597,6 +602,7 @@ class DrawingSheet {
             : null,
         showElevationCallouts: json['showElevationCallouts'] as bool? ?? true,
         groupMultiLevelCallouts: json['groupMultiLevelCallouts'] as bool? ?? true,
+        debugShowObstacles: json['debugShowObstacles'] as bool? ?? false,
       );
 
   DrawingSheet copyWith({
@@ -616,6 +622,7 @@ class DrawingSheet {
     bool clearEnabledCalloutTypes = false,
     bool? showElevationCallouts,
     bool? groupMultiLevelCallouts,
+    bool? debugShowObstacles,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -635,6 +642,7 @@ class DrawingSheet {
           : (enabledCalloutTypes ?? this.enabledCalloutTypes),
       showElevationCallouts: showElevationCallouts ?? this.showElevationCallouts,
       groupMultiLevelCallouts: groupMultiLevelCallouts ?? this.groupMultiLevelCallouts,
+      debugShowObstacles: debugShowObstacles ?? this.debugShowObstacles,
     );
   }
 }

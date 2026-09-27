@@ -309,6 +309,21 @@ class SheetToolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
 
+                  // Кнопка Сетка препятствий (Debug)
+                  IconButton(
+                    key: const Key('sheet_debug_obstacles_button'),
+                    icon: Icon(
+                      sheet.debugShowObstacles ? Icons.grid_on : Icons.grid_off_outlined,
+                      size: 16,
+                      color: sheet.debugShowObstacles ? Colors.redAccent : Colors.white60,
+                    ),
+                    tooltip: sheet.debugShowObstacles
+                        ? 'Скрыть сетку препятствий выносок (Debug)'
+                        : 'Показать сетку препятствий выносок (Debug)',
+                    onPressed: () => controller.toggleDebugObstacles(sheet.id),
+                  ),
+                  const SizedBox(width: 6),
+
                   // Кнопка Авто-расстановка выносок листа (ГОСТ) и сброс
                   Row(
                     mainAxisSize: MainAxisSize.min,
