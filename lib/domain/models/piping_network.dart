@@ -3474,6 +3474,7 @@ class PipingNetwork {
 
     if (targetTypes == null || targetTypes.contains(CalloutTargetType.fitting)) {
       for (final fit in fittings.values) {
+        if (fit.fittingType == FittingType.directBranch) continue;
         if (!existingTargetIds.contains(fit.id) && !existingTargetIds.contains(fit.nodeId)) {
           final id = 'callout_${_uuid.v4()}';
           final resolvedY = resolveNonCollidingOffsetY(null, offsetY);
@@ -3608,8 +3609,9 @@ class PipingNetwork {
           exists = weldJoints.containsKey(c.targetId);
           break;
         case CalloutTargetType.fitting:
-          exists = fittings.containsKey(c.targetId) ||
-              fittings.values.any((f) => f.id == c.targetId || f.nodeId == c.targetId);
+          final fit = fittings[c.targetId] ??
+              fittings.values.where((f) => f.id == c.targetId || f.nodeId == c.targetId).firstOrNull;
+          exists = fit != null && fit.fittingType != FittingType.directBranch;
           break;
         case CalloutTargetType.equipment:
           exists = equipments.containsKey(c.targetId);

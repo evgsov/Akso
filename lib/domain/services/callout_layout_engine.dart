@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:akso/domain/models/piping_network.dart';
+import 'package:akso/domain/enums/fitting_type.dart';
 import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
@@ -132,6 +133,7 @@ class CalloutObstacleMap {
 
     // 6. Фасонные элементы (отводы, тройники, переходы, фланцы, заглушки)
     for (final fit in network.fittings.values) {
+      if (fit.fittingType == FittingType.directBranch) continue;
       final node = network.nodes[fit.nodeId];
       if (node == null) continue;
       final connected = network.getConnectedSegments(node.id);

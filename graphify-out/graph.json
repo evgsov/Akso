@@ -5221,6 +5221,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_editor_screen_editorscreen",
+      "label": "EditorScreen",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "editorscreen",
+      "source_file": "lib/ui/features/editor/editor_screen.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_editor_screen_editorscreenstate",
+      "label": "_EditorScreenState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_editorscreenstate",
+      "source_file": "lib/ui/features/editor/editor_screen.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout",
       "label": "desktop_cad_layout.dart",
       "_origin": "ast",
@@ -5507,6 +5529,160 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspector",
+      "label": "_DesktopEquipmentInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopequipmentinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspectorstate",
+      "label": "_DesktopEquipmentInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopequipmentinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspector",
+      "label": "_DesktopFittingInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopfittinginspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspectorstate",
+      "label": "_DesktopFittingInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopfittinginspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditor",
+      "label": "_DesktopNodeElevationEditor",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopnodeelevationeditor",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditorstate",
+      "label": "_DesktopNodeElevationEditorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopnodeelevationeditorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspector",
+      "label": "_DesktopSegmentInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopsegmentinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspectorstate",
+      "label": "_DesktopSegmentInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopsegmentinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspector",
+      "label": "_DesktopSpoolInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopspoolinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspectorstate",
+      "label": "_DesktopSpoolInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopspoolinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspector",
+      "label": "_DesktopValveInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopvalveinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspectorstate",
+      "label": "_DesktopValveInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopvalveinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspector",
+      "label": "_DesktopWeldInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopweldinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspectorstate",
+      "label": "_DesktopWeldInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopweldinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout_didupdatewidget",
       "label": "didUpdateWidget",
       "_origin": "ast",
@@ -5668,6 +5844,28 @@
       "community_name": "desktop_cad_layout.dart",
       "file_type": "code",
       "norm_label": "_materials",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrols",
+      "label": "_MultiSelectPipeControls",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_multiselectpipecontrols",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrolsstate",
+      "label": "_MultiSelectPipeControlsState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_multiselectpipecontrolsstate",
       "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
       "source_location": null
     },
@@ -5877,6 +6075,28 @@
       "community_name": "desktop_cad_layout.dart",
       "file_type": "code",
       "norm_label": "sheet_toolbar.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "state",
+      "label": "State",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "state",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "statefulwidget",
+      "label": "StatefulWidget",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "statefulwidget",
       "source_file": null,
       "source_location": null
     },
@@ -8012,146 +8232,58 @@
       "source_location": "L140"
     },
     {
-      "id": "lib_domain_models_piping_network_pipingnetwork",
-      "label": "PipingNetwork",
+      "id": "lib_domain_models_pipe_segment_pipesegment",
+      "label": "PipeSegment",
       "_origin": "ast",
       "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
+      "community_name": "segment_3d.dart",
       "file_type": "code",
-      "norm_label": "pipingnetwork",
-      "source_file": "lib/domain/models/piping_network.dart",
+      "norm_label": "pipesegment",
+      "source_file": "lib/domain/models/pipe_segment.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog",
-      "label": "pipe_assortment_dialog.dart",
+      "id": "lib_domain_models_segment_3d",
+      "label": "segment_3d.dart",
       "_origin": "ast",
       "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
+      "community_name": "segment_3d.dart",
       "file_type": "code",
-      "norm_label": "pipe_assortment_dialog.dart",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "norm_label": "segment_3d.dart",
+      "source_file": "lib/domain/models/segment_3d.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_build",
-      "label": "build",
+      "id": "lib_domain_models_segment_3d_segment3d",
+      "label": "Segment3D",
       "_origin": "ast",
       "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
+      "community_name": "segment_3d.dart",
       "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "norm_label": "segment3d",
+      "source_file": "lib/domain/models/segment_3d.dart",
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_controller",
-      "label": "controller",
+      "id": "pipe_segment_dart",
+      "label": "pipe_segment.dart",
       "_origin": "ast",
       "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
+      "community_name": "segment_3d.dart",
       "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "norm_label": "pipe_segment.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_createstate",
-      "label": "createState",
+      "id": "typedef",
+      "label": "typedef",
       "_origin": "ast",
       "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
+      "community_name": "segment_3d.dart",
       "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_dispose",
-      "label": "dispose",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dispose",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_filter",
-      "label": "_filter",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_filter",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_network",
-      "label": "network",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "network",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_oncatalogchanged",
-      "label": "onCatalogChanged",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "oncatalogchanged",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_searchcontroller",
-      "label": "_searchController",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_searchcontroller",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_searchquery",
-      "label": "_searchQuery",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_searchquery",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_show",
-      "label": "show",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "show",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_showaddwallthicknessdialog",
-      "label": "_showAddWallThicknessDialog",
-      "_origin": "ast",
-      "community": 130,
-      "community_name": "pipe_assortment_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_showaddwallthicknessdialog",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "norm_label": "typedef",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -12021,6 +12153,28 @@
       "source_location": null
     },
     {
+      "id": "lib_domain_models_equipment_equipmenttype",
+      "label": "EquipmentType",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "equipmenttype",
+      "source_file": "lib/domain/models/equipment.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_equipment_equipmenttypeext",
+      "label": "EquipmentTypeExt",
+      "_origin": "ast",
+      "community": 142,
+      "community_name": "equipment.dart",
+      "file_type": "code",
+      "norm_label": "equipmenttypeext",
+      "source_file": "lib/domain/models/equipment.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_domain_models_equipment_face",
       "label": "face",
       "_origin": "ast",
@@ -12435,6 +12589,28 @@
       "community_name": "materials_specification_dialog.dart",
       "file_type": "code",
       "norm_label": "_matchescategory",
+      "source_file": "lib/ui/features/editor/widgets/materials_specification_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_materials_specification_dialog_materialsspecificationdialog",
+      "label": "MaterialsSpecificationDialog",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "materials_specification_dialog.dart",
+      "file_type": "code",
+      "norm_label": "materialsspecificationdialog",
+      "source_file": "lib/ui/features/editor/widgets/materials_specification_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_materials_specification_dialog_materialsspecificationdialogstate",
+      "label": "_MaterialsSpecificationDialogState",
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "materials_specification_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_materialsspecificationdialogstate",
       "source_file": "lib/ui/features/editor/widgets/materials_specification_dialog.dart",
       "source_location": null
     },
@@ -13082,6 +13258,17 @@
       "norm_label": "\u0430\u0440\u0445\u0438\u0442\u0435\u043a\u0442\u0443\u0440\u043d\u0430\u044f \u0441\u043f\u0435\u0446\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f: \u0434\u0432\u0443\u0445\u0443\u0440\u043e\u0432\u043d\u0435\u0432\u0430\u044f \u043c\u043e\u0434\u0435\u043b\u044c \u0441\u0430\u043f\u0440 (\u043e\u0441\u0435\u0432\u0430\u044f \u0442\u0440\u0430\u0441\u0441\u0430 \u0438 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u043a\u043e\u043c\u043f\u043e\u043d\u0435\u043d\u0442\u044b)",
       "source_file": "docs/superpowers/specs/2026-09-16-centerline-and-physical-spools-architecture-design.md",
       "source_location": "L1"
+    },
+    {
+      "id": "domain_enums_valve_type_dart",
+      "label": "../../../../domain/enums/valve_type.dart",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "pipe_painter.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/enums/valve_type.dart",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "domain_models_custom_valve_definition_dart",
@@ -14435,6 +14622,17 @@
       "file_type": "code",
       "norm_label": "tojson",
       "source_file": "lib/domain/models/linear_dimension.dart",
+      "source_location": null
+    },
+    {
+      "id": "node_3d_dart",
+      "label": "node_3d.dart",
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "linear_dimension.dart",
+      "file_type": "code",
+      "norm_label": "node_3d.dart",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -15927,13 +16125,13 @@
       "source_location": null
     },
     {
-      "id": "models_pipe_segment_dart",
-      "label": "../models/pipe_segment.dart",
+      "id": "models_node_3d_dart",
+      "label": "../models/node_3d.dart",
       "_origin": "ast",
       "community": 157,
       "community_name": "topology_service.dart",
       "file_type": "code",
-      "norm_label": "../models/pipe_segment.dart",
+      "norm_label": "../models/node_3d.dart",
       "source_file": null,
       "source_location": null
     },
@@ -16528,6 +16726,17 @@
       "source_location": null
     },
     {
+      "id": "custom_pipe_dimension_dialog_dart",
+      "label": "custom_pipe_dimension_dialog.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "custom_pipe_dimension_dialog.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "domain_enums_sheet_format_type_dart",
       "label": "../../../../domain/enums/sheet_format_type.dart",
       "_origin": "ast",
@@ -16546,6 +16755,28 @@
       "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/enums/viewport_layout_preset.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "domain_enums_weld_type_dart",
+      "label": "../../../../domain/enums/weld_type.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/enums/weld_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "domain_models_drawing_legend_dart",
+      "label": "../../../../domain/models/drawing_legend.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/models/drawing_legend.dart",
       "source_file": null,
       "source_location": null
     },
@@ -16613,6 +16844,17 @@
       "file_type": "code",
       "norm_label": "viewportlayoutpreset",
       "source_file": "lib/domain/enums/viewport_layout_preset.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_canvas_input_controller_canvastool",
+      "label": "CanvasTool",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "canvastool",
+      "source_file": "lib/ui/canvas/input_controller.dart",
       "source_location": null
     },
     {
@@ -16913,6 +17155,39 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_tools_panel",
+      "label": "tools_panel.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "tools_panel.dart",
+      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_tools_panel_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_tools_panel_controller",
+      "label": "controller",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_tools_panel_editortoolspanel",
       "label": "EditorToolsPanel",
       "_origin": "ast",
@@ -16932,6 +17207,17 @@
       "file_type": "code",
       "norm_label": "editortopbar",
       "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "pipe_assortment_dialog_dart",
+      "label": "pipe_assortment_dialog.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "pipe_assortment_dialog.dart",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -16968,17 +17254,6 @@
       "source_location": null
     },
     {
-      "id": "voidcallback",
-      "label": "VoidCallback?",
-      "_origin": "ast",
-      "community": 160,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "voidcallback?",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "enums_fitting_type_dart",
       "label": "../enums/fitting_type.dart",
       "_origin": "ast",
@@ -16997,6 +17272,17 @@
       "community_name": "report_engine.dart",
       "file_type": "code",
       "norm_label": "../enums/inspection_method.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "enums_valve_type_dart",
+      "label": "../enums/valve_type.dart",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "../enums/valve_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -17166,6 +17452,105 @@
       "source_location": null
     },
     {
+      "id": "lib_domain_services_spool_calculator",
+      "label": "spool_calculator.dart",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "spool_calculator.dart",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_generatespoolsforthroughchain",
+      "label": "_generateSpoolsForThroughChain",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "_generatespoolsforthroughchain",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_generatesubspoolsforsingle",
+      "label": "_generateSubSpoolsForSingle",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "_generatesubspoolsforsingle",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_getfittingdeduction",
+      "label": "getFittingDeduction",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "getfittingdeduction",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_getvisualfittingdeduction",
+      "label": "_getVisualFittingDeduction",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "_getvisualfittingdeduction",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_isdirectbranchrun",
+      "label": "_isDirectBranchRun",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "_isdirectbranchrun",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_pointalongchain",
+      "label": "_pointAlongChain",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "_pointalongchain",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_recalculatespools",
+      "label": "recalculateSpools",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "recalculatespools",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_spool_calculator_spoolcalculator",
+      "label": "SpoolCalculator",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "spoolcalculator",
+      "source_file": "lib/domain/services/spool_calculator.dart",
+      "source_location": null
+    },
+    {
       "id": "models_equipment_dart",
       "label": "../models/equipment.dart",
       "_origin": "ast",
@@ -17184,6 +17569,28 @@
       "community_name": "report_engine.dart",
       "file_type": "code",
       "norm_label": "../models/fitting.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "models_pipe_segment_dart",
+      "label": "../models/pipe_segment.dart",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "../models/pipe_segment.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "models_pipe_spool_dart",
+      "label": "../models/pipe_spool.dart",
+      "_origin": "ast",
+      "community": 161,
+      "community_name": "report_engine.dart",
+      "file_type": "code",
+      "norm_label": "../models/pipe_spool.dart",
       "source_file": null,
       "source_location": null
     },
@@ -17419,380 +17826,6 @@
       "source_location": null
     },
     {
-      "id": "lib_ui_features_editor_editor_screen_editorscreen",
-      "label": "EditorScreen",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "editorscreen",
-      "source_file": "lib/ui/features/editor/editor_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_editor_screen_editorscreenstate",
-      "label": "_EditorScreenState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_editorscreenstate",
-      "source_file": "lib/ui/features/editor/editor_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspector",
-      "label": "_DesktopEquipmentInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopequipmentinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspectorstate",
-      "label": "_DesktopEquipmentInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopequipmentinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspector",
-      "label": "_DesktopFittingInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopfittinginspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspectorstate",
-      "label": "_DesktopFittingInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopfittinginspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditor",
-      "label": "_DesktopNodeElevationEditor",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopnodeelevationeditor",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditorstate",
-      "label": "_DesktopNodeElevationEditorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopnodeelevationeditorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspector",
-      "label": "_DesktopSegmentInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopsegmentinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspectorstate",
-      "label": "_DesktopSegmentInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopsegmentinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspector",
-      "label": "_DesktopSpoolInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopspoolinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspectorstate",
-      "label": "_DesktopSpoolInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopspoolinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspector",
-      "label": "_DesktopValveInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopvalveinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspectorstate",
-      "label": "_DesktopValveInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopvalveinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspector",
-      "label": "_DesktopWeldInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopweldinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspectorstate",
-      "label": "_DesktopWeldInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopweldinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrols",
-      "label": "_MultiSelectPipeControls",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_multiselectpipecontrols",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrolsstate",
-      "label": "_MultiSelectPipeControlsState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_multiselectpipecontrolsstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheet",
-      "label": "FittingPropertiesSheet",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "fittingpropertiessheet",
-      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheetstate",
-      "label": "_FittingPropertiesSheetState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_fittingpropertiessheetstate",
-      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_materials_specification_dialog_materialsspecificationdialog",
-      "label": "MaterialsSpecificationDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "materialsspecificationdialog",
-      "source_file": "lib/ui/features/editor/widgets/materials_specification_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_materials_specification_dialog_materialsspecificationdialogstate",
-      "label": "_MaterialsSpecificationDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_materialsspecificationdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/materials_specification_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialog",
-      "label": "PipeAssortmentDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "pipeassortmentdialog",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialogstate",
-      "label": "_PipeAssortmentDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_pipeassortmentdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_project_properties_dialog_projectpropertiesdialog",
-      "label": "ProjectPropertiesDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "projectpropertiesdialog",
-      "source_file": "lib/ui/features/editor/widgets/project_properties_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_project_properties_dialog_projectpropertiesdialogstate",
-      "label": "_ProjectPropertiesDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_projectpropertiesdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/project_properties_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_report_template_builder_widget_reporttemplatebuilderwidget",
-      "label": "ReportTemplateBuilderWidget",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "reporttemplatebuilderwidget",
-      "source_file": "lib/ui/features/editor/widgets/report_template_builder_widget.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_report_template_builder_widget_reporttemplatebuilderwidgetstate",
-      "label": "_ReportTemplateBuilderWidgetState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_reporttemplatebuilderwidgetstate",
-      "source_file": "lib/ui/features/editor/widgets/report_template_builder_widget.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_technical_requirements_dialog_technicalrequirementsdialog",
-      "label": "TechnicalRequirementsDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "technicalrequirementsdialog",
-      "source_file": "lib/ui/features/editor/widgets/technical_requirements_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_technical_requirements_dialog_technicalrequirementsdialogstate",
-      "label": "_TechnicalRequirementsDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_technicalrequirementsdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/technical_requirements_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_weld_journal_dialog_weldjournaldialog",
-      "label": "WeldJournalDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "weldjournaldialog",
-      "source_file": "lib/ui/features/editor/widgets/weld_journal_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_weld_journal_dialog_weldjournaldialogstate",
-      "label": "_WeldJournalDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_weldjournaldialogstate",
-      "source_file": "lib/ui/features/editor/widgets/weld_journal_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "state",
-      "label": "State",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "state",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "statefulwidget",
-      "label": "StatefulWidget",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "statefulwidget",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_enums_fitting_type_dart",
       "label": "package:akso/domain/enums/fitting_type.dart",
       "_origin": "ast",
@@ -17811,17 +17844,6 @@
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/enums/valve_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_enums_weld_type_dart",
-      "label": "package:akso/domain/enums/weld_type.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/enums/weld_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -17859,17 +17881,6 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_services_fitting_detector_dart",
-      "label": "package:akso/domain/services/fitting_detector.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/services/fitting_detector.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_services_report_engine_dart",
       "label": "package:akso/domain/services/report_engine.dart",
       "_origin": "ast",
@@ -17881,13 +17892,13 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_services_spool_calculator_dart",
-      "label": "package:akso/domain/services/spool_calculator.dart",
+      "id": "package_akso_domain_services_segment_positioning_service_dart",
+      "label": "package:akso/domain/services/segment_positioning_service.dart",
       "_origin": "ast",
       "community": 164,
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/services/spool_calculator.dart",
+      "norm_label": "package:akso/domain/services/segment_positioning_service.dart",
       "source_file": null,
       "source_location": null
     },
@@ -17991,25 +18002,25 @@
       "source_location": null
     },
     {
-      "id": "test_copy_branch_connection_test",
-      "label": "copy_branch_connection_test.dart",
+      "id": "test_cascading_spool_length_test",
+      "label": "cascading_spool_length_test.dart",
       "_origin": "ast",
       "community": 164,
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
-      "norm_label": "copy_branch_connection_test.dart",
-      "source_file": "test/copy_branch_connection_test.dart",
+      "norm_label": "cascading_spool_length_test.dart",
+      "source_file": "test/cascading_spool_length_test.dart",
       "source_location": null
     },
     {
-      "id": "test_copy_branch_connection_test_main",
+      "id": "test_cascading_spool_length_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 164,
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/copy_branch_connection_test.dart",
+      "source_file": "test/cascading_spool_length_test.dart",
       "source_location": null
     },
     {
@@ -18032,28 +18043,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/custom_valve_definition_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_direct_branch_test",
-      "label": "direct_branch_test.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "direct_branch_test.dart",
-      "source_file": "test/direct_branch_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_direct_branch_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/direct_branch_test.dart",
       "source_location": null
     },
     {
@@ -18098,28 +18087,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/elements_3d_wireframe_and_dxf_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_fitting_catalog_test",
-      "label": "fitting_catalog_test.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "fitting_catalog_test.dart",
-      "source_file": "test/fitting_catalog_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_fitting_catalog_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/fitting_catalog_test.dart",
       "source_location": null
     },
     {
@@ -18189,6 +18156,28 @@
       "source_location": null
     },
     {
+      "id": "test_node_pipe_connection_test",
+      "label": "node_pipe_connection_test.dart",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "node_pipe_connection_test.dart",
+      "source_file": "test/node_pipe_connection_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_node_pipe_connection_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/node_pipe_connection_test.dart",
+      "source_location": null
+    },
+    {
       "id": "test_report_engine_test",
       "label": "report_engine_test.dart",
       "_origin": "ast",
@@ -18211,25 +18200,25 @@
       "source_location": null
     },
     {
-      "id": "test_riser_elbow_tracing_test",
-      "label": "riser_elbow_tracing_test.dart",
+      "id": "test_segment_positioning_and_riser_sectioning_test",
+      "label": "segment_positioning_and_riser_sectioning_test.dart",
       "_origin": "ast",
       "community": 164,
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
-      "norm_label": "riser_elbow_tracing_test.dart",
-      "source_file": "test/riser_elbow_tracing_test.dart",
+      "norm_label": "segment_positioning_and_riser_sectioning_test.dart",
+      "source_file": "test/segment_positioning_and_riser_sectioning_test.dart",
       "source_location": null
     },
     {
-      "id": "test_riser_elbow_tracing_test_main",
+      "id": "test_segment_positioning_and_riser_sectioning_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 164,
       "community_name": "package:akso/domain/enums/valve_type.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/riser_elbow_tracing_test.dart",
+      "source_file": "test/segment_positioning_and_riser_sectioning_test.dart",
       "source_location": null
     },
     {
@@ -18255,6 +18244,28 @@
       "source_location": null
     },
     {
+      "id": "test_spool_callout_and_dxf_test",
+      "label": "spool_callout_and_dxf_test.dart",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "spool_callout_and_dxf_test.dart",
+      "source_file": "test/spool_callout_and_dxf_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_spool_callout_and_dxf_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/spool_callout_and_dxf_test.dart",
+      "source_location": null
+    },
+    {
       "id": "test_valve_pipe_cut_and_fittings_test",
       "label": "valve_pipe_cut_and_fittings_test.dart",
       "_origin": "ast",
@@ -18274,50 +18285,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/valve_pipe_cut_and_fittings_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_valve_weld_tracking_and_spool_division_test",
-      "label": "valve_weld_tracking_and_spool_division_test.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "valve_weld_tracking_and_spool_division_test.dart",
-      "source_file": "test/valve_weld_tracking_and_spool_division_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_valve_weld_tracking_and_spool_division_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/valve_weld_tracking_and_spool_division_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_weld_joint_physical_positioning_test",
-      "label": "weld_joint_physical_positioning_test.dart",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "weld_joint_physical_positioning_test.dart",
-      "source_file": "test/weld_joint_physical_positioning_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_weld_joint_physical_positioning_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 164,
-      "community_name": "package:akso/domain/enums/valve_type.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/weld_joint_physical_positioning_test.dart",
       "source_location": null
     },
     {
@@ -18761,25 +18728,25 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_enums_dxf_callout_options_dart",
-      "label": "package:akso/domain/enums/dxf_callout_options.dart",
+      "id": "lib_domain_models_node_3d_node3d",
+      "label": "Node3D",
       "_origin": "ast",
       "community": 168,
       "community_name": "dart:ui",
       "file_type": "code",
-      "norm_label": "package:akso/domain/enums/dxf_callout_options.dart",
-      "source_file": null,
+      "norm_label": "node3d",
+      "source_file": "lib/domain/models/node_3d.dart",
       "source_location": null
     },
     {
-      "id": "package_akso_domain_enums_projection_type_dart",
-      "label": "package:akso/domain/enums/projection_type.dart",
+      "id": "lib_domain_models_valve_valve",
+      "label": "Valve",
       "_origin": "ast",
       "community": 168,
       "community_name": "dart:ui",
       "file_type": "code",
-      "norm_label": "package:akso/domain/enums/projection_type.dart",
-      "source_file": null,
+      "norm_label": "valve",
+      "source_file": "lib/domain/models/valve.dart",
       "source_location": null
     },
     {
@@ -18790,6 +18757,17 @@
       "community_name": "dart:ui",
       "file_type": "code",
       "norm_label": "package:akso/domain/enums/weld_joint_style.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_models_custom_valve_definition_dart",
+      "label": "package:akso/domain/models/custom_valve_definition.dart",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/models/custom_valve_definition.dart",
       "source_file": null,
       "source_location": null
     },
@@ -18812,6 +18790,17 @@
       "community_name": "dart:ui",
       "file_type": "code",
       "norm_label": "package:akso/domain/services/sheet_geometry_builder.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_services_spool_calculator_dart",
+      "label": "package:akso/domain/services/spool_calculator.dart",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/services/spool_calculator.dart",
       "source_file": null,
       "source_location": null
     },
@@ -18849,13 +18838,24 @@
       "source_location": null
     },
     {
-      "id": "package_akso_ui_features_editor_widgets_dxf_export_dialog_dart",
-      "label": "package:akso/ui/features/editor/widgets/dxf_export_dialog.dart",
+      "id": "package_akso_ui_canvas_painters_valve_painter_dart",
+      "label": "package:akso/ui/canvas/painters/valve_painter.dart",
       "_origin": "ast",
       "community": 168,
       "community_name": "dart:ui",
       "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/dxf_export_dialog.dart",
+      "norm_label": "package:akso/ui/canvas/painters/valve_painter.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_canvas_valve_symbol_painter_dart",
+      "label": "package:akso/ui/canvas/valve_symbol_painter.dart",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/canvas/valve_symbol_painter.dart",
       "source_file": null,
       "source_location": null
     },
@@ -18904,25 +18904,80 @@
       "source_location": null
     },
     {
-      "id": "test_dxf_export_dialog_widget_test",
-      "label": "dxf_export_dialog_widget_test.dart",
+      "id": "test_custom_valve_3d_geometry_test",
+      "label": "custom_valve_3d_geometry_test.dart",
       "_origin": "ast",
       "community": 168,
       "community_name": "dart:ui",
       "file_type": "code",
-      "norm_label": "dxf_export_dialog_widget_test.dart",
-      "source_file": "test/dxf_export_dialog_widget_test.dart",
+      "norm_label": "custom_valve_3d_geometry_test.dart",
+      "source_file": "test/custom_valve_3d_geometry_test.dart",
       "source_location": null
     },
     {
-      "id": "test_dxf_export_dialog_widget_test_main",
+      "id": "test_custom_valve_3d_geometry_test_endnode",
+      "label": "endNode",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "endnode",
+      "source_file": "test/custom_valve_3d_geometry_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_custom_valve_3d_geometry_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 168,
       "community_name": "dart:ui",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/dxf_export_dialog_widget_test.dart",
+      "source_file": "test/custom_valve_3d_geometry_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_custom_valve_3d_geometry_test_startnode",
+      "label": "startNode",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "startnode",
+      "source_file": "test/custom_valve_3d_geometry_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_custom_valve_3d_geometry_test_valve",
+      "label": "valve",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "valve",
+      "source_file": "test/custom_valve_3d_geometry_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_custom_valve_rendering_test",
+      "label": "custom_valve_rendering_test.dart",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "custom_valve_rendering_test.dart",
+      "source_file": "test/custom_valve_rendering_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_custom_valve_rendering_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 168,
+      "community_name": "dart:ui",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/custom_valve_rendering_test.dart",
       "source_location": null
     },
     {
@@ -18945,50 +19000,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/elbow_and_tee_rendering_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_fittings_and_elevation_test",
-      "label": "fittings_and_elevation_test.dart",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "fittings_and_elevation_test.dart",
-      "source_file": "test/fittings_and_elevation_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_fittings_and_elevation_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/fittings_and_elevation_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_generate_samples_test",
-      "label": "generate_samples_test.dart",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "generate_samples_test.dart",
-      "source_file": "test/generate_samples_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_generate_samples_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/generate_samples_test.dart",
       "source_location": null
     },
     {
@@ -19033,28 +19044,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/vector_scene_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_viewport_navigation_test",
-      "label": "viewport_navigation_test.dart",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "viewport_navigation_test.dart",
-      "source_file": "test/viewport_navigation_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_viewport_navigation_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "dart:ui",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/viewport_navigation_test.dart",
       "source_location": null
     },
     {
@@ -20231,94 +20220,6 @@
       "source_location": "L7"
     },
     {
-      "id": "lib_domain_models_node_3d_node3d",
-      "label": "Node3D",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "node3d",
-      "source_file": "lib/domain/models/node_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_valve_valve",
-      "label": "Valve",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "valve",
-      "source_file": "lib/domain/models/valve.dart",
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_canvas_painters_valve_painter_dart",
-      "label": "package:akso/ui/canvas/painters/valve_painter.dart",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/canvas/painters/valve_painter.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_3d_geometry_test",
-      "label": "custom_valve_3d_geometry_test.dart",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "custom_valve_3d_geometry_test.dart",
-      "source_file": "test/custom_valve_3d_geometry_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_3d_geometry_test_endnode",
-      "label": "endNode",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "endnode",
-      "source_file": "test/custom_valve_3d_geometry_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_3d_geometry_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/custom_valve_3d_geometry_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_3d_geometry_test_startnode",
-      "label": "startNode",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "startnode",
-      "source_file": "test/custom_valve_3d_geometry_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_3d_geometry_test_valve",
-      "label": "valve",
-      "_origin": "ast",
-      "community": 171,
-      "community_name": "custom_valve_3d_geometry_test.dart",
-      "file_type": "code",
-      "norm_label": "valve",
-      "source_file": "test/custom_valve_3d_geometry_test.dart",
-      "source_location": null
-    },
-    {
       "id": "windows_runner_flutter_window_flutterwindow_oncreate",
       "label": "OnCreate",
       "_origin": "ast",
@@ -20949,6 +20850,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_project_properties_dialog_projectpropertiesdialog",
+      "label": "ProjectPropertiesDialog",
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "project_properties_dialog.dart",
+      "file_type": "code",
+      "norm_label": "projectpropertiesdialog",
+      "source_file": "lib/ui/features/editor/widgets/project_properties_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_project_properties_dialog_projectpropertiesdialogstate",
+      "label": "_ProjectPropertiesDialogState",
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "project_properties_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_projectpropertiesdialogstate",
+      "source_file": "lib/ui/features/editor/widgets/project_properties_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_project_properties_dialog_save",
       "label": "_save",
       "_origin": "ast",
@@ -21151,17 +21074,6 @@
       "file_type": "code",
       "norm_label": "worldpoint",
       "source_file": "lib/domain/models/acquired_tracking_point.dart",
-      "source_location": null
-    },
-    {
-      "id": "node_3d_dart",
-      "label": "node_3d.dart",
-      "_origin": "ast",
-      "community": 178,
-      "community_name": "Offset?",
-      "file_type": "code",
-      "norm_label": "node_3d.dart",
-      "source_file": null,
       "source_location": null
     },
     {
@@ -21560,6 +21472,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_weld_journal_dialog_weldjournaldialog",
+      "label": "WeldJournalDialog",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "weld_journal_dialog.dart",
+      "file_type": "code",
+      "norm_label": "weldjournaldialog",
+      "source_file": "lib/ui/features/editor/widgets/weld_journal_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_weld_journal_dialog_weldjournaldialogstate",
+      "label": "_WeldJournalDialogState",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "weld_journal_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_weldjournaldialogstate",
+      "source_file": "lib/ui/features/editor/widgets/weld_journal_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_weld_journal_dialog_weldtemplates",
       "label": "_weldTemplates",
       "_origin": "ast",
@@ -21631,13 +21565,13 @@
       "source_location": "L96"
     },
     {
-      "id": "package_akso_domain_enums_inspection_method_dart",
-      "label": "package:akso/domain/enums/inspection_method.dart",
+      "id": "package_akso_domain_enums_weld_type_dart",
+      "label": "package:akso/domain/enums/weld_type.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/enums/inspection_method.dart",
+      "norm_label": "package:akso/domain/enums/weld_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -21646,53 +21580,9 @@
       "label": "package:akso/domain/models/fitting_catalog.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/models/fitting_catalog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_pipe_spool_dart",
-      "label": "package:akso/domain/models/pipe_spool.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/pipe_spool.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_piping_network_dart",
-      "label": "package:akso/domain/models/piping_network.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/piping_network.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_piping_system_dart",
-      "label": "package:akso/domain/models/piping_system.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/piping_system.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_services_segment_positioning_service_dart",
-      "label": "package:akso/domain/services/segment_positioning_service.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/services/segment_positioning_service.dart",
       "source_file": null,
       "source_location": null
     },
@@ -21701,7 +21591,7 @@
       "label": "package:akso/ui/features/editor/widgets/fitting_catalog_dialog.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/widgets/fitting_catalog_dialog.dart",
       "source_file": null,
@@ -21712,109 +21602,32 @@
       "label": "package:akso/ui/features/editor/widgets/fitting_properties_sheet.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/widgets/fitting_properties_sheet.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_ui_features_editor_widgets_piping_systems_dialog_dart",
-      "label": "package:akso/ui/features/editor/widgets/piping_systems_dialog.dart",
+      "id": "test_fitting_catalog_test",
+      "label": "fitting_catalog_test.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/piping_systems_dialog.dart",
-      "source_file": null,
+      "norm_label": "fitting_catalog_test.dart",
+      "source_file": "test/fitting_catalog_test.dart",
       "source_location": null
     },
     {
-      "id": "test_cascading_spool_length_test",
-      "label": "cascading_spool_length_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "cascading_spool_length_test.dart",
-      "source_file": "test/cascading_spool_length_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_cascading_spool_length_test_main",
+      "id": "test_fitting_catalog_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/cascading_spool_length_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_centerline_and_physical_spools_test",
-      "label": "centerline_and_physical_spools_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "centerline_and_physical_spools_test.dart",
-      "source_file": "test/centerline_and_physical_spools_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_centerline_and_physical_spools_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/centerline_and_physical_spools_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_copy_tool_and_undo_test",
-      "label": "copy_tool_and_undo_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "copy_tool_and_undo_test.dart",
-      "source_file": "test/copy_tool_and_undo_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_copy_tool_and_undo_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/copy_tool_and_undo_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_duplicate_and_rotate_test",
-      "label": "duplicate_and_rotate_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "duplicate_and_rotate_test.dart",
-      "source_file": "test/duplicate_and_rotate_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_duplicate_and_rotate_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/duplicate_and_rotate_test.dart",
+      "source_file": "test/fitting_catalog_test.dart",
       "source_location": null
     },
     {
@@ -21822,7 +21635,7 @@
       "label": "fitting_elements_interaction_test.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "fitting_elements_interaction_test.dart",
       "source_file": "test/fitting_elements_interaction_test.dart",
@@ -21833,98 +21646,54 @@
       "label": "main",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/fitting_elements_interaction_test.dart",
       "source_location": null
     },
     {
-      "id": "test_piping_systems_test",
-      "label": "piping_systems_test.dart",
+      "id": "test_valve_weld_tracking_and_spool_division_test",
+      "label": "valve_weld_tracking_and_spool_division_test.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
-      "norm_label": "piping_systems_test.dart",
-      "source_file": "test/piping_systems_test.dart",
+      "norm_label": "valve_weld_tracking_and_spool_division_test.dart",
+      "source_file": "test/valve_weld_tracking_and_spool_division_test.dart",
       "source_location": null
     },
     {
-      "id": "test_piping_systems_test_main",
+      "id": "test_valve_weld_tracking_and_spool_division_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/piping_systems_test.dart",
+      "source_file": "test/valve_weld_tracking_and_spool_division_test.dart",
       "source_location": null
     },
     {
-      "id": "test_segment_positioning_and_riser_sectioning_test",
-      "label": "segment_positioning_and_riser_sectioning_test.dart",
+      "id": "test_weld_joint_physical_positioning_test",
+      "label": "weld_joint_physical_positioning_test.dart",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
-      "norm_label": "segment_positioning_and_riser_sectioning_test.dart",
-      "source_file": "test/segment_positioning_and_riser_sectioning_test.dart",
+      "norm_label": "weld_joint_physical_positioning_test.dart",
+      "source_file": "test/weld_joint_physical_positioning_test.dart",
       "source_location": null
     },
     {
-      "id": "test_segment_positioning_and_riser_sectioning_test_main",
+      "id": "test_weld_joint_physical_positioning_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
+      "community_name": "package:akso/domain/enums/weld_type.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/segment_positioning_and_riser_sectioning_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_spool_selection_and_hit_test",
-      "label": "spool_selection_and_hit_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "spool_selection_and_hit_test.dart",
-      "source_file": "test/spool_selection_and_hit_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_spool_selection_and_hit_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/spool_selection_and_hit_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_weld_bulk_edit_test",
-      "label": "weld_bulk_edit_test.dart",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "weld_bulk_edit_test.dart",
-      "source_file": "test/weld_bulk_edit_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_weld_bulk_edit_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 181,
-      "community_name": "package:akso/domain/models/piping_network.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/weld_bulk_edit_test.dart",
+      "source_file": "test/weld_joint_physical_positioning_test.dart",
       "source_location": null
     },
     {
@@ -25621,17 +25390,6 @@
       "source_location": null
     },
     {
-      "id": "domain_models_drawing_legend_dart",
-      "label": "../../../../domain/models/drawing_legend.dart",
-      "_origin": "ast",
-      "community": 198,
-      "community_name": "drawing_legend_dialog.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/models/drawing_legend.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_ui_features_editor_widgets_drawing_legend_dialog",
       "label": "drawing_legend_dialog.dart",
       "_origin": "ast",
@@ -25805,6 +25563,17 @@
       "file_type": "code",
       "norm_label": "_titlecontroller",
       "source_file": "lib/ui/features/editor/widgets/drawing_legend_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "valuechanged",
+      "label": "ValueChanged",
+      "_origin": "ast",
+      "community": 198,
+      "community_name": "drawing_legend_dialog.dart",
+      "file_type": "code",
+      "norm_label": "valuechanged",
+      "source_file": null,
       "source_location": null
     },
     {
@@ -31092,6 +30861,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_technical_requirements_dialog_technicalrequirementsdialog",
+      "label": "TechnicalRequirementsDialog",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "technical_requirements_dialog.dart",
+      "file_type": "code",
+      "norm_label": "technicalrequirementsdialog",
+      "source_file": "lib/ui/features/editor/widgets/technical_requirements_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_technical_requirements_dialog_technicalrequirementsdialogstate",
+      "label": "_TechnicalRequirementsDialogState",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "technical_requirements_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_technicalrequirementsdialogstate",
+      "source_file": "lib/ui/features/editor/widgets/technical_requirements_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_technical_requirements_dialog_textcontroller",
       "label": "_textController",
       "_origin": "ast",
@@ -32068,6 +31859,39 @@
       "source_location": null
     },
     {
+      "id": "lib_data_repositories_project_repository_iprojectrepository",
+      "label": "IProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "iprojectrepository",
+      "source_file": "lib/data/repositories/project_repository.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_data_repositories_project_repository_projectrepository",
+      "label": "ProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projectrepository",
+      "source_file": "lib/data/repositories/project_repository.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_project_model_projectmodel",
+      "label": "ProjectModel",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projectmodel",
+      "source_file": "lib/domain/models/project_model.dart",
+      "source_location": null
+    },
+    {
       "id": "package_akso_data_repositories_project_repository_dart",
       "label": "package:akso/data/repositories/project_repository.dart",
       "_origin": "ast",
@@ -32189,6 +32013,105 @@
       "source_location": null
     },
     {
+      "id": "test_project_controller_integration_test_testprojectrepository",
+      "label": "TestProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "testprojectrepository",
+      "source_file": "test/project_controller_integration_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test",
+      "label": "project_identity_test.dart",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "project_identity_test.dart",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_fakeprojectrepository",
+      "label": "FakeProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "fakeprojectrepository",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_lastsavedproject",
+      "label": "lastSavedProject",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "lastsavedproject",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_loadcount",
+      "label": "loadCount",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "loadcount",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_projecttoload",
+      "label": "projectToLoad",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projecttoload",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_savecount",
+      "label": "saveCount",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "savecount",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_saveproject",
+      "label": "saveProject",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "saveproject",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
       "id": "test_project_repository_test",
       "label": "project_repository_test.dart",
       "_origin": "ast",
@@ -32208,6 +32131,17 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/project_repository_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_serialization_test_mockprojectrepository",
+      "label": "MockProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "mockprojectrepository",
+      "source_file": "test/project_serialization_test.dart",
       "source_location": null
     },
     {
@@ -34803,13 +34737,13 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_models_pipe_dimension_dart",
-      "label": "package:akso/domain/models/pipe_dimension.dart",
+      "id": "package_akso_domain_models_piping_system_dart",
+      "label": "package:akso/domain/models/piping_system.dart",
       "_origin": "ast",
       "community": 220,
       "community_name": "package:flutter/material.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/models/pipe_dimension.dart",
+      "norm_label": "package:akso/domain/models/piping_system.dart",
       "source_file": null,
       "source_location": null
     },
@@ -34869,13 +34803,13 @@
       "source_location": null
     },
     {
-      "id": "package_akso_ui_features_editor_widgets_pipe_assortment_dialog_dart",
-      "label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "id": "package_akso_ui_features_editor_widgets_piping_systems_dialog_dart",
+      "label": "package:akso/ui/features/editor/widgets/piping_systems_dialog.dart",
       "_origin": "ast",
       "community": 220,
       "community_name": "package:flutter/material.dart",
       "file_type": "code",
-      "norm_label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "norm_label": "package:akso/ui/features/editor/widgets/piping_systems_dialog.dart",
       "source_file": null,
       "source_location": null
     },
@@ -35265,25 +35199,25 @@
       "source_location": null
     },
     {
-      "id": "test_pipe_assortment_test",
-      "label": "pipe_assortment_test.dart",
+      "id": "test_piping_systems_test",
+      "label": "piping_systems_test.dart",
       "_origin": "ast",
       "community": 220,
       "community_name": "package:flutter/material.dart",
       "file_type": "code",
-      "norm_label": "pipe_assortment_test.dart",
-      "source_file": "test/pipe_assortment_test.dart",
+      "norm_label": "piping_systems_test.dart",
+      "source_file": "test/piping_systems_test.dart",
       "source_location": null
     },
     {
-      "id": "test_pipe_assortment_test_main",
+      "id": "test_piping_systems_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 220,
       "community_name": "package:flutter/material.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/pipe_assortment_test.dart",
+      "source_file": "test/piping_systems_test.dart",
       "source_location": null
     },
     {
@@ -35870,17 +35804,6 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_models_custom_valve_definition_dart",
-      "label": "package:akso/domain/models/custom_valve_definition.dart",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "custom_valve_editor_dialog_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/custom_valve_definition.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_services_custom_valve_catalog_dart",
       "label": "package:akso/domain/services/custom_valve_catalog.dart",
       "_origin": "ast",
@@ -35888,17 +35811,6 @@
       "community_name": "custom_valve_editor_dialog_test.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/services/custom_valve_catalog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_canvas_valve_symbol_painter_dart",
-      "label": "package:akso/ui/canvas/valve_symbol_painter.dart",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "custom_valve_editor_dialog_test.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/canvas/valve_symbol_painter.dart",
       "source_file": null,
       "source_location": null
     },
@@ -35999,28 +35911,6 @@
       "file_type": "code",
       "norm_label": "tempdir",
       "source_file": "test/custom_valve_editor_dialog_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_rendering_test",
-      "label": "custom_valve_rendering_test.dart",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "custom_valve_editor_dialog_test.dart",
-      "file_type": "code",
-      "norm_label": "custom_valve_rendering_test.dart",
-      "source_file": "test/custom_valve_rendering_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_custom_valve_rendering_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "custom_valve_editor_dialog_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/custom_valve_rendering_test.dart",
       "source_location": null
     },
     {
@@ -36933,13 +36823,13 @@
       "source_location": "L1"
     },
     {
-      "id": "package_akso_data_dxf_dxf_writer_dart",
-      "label": "package:akso/data/dxf/dxf_writer.dart",
+      "id": "package_akso_domain_enums_inspection_method_dart",
+      "label": "package:akso/domain/enums/inspection_method.dart",
       "_origin": "ast",
       "community": 231,
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
-      "norm_label": "package:akso/data/dxf/dxf_writer.dart",
+      "norm_label": "package:akso/domain/enums/inspection_method.dart",
       "source_file": null,
       "source_location": null
     },
@@ -36955,17 +36845,6 @@
       "source_location": null
     },
     {
-      "id": "package_akso_domain_models_network_history_manager_dart",
-      "label": "package:akso/domain/models/network_history_manager.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/network_history_manager.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_akso_domain_models_pipe_segment_dart",
       "label": "package:akso/domain/models/pipe_segment.dart",
       "_origin": "ast",
@@ -36973,6 +36852,17 @@
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/models/pipe_segment.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_models_pipe_spool_dart",
+      "label": "package:akso/domain/models/pipe_spool.dart",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "package:akso/domain/models/pipe_segment.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/models/pipe_spool.dart",
       "source_file": null,
       "source_location": null
     },
@@ -37018,39 +36908,6 @@
       "file_type": "code",
       "norm_label": "package:akso/ui/canvas/painters/callout_painter.dart",
       "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_ui_canvas_painters_equipment_painter_dart",
-      "label": "package:akso/ui/canvas/painters/equipment_painter.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/ui/canvas/painters/equipment_painter.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "test_auto_branching_and_flanges_test",
-      "label": "auto_branching_and_flanges_test.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "auto_branching_and_flanges_test.dart",
-      "source_file": "test/auto_branching_and_flanges_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_auto_branching_and_flanges_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/auto_branching_and_flanges_test.dart",
       "source_location": null
     },
     {
@@ -37131,47 +36988,69 @@
       "source_location": null
     },
     {
-      "id": "test_dxf_export_test",
-      "label": "dxf_export_test.dart",
+      "id": "test_centerline_and_physical_spools_test",
+      "label": "centerline_and_physical_spools_test.dart",
       "_origin": "ast",
       "community": 231,
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
-      "norm_label": "dxf_export_test.dart",
-      "source_file": "test/dxf_export_test.dart",
+      "norm_label": "centerline_and_physical_spools_test.dart",
+      "source_file": "test/centerline_and_physical_spools_test.dart",
       "source_location": null
     },
     {
-      "id": "test_dxf_export_test_main",
+      "id": "test_centerline_and_physical_spools_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 231,
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/dxf_export_test.dart",
+      "source_file": "test/centerline_and_physical_spools_test.dart",
       "source_location": null
     },
     {
-      "id": "test_dxf_orbit_export_test",
-      "label": "dxf_orbit_export_test.dart",
+      "id": "test_copy_tool_and_undo_test",
+      "label": "copy_tool_and_undo_test.dart",
       "_origin": "ast",
       "community": 231,
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
-      "norm_label": "dxf_orbit_export_test.dart",
-      "source_file": "test/dxf_orbit_export_test.dart",
+      "norm_label": "copy_tool_and_undo_test.dart",
+      "source_file": "test/copy_tool_and_undo_test.dart",
       "source_location": null
     },
     {
-      "id": "test_dxf_orbit_export_test_main",
+      "id": "test_copy_tool_and_undo_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 231,
       "community_name": "package:akso/domain/models/pipe_segment.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/dxf_orbit_export_test.dart",
+      "source_file": "test/copy_tool_and_undo_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_duplicate_and_rotate_test",
+      "label": "duplicate_and_rotate_test.dart",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "package:akso/domain/models/pipe_segment.dart",
+      "file_type": "code",
+      "norm_label": "duplicate_and_rotate_test.dart",
+      "source_file": "test/duplicate_and_rotate_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_duplicate_and_rotate_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "package:akso/domain/models/pipe_segment.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/duplicate_and_rotate_test.dart",
       "source_location": null
     },
     {
@@ -37197,28 +37076,6 @@
       "source_location": null
     },
     {
-      "id": "test_equipment_dynamic_nozzles_and_rotation_test",
-      "label": "equipment_dynamic_nozzles_and_rotation_test.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "equipment_dynamic_nozzles_and_rotation_test.dart",
-      "source_file": "test/equipment_dynamic_nozzles_and_rotation_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_equipment_dynamic_nozzles_and_rotation_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/equipment_dynamic_nozzles_and_rotation_test.dart",
-      "source_location": null
-    },
-    {
       "id": "test_equipment_test",
       "label": "equipment_test.dart",
       "_origin": "ast",
@@ -37238,28 +37095,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/equipment_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_network_history_test",
-      "label": "network_history_test.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "network_history_test.dart",
-      "source_file": "test/network_history_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_network_history_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/network_history_test.dart",
       "source_location": null
     },
     {
@@ -37307,28 +37142,6 @@
       "source_location": null
     },
     {
-      "id": "test_spool_callout_and_dxf_test",
-      "label": "spool_callout_and_dxf_test.dart",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "spool_callout_and_dxf_test.dart",
-      "source_file": "test/spool_callout_and_dxf_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_spool_callout_and_dxf_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/spool_callout_and_dxf_test.dart",
-      "source_location": null
-    },
-    {
       "id": "test_topology_service_test",
       "label": "topology_service_test.dart",
       "_origin": "ast",
@@ -37348,6 +37161,28 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/topology_service_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_weld_bulk_edit_test",
+      "label": "weld_bulk_edit_test.dart",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "package:akso/domain/models/pipe_segment.dart",
+      "file_type": "code",
+      "norm_label": "weld_bulk_edit_test.dart",
+      "source_file": "test/weld_bulk_edit_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_weld_bulk_edit_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "package:akso/domain/models/pipe_segment.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/weld_bulk_edit_test.dart",
       "source_location": null
     },
     {
@@ -38910,138 +38745,6 @@
       "source_location": null
     },
     {
-      "id": "enums_valve_type_dart",
-      "label": "../enums/valve_type.dart",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "../enums/valve_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator",
-      "label": "spool_calculator.dart",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "spool_calculator.dart",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_generatespoolsforthroughchain",
-      "label": "_generateSpoolsForThroughChain",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "_generatespoolsforthroughchain",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_generatesubspoolsforsingle",
-      "label": "_generateSubSpoolsForSingle",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "_generatesubspoolsforsingle",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_getfittingdeduction",
-      "label": "getFittingDeduction",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "getfittingdeduction",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_getvisualfittingdeduction",
-      "label": "_getVisualFittingDeduction",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "_getvisualfittingdeduction",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_isdirectbranchrun",
-      "label": "_isDirectBranchRun",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "_isdirectbranchrun",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_pointalongchain",
-      "label": "_pointAlongChain",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "_pointalongchain",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_recalculatespools",
-      "label": "recalculateSpools",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "recalculatespools",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_spool_calculator_spoolcalculator",
-      "label": "SpoolCalculator",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "spoolcalculator",
-      "source_file": "lib/domain/services/spool_calculator.dart",
-      "source_location": null
-    },
-    {
-      "id": "models_node_3d_dart",
-      "label": "../models/node_3d.dart",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "../models/node_3d.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "models_pipe_spool_dart",
-      "label": "../models/pipe_spool.dart",
-      "_origin": "ast",
-      "community": 247,
-      "community_name": "spool_calculator.dart",
-      "file_type": "code",
-      "norm_label": "../models/pipe_spool.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_domain_enums_fitting_type",
       "label": "fitting_type.dart",
       "_origin": "ast",
@@ -39112,7 +38815,7 @@
       "label": "package:akso/core/math/axonometry_projector.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/core/math/axonometry_projector.dart",
       "source_file": null,
@@ -39123,7 +38826,7 @@
       "label": "package:akso/core/math/drafting_settings.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/core/math/drafting_settings.dart",
       "source_file": null,
@@ -39134,9 +38837,31 @@
       "label": "package:akso/core/math/snap_engine.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/core/math/snap_engine.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_enums_dxf_callout_options_dart",
+      "label": "package:akso/domain/enums/dxf_callout_options.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/enums/dxf_callout_options.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_domain_enums_projection_type_dart",
+      "label": "package:akso/domain/enums/projection_type.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/domain/enums/projection_type.dart",
       "source_file": null,
       "source_location": null
     },
@@ -39145,53 +38870,31 @@
       "label": "package:akso/domain/models/acquired_tracking_point.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/domain/models/acquired_tracking_point.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_domain_models_construction_axis_dart",
-      "label": "package:akso/domain/models/construction_axis.dart",
+      "id": "package_akso_domain_models_piping_network_dart",
+      "label": "package:akso/domain/models/piping_network.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/models/construction_axis.dart",
+      "norm_label": "package:akso/domain/models/piping_network.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "package_akso_domain_models_linear_dimension_dart",
-      "label": "package:akso/domain/models/linear_dimension.dart",
+      "id": "package_akso_domain_services_fitting_detector_dart",
+      "label": "package:akso/domain/services/fitting_detector.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
-      "norm_label": "package:akso/domain/models/linear_dimension.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_models_node_3d_dart",
-      "label": "package:akso/domain/models/node_3d.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/models/node_3d.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_akso_domain_services_grid_system_engine_dart",
-      "label": "package:akso/domain/services/grid_system_engine.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "package:akso/domain/services/grid_system_engine.dart",
+      "norm_label": "package:akso/domain/services/fitting_detector.dart",
       "source_file": null,
       "source_location": null
     },
@@ -39200,7 +38903,7 @@
       "label": "package:akso/main.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/main.dart",
       "source_file": null,
@@ -39211,7 +38914,7 @@
       "label": "package:akso/ui/canvas/controllers/selection_controller.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/canvas/controllers/selection_controller.dart",
       "source_file": null,
@@ -39222,9 +38925,20 @@
       "label": "package:akso/ui/canvas/controllers/tracing_controller.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/canvas/controllers/tracing_controller.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_canvas_painters_equipment_painter_dart",
+      "label": "package:akso/ui/canvas/painters/equipment_painter.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/canvas/painters/equipment_painter.dart",
       "source_file": null,
       "source_location": null
     },
@@ -39233,7 +38947,7 @@
       "label": "package:akso/ui/canvas/piping_canvas.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/canvas/piping_canvas.dart",
       "source_file": null,
@@ -39244,9 +38958,20 @@
       "label": "package:akso/ui/features/editor/editor_screen.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/editor_screen.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_akso_ui_features_editor_widgets_dxf_export_dialog_dart",
+      "label": "package:akso/ui/features/editor/widgets/dxf_export_dialog.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "package:akso/ui/features/editor/widgets/dxf_export_dialog.dart",
       "source_file": null,
       "source_location": null
     },
@@ -39255,7 +38980,7 @@
       "label": "package:akso/ui/features/editor/widgets/top_bar.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/widgets/top_bar.dart",
       "source_file": null,
@@ -39266,7 +38991,7 @@
       "label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:akso/ui/features/editor/widgets/trace_length_input.dart",
       "source_file": null,
@@ -39277,7 +39002,7 @@
       "label": "package:flutter/services.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "package:flutter/services.dart",
       "source_file": null,
@@ -39288,7 +39013,7 @@
       "label": "axis_selection_and_snap_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "axis_selection_and_snap_test.dart",
       "source_file": "test/axis_selection_and_snap_test.dart",
@@ -39299,7 +39024,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/axis_selection_and_snap_test.dart",
@@ -39310,7 +39035,7 @@
       "label": "axonometry_math_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "axonometry_math_test.dart",
       "source_file": "test/axonometry_math_test.dart",
@@ -39321,54 +39046,10 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/axonometry_math_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_cad_modify_and_selection_test",
-      "label": "cad_modify_and_selection_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "cad_modify_and_selection_test.dart",
-      "source_file": "test/cad_modify_and_selection_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_cad_modify_and_selection_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/cad_modify_and_selection_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_construction_axis_test",
-      "label": "construction_axis_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "construction_axis_test.dart",
-      "source_file": "test/construction_axis_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_construction_axis_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/construction_axis_test.dart",
       "source_location": null
     },
     {
@@ -39376,7 +39057,7 @@
       "label": "controllers_refactoring_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "controllers_refactoring_test.dart",
       "source_file": "test/controllers_refactoring_test.dart",
@@ -39387,10 +39068,32 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/controllers_refactoring_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_direct_branch_test",
+      "label": "direct_branch_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "direct_branch_test.dart",
+      "source_file": "test/direct_branch_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_direct_branch_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/direct_branch_test.dart",
       "source_location": null
     },
     {
@@ -39398,7 +39101,7 @@
       "label": "direct_distance_entry_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "direct_distance_entry_test.dart",
       "source_file": "test/direct_distance_entry_test.dart",
@@ -39409,7 +39112,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/direct_distance_entry_test.dart",
@@ -39420,7 +39123,7 @@
       "label": "drafting_settings_model_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "drafting_settings_model_test.dart",
       "source_file": "test/drafting_settings_model_test.dart",
@@ -39431,10 +39134,76 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/drafting_settings_model_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_dialog_widget_test",
+      "label": "dxf_export_dialog_widget_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "dxf_export_dialog_widget_test.dart",
+      "source_file": "test/dxf_export_dialog_widget_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_dialog_widget_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/dxf_export_dialog_widget_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_equipment_dynamic_nozzles_and_rotation_test",
+      "label": "equipment_dynamic_nozzles_and_rotation_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "equipment_dynamic_nozzles_and_rotation_test.dart",
+      "source_file": "test/equipment_dynamic_nozzles_and_rotation_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_equipment_dynamic_nozzles_and_rotation_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/equipment_dynamic_nozzles_and_rotation_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_fittings_and_elevation_test",
+      "label": "fittings_and_elevation_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "fittings_and_elevation_test.dart",
+      "source_file": "test/fittings_and_elevation_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_fittings_and_elevation_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/fittings_and_elevation_test.dart",
       "source_location": null
     },
     {
@@ -39442,7 +39211,7 @@
       "label": "grid_3d_rendering_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "grid_3d_rendering_test.dart",
       "source_file": "test/grid_3d_rendering_test.dart",
@@ -39453,120 +39222,10 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/grid_3d_rendering_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_grid_interactive_grips_test",
-      "label": "grid_interactive_grips_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "grid_interactive_grips_test.dart",
-      "source_file": "test/grid_interactive_grips_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_grid_interactive_grips_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/grid_interactive_grips_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_grid_system_engine_test",
-      "label": "grid_system_engine_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "grid_system_engine_test.dart",
-      "source_file": "test/grid_system_engine_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_grid_system_engine_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/grid_system_engine_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_interaction_and_selection_ux_test",
-      "label": "interaction_and_selection_ux_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "interaction_and_selection_ux_test.dart",
-      "source_file": "test/interaction_and_selection_ux_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_interaction_and_selection_ux_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/interaction_and_selection_ux_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_linear_dimension_test",
-      "label": "linear_dimension_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "linear_dimension_test.dart",
-      "source_file": "test/linear_dimension_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_linear_dimension_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/linear_dimension_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_node_pipe_connection_test",
-      "label": "node_pipe_connection_test.dart",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "node_pipe_connection_test.dart",
-      "source_file": "test/node_pipe_connection_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_node_pipe_connection_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/node_pipe_connection_test.dart",
       "source_location": null
     },
     {
@@ -39574,7 +39233,7 @@
       "label": "otrack_cleanup_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "otrack_cleanup_test.dart",
       "source_file": "test/otrack_cleanup_test.dart",
@@ -39585,7 +39244,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/otrack_cleanup_test.dart",
@@ -39596,7 +39255,7 @@
       "label": "rigid_elbows_and_butt_joint_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "rigid_elbows_and_butt_joint_test.dart",
       "source_file": "test/rigid_elbows_and_butt_joint_test.dart",
@@ -39607,10 +39266,32 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/rigid_elbows_and_butt_joint_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_riser_elbow_tracing_test",
+      "label": "riser_elbow_tracing_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "riser_elbow_tracing_test.dart",
+      "source_file": "test/riser_elbow_tracing_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_riser_elbow_tracing_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/riser_elbow_tracing_test.dart",
       "source_location": null
     },
     {
@@ -39618,7 +39299,7 @@
       "label": "smart_connection_and_tracking_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "smart_connection_and_tracking_test.dart",
       "source_file": "test/smart_connection_and_tracking_test.dart",
@@ -39629,7 +39310,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/smart_connection_and_tracking_test.dart",
@@ -39640,7 +39321,7 @@
       "label": "snap_engine_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "snap_engine_test.dart",
       "source_file": "test/snap_engine_test.dart",
@@ -39651,10 +39332,32 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/snap_engine_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_spool_selection_and_hit_test",
+      "label": "spool_selection_and_hit_test.dart",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "spool_selection_and_hit_test.dart",
+      "source_file": "test/spool_selection_and_hit_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_spool_selection_and_hit_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 249,
+      "community_name": "package:akso/domain/models/piping_network.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/spool_selection_and_hit_test.dart",
       "source_location": null
     },
     {
@@ -39662,7 +39365,7 @@
       "label": "top_bar_grid_snap_axes_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "top_bar_grid_snap_axes_test.dart",
       "source_file": "test/top_bar_grid_snap_axes_test.dart",
@@ -39673,7 +39376,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/top_bar_grid_snap_axes_test.dart",
@@ -39684,7 +39387,7 @@
       "label": "trace_hud_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "trace_hud_test.dart",
       "source_file": "test/trace_hud_test.dart",
@@ -39695,32 +39398,32 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/trace_hud_test.dart",
       "source_location": null
     },
     {
-      "id": "test_verify_autocad_dxf_test",
-      "label": "verify_autocad_dxf_test.dart",
+      "id": "test_viewport_navigation_test",
+      "label": "viewport_navigation_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
-      "norm_label": "verify_autocad_dxf_test.dart",
-      "source_file": "test/verify_autocad_dxf_test.dart",
+      "norm_label": "viewport_navigation_test.dart",
+      "source_file": "test/viewport_navigation_test.dart",
       "source_location": null
     },
     {
-      "id": "test_verify_autocad_dxf_test_main",
+      "id": "test_viewport_navigation_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/verify_autocad_dxf_test.dart",
+      "source_file": "test/viewport_navigation_test.dart",
       "source_location": null
     },
     {
@@ -39728,7 +39431,7 @@
       "label": "widget_test.dart",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "widget_test.dart",
       "source_file": "test/widget_test.dart",
@@ -39739,7 +39442,7 @@
       "label": "main",
       "_origin": "ast",
       "community": 249,
-      "community_name": "package:akso/domain/models/node_3d.dart",
+      "community_name": "package:akso/domain/models/piping_network.dart",
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/widget_test.dart",
@@ -39940,28 +39643,6 @@
       "norm_label": "your human partner's signals you're doing it wrong",
       "source_file": ".agents/skills/systematic-debugging/SKILL.md",
       "source_location": "L233"
-    },
-    {
-      "id": "lib_domain_models_equipment_equipmenttype",
-      "label": "EquipmentType",
-      "_origin": "ast",
-      "community": 250,
-      "community_name": "EquipmentType",
-      "file_type": "code",
-      "norm_label": "equipmenttype",
-      "source_file": "lib/domain/models/equipment.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_equipment_equipmenttypeext",
-      "label": "EquipmentTypeExt",
-      "_origin": "ast",
-      "community": 250,
-      "community_name": "EquipmentType",
-      "file_type": "code",
-      "norm_label": "equipmenttypeext",
-      "source_file": "lib/domain/models/equipment.dart",
-      "source_location": null
     },
     {
       "id": "lib_ui_features_editor_widgets_callout_manager_panel_calloutmanagerpanel",
@@ -40200,146 +39881,399 @@
       "source_location": "L135"
     },
     {
-      "id": "lib_data_repositories_project_repository_iprojectrepository",
-      "label": "IProjectRepository",
+      "id": "package_akso_data_dxf_dxf_writer_dart",
+      "label": "package:akso/data/dxf/dxf_writer.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "iprojectrepository",
-      "source_file": "lib/data/repositories/project_repository.dart",
+      "norm_label": "package:akso/data/dxf/dxf_writer.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_data_repositories_project_repository_projectrepository",
-      "label": "ProjectRepository",
+      "id": "package_akso_domain_models_construction_axis_dart",
+      "label": "package:akso/domain/models/construction_axis.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "projectrepository",
-      "source_file": "lib/data/repositories/project_repository.dart",
+      "norm_label": "package:akso/domain/models/construction_axis.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_domain_models_project_model_projectmodel",
-      "label": "ProjectModel",
+      "id": "package_akso_domain_models_linear_dimension_dart",
+      "label": "package:akso/domain/models/linear_dimension.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "projectmodel",
-      "source_file": "lib/domain/models/project_model.dart",
+      "norm_label": "package:akso/domain/models/linear_dimension.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_controller_integration_test_testprojectrepository",
-      "label": "TestProjectRepository",
+      "id": "package_akso_domain_models_network_history_manager_dart",
+      "label": "package:akso/domain/models/network_history_manager.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "testprojectrepository",
-      "source_file": "test/project_controller_integration_test.dart",
+      "norm_label": "package:akso/domain/models/network_history_manager.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_identity_test",
-      "label": "project_identity_test.dart",
+      "id": "package_akso_domain_models_node_3d_dart",
+      "label": "package:akso/domain/models/node_3d.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "project_identity_test.dart",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "package:akso/domain/models/node_3d.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_fakeprojectrepository",
-      "label": "FakeProjectRepository",
+      "id": "package_akso_domain_models_pipe_dimension_dart",
+      "label": "package:akso/domain/models/pipe_dimension.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "fakeprojectrepository",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "package:akso/domain/models/pipe_dimension.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_lastsavedproject",
-      "label": "lastSavedProject",
+      "id": "package_akso_domain_services_grid_system_engine_dart",
+      "label": "package:akso/domain/services/grid_system_engine.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "lastsavedproject",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "package:akso/domain/services/grid_system_engine.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_loadcount",
-      "label": "loadCount",
+      "id": "package_akso_ui_features_editor_widgets_pipe_assortment_dialog_dart",
+      "label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "loadcount",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_main",
+      "id": "test_auto_branching_and_flanges_test",
+      "label": "auto_branching_and_flanges_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "auto_branching_and_flanges_test.dart",
+      "source_file": "test/auto_branching_and_flanges_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_auto_branching_and_flanges_test_main",
       "label": "main",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
       "norm_label": "main",
-      "source_file": "test/project_identity_test.dart",
+      "source_file": "test/auto_branching_and_flanges_test.dart",
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_projecttoload",
-      "label": "projectToLoad",
+      "id": "test_cad_modify_and_selection_test",
+      "label": "cad_modify_and_selection_test.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "projecttoload",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "cad_modify_and_selection_test.dart",
+      "source_file": "test/cad_modify_and_selection_test.dart",
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_savecount",
-      "label": "saveCount",
+      "id": "test_cad_modify_and_selection_test_main",
+      "label": "main",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "savecount",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "main",
+      "source_file": "test/cad_modify_and_selection_test.dart",
       "source_location": null
     },
     {
-      "id": "test_project_identity_test_saveproject",
-      "label": "saveProject",
+      "id": "test_construction_axis_test",
+      "label": "construction_axis_test.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "saveproject",
-      "source_file": "test/project_identity_test.dart",
+      "norm_label": "construction_axis_test.dart",
+      "source_file": "test/construction_axis_test.dart",
       "source_location": null
     },
     {
-      "id": "test_project_serialization_test_mockprojectrepository",
-      "label": "MockProjectRepository",
+      "id": "test_construction_axis_test_main",
+      "label": "main",
       "_origin": "ast",
       "community": 27,
-      "community_name": "project_identity_test.dart",
+      "community_name": "package:akso/domain/models/node_3d.dart",
       "file_type": "code",
-      "norm_label": "mockprojectrepository",
-      "source_file": "test/project_serialization_test.dart",
+      "norm_label": "main",
+      "source_file": "test/construction_axis_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_copy_branch_connection_test",
+      "label": "copy_branch_connection_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "copy_branch_connection_test.dart",
+      "source_file": "test/copy_branch_connection_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_copy_branch_connection_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/copy_branch_connection_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_test",
+      "label": "dxf_export_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "dxf_export_test.dart",
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_export_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/dxf_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_orbit_export_test",
+      "label": "dxf_orbit_export_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "dxf_orbit_export_test.dart",
+      "source_file": "test/dxf_orbit_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_dxf_orbit_export_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/dxf_orbit_export_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_generate_samples_test",
+      "label": "generate_samples_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "generate_samples_test.dart",
+      "source_file": "test/generate_samples_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_generate_samples_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/generate_samples_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_grid_interactive_grips_test",
+      "label": "grid_interactive_grips_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "grid_interactive_grips_test.dart",
+      "source_file": "test/grid_interactive_grips_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_grid_interactive_grips_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/grid_interactive_grips_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_grid_system_engine_test",
+      "label": "grid_system_engine_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "grid_system_engine_test.dart",
+      "source_file": "test/grid_system_engine_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_grid_system_engine_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/grid_system_engine_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_interaction_and_selection_ux_test",
+      "label": "interaction_and_selection_ux_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "interaction_and_selection_ux_test.dart",
+      "source_file": "test/interaction_and_selection_ux_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_interaction_and_selection_ux_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/interaction_and_selection_ux_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_linear_dimension_test",
+      "label": "linear_dimension_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "linear_dimension_test.dart",
+      "source_file": "test/linear_dimension_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_linear_dimension_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/linear_dimension_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_network_history_test",
+      "label": "network_history_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "network_history_test.dart",
+      "source_file": "test/network_history_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_network_history_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/network_history_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_pipe_assortment_test",
+      "label": "pipe_assortment_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "pipe_assortment_test.dart",
+      "source_file": "test/pipe_assortment_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_pipe_assortment_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/pipe_assortment_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_verify_autocad_dxf_test",
+      "label": "verify_autocad_dxf_test.dart",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "verify_autocad_dxf_test.dart",
+      "source_file": "test/verify_autocad_dxf_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_verify_autocad_dxf_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "package:akso/domain/models/node_3d.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/verify_autocad_dxf_test.dart",
       "source_location": null
     },
     {
@@ -41301,39 +41235,6 @@
       "source_location": "L31"
     },
     {
-      "id": "custom_pipe_dimension_dialog_dart",
-      "label": "custom_pipe_dimension_dialog.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "custom_pipe_dimension_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "domain_enums_valve_type_dart",
-      "label": "../../../../domain/enums/valve_type.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/valve_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "domain_enums_weld_type_dart",
-      "label": "../../../../domain/enums/weld_type.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/weld_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "domain_models_fitting_definition_dart",
       "label": "../../../../domain/models/fitting_definition.dart",
       "_origin": "ast",
@@ -41375,17 +41276,6 @@
       "file_type": "code",
       "norm_label": "weldtypeext",
       "source_file": "lib/domain/enums/weld_type.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_canvas_input_controller_canvastool",
-      "label": "CanvasTool",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "canvastool",
-      "source_file": "lib/ui/canvas/input_controller.dart",
       "source_location": null
     },
     {
@@ -41440,6 +41330,28 @@
       "community_name": "fitting_properties_sheet.dart",
       "file_type": "code",
       "norm_label": "createstate",
+      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheet",
+      "label": "FittingPropertiesSheet",
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "fitting_properties_sheet.dart",
+      "file_type": "code",
+      "norm_label": "fittingpropertiessheet",
+      "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_fitting_properties_sheet_fittingpropertiessheetstate",
+      "label": "_FittingPropertiesSheetState",
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "fitting_properties_sheet.dart",
+      "file_type": "code",
+      "norm_label": "_fittingpropertiessheetstate",
       "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
       "source_location": null
     },
@@ -41540,50 +41452,6 @@
       "file_type": "code",
       "norm_label": "_uuid",
       "source_file": "lib/ui/features/editor/widgets/fitting_properties_sheet.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_tools_panel",
-      "label": "tools_panel.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "tools_panel.dart",
-      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_tools_panel_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_tools_panel_controller",
-      "label": "controller",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
-      "source_location": null
-    },
-    {
-      "id": "pipe_assortment_dialog_dart",
-      "label": "pipe_assortment_dialog.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "pipe_assortment_dialog.dart",
-      "source_file": null,
       "source_location": null
     },
     {
@@ -42259,6 +42127,171 @@
       "source_location": null
     },
     {
+      "id": "lib_domain_models_piping_network_pipingnetwork",
+      "label": "PipingNetwork",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "pipingnetwork",
+      "source_file": "lib/domain/models/piping_network.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog",
+      "label": "pipe_assortment_dialog.dart",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "pipe_assortment_dialog.dart",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_controller",
+      "label": "controller",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_createstate",
+      "label": "createState",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "createstate",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_dispose",
+      "label": "dispose",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "dispose",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_filter",
+      "label": "_filter",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_filter",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_network",
+      "label": "network",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "network",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_oncatalogchanged",
+      "label": "onCatalogChanged",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "oncatalogchanged",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialog",
+      "label": "PipeAssortmentDialog",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "pipeassortmentdialog",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_pipeassortmentdialogstate",
+      "label": "_PipeAssortmentDialogState",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_pipeassortmentdialogstate",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_searchcontroller",
+      "label": "_searchController",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_searchcontroller",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_searchquery",
+      "label": "_searchQuery",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_searchquery",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_show",
+      "label": "show",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "show",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_pipe_assortment_dialog_showaddwallthicknessdialog",
+      "label": "_showAddWallThicknessDialog",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "piping_systems_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_showaddwallthicknessdialog",
+      "source_file": "lib/ui/features/editor/widgets/pipe_assortment_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_piping_systems_dialog",
       "label": "piping_systems_dialog.dart",
       "_origin": "ast",
@@ -42435,13 +42468,13 @@
       "source_location": null
     },
     {
-      "id": "valuechanged",
-      "label": "ValueChanged",
+      "id": "voidcallback",
+      "label": "VoidCallback?",
       "_origin": "ast",
       "community": 35,
       "community_name": "piping_systems_dialog.dart",
       "file_type": "code",
-      "norm_label": "valuechanged",
+      "norm_label": "voidcallback?",
       "source_file": null,
       "source_location": null
     },
@@ -44325,17 +44358,6 @@
       "source_location": null
     },
     {
-      "id": "lib_domain_models_pipe_segment_pipesegment",
-      "label": "PipeSegment",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "pipesegment",
-      "source_file": "lib/domain/models/pipe_segment.dart",
-      "source_location": null
-    },
-    {
       "id": "lib_domain_models_pipe_segment_serialnumber",
       "label": "serialNumber",
       "_origin": "ast",
@@ -44399,50 +44421,6 @@
       "file_type": "code",
       "norm_label": "wallthicknessmm",
       "source_file": "lib/domain/models/pipe_segment.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_segment_3d",
-      "label": "segment_3d.dart",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "segment_3d.dart",
-      "source_file": "lib/domain/models/segment_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_segment_3d_segment3d",
-      "label": "Segment3D",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "segment3d",
-      "source_file": "lib/domain/models/segment_3d.dart",
-      "source_location": null
-    },
-    {
-      "id": "pipe_segment_dart",
-      "label": "pipe_segment.dart",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "pipe_segment.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "typedef",
-      "label": "typedef",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "typedef",
-      "source_file": null,
       "source_location": null
     },
     {
@@ -46075,6 +46053,28 @@
       "community_name": "report_template_builder_widget.dart",
       "file_type": "code",
       "norm_label": "_previewverticalcontroller",
+      "source_file": "lib/ui/features/editor/widgets/report_template_builder_widget.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_report_template_builder_widget_reporttemplatebuilderwidget",
+      "label": "ReportTemplateBuilderWidget",
+      "_origin": "ast",
+      "community": 51,
+      "community_name": "report_template_builder_widget.dart",
+      "file_type": "code",
+      "norm_label": "reporttemplatebuilderwidget",
+      "source_file": "lib/ui/features/editor/widgets/report_template_builder_widget.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_report_template_builder_widget_reporttemplatebuilderwidgetstate",
+      "label": "_ReportTemplateBuilderWidgetState",
+      "_origin": "ast",
+      "community": 51,
+      "community_name": "report_template_builder_widget.dart",
+      "file_type": "code",
+      "norm_label": "_reporttemplatebuilderwidgetstate",
       "source_file": "lib/ui/features/editor/widgets/report_template_builder_widget.dart",
       "source_location": null
     },
@@ -53172,7 +53172,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0430\u0434\u0430\u043f\u0442\u0438\u0432\u043d\u044b\u0435 \u0434\u0438\u043d\u0430\u043c\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438 (adaptive smart callouts), \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0437\u043c\u0435\u0440\u044b \u0448\u0440\u0438\u0444\u0442\u043e\u0432 \u0432 \u043c\u043c \u0431\u0443\u043c\u0430\u0433\u0438 \u0438 \u0440\u0443\u0447\u043d\u043e\u0435 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0432\u044b\u0441\u043e\u0442\u043e\u0438 \u0442\u0435\u043a\u0441\u0442\u0430 (phase 50)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3035"
+      "source_location": "L3044"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e_\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435_\u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435_\u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f_\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432_\u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430_\u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445_\u043a\u0430\u0442\u0443\u0448\u0435\u043a_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0438_\u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435_\u0432\u044b\u043d\u043e\u0441\u043a\u0438",
@@ -53184,7 +53184,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e-\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435 \u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435 \u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432, \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430 \u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445 \u043a\u0430\u0442\u0443\u0448\u0435\u043a/\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0438 \u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2994"
+      "source_location": "L3003"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f_\u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430_\u0432\u044b\u043d\u043e\u0441\u043e\u043a_\u043f\u043e_\u0432\u0435\u0442\u043a\u0430\u043c_\u0442\u0440\u0430\u0441\u0441\u044b_branch_oriented_local_stacking_layout",
@@ -53196,7 +53196,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f \u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0432\u044b\u043d\u043e\u0441\u043e\u043a \u043f\u043e \u0432\u0435\u0442\u043a\u0430\u043c \u0442\u0440\u0430\u0441\u0441\u044b (branch-oriented local stacking layout)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3070"
+      "source_location": "L3079"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435_\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0439_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0432_\u0441\u0445\u0435\u043c\u0430\u0445_\u043f\u043e_\u0433\u043e\u0441\u0442_21_205_2d_\u0443\u0433\u043e_\u0432_3d_\u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438",
@@ -53208,7 +53208,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0438 \u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0432 \u0441\u0445\u0435\u043c\u0430\u0445 \u043f\u043e \u0433\u043e\u0441\u0442 21.205 (2d \u0443\u0433\u043e \u0432 3d \u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2894"
+      "source_location": "L2903"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u043e\u043b\u043d\u043e\u0435_\u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435_\u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e_pdf_\u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443_\u044d\u043a\u0440\u0430\u043d\u0443_\u0438_\u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435_\u0442\u043e\u043b\u0449\u0438\u043d\u044b_\u043b\u0438\u043d\u0438\u0439_pdf_fidelity_line_weight_styles",
@@ -53220,7 +53220,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u043e\u043b\u043d\u043e\u0435 \u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435 \u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e pdf \u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443 \u044d\u043a\u0440\u0430\u043d\u0443 \u0438 \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435 \u0442\u043e\u043b\u0449\u0438\u043d\u044b \u043b\u0438\u043d\u0438\u0438 (pdf fidelity & line weight styles)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2799"
+      "source_location": "L2808"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435_\u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0439_\u043d\u0430\u0434\u043f\u0438\u0441\u0438_\u0448\u0442\u0430\u043c\u043f\u0430_185_55_\u043c\u043c_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_\u043a_\u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443_\u0433\u043e\u0441\u0442_\u0440_21_101_2020_\u0444\u043e\u0440\u043c\u0430_3_\u0441\u043f\u0434\u0441_\u0438_\u043e\u0431\u0440\u0430\u0437\u0446\u0443_\u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0439_\u0441\u0445\u0435\u043c\u044b",
@@ -53232,7 +53232,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0438 \u043d\u0430\u0434\u043f\u0438\u0441\u0438 (\u0448\u0442\u0430\u043c\u043f\u0430 185\u00d755 \u043c\u043c) \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 \u043a \u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443 \u0433\u043e\u0441\u0442 \u0440 21.101-2020 (\u0444\u043e\u0440\u043c\u0430 3 / \u0441\u043f\u0434\u0441) \u0438 \u043e\u0431\u0440\u0430\u0437\u0446\u0443 \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0438 \u0441\u0445\u0435\u043c\u044b",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2765"
+      "source_location": "L2774"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439_cad_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0439_\u0434\u0432\u0438\u0436\u043e\u043a_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_vectorscene_sheetgeometrybuilder_\u0438_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432_\u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430_pdf",
@@ -53244,7 +53244,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0438 cad-\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0438 \u0434\u0432\u0438\u0436\u043e\u043a \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 (vectorscene & sheetgeometrybuilder) \u0438 \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430 pdf",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2953"
+      "source_location": "L2962"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_renderflex_overflow_\u0432_\u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445_cad_\u0438_\u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f_\u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f_\u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_\u0438_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432_phase_17",
@@ -53256,7 +53256,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 renderflex overflow \u0432 \u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445 cad \u0438 \u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f \u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f \u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 \u0438 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430 \u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432 (phase 17)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2861"
+      "source_location": "L2870"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f_\u043f\u0440\u0438_\u043a\u043b\u0438\u043a\u0435_\u043d\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u044b_\u0448\u0430\u0431\u043b\u043e\u043d\u0430_\u0432_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_fix_freeze_pointer_deadlock_in_reporttemplatebuilderwidget",
@@ -53268,7 +53268,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f \u043f\u0440\u0438 \u043a\u043b\u0438\u043a\u0435 \u043d\u0430 \"\u0441\u0442\u043e\u043b\u0431\u0446\u044b \u0448\u0430\u0431\u043b\u043e\u043d\u0430\" \u0432 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 (fix freeze & pointer deadlock in reporttemplatebuilderwidget)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2924"
+      "source_location": "L2933"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e_\u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e_\u0441\u0442\u044b\u043a\u0430_\u0438_\u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0439_\u043a\u0430\u0442\u0443\u0448\u043a\u0438_\u043f\u0440\u0438_\u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435_\u0432_\u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0439_\u0441\u0442\u043e\u044f\u043a_fix_riser_elbow_stray_weld_protruding_spool",
@@ -53280,7 +53280,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e \u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e \u0441\u0442\u044b\u043a\u0430 \u0438 \u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0438 \u043a\u0430\u0442\u0443\u0448\u043a\u0438 \u043f\u0440\u0438 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435 \u0432 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0438 \u0441\u0442\u043e\u044f\u043a (fix riser elbow stray weld & protruding spool)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2830"
+      "source_location": "L2839"
     },
     {
       "id": "agents_skills_systematic_debugging_test_pressure_1",
@@ -74153,7 +74153,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2765",
+      "source_location": "L2774",
       "weight": 1.0
     },
     {
@@ -74164,7 +74164,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2799",
+      "source_location": "L2808",
       "weight": 1.0
     },
     {
@@ -74175,7 +74175,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2830",
+      "source_location": "L2839",
       "weight": 1.0
     },
     {
@@ -74186,7 +74186,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2861",
+      "source_location": "L2870",
       "weight": 1.0
     },
     {
@@ -74197,7 +74197,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2894",
+      "source_location": "L2903",
       "weight": 1.0
     },
     {
@@ -74208,7 +74208,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2924",
+      "source_location": "L2933",
       "weight": 1.0
     },
     {
@@ -74219,7 +74219,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2953",
+      "source_location": "L2962",
       "weight": 1.0
     },
     {
@@ -74230,7 +74230,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2994",
+      "source_location": "L3003",
       "weight": 1.0
     },
     {
@@ -74241,7 +74241,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3035",
+      "source_location": "L3044",
       "weight": 1.0
     },
     {
@@ -74252,7 +74252,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3070",
+      "source_location": "L3079",
       "weight": 1.0
     },
     {
@@ -107103,6 +107103,17 @@
     },
     {
       "source": "lib_domain_models_drawing_sheet",
+      "target": "enums_fitting_type_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/models/drawing_sheet.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_domain_models_drawing_sheet",
       "target": "enums_sheet_format_type_dart",
       "relation": "imports",
       "_origin": "ast",
@@ -107907,6 +107918,17 @@
     {
       "source": "lib_domain_services_callout_layout_engine",
       "target": "package_akso_core_math_axonometry_projector_dart",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/services/callout_layout_engine.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_domain_services_callout_layout_engine",
+      "target": "package_akso_domain_enums_fitting_type_dart",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -128204,5 +128226,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e626d668487153ec2ffba0644de996e4d0371376"
+  "built_at_commit": "0e00570c45ae08a92733a99cb7634939439098a6"
 }

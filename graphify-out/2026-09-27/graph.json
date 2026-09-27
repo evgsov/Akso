@@ -13084,17 +13084,6 @@
       "source_location": "L1"
     },
     {
-      "id": "domain_enums_valve_type_dart",
-      "label": "../../../../domain/enums/valve_type.dart",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "pipe_painter.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/enums/valve_type.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "domain_models_custom_valve_definition_dart",
       "label": "../../../../domain/models/custom_valve_definition.dart",
       "_origin": "ast",
@@ -30201,6 +30190,17 @@
       "source_location": null
     },
     {
+      "id": "lib_domain_services_callout_layout_engine_bottomy",
+      "label": "bottomY",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "callout_layout_engine.dart",
+      "file_type": "code",
+      "norm_label": "bottomy",
+      "source_file": "lib/domain/services/callout_layout_engine.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_domain_services_callout_layout_engine_bounds",
       "label": "bounds",
       "_origin": "ast",
@@ -30527,28 +30527,6 @@
       "community_name": "callout_layout_engine.dart",
       "file_type": "code",
       "norm_label": "leaderlines",
-      "source_file": "lib/domain/services/callout_layout_engine.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_callout_layout_engine_maxy",
-      "label": "maxY",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "callout_layout_engine.dart",
-      "file_type": "code",
-      "norm_label": "maxy",
-      "source_file": "lib/domain/services/callout_layout_engine.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_services_callout_layout_engine_miny",
-      "label": "minY",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "callout_layout_engine.dart",
-      "file_type": "code",
-      "norm_label": "miny",
       "source_file": "lib/domain/services/callout_layout_engine.dart",
       "source_location": null
     },
@@ -30923,6 +30901,17 @@
       "community_name": "callout_layout_engine.dart",
       "file_type": "code",
       "norm_label": "textwidthmm",
+      "source_file": "lib/domain/services/callout_layout_engine.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_services_callout_layout_engine_topy",
+      "label": "topY",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "callout_layout_engine.dart",
+      "file_type": "code",
+      "norm_label": "topy",
       "source_file": "lib/domain/services/callout_layout_engine.dart",
       "source_location": null
     },
@@ -32295,6 +32284,17 @@
       "community_name": "dart:math",
       "file_type": "code",
       "norm_label": "../../domain/models/linear_dimension.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "domain_models_pipe_support_dart",
+      "label": "../../../../domain/models/pipe_support.dart",
+      "_origin": "ast",
+      "community": 208,
+      "community_name": "dart:math",
+      "file_type": "code",
+      "norm_label": "../../../../domain/models/pipe_support.dart",
       "source_file": null,
       "source_location": null
     },
@@ -41312,6 +41312,17 @@
       "source_location": null
     },
     {
+      "id": "domain_enums_valve_type_dart",
+      "label": "../../../../domain/enums/valve_type.dart",
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "fitting_properties_sheet.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/enums/valve_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "domain_enums_weld_type_dart",
       "label": "../../../../domain/enums/weld_type.dart",
       "_origin": "ast",
@@ -41330,17 +41341,6 @@
       "community_name": "fitting_properties_sheet.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/models/fitting_definition.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "domain_models_pipe_support_dart",
-      "label": "../../../../domain/models/pipe_support.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "fitting_properties_sheet.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/models/pipe_support.dart",
       "source_file": null,
       "source_location": null
     },
@@ -53172,7 +53172,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0430\u0434\u0430\u043f\u0442\u0438\u0432\u043d\u044b\u0435 \u0434\u0438\u043d\u0430\u043c\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438 (adaptive smart callouts), \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0437\u043c\u0435\u0440\u044b \u0448\u0440\u0438\u0444\u0442\u043e\u0432 \u0432 \u043c\u043c \u0431\u0443\u043c\u0430\u0433\u0438 \u0438 \u0440\u0443\u0447\u043d\u043e\u0435 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0432\u044b\u0441\u043e\u0442\u043e\u0438 \u0442\u0435\u043a\u0441\u0442\u0430 (phase 50)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3028"
+      "source_location": "L3035"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e_\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435_\u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435_\u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f_\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432_\u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430_\u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445_\u043a\u0430\u0442\u0443\u0448\u0435\u043a_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0438_\u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435_\u0432\u044b\u043d\u043e\u0441\u043a\u0438",
@@ -53184,7 +53184,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e-\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435 \u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435 \u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432, \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430 \u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445 \u043a\u0430\u0442\u0443\u0448\u0435\u043a/\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0438 \u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2987"
+      "source_location": "L2994"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f_\u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430_\u0432\u044b\u043d\u043e\u0441\u043e\u043a_\u043f\u043e_\u0432\u0435\u0442\u043a\u0430\u043c_\u0442\u0440\u0430\u0441\u0441\u044b_branch_oriented_local_stacking_layout",
@@ -53196,7 +53196,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f \u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0432\u044b\u043d\u043e\u0441\u043e\u043a \u043f\u043e \u0432\u0435\u0442\u043a\u0430\u043c \u0442\u0440\u0430\u0441\u0441\u044b (branch-oriented local stacking layout)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3063"
+      "source_location": "L3070"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435_\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0439_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0432_\u0441\u0445\u0435\u043c\u0430\u0445_\u043f\u043e_\u0433\u043e\u0441\u0442_21_205_2d_\u0443\u0433\u043e_\u0432_3d_\u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438",
@@ -53208,7 +53208,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0438 \u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0432 \u0441\u0445\u0435\u043c\u0430\u0445 \u043f\u043e \u0433\u043e\u0441\u0442 21.205 (2d \u0443\u0433\u043e \u0432 3d \u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2887"
+      "source_location": "L2894"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u043e\u043b\u043d\u043e\u0435_\u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435_\u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e_pdf_\u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443_\u044d\u043a\u0440\u0430\u043d\u0443_\u0438_\u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435_\u0442\u043e\u043b\u0449\u0438\u043d\u044b_\u043b\u0438\u043d\u0438\u0439_pdf_fidelity_line_weight_styles",
@@ -53220,7 +53220,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u043e\u043b\u043d\u043e\u0435 \u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435 \u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e pdf \u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443 \u044d\u043a\u0440\u0430\u043d\u0443 \u0438 \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435 \u0442\u043e\u043b\u0449\u0438\u043d\u044b \u043b\u0438\u043d\u0438\u0438 (pdf fidelity & line weight styles)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2792"
+      "source_location": "L2799"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435_\u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0439_\u043d\u0430\u0434\u043f\u0438\u0441\u0438_\u0448\u0442\u0430\u043c\u043f\u0430_185_55_\u043c\u043c_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_\u043a_\u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443_\u0433\u043e\u0441\u0442_\u0440_21_101_2020_\u0444\u043e\u0440\u043c\u0430_3_\u0441\u043f\u0434\u0441_\u0438_\u043e\u0431\u0440\u0430\u0437\u0446\u0443_\u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0439_\u0441\u0445\u0435\u043c\u044b",
@@ -53232,7 +53232,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0438 \u043d\u0430\u0434\u043f\u0438\u0441\u0438 (\u0448\u0442\u0430\u043c\u043f\u0430 185\u00d755 \u043c\u043c) \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 \u043a \u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443 \u0433\u043e\u0441\u0442 \u0440 21.101-2020 (\u0444\u043e\u0440\u043c\u0430 3 / \u0441\u043f\u0434\u0441) \u0438 \u043e\u0431\u0440\u0430\u0437\u0446\u0443 \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0438 \u0441\u0445\u0435\u043c\u044b",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2758"
+      "source_location": "L2765"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439_cad_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0439_\u0434\u0432\u0438\u0436\u043e\u043a_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_vectorscene_sheetgeometrybuilder_\u0438_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432_\u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430_pdf",
@@ -53244,7 +53244,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0438 cad-\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0438 \u0434\u0432\u0438\u0436\u043e\u043a \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 (vectorscene & sheetgeometrybuilder) \u0438 \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430 pdf",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2946"
+      "source_location": "L2953"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_renderflex_overflow_\u0432_\u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445_cad_\u0438_\u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f_\u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f_\u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_\u0438_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432_phase_17",
@@ -53256,7 +53256,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 renderflex overflow \u0432 \u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445 cad \u0438 \u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f \u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f \u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 \u0438 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430 \u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432 (phase 17)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2854"
+      "source_location": "L2861"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f_\u043f\u0440\u0438_\u043a\u043b\u0438\u043a\u0435_\u043d\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u044b_\u0448\u0430\u0431\u043b\u043e\u043d\u0430_\u0432_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_fix_freeze_pointer_deadlock_in_reporttemplatebuilderwidget",
@@ -53268,7 +53268,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f \u043f\u0440\u0438 \u043a\u043b\u0438\u043a\u0435 \u043d\u0430 \"\u0441\u0442\u043e\u043b\u0431\u0446\u044b \u0448\u0430\u0431\u043b\u043e\u043d\u0430\" \u0432 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 (fix freeze & pointer deadlock in reporttemplatebuilderwidget)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2917"
+      "source_location": "L2924"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e_\u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e_\u0441\u0442\u044b\u043a\u0430_\u0438_\u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0439_\u043a\u0430\u0442\u0443\u0448\u043a\u0438_\u043f\u0440\u0438_\u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435_\u0432_\u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0439_\u0441\u0442\u043e\u044f\u043a_fix_riser_elbow_stray_weld_protruding_spool",
@@ -53280,7 +53280,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e \u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e \u0441\u0442\u044b\u043a\u0430 \u0438 \u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0438 \u043a\u0430\u0442\u0443\u0448\u043a\u0438 \u043f\u0440\u0438 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435 \u0432 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0438 \u0441\u0442\u043e\u044f\u043a (fix riser elbow stray weld & protruding spool)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2823"
+      "source_location": "L2830"
     },
     {
       "id": "agents_skills_systematic_debugging_test_pressure_1",
@@ -74153,7 +74153,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2758",
+      "source_location": "L2765",
       "weight": 1.0
     },
     {
@@ -74164,7 +74164,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2792",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -74175,7 +74175,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2823",
+      "source_location": "L2830",
       "weight": 1.0
     },
     {
@@ -74186,7 +74186,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2854",
+      "source_location": "L2861",
       "weight": 1.0
     },
     {
@@ -74197,7 +74197,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2887",
+      "source_location": "L2894",
       "weight": 1.0
     },
     {
@@ -74208,7 +74208,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2917",
+      "source_location": "L2924",
       "weight": 1.0
     },
     {
@@ -74219,7 +74219,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2946",
+      "source_location": "L2953",
       "weight": 1.0
     },
     {
@@ -74230,7 +74230,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2987",
+      "source_location": "L2994",
       "weight": 1.0
     },
     {
@@ -74241,7 +74241,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3028",
+      "source_location": "L3035",
       "weight": 1.0
     },
     {
@@ -74252,7 +74252,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3063",
+      "source_location": "L3070",
       "weight": 1.0
     },
     {
@@ -86566,6 +86566,17 @@
     },
     {
       "source": "lib_domain_services_callout_layout_engine",
+      "target": "lib_domain_services_callout_layout_engine_bottomy",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/services/callout_layout_engine.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_domain_services_callout_layout_engine",
       "target": "lib_domain_services_callout_layout_engine_bounds",
       "relation": "defines",
       "_origin": "ast",
@@ -86886,28 +86897,6 @@
     {
       "source": "lib_domain_services_callout_layout_engine",
       "target": "lib_domain_services_callout_layout_engine_leaderlines",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/domain/services/callout_layout_engine.dart",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "lib_domain_services_callout_layout_engine",
-      "target": "lib_domain_services_callout_layout_engine_maxy",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/domain/services/callout_layout_engine.dart",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "lib_domain_services_callout_layout_engine",
-      "target": "lib_domain_services_callout_layout_engine_miny",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -87282,6 +87271,17 @@
     {
       "source": "lib_domain_services_callout_layout_engine",
       "target": "lib_domain_services_callout_layout_engine_textwidthmm",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/services/callout_layout_engine.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_domain_services_callout_layout_engine",
+      "target": "lib_domain_services_callout_layout_engine_topy",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -128204,5 +128204,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7330f83bc13d80cc74cf43b37a730c5696635f4e"
+  "built_at_commit": "e626d668487153ec2ffba0644de996e4d0371376"
 }

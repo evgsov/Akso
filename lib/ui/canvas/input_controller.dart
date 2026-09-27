@@ -5976,6 +5976,8 @@ class PipingInputController extends ChangeNotifier {
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     if (sheet == null || network.callouts.isEmpty) return 0;
 
+    network.cleanOrphanedCallouts();
+
     final sheetLayout = CalloutLayoutEngine.calculateSheetLayout(
       network: network,
       sheet: sheet,

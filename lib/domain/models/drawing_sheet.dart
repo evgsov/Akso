@@ -1,3 +1,4 @@
+import '../enums/fitting_type.dart';
 import '../enums/sheet_format_type.dart';
 import '../enums/viewport_layout_preset.dart';
 import 'callout.dart';
@@ -308,6 +309,14 @@ class DrawingSheet {
     }
     if (enabledCalloutTypes != null && !enabledCalloutTypes!.contains(callout.targetType)) {
       return false;
+    }
+    // Прямая врезка (directBranch) не является фасонной деталью/элементом сети
+    if (callout.targetType == CalloutTargetType.fitting && network != null) {
+      final fit = network.fittings[callout.targetId] ??
+          network.fittings.values.where((f) => f.id == callout.targetId || f.nodeId == callout.targetId).firstOrNull;
+      if (fit != null && fit.fittingType == FittingType.directBranch) {
+        return false;
+      }
     }
     // Фильтрация по видимым системам видового экрана
     final visibleSys = viewport.visibleSystemIds;

@@ -416,6 +416,7 @@ class ReportEngine {
     final fittingMap = <String, int>{};
     final fittingData = <String, Fitting>{};
     for (final fit in network.fittings.values) {
+      if (fit.fittingType == FittingType.directBranch) continue;
       final key = '${fit.displayName}|${fit.standard ?? "ГОСТ"}|${fit.material}';
       fittingMap[key] = (fittingMap[key] ?? 0) + 1;
       fittingData[key] = fit;
