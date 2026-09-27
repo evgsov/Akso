@@ -6085,6 +6085,7 @@ class PipingInputController extends ChangeNotifier {
     // 2. Финальное 1D-пружинное каскадное выравнивание
     final alignedSolution = CascadeSpringAligner.align(
       rawSolution,
+      obstacleMap: obstacleMap,
       pitchMm: null,
     );
 

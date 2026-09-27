@@ -34,9 +34,16 @@ class SimulatedAnnealingCalloutSolver {
 
     // 5. Поощрительный бонус за аккуратный каскад (выравнивание по одной вертикальной линии X)
     if (a.isRight == b.isRight &&
-        (a.entryShelf.dx - b.entryShelf.dx).abs() <= 1.2 &&
-        (a.anchor - b.anchor).distance <= 60.0) {
-      return -50.0;
+        (a.entryShelf.dx - b.entryShelf.dx).abs() <= 1.8) {
+      final dy = (a.entryShelf.dy - b.entryShelf.dy).abs();
+      if (dy >= 4.5 && dy <= 80.0) {
+        // Дополнительный бонус за идеальное совпадение направляющей X
+        final exactXBonus = (a.entryShelf.dx - b.entryShelf.dx).abs() <= 0.05 ? -40.0 : 0.0;
+        return -100.0 + exactXBonus;
+      } else if (dy < 4.5) {
+        // Слишком тесно по вертикали в одной колонке
+        return 10000.0;
+      }
     }
 
     return 0.0;
@@ -47,7 +54,7 @@ class SimulatedAnnealingCalloutSolver {
     required Map<String, List<CalloutCandidateSlot>> candidatePools,
     CalloutObstacleMap? obstacleMap,
     int iterations = 30000,
-    double initialTemperature = 1000.0,
+    double initialTemperature = 500.0,
     double minTemperature = 0.05,
     void Function(Map<String, CalloutCandidateSlot> currentSolution)? onStep,
     int stepInterval = 1000,
@@ -59,8 +66,37 @@ class SimulatedAnnealingCalloutSolver {
     final pools = calloutIds.map((id) => candidatePools[id]!).toList();
     final n = calloutIds.length;
 
-    // Начальное состояние: выбираем первые (наименее затратные по статической оценке) слоты
+    // Жадная монотонная инициализация сверху вниз:
+    // Сортируем выноски по вертикальной координате анкера (Y).
+    // Верхние выноски первыми занимают верхние слоты без пересечений и коллизий.
+    final sortedIndices = List<int>.generate(n, (idx) => idx);
+    sortedIndices.sort((a, b) => pools[a].first.anchor.dy.compareTo(pools[b].first.anchor.dy));
+
     final state = List<int>.filled(n, 0);
+    final placed = <int>[];
+
+    for (final i in sortedIndices) {
+      final pool = pools[i];
+      int bestIdx = 0;
+      double minCost = double.infinity;
+
+      for (int s = 0; s < pool.length; s++) {
+        final cand = pool[s];
+        double cost = cand.localStaticCost;
+
+        for (final p in placed) {
+          cost += computePairwiseConflict(cand, pools[p][state[p]]);
+        }
+
+        if (cost < minCost) {
+          minCost = cost;
+          bestIdx = s;
+        }
+      }
+
+      state[i] = bestIdx;
+      placed.add(i);
+    }
 
     // Расчет начальной энергии системы
     double currentEnergy = 0.0;
@@ -150,7 +186,7 @@ class SimulatedAnnealingCalloutSolver {
     required Map<String, List<CalloutCandidateSlot>> candidatePools,
     CalloutObstacleMap? obstacleMap,
     int iterations = 30000,
-    double initialTemperature = 1000.0,
+    double initialTemperature = 500.0,
     double minTemperature = 0.05,
     Future<void> Function(Map<String, CalloutCandidateSlot> currentSolution, double progress)? onStep,
     int stepInterval = 1000,
@@ -163,8 +199,38 @@ class SimulatedAnnealingCalloutSolver {
     final pools = calloutIds.map((id) => candidatePools[id]!).toList();
     final n = calloutIds.length;
 
-    final state = List<int>.filled(n, 0);
+    // Жадная монотонная инициализация сверху вниз:
+    // Сортируем выноски по вертикальной координате анкера (Y).
+    final sortedIndices = List<int>.generate(n, (idx) => idx);
+    sortedIndices.sort((a, b) => pools[a].first.anchor.dy.compareTo(pools[b].first.anchor.dy));
 
+    final state = List<int>.filled(n, 0);
+    final placed = <int>[];
+
+    for (final i in sortedIndices) {
+      final pool = pools[i];
+      int bestIdx = 0;
+      double minCost = double.infinity;
+
+      for (int s = 0; s < pool.length; s++) {
+        final cand = pool[s];
+        double cost = cand.localStaticCost;
+
+        for (final p in placed) {
+          cost += computePairwiseConflict(cand, pools[p][state[p]]);
+        }
+
+        if (cost < minCost) {
+          minCost = cost;
+          bestIdx = s;
+        }
+      }
+
+      state[i] = bestIdx;
+      placed.add(i);
+    }
+
+    // Расчет начальной энергии системы
     double currentEnergy = 0.0;
     for (int i = 0; i < n; i++) {
       currentEnergy += pools[i][state[i]].localStaticCost;
@@ -175,6 +241,14 @@ class SimulatedAnnealingCalloutSolver {
 
     double bestEnergy = currentEnergy;
     final bestState = List<int>.from(state);
+
+    if (onStep != null) {
+      final initialMap = <String, CalloutCandidateSlot>{};
+      for (int k = 0; k < n; k++) {
+        initialMap[calloutIds[k]] = pools[k][state[k]];
+      }
+      await onStep(initialMap, 0.0);
+    }
 
     final random = math.Random(42);
     double temperature = initialTemperature;

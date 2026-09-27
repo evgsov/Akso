@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import '../models/callout_candidate_slot.dart';
+import 'callout_layout_engine.dart';
 
 /// Сервис 1D-пружинного каскадного выравнивания (Cascade Spring Aligner)
 /// Выравнивает близкие по X выноски в строгие вертикальные каскады («друг под другом») с идеальным шагом
@@ -8,6 +9,7 @@ class CascadeSpringAligner {
   /// Выравнивает полочки, оказавшиеся на близких X-координатах, в строгий каскад
   static Map<String, CalloutCandidateSlot> align(
     Map<String, CalloutCandidateSlot> solution, {
+    CalloutObstacleMap? obstacleMap,
     double? pitchMm,
     double maxXClusterDistance = 3.5,
     double maxYClusterDistance = 50.0,
@@ -95,16 +97,66 @@ class CascadeSpringAligner {
         final newRadius = (newEntryShelf - oldSlot.anchor).distance;
         final newAngle = math.atan2(newEntryShelf.dy - oldSlot.anchor.dy, newEntryShelf.dx - oldSlot.anchor.dx);
 
-        result[id] = CalloutCandidateSlot(
-          anchor: oldSlot.anchor,
-          entryShelf: newEntryShelf,
-          shelfEnd: newShelfEnd,
-          isRight: oldSlot.isRight,
-          boundingBox: newBox,
-          radius: newRadius,
-          angleRad: newAngle,
-          localStaticCost: oldSlot.localStaticCost,
-        );
+        // Проверяем безопасность: смещение не должно создавать пересечений и коллизий
+        bool causesConflict = false;
+
+        // 1. Проверка пересечения со стрелками и полками других выносок
+        for (final otherEntry in result.entries) {
+          if (otherEntry.key == id) continue;
+          final otherSlot = otherEntry.value;
+          if (CalloutObstacleMap.segmentsIntersect(
+            oldSlot.anchor,
+            newEntryShelf,
+            otherSlot.anchor,
+            otherSlot.entryShelf,
+          )) {
+            causesConflict = true;
+            break;
+          }
+          if (CalloutObstacleMap.segmentsIntersect(
+            oldSlot.anchor,
+            newEntryShelf,
+            otherSlot.entryShelf,
+            otherSlot.shelfEnd,
+          )) {
+            causesConflict = true;
+            break;
+          }
+        }
+
+        // 2. Проверка препятствий карты (трубы, штамп)
+        if (!causesConflict && obstacleMap != null) {
+          if (obstacleMap.testShelfPipeCollision(newBox, maxRadius: 1.0)) {
+            causesConflict = true;
+          }
+          if (!causesConflict) {
+            for (final pipe in obstacleMap.pipes) {
+              if (CalloutObstacleMap.segmentsIntersect(
+                oldSlot.anchor,
+                newEntryShelf,
+                pipe.p1,
+                pipe.p2,
+                tolerance: 0.05,
+              )) {
+                causesConflict = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!causesConflict) {
+          result[id] = CalloutCandidateSlot(
+            anchor: oldSlot.anchor,
+            entryShelf: newEntryShelf,
+            shelfEnd: newShelfEnd,
+            isRight: oldSlot.isRight,
+            boundingBox: newBox,
+            radius: newRadius,
+            angleRad: newAngle,
+            localStaticCost: oldSlot.localStaticCost,
+          );
+        }
       }
     }
 

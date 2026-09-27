@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790504180.5348036,
-    "seen": 1790504324.5194168,
-    "ast_hash": "377c140489f9e0f3928be7c5ffbed215",
+    "mtime": 1790515313.6041267,
+    "seen": 1790515409.1913862,
+    "ast_hash": "331a322e9d0e8f5c3e5c4fcd077bddb6",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790509785.0595088,
-    "seen": 1790509801.5211995,
-    "ast_hash": "30720d97a324d5c1064c4945e208b302",
+    "mtime": 1790515393.7951262,
+    "seen": 1790515409.191692,
+    "ast_hash": "34e3bfe1f6de44b52693790cc086eae9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2070,9 +2070,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_sheet.dart": {
-    "mtime": 1790509301.390469,
-    "seen": 1790509801.5208712,
-    "ast_hash": "18108d2f72c48a9be6d930d123e93fbc",
+    "mtime": 1790514398.844403,
+    "seen": 1790515409.1913333,
+    "ast_hash": "3a7b62e5350f553a86677ed3a626f9d9",
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_style_config.dart": {
@@ -2100,9 +2100,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/sheet_canvas_painter.dart": {
-    "mtime": 1790507482.0710886,
-    "seen": 1790507725.9301822,
-    "ast_hash": "d63d81b7cde9acc320539bf114bfa6d0",
+    "mtime": 1790514615.5697634,
+    "seen": 1790515409.1913993,
+    "ast_hash": "1c2f4986cbd2434f5d7b5b3e9e4c4844",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_tab_bar.dart": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
-    "mtime": 1790478636.4242835,
-    "seen": 1790478712.6883025,
-    "ast_hash": "a35ea6081abb1e5316c1a77f871606dd",
+    "mtime": 1790515336.2338178,
+    "seen": 1790515409.1914282,
+    "ast_hash": "1c1c03adadd4212ec42149100c29e037",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
@@ -2214,9 +2214,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_layout_engine.dart": {
-    "mtime": 1790509714.080152,
-    "seen": 1790509801.520899,
-    "ast_hash": "1ae407ba1781384078189e140a157474",
+    "mtime": 1790515192.0468664,
+    "seen": 1790515409.1913671,
+    "ast_hash": "c26d0ee5e8e66bbc4ab39cebb9a7fe84",
     "semantic_hash": ""
   },
   "test/callout_layout_engine_test.dart": {
@@ -2589,6 +2589,66 @@
     "mtime": 1790448292.1114347,
     "seen": 1790448382.753713,
     "ast_hash": "280fba766b57e35c0ea3bf6f19dac254",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/callout_candidate_slot.dart": {
+    "mtime": 1790514667.2131722,
+    "seen": 1790515409.1913278,
+    "ast_hash": "bec8fd151d66e167f84db975380a632a",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/callout_candidate_generator.dart": {
+    "mtime": 1790514742.7568967,
+    "seen": 1790515409.191366,
+    "ast_hash": "e3423d5165b0eed576597696b2f665c2",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/cascade_spring_aligner.dart": {
+    "mtime": 1790514978.8558521,
+    "seen": 1790515409.191368,
+    "ast_hash": "0a9a6a7a23f56462da2924c7993cf581",
+    "semantic_hash": ""
+  },
+  "lib/domain/services/simulated_annealing_callout_solver.dart": {
+    "mtime": 1790515282.7260485,
+    "seen": 1790515409.1913784,
+    "ast_hash": "d69226c882323bdda54e50e6aeafc7c2",
+    "semantic_hash": ""
+  },
+  "test/callout_candidate_generator_test.dart": {
+    "mtime": 1790514752.5035434,
+    "seen": 1790515409.191461,
+    "ast_hash": "7f13c889aee53bae81972f5559d3c6df",
+    "semantic_hash": ""
+  },
+  "test/callout_debug_overlay_test.dart": {
+    "mtime": 1790514356.2793326,
+    "seen": 1790515409.1914632,
+    "ast_hash": "9efc343fb90f21e4519f3aa65c752bce",
+    "semantic_hash": ""
+  },
+  "test/cascade_spring_aligner_test.dart": {
+    "mtime": 1790514962.9257033,
+    "seen": 1790515409.1914802,
+    "ast_hash": "e9553058eae4dcbb66e85f43f2a47bfc",
+    "semantic_hash": ""
+  },
+  "test/simulated_annealing_solver_test.dart": {
+    "mtime": 1790514822.0195024,
+    "seen": 1790515409.1915846,
+    "ast_hash": "cc17fd49964e673e9cad5c3a5b8360d6",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-09-27-simulated-annealing-callout-solver.md": {
+    "mtime": 1790513854.3551185,
+    "seen": 1790515409.1917148,
+    "ast_hash": "4059dcd96d078da6ff66cd569fa682dd",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-09-27-simulated-annealing-callout-solver-design.md": {
+    "mtime": 1790513810.73635,
+    "seen": 1790515409.1917336,
+    "ast_hash": "2d42ca975d19b7f469be96f6f61d37e8",
     "semantic_hash": ""
   }
 }

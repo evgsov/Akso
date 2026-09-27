@@ -943,6 +943,7 @@ class CalloutLayoutEngine {
 
         final alignedSolution = CascadeSpringAligner.align(
           rawSolution,
+          obstacleMap: obstacleMap,
           pitchMm: customPitchMm,
         );
 

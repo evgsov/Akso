@@ -121,5 +121,57 @@ void main() {
       final conflictCascade = SimulatedAnnealingCalloutSolver.computePairwiseConflict(a, bCascade);
       expect(conflictCascade, lessThan(0.0)); // Бонус за каскад!
     });
+
+    test('greedy monotonic initialization resolves dense vertical stack without leader crossings', () {
+      // 5 выносок, расположенных вертикально вдоль стояка (X = 100, Y от 50 до 90)
+      final pools = <String, List<CalloutCandidateSlot>>{};
+
+      for (int i = 0; i < 5; i++) {
+        final y = 50.0 + i * 10.0;
+        final anchor = Offset(100.0, y);
+
+        // Каждый имеет выбор: слот в правой колонке на разной высоте
+        final slots = <CalloutCandidateSlot>[];
+        for (int k = 0; k < 5; k++) {
+          final shelfY = 45.0 + k * 12.0;
+          final entry = Offset(130.0, shelfY);
+          slots.add(CalloutCandidateSlot(
+            anchor: anchor,
+            entryShelf: entry,
+            shelfEnd: Offset(entry.dx + 25.0, entry.dy),
+            isRight: true,
+            boundingBox: Rect.fromLTWH(entry.dx, entry.dy - 4.0, 25.0, 8.0),
+            radius: (entry - anchor).distance,
+            angleRad: 0.3,
+            localStaticCost: (entry - anchor).distance,
+          ));
+        }
+        pools['c$i'] = slots;
+      }
+
+      final solution = SimulatedAnnealingCalloutSolver.solve(
+        candidatePools: pools,
+        iterations: 1000,
+      );
+
+      expect(solution.length, equals(5));
+
+      // Проверяем, что ни одна пара стрелок не пересекается
+      final entries = solution.values.toList();
+      for (int i = 0; i < entries.length; i++) {
+        for (int j = i + 1; j < entries.length; j++) {
+          final a = entries[i];
+          final b = entries[j];
+          final crosses = CalloutObstacleMap.segmentsIntersect(
+            a.anchor,
+            a.entryShelf,
+            b.anchor,
+            b.entryShelf,
+          );
+          expect(crosses, isFalse, reason: 'Callouts $i and $j crossed leader lines!');
+          expect(a.boundingBox.overlaps(b.boundingBox), isFalse, reason: 'Callouts $i and $j overlap!');
+        }
+      }
+    });
   });
 }
