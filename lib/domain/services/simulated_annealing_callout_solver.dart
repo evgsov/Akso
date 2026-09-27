@@ -1,0 +1,146 @@
+import 'dart:math' as math;
+import '../models/callout_candidate_slot.dart';
+import 'callout_layout_engine.dart';
+
+/// Глобальный оптимизатор расстановки выносок на основе метода имитации отжига (Simulated Annealing)
+class SimulatedAnnealingCalloutSolver {
+  /// Оценка парного конфликта между двумя выносками (слотами):
+  /// - Наложение полочек: +100 000 000
+  /// - Пересечение стрелок: +50 000 000
+  /// - Стрелка рассекает чужую полочку: +30 000 000
+  /// - Бонус за ровный каскад (друг под другом): -50.0
+  static double computePairwiseConflict(CalloutCandidateSlot a, CalloutCandidateSlot b) {
+    // 1. Абсолютный запрет: наложение полок и текстов друг на друга
+    if (a.boundingBox.overlaps(b.boundingBox)) {
+      return 100000000.0;
+    }
+
+    // 2. Абсолютный запрет: взаимное пересечение наклонных стрелок (ножек)
+    if (CalloutObstacleMap.segmentsIntersect(a.anchor, a.entryShelf, b.anchor, b.entryShelf)) {
+      return 50000000.0;
+    }
+
+    // 3. Стрелка одной выноски рассекает горизонтальную полочку другой
+    if (CalloutObstacleMap.segmentsIntersect(a.anchor, a.entryShelf, b.entryShelf, b.shelfEnd) ||
+        CalloutObstacleMap.segmentsIntersect(b.anchor, b.entryShelf, a.entryShelf, a.shelfEnd)) {
+      return 30000000.0;
+    }
+
+    // 4. Прямоугольник текста полочки пересекает наклонную стрелку другой выноски
+    if (CalloutObstacleMap.rectCollidesWithSegment(a.boundingBox, b.anchor, b.entryShelf, 0.3) ||
+        CalloutObstacleMap.rectCollidesWithSegment(b.boundingBox, a.anchor, a.entryShelf, 0.3)) {
+      return 30000000.0;
+    }
+
+    // 5. Поощрительный бонус за аккуратный каскад (выравнивание по одной вертикальной линии X)
+    if (a.isRight == b.isRight &&
+        (a.entryShelf.dx - b.entryShelf.dx).abs() <= 1.2 &&
+        (a.anchor - b.anchor).distance <= 60.0) {
+      return -50.0;
+    }
+
+    return 0.0;
+  }
+
+  /// Выполняет глобальный поиск оптимальной комбинации слотов выносок
+  static Map<String, CalloutCandidateSlot> solve({
+    required Map<String, List<CalloutCandidateSlot>> candidatePools,
+    CalloutObstacleMap? obstacleMap,
+    int iterations = 30000,
+    double initialTemperature = 1000.0,
+    double minTemperature = 0.05,
+    void Function(Map<String, CalloutCandidateSlot> currentSolution)? onStep,
+    int stepInterval = 1000,
+  }) {
+    final result = <String, CalloutCandidateSlot>{};
+    if (candidatePools.isEmpty) return result;
+
+    final calloutIds = candidatePools.keys.toList();
+    final pools = calloutIds.map((id) => candidatePools[id]!).toList();
+    final n = calloutIds.length;
+
+    // Начальное состояние: выбираем первые (наименее затратные по статической оценке) слоты
+    final state = List<int>.filled(n, 0);
+
+    // Расчет начальной энергии системы
+    double currentEnergy = 0.0;
+    for (int i = 0; i < n; i++) {
+      currentEnergy += pools[i][state[i]].localStaticCost;
+      for (int j = i + 1; j < n; j++) {
+        currentEnergy += computePairwiseConflict(pools[i][state[i]], pools[j][state[j]]);
+      }
+    }
+
+    double bestEnergy = currentEnergy;
+    final bestState = List<int>.from(state);
+
+    final random = math.Random(42);
+    double temperature = initialTemperature;
+    final coolingFactor = math.pow(minTemperature / initialTemperature, 1.0 / math.max(1, iterations)).toDouble();
+
+    for (int iter = 0; iter < iterations; iter++) {
+      // Выбираем случайную выноску, у которой есть альтернативные слоты
+      final i = random.nextInt(n);
+      final pool = pools[i];
+      if (pool.length <= 1) continue;
+
+      final oldIdx = state[i];
+      int newIdx = random.nextInt(pool.length);
+      if (newIdx == oldIdx) {
+        newIdx = (oldIdx + 1) % pool.length;
+      }
+
+      final oldSlot = pool[oldIdx];
+      final newSlot = pool[newIdx];
+
+      // Быстрое инкрементальное вычисление изменения энергии (Delta E) за O(N)
+      double deltaE = newSlot.localStaticCost - oldSlot.localStaticCost;
+      for (int j = 0; j < n; j++) {
+        if (j == i) continue;
+        final otherSlot = pools[j][state[j]];
+        final oldConflict = computePairwiseConflict(oldSlot, otherSlot);
+        final newConflict = computePairwiseConflict(newSlot, otherSlot);
+        deltaE += (newConflict - oldConflict);
+      }
+
+      // Критерий Метрополиса для принятия изменений
+      bool accept = false;
+      if (deltaE < 0) {
+        accept = true;
+      } else {
+        final prob = math.exp(-deltaE / temperature);
+        if (random.nextDouble() < prob) {
+          accept = true;
+        }
+      }
+
+      if (accept) {
+        state[i] = newIdx;
+        currentEnergy += deltaE;
+        if (currentEnergy < bestEnergy) {
+          bestEnergy = currentEnergy;
+          for (int k = 0; k < n; k++) {
+            bestState[k] = state[k];
+          }
+        }
+      }
+
+      temperature *= coolingFactor;
+
+      if (onStep != null && (iter % stepInterval == 0 || iter == iterations - 1)) {
+        final intermediate = <String, CalloutCandidateSlot>{};
+        for (int k = 0; k < n; k++) {
+          intermediate[calloutIds[k]] = pools[k][state[k]];
+        }
+        onStep(intermediate);
+      }
+    }
+
+    // Формируем результат на основе наилучшего зафиксированного состояния
+    for (int k = 0; k < n; k++) {
+      result[calloutIds[k]] = pools[k][bestState[k]];
+    }
+
+    return result;
+  }
+}

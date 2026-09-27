@@ -285,7 +285,8 @@ class CalloutObstacleMap {
     return math.sqrt(dx * dx + dy * dy);
   }
 
-  static bool _rectCollidesWithSegment(
+  /// Проверяет пересечение прямоугольника с отрезком с заданным радиусом безопасности
+  static bool rectCollidesWithSegment(
     Rect rect,
     Offset p1,
     Offset p2,
@@ -320,6 +321,9 @@ class CalloutObstacleMap {
 
     return false;
   }
+
+  static bool _rectCollidesWithSegment(Rect rect, Offset p1, Offset p2, double radius) =>
+      rectCollidesWithSegment(rect, p1, p2, radius);
 
   /// Проверяет пересечение двух 2D отрезков [a1, a2] и [b1, b2] с заданным допуском на концах
   static bool segmentsIntersect(
