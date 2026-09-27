@@ -217,9 +217,16 @@ class CalloutObstacleMap {
   }
 
   /// Проверяет пересечение полочки с коридорами трубопроводов
-  bool testShelfPipeCollision(Rect shelfRect, {double extraClearance = 1.0}) {
+  bool testShelfPipeCollision(
+    Rect shelfRect, {
+    double extraClearance = 1.0,
+    double? maxRadius,
+  }) {
     for (final pipe in pipes) {
-      if (_rectCollidesWithSegment(shelfRect, pipe.p1, pipe.p2, pipe.radius + extraClearance)) {
+      final r = maxRadius != null
+          ? math.min(pipe.radius, maxRadius)
+          : (pipe.radius + extraClearance);
+      if (_rectCollidesWithSegment(shelfRect, pipe.p1, pipe.p2, r)) {
         return true;
       }
     }
@@ -1581,8 +1588,8 @@ class CalloutLayoutEngine {
       5 * math.pi / 3, 7 * math.pi / 4, 11 * math.pi / 6, // 300°, 315°, 330°
     ];
 
-    // Компактные дистанции поиска с акцентом на близкое расстояние (9..30 мм)
-    final radii = <double>[9.0, 12.0, 15.0, 19.0, 24.0, 30.0];
+    // Компактные дистанции поиска с акцентом на близкое расстояние (7..32 мм)
+    final radii = <double>[7.0, 9.0, 11.0, 13.0, 16.0, 20.0, 26.0, 32.0];
     final placedShelves = <_PlacedGenerativeShelf>[];
 
     for (final cluster in clusters) {
@@ -1592,15 +1599,14 @@ class CalloutLayoutEngine {
       final pitch = avgTextH + 1.5;
       final maxW = cluster.items.map((e) => e.textWidthMm).reduce(math.max);
 
-      // Собираем ID целевых сегментов и задвижек для текущего кластера
+      // Собираем ID целевых сегментов и элементов для текущего кластера
       final clusterTargetSegIds = <String>{};
-      final clusterTargetValveIds = <String>{};
+      final clusterTargetElementIds = <String>{};
       for (final item in cluster.items) {
         if (item.callout.targetType == CalloutTargetType.segment) {
           clusterTargetSegIds.add(item.callout.targetId);
-        } else if (item.callout.targetType == CalloutTargetType.valve) {
-          clusterTargetValveIds.add('valve_${item.callout.targetId}');
         }
+        clusterTargetElementIds.add('${item.callout.targetType.name}_${item.callout.targetId}');
       }
 
       // Вычисляем 2D-вектор направления трубы на листе для ориентации выноски
@@ -1645,13 +1651,13 @@ class CalloutLayoutEngine {
         double penalty = 0.0;
 
         // 1. Штраф, если выноска идет по направлению с трубой (параллельно/соосно)
-        if (cosTheta > 0.4) {
-          penalty += (cosTheta - 0.4) * 60.0; // от 0 до +36 штрафа
+        if (cosTheta > 0.45) {
+          penalty += (cosTheta - 0.45) * 120.0; // от 0 до +66 штрафа
         }
 
         // 2. Плюс ("+"), если выноска идет перпендикулярно трубе (вбок от трассы)
         if (cosTheta < 0.3) {
-          penalty -= 15.0; // поощрение за чистый перпендикулярный отвод
+          penalty -= 25.0; // поощрение за чистый перпендикулярный отвод
         }
 
         return penalty;
@@ -1661,29 +1667,35 @@ class CalloutLayoutEngine {
       double lowestCost = double.infinity;
 
       // 4a. Каскадный поиск (попытка встать в каскад строго "друг над другом" с соседней полкой)
+      final candItem = cluster.items.first;
+      final candBText = network.generateCalloutBottomText(candItem.callout, defaultCalloutTemplates);
+      final candHasBottom = candBText != null && candBText.trim().isNotEmpty;
+      final candTopH = candItem.textHeightMm;
+      final candBottomH = candHasBottom ? (candItem.textHeightMm * 0.85 + 1.5) : 0.0;
+
       for (final placed in placedShelves) {
         final dAnchor = (placed.anchor - anchor).distance;
-        if (dAnchor > 55.0) continue; // только для элементов в пределах одной строчной зоны
+        if (dAnchor > 60.0) continue; // только для элементов в пределах одной строчной зоны
 
         final cascadeX = placed.shelfStart.dx;
         final isRight = placed.isRight;
 
-        // Попробуем встать строго сверху или снизу от уже стоящей полки/стопки
+        // Попробуем встать строго сверху или снизу от уже стоящей полки/стопки с аккуратным зазором 1.2 мм
         final testYList = <double>[
-          placed.minY - numItems * (pitch + 1.0), // над полкой
-          placed.maxY + pitch + 1.0,              // под полкой
+          placed.topY - candBottomH - 1.2,  // над полкой: линия полки candStartY так, чтобы её низ был выше placed.topY
+          placed.bottomY + candTopH + 1.2, // под полкой: линия полки candStartY так, чтобы её верх был ниже placed.bottomY
         ];
 
         for (final candStartY in testYList) {
           final entryShelf = Offset(cascadeX, candStartY + (numItems - 1) * pitch / 2.0);
           final dist = (entryShelf - anchor).distance;
-          if (dist < 8.0 || dist > 26.0) continue; // компактная дистанция
+          if (dist < 6.0 || dist > 28.0) continue; // компактная дистанция
 
           final dx = (entryShelf.dx - anchor.dx).abs();
           final dy = (entryShelf.dy - anchor.dy).abs();
           if (dx < 1.0) continue; // исключаем строго вертикальную линию
           final angleDeg = math.atan2(dy, dx) * 180 / math.pi;
-          if (angleDeg < 25.0 || angleDeg > 65.0) continue; // только красивые наклонные углы, никаких прямых углов
+          if (angleDeg < 15.0 || angleDeg > 75.0) continue; // наклонные углы без строго прямых линий
 
           final rects = <Rect>[];
           bool outOfBounds = false;
@@ -1717,7 +1729,8 @@ class CalloutLayoutEngine {
           }
           if (outOfBounds) continue;
 
-          int calloutCollisions = 0; // Наложение на другие выноски (наивысший штраф 150 000!)
+          int calloutCollisions = 0; // Наложение на другие выноски (абсолютный запрет!)
+          int leaderCrossings = 0; // Пересечение стрелки со стрелками/полками других выносок
           int shelfPipeCollisions = 0; // Наложение полки на трубы
           int shelfElementCollisions = 0; // Наложение полки на арматуру, фитинги, оборудование, штамп
           int linePipeCollisions = 0; // Пересечение ножки с чужой трубой
@@ -1726,21 +1739,37 @@ class CalloutLayoutEngine {
           for (final rect in rects) {
             // а) На другие выноски и элементы чертежа:
             for (final obs in obstacleMap.rects) {
-              if (rect.overlaps(obs.rect)) {
-                if (obs.id != null && obs.id!.startsWith('callout_')) {
-                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
-                } else {
-                  shelfElementCollisions++; // На арматуру, фитинги, оборудование, штамп
+              if (obs.id != null && (obs.id == 'stamp' || obs.id!.startsWith('table_') || obs.id == 'tech_reqs')) {
+                if (rect.overlaps(obs.rect)) {
+                  shelfElementCollisions++;
                 }
+                continue;
+              }
+              if (obs.id != null && obs.id!.startsWith('callout_')) {
+                if (rect.overlaps(obs.rect)) {
+                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
+                }
+                continue;
+              }
+              // Если это собственный целевой элемент:
+              if (obs.id != null && clusterTargetElementIds.contains(obs.id)) {
+                continue;
+              }
+              // Для остальных элементов (арматура, фитинги, опоры):
+              // Проверяем с компактным габаритом 4.0х4.0 мм (радиус 2.0 мм)
+              final elemCenter = obs.rect.center;
+              final compactRect = Rect.fromCenter(center: elemCenter, width: 4.0, height: 4.0);
+              if (rect.overlaps(compactRect)) {
+                shelfElementCollisions++;
               }
             }
-            // б) На коридоры трубопроводов (с защитным зазором 1.0 мм):
-            if (obstacleMap.testShelfPipeCollision(rect, extraClearance: 1.0)) {
+            // б) На коридоры трубопроводов (с защитным порогом 2.2 мм от оси):
+            if (obstacleMap.testShelfPipeCollision(rect, maxRadius: 2.2)) {
               shelfPipeCollisions++;
             }
             // в) На существующие линии-выноски и полочки других выносок:
             for (final line in obstacleMap.leaderLines) {
-              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.3)) {
                 calloutCollisions++; // Полочка/текст попадает на стрелку/полку другой выноски!
               }
             }
@@ -1749,14 +1778,14 @@ class CalloutLayoutEngine {
           // 2. Линия-выноска не должна пересекать чужие стрелки и полки:
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
-              calloutCollisions++; // Стрелка пересекает стрелку/полку другой выноски!
+              leaderCrossings++; // Стрелка пересекает стрелку/полку другой выноски!
             }
           }
 
           // 3. Линия-выноска не должна пересекать прямоугольники чужих выносок:
           for (final obs in obstacleMap.rects) {
             if (obs.id != null && obs.id!.startsWith('callout_')) {
-              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.3)) {
                 calloutCollisions++; // Стрелка пересекает текст/полку другой выноски!
               }
             }
@@ -1770,21 +1799,25 @@ class CalloutLayoutEngine {
             }
           }
 
-          // Базовая стоимость за расстояние: жесткий штраф за удаление больше 14 мм
-          double cost = dist * 8.0;
-          if (dist > 14.0) {
-            final extra = dist - 14.0;
-            cost += extra * extra * 40.0;
+          // Базовая стоимость за расстояние: жесткий квадратичный штраф за удаление больше 11 мм
+          double cost = dist * 3.0;
+          if (dist > 11.0) {
+            final extra = dist - 11.0;
+            cost += extra * extra * 70.0;
           }
 
           // Оценка направления относительно трубы (штраф за параллельность, плюс за перпендикуляр)
           cost += evalPipeDirectionCost(entryShelf - anchor);
 
-          // Выноска на выноску карается наивысшим штрафом 150 000 очков!
-          cost += calloutCollisions * 150000.0;
-          cost += linePipeCollisions * 100000.0;
-          cost += shelfPipeCollisions * 80000.0;
-          cost += shelfElementCollisions * 80000.0;
+          // Бонус за чистый каскад ("друг над другом")
+          cost -= 40.0;
+
+          // Строгая иерархия штрафов:
+          cost += calloutCollisions * 1000000.0; // Абсолютный запрет наложения выноски на выноску!
+          cost += leaderCrossings * 500000.0;    // Жесткий запрет пересечения стрелок!
+          cost += linePipeCollisions * 150000.0; // Пересечение ножки с трубой
+          cost += shelfPipeCollisions * 60000.0; // Полка на трубе
+          cost += shelfElementCollisions * 40000.0; // Полка на фасонине/арматуре
 
           if (cost < lowestCost) {
             lowestCost = cost;
@@ -1842,7 +1875,8 @@ class CalloutLayoutEngine {
           }
           if (outOfBounds) continue;
 
-          int calloutCollisions = 0; // Наложение на другие выноски (наивысший штраф 150 000!)
+          int calloutCollisions = 0; // Наложение на другие выноски (абсолютный запрет!)
+          int leaderCrossings = 0; // Пересечение стрелки со стрелками/полками других выносок
           int shelfPipeCollisions = 0; // Наложение полки на трубы
           int shelfElementCollisions = 0; // Наложение полки на арматуру, фитинги, оборудование, штамп
           int linePipeCollisions = 0; // Пересечение ножки с чужой трубой
@@ -1851,21 +1885,37 @@ class CalloutLayoutEngine {
           for (final rect in rects) {
             // а) На другие выноски и элементы чертежа:
             for (final obs in obstacleMap.rects) {
-              if (rect.overlaps(obs.rect)) {
-                if (obs.id != null && obs.id!.startsWith('callout_')) {
-                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
-                } else {
-                  shelfElementCollisions++; // На арматуру, фитинги, оборудование, штамп
+              if (obs.id != null && (obs.id == 'stamp' || obs.id!.startsWith('table_') || obs.id == 'tech_reqs')) {
+                if (rect.overlaps(obs.rect)) {
+                  shelfElementCollisions++;
                 }
+                continue;
+              }
+              if (obs.id != null && obs.id!.startsWith('callout_')) {
+                if (rect.overlaps(obs.rect)) {
+                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
+                }
+                continue;
+              }
+              // Если это собственный целевой элемент:
+              if (obs.id != null && clusterTargetElementIds.contains(obs.id)) {
+                continue;
+              }
+              // Для остальных элементов (арматура, фитинги, опоры):
+              // Проверяем с компактным габаритом 4.0х4.0 мм (радиус 2.0 мм)
+              final elemCenter = obs.rect.center;
+              final compactRect = Rect.fromCenter(center: elemCenter, width: 4.0, height: 4.0);
+              if (rect.overlaps(compactRect)) {
+                shelfElementCollisions++;
               }
             }
-            // б) На коридоры трубопроводов (с защитным зазором 1.0 мм):
-            if (obstacleMap.testShelfPipeCollision(rect, extraClearance: 1.0)) {
+            // б) На коридоры трубопроводов (с защитным порогом 2.2 мм от оси):
+            if (obstacleMap.testShelfPipeCollision(rect, maxRadius: 2.2)) {
               shelfPipeCollisions++;
             }
             // в) На существующие линии-выноски и полочки других выносок:
             for (final line in obstacleMap.leaderLines) {
-              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.3)) {
                 calloutCollisions++; // Полочка/текст попадает на стрелку/полку другой выноски!
               }
             }
@@ -1874,14 +1924,14 @@ class CalloutLayoutEngine {
           // 2. Линия-выноска не должна пересекать чужие стрелки и полки:
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
-              calloutCollisions++; // Стрелка пересекает стрелку/полку другой выноски!
+              leaderCrossings++; // Стрелка пересекает стрелку/полку другой выноски!
             }
           }
 
           // 3. Линия-выноска не должна пересекать прямоугольники чужих выносок:
           for (final obs in obstacleMap.rects) {
             if (obs.id != null && obs.id!.startsWith('callout_')) {
-              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.3)) {
                 calloutCollisions++; // Стрелка пересекает текст/полку другой выноски!
               }
             }
@@ -1896,11 +1946,11 @@ class CalloutLayoutEngine {
           }
 
           // Оценка эстетики (Scoring):
-          // Базовая стоимость за расстояние + жесткий квадратичный штраф за удаление больше 14 мм
-          double cost = radius * 8.0;
-          if (radius > 14.0) {
-            final extra = radius - 14.0;
-            cost += extra * extra * 40.0; // Сильный штраф за дальность!
+          // Базовая стоимость за расстояние + жесткий квадратичный штраф за удаление больше 11 мм
+          double cost = radius * 3.0;
+          if (radius > 11.0) {
+            final extra = radius - 11.0;
+            cost += extra * extra * 70.0; // Сильнейший штраф за дальность!
           }
 
           // Оценка направления относительно трубы (штраф за параллельность, плюс за перпендикуляр)
@@ -1920,16 +1970,17 @@ class CalloutLayoutEngine {
           }
 
           // Если рядом есть соседи, но кандидат ставит полку на случайном X вразнобой —
-          // накладываем ПЛЮС К ШТРАФУ за разрозненность полок!
+          // накладываем штраф за отказ от каскадного выравнивания:
           if (hasNearbyShelf && !matchesCascade) {
-            cost += 45.0; // Штраф за отказ от каскадного выравнивания
+            cost += 45.0;
           }
 
-          // Выноска на выноску карается наивысшим штрафом 150 000 очков!
-          cost += calloutCollisions * 150000.0;
-          cost += linePipeCollisions * 100000.0;
-          cost += shelfPipeCollisions * 80000.0;
-          cost += shelfElementCollisions * 80000.0;
+          // Строгая иерархия штрафов:
+          cost += calloutCollisions * 1000000.0; // Абсолютный запрет наложения выноски на выноску!
+          cost += leaderCrossings * 500000.0;    // Жесткий запрет пересечения стрелок!
+          cost += linePipeCollisions * 150000.0; // Пересечение ножки с трубой
+          cost += shelfPipeCollisions * 60000.0; // Полка на трубе
+          cost += shelfElementCollisions * 40000.0; // Полка на фасонине/арматуре
 
           if (cost < lowestCost) {
             lowestCost = cost;
@@ -1979,12 +2030,19 @@ class CalloutLayoutEngine {
           );
         }
 
+        double minShelfY = double.infinity;
+        double maxShelfY = -double.infinity;
+        for (final r in best.rects) {
+          if (r.top < minShelfY) minShelfY = r.top;
+          if (r.bottom > maxShelfY) maxShelfY = r.bottom;
+        }
+
         // Фиксируем размещенную полку в списке для каскадного выравнивания следующих выносок
         placedShelves.add(_PlacedGenerativeShelf(
           shelfStart: best.entryShelf,
           isRight: best.isRight,
-          minY: best.startY,
-          maxY: best.startY + (numItems - 1) * best.pitch,
+          topY: minShelfY,
+          bottomY: maxShelfY,
           anchor: anchor,
         ));
       }
@@ -2013,15 +2071,15 @@ class _GenerativeCandidate {
 class _PlacedGenerativeShelf {
   final Offset shelfStart;
   final bool isRight;
-  final double minY;
-  final double maxY;
+  final double topY;
+  final double bottomY;
   final Offset anchor;
 
   _PlacedGenerativeShelf({
     required this.shelfStart,
     required this.isRight,
-    required this.minY,
-    required this.maxY,
+    required this.topY,
+    required this.bottomY,
     required this.anchor,
   });
 }

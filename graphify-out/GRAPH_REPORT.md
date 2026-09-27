@@ -1,7 +1,7 @@
 # Graph Report - Akso  (2026-09-27)
 
 ## Corpus Check
-- 380 files · ~609,596 words
+- 380 files · ~610,332 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7330f83b`
+- Built from commit: `e626d668`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -415,7 +415,7 @@ Nodes (15): 1. High Write Rates (Sequential Values), 2. Large String/Map/Array F
 
 ### Community 31 - "fitting_properties_sheet.dart"
 Cohesion: 0.08
-Nodes (23): custom_pipe_dimension_dialog.dart, ../../../../domain/enums/weld_type.dart, ../../../../domain/models/fitting_definition.dart, ../../../../domain/models/pipe_support.dart, WeldType, WeldTypeExt, CanvasTool, build (+15 more)
+Nodes (23): custom_pipe_dimension_dialog.dart, ../../../../domain/enums/valve_type.dart, ../../../../domain/enums/weld_type.dart, ../../../../domain/models/fitting_definition.dart, WeldType, WeldTypeExt, CanvasTool, build (+15 more)
 
 ### Community 32 - "Using Git Worktrees"
 Cohesion: 0.13
@@ -815,7 +815,7 @@ Nodes (17): 1.1. Проблема текущей реализации, 1.2. Це
 
 ### Community 146 - "pipe_painter.dart"
 Cohesion: 0.10
-Nodes (19): ../../../../domain/enums/valve_type.dart, ../../../../domain/models/custom_valve_definition.dart, ../../domain/models/pipe_spool.dart, calcElbowTangentLength, calcPipeTrimmedPoint, calcStrokeWidth, _drawCenterlineLayer, drawDashDotLine (+11 more)
+Nodes (18): ../../../../domain/models/custom_valve_definition.dart, ../../domain/models/pipe_spool.dart, calcElbowTangentLength, calcPipeTrimmedPoint, calcStrokeWidth, _drawCenterlineLayer, drawDashDotLine, drawSelectedDimensionBadge (+10 more)
 
 ### Community 147 - "drawing_sheet.dart"
 Cohesion: 0.04
@@ -1047,7 +1047,7 @@ Nodes (15): dart:io, FileSystemException, FormatException, package:akso/data/rep
 
 ### Community 208 - "dart:math"
 Cohesion: 0.08
-Nodes (28): ../../../../core/math/axonometry_projector.dart, dart:math, ../../../../domain/models/drawing_style_config.dart, ../../../../../domain/models/equipment.dart, ../../domain/models/linear_dimension.dart, ../../../../domain/models/piping_network.dart, ../../../../domain/services/custom_valve_catalog.dart, ../../../../domain/services/element_3d_geometry.dart (+20 more)
+Nodes (29): ../../../../core/math/axonometry_projector.dart, dart:math, ../../../../domain/models/drawing_style_config.dart, ../../../../../domain/models/equipment.dart, ../../domain/models/linear_dimension.dart, ../../../../domain/models/pipe_support.dart, ../../../../domain/models/piping_network.dart, ../../../../domain/services/custom_valve_catalog.dart (+21 more)
 
 ### Community 209 - "VectorPathCommand"
 Cohesion: 0.40
