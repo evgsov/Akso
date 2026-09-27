@@ -5319,6 +5319,7 @@ class PipingInputController extends ChangeNotifier {
       offsetY: offsetY,
     );
     if (count > 0) {
+      autoLayoutCallouts(onlyUnpinned: true);
       history.recordState(network);
       notifyListeners();
     }
@@ -6440,6 +6441,18 @@ class PipingInputController extends ChangeNotifier {
     isViewportSelected = false;
     selectedSheetBlock = null;
     activeViewportGrip = null;
+
+    // Автоматическая раскладка выносок листа, если они еще не имеют позиций на этом листе
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet != null && network.callouts.isNotEmpty) {
+      final hasUnplaced = network.callouts.values.any(
+        (c) => sheet.isCalloutVisible(c) && !c.hasSheetOffset(sheet.id),
+      );
+      if (hasUnplaced) {
+        runSheetCalloutAutoLayout(sheet.id, onlyUnpinned: true);
+      }
+    }
+
     hasUnsavedChanges = true;
     notifyListeners();
   }

@@ -781,26 +781,70 @@ class DesktopCadLayout extends StatelessWidget {
           ),
 
           // Авто-расстановка выносок
-          Tooltip(
-            message: 'Авто-расстановка выносок (ГОСТ)',
-            child: IconButton(
-              key: const Key('cad_auto_layout_callouts_button'),
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.auto_fix_high, size: 18, color: Colors.tealAccent),
-              onPressed: () {
-                final updated = controller.autoLayoutCallouts();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      updated > 0
-                          ? 'Авто-расстановка выполнена для $updated выносок'
-                          : 'Все выноски уже расположены оптимально',
-                    ),
-                    duration: const Duration(seconds: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Tooltip(
+                message: 'Авто-расстановка выносок (ГОСТ)',
+                child: IconButton(
+                  key: const Key('cad_auto_layout_callouts_button'),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.auto_fix_high, size: 18, color: Colors.tealAccent),
+                  onPressed: () {
+                    final updated = controller.autoLayoutCallouts(onlyUnpinned: true);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          updated > 0
+                              ? 'Авто-расстановка выполнена для $updated выносок'
+                              : 'Все незакрепленные выноски уже расположены оптимально',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              PopupMenuButton<String>(
+                key: const Key('cad_auto_layout_callouts_options_button'),
+                tooltip: 'Опции авторасстановки',
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.tealAccent),
+                color: const Color(0xFF1E293B),
+                onSelected: (val) {
+                  if (val == 'unpin_and_layout') {
+                    final updated = controller.autoLayoutCallouts(onlyUnpinned: false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Снята фиксация и перераспределено: $updated выносок'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (val == 'reset') {
+                    if (!controller.isModelSpaceActive && controller.activeSheet != null) {
+                      controller.resetAllSheetCalloutOffsets(controller.activeSheet!.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Позиции выносок на листе сброшены к 3D-модели'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'unpin_and_layout',
+                    child: Text('Перераспределить все (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 13)),
                   ),
-                );
-              },
-            ),
+                  if (!controller.isModelSpaceActive && controller.activeSheet != null)
+                    const PopupMenuItem(
+                      value: 'reset',
+                      child: Text('Сбросить позиции листа к 3D-модели', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(width: 4),
 

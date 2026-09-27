@@ -285,10 +285,10 @@ class CalloutCandidate {
 
 /// Движок интеллектуального размещения и предотвращения коллизий выносок
 class CalloutLayoutEngine {
-  static const double shelfTextOverlapPenalty = 10000.0;
-  static const double shelfPipeOverlapPenalty = 5000.0;
-  static const double leaderCrossPenalty = 800.0;
-  static const double distancePenaltyWeight = 1.5;
+  static const double shelfTextOverlapPenalty = 100000.0;
+  static const double shelfPipeOverlapPenalty = 100000.0;
+  static const double leaderCrossPenalty = 50000.0;
+  static const double distancePenaltyWeight = 12.0;
   static const double columnAlignmentReward = 150.0;
 
   /// Вычисляет 3D узел привязки для выноски любого типа
@@ -943,81 +943,44 @@ class CalloutLayoutEngine {
       }
 
       for (final groupClusters in localGroups) {
-        // 6. Оценка нормалей +90 и -90 градусов при зазорах 16..26 мм для локальной группы
-        final candidates = <_CandidateStack>[];
+        // 6. Оценка многонаправленных кандидатов для локальной группы
+        final searchDirs = _getSearchDirections(branch);
+        var bestCandidate = _findBestCandidateForClusters(
+          branch: branch,
+          clusters: groupClusters,
+          searchDirs: searchDirs,
+          customPitchMm: customPitchMm,
+          obstacleMap: obstacleMap,
+          frameLeft: frameLeft,
+          frameRight: frameRight,
+          frameTop: frameTop,
+          frameBottom: frameBottom,
+          stampRect: stampRect,
+        );
 
-        for (final normal in [branch.normal1, branch.normal2]) {
-          for (final clearance in [18.0, 22.0, 26.0]) {
-            if (branch.branchVector2D.dy.abs() < 0.25) {
-              // Ветка почти горизонтальна: пробуем выравнивание справа и слева
-              final candRight = _evaluateCandidateStack(
-                branch: branch,
-                clusters: groupClusters,
-                normal: normal,
-                clearance: clearance,
-                customPitchMm: customPitchMm,
-                obstacleMap: obstacleMap,
-                frameLeft: frameLeft,
-                frameRight: frameRight,
-                frameTop: frameTop,
-                frameBottom: frameBottom,
-                stampRect: stampRect,
-                forceRight: true,
-              );
-              if (candRight != null) candidates.add(candRight);
-
-              final candLeft = _evaluateCandidateStack(
-                branch: branch,
-                clusters: groupClusters,
-                normal: normal,
-                clearance: clearance,
-                customPitchMm: customPitchMm,
-                obstacleMap: obstacleMap,
-                frameLeft: frameLeft,
-                frameRight: frameRight,
-                frameTop: frameTop,
-                frameBottom: frameBottom,
-                stampRect: stampRect,
-                forceRight: false,
-              );
-              if (candLeft != null) candidates.add(candLeft);
-            } else {
-              final cand = _evaluateCandidateStack(
-                branch: branch,
-                clusters: groupClusters,
-                normal: normal,
-                clearance: clearance,
-                customPitchMm: customPitchMm,
-                obstacleMap: obstacleMap,
-                frameLeft: frameLeft,
-                frameRight: frameRight,
-                frameTop: frameTop,
-                frameBottom: frameBottom,
-                stampRect: stampRect,
-              );
-              if (cand != null) candidates.add(cand);
+        // Интеллектуальный De-clustering Fallback:
+        // Если общий стек группы не помещается без коллизий (cost >= 50000.0) и в группе несколько кластеров,
+        // разбиваем на отдельные кластеры и размещаем каждый в своем чистом кармане!
+        if ((bestCandidate == null || bestCandidate.cost >= 50000.0) && groupClusters.length > 1) {
+          for (final singleCluster in groupClusters) {
+            final singleCand = _findBestCandidateForClusters(
+              branch: branch,
+              clusters: [singleCluster],
+              searchDirs: searchDirs,
+              customPitchMm: customPitchMm,
+              obstacleMap: obstacleMap,
+              frameLeft: frameLeft,
+              frameRight: frameRight,
+              frameTop: frameTop,
+              frameBottom: frameBottom,
+              stampRect: stampRect,
+            );
+            if (singleCand != null) {
+              _applyCandidate(singleCand, result, handledCalloutIds, obstacleMap);
             }
           }
-        }
-
-        if (candidates.isEmpty) continue;
-
-        candidates.sort((a, b) => a.cost.compareTo(b.cost));
-        final bestCandidate = candidates.first;
-
-        // Применяем оптимальный кандидат
-        for (int i = 0; i < bestCandidate.items.length; i++) {
-          final item = bestCandidate.items[i];
-          final shelfStart = bestCandidate.shelfStarts[i];
-          final shelfRect = bestCandidate.shelfRects[i];
-
-          final offMm = shelfStart - item.anchorMm;
-          final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
-          result[item.callout.id] = storedOff;
-          handledCalloutIds.add(item.callout.id);
-
-          obstacleMap.addRect(shelfRect, item.callout.id);
-          obstacleMap.addLeaderLine(item.anchorMm, shelfStart, item.callout.id);
+        } else if (bestCandidate != null) {
+          _applyCandidate(bestCandidate, result, handledCalloutIds, obstacleMap);
         }
       }
     }
@@ -1072,11 +1035,112 @@ class CalloutLayoutEngine {
     return result;
   }
 
-  static _CandidateStack? _evaluateCandidateStack({
+  static void _applyCandidate(
+    _CandidateStack candidate,
+    Map<String, Offset> result,
+    Set<String> handledCalloutIds,
+    CalloutObstacleMap obstacleMap,
+  ) {
+    for (int i = 0; i < candidate.items.length; i++) {
+      final item = candidate.items[i];
+      final shelfStart = candidate.shelfStarts[i];
+      final shelfRect = candidate.shelfRects[i];
+
+      final offMm = shelfStart - item.anchorMm;
+      final storedOff = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+      result[item.callout.id] = storedOff;
+      handledCalloutIds.add(item.callout.id);
+
+      obstacleMap.addRect(shelfRect, item.callout.id);
+    }
+
+    // Регистрируем линии в obstacleMap по логике ГОСТ этажерки (1 общая ножка + стойка)
+    final itemsByAnchor = <Offset, List<int>>{};
+    for (int i = 0; i < candidate.items.length; i++) {
+      final anch = candidate.items[i].anchorMm;
+      itemsByAnchor.putIfAbsent(anch, () => []).add(i);
+    }
+
+    for (final entry in itemsByAnchor.entries) {
+      final anchor = entry.key;
+      final indices = entry.value;
+
+      double minDy = double.infinity;
+      Offset entryShelf = candidate.shelfStarts[indices.first];
+      double minY = double.infinity;
+      double maxY = -double.infinity;
+
+      for (final idx in indices) {
+        final sStart = candidate.shelfStarts[idx];
+        minY = math.min(minY, sStart.dy);
+        maxY = math.max(maxY, sStart.dy);
+        final dy = (sStart.dy - anchor.dy).abs();
+        if (dy < minDy) {
+          minDy = dy;
+          entryShelf = sStart;
+        }
+      }
+
+      // Общая линия-ножка
+      obstacleMap.addLeaderLine(anchor, entryShelf, candidate.items[indices.first].callout.id);
+
+      // Стойка этажерки
+      if (indices.length > 1) {
+        final rackX = entryShelf.dx;
+        obstacleMap.addLeaderLine(Offset(rackX, minY), Offset(rackX, maxY), candidate.items[indices.first].callout.id);
+      }
+    }
+  }
+
+  static List<Offset> _getSearchDirections(PipelineBranch branch) {
+    final dirs = <Offset>[];
+
+    void addDir(Offset v) {
+      final len = v.distance;
+      if (len < 1e-4) return;
+      final u = Offset(v.dx / len, v.dy / len);
+      for (final existing in dirs) {
+        if (existing.dx * u.dx + existing.dy * u.dy > 0.97) return;
+      }
+      dirs.add(u);
+    }
+
+    // 1. Нормали ветки
+    addDir(branch.normal1);
+    addDir(branch.normal2);
+
+    // 2. Вращение нормалей на +/- 30 и +/- 45 градусов
+    for (final angleDeg in [-45.0, -30.0, 30.0, 45.0]) {
+      addDir(_rotateOffset(branch.normal1, angleDeg));
+      addDir(_rotateOffset(branch.normal2, angleDeg));
+    }
+
+    // 3. Стандартные чертежные направления (кардинальные и изометрические 30/45 град)
+    addDir(const Offset(0.0, -1.0)); // строго вверх
+    addDir(const Offset(0.866, -0.5)); // изометрия 30 град вверх-вправо
+    addDir(const Offset(-0.866, -0.5)); // изометрия 30 град вверх-влево
+    addDir(const Offset(1.0, -1.0)); // 45 град вверх-вправо
+    addDir(const Offset(-1.0, -1.0)); // 45 град вверх-влево
+    addDir(const Offset(0.0, 1.0)); // строго вниз
+    addDir(const Offset(0.866, 0.5)); // изометрия 30 град вниз-вправо
+    addDir(const Offset(-0.866, 0.5)); // изометрия 30 град вниз-влево
+    addDir(const Offset(1.0, 1.0)); // 45 град вниз-вправо
+    addDir(const Offset(-1.0, 1.0)); // 45 град вниз-влево
+
+    return dirs;
+  }
+
+  static Offset _rotateOffset(Offset v, double deg) {
+    final rad = deg * math.pi / 180.0;
+    final cosA = math.cos(rad);
+    final sinA = math.sin(rad);
+    return Offset(v.dx * cosA - v.dy * sinA, v.dx * sinA + v.dy * cosA);
+  }
+
+  static _CandidateStack? _findBestCandidateForClusters({
     required PipelineBranch branch,
     required List<_SheetNodeCluster> clusters,
-    required Offset normal,
-    required double clearance,
+    required List<Offset> searchDirs,
     required double? customPitchMm,
     required CalloutObstacleMap obstacleMap,
     required double frameLeft,
@@ -1084,7 +1148,58 @@ class CalloutLayoutEngine {
     required double frameTop,
     required double frameBottom,
     required Rect stampRect,
-    bool? forceRight,
+  }) {
+    final clearances = const [14.0, 18.0, 24.0, 32.0, 42.0, 52.0];
+    final shifts = const [-14.0, 0.0, 14.0, 28.0];
+    final sides = const [true, false]; // isRight
+
+    _CandidateStack? best;
+    double lowestCost = double.infinity;
+
+    for (final dir in searchDirs) {
+      for (final clearance in clearances) {
+        for (final shift in shifts) {
+          for (final isRight in sides) {
+            final cand = _evaluateCandidateStack(
+              branch: branch,
+              clusters: clusters,
+              dirVector: dir,
+              clearance: clearance,
+              shiftAlongBranch: shift,
+              isRight: isRight,
+              customPitchMm: customPitchMm,
+              obstacleMap: obstacleMap,
+              frameLeft: frameLeft,
+              frameRight: frameRight,
+              frameTop: frameTop,
+              frameBottom: frameBottom,
+              stampRect: stampRect,
+            );
+            if (cand != null && cand.cost < lowestCost) {
+              lowestCost = cand.cost;
+              best = cand;
+            }
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  static _CandidateStack? _evaluateCandidateStack({
+    required PipelineBranch branch,
+    required List<_SheetNodeCluster> clusters,
+    required Offset dirVector,
+    required double clearance,
+    double shiftAlongBranch = 0.0,
+    required bool isRight,
+    required double? customPitchMm,
+    required CalloutObstacleMap obstacleMap,
+    required double frameLeft,
+    required double frameRight,
+    required double frameTop,
+    required double frameBottom,
+    required Rect stampRect,
   }) {
     if (clusters.isEmpty) return null;
 
@@ -1092,16 +1207,6 @@ class CalloutLayoutEngine {
     final avgTextH = clusters.first.items.first.textHeightMm;
     final idealPitch = customPitchMm ?? (avgTextH * 2.1);
     final minPitch = avgTextH + 1.2;
-
-    // Определяем горизонтальную сторону размещения (справа / слева)
-    final bool isRight;
-    if (forceRight != null) {
-      isRight = forceRight;
-    } else if (normal.dx.abs() >= 0.25) {
-      isRight = normal.dx > 0;
-    } else {
-      isRight = true;
-    }
 
     // Многоярусное разбиение при числе выносок > 6
     final numTiers = totalItems > 6 ? (totalItems / 6.0).ceil() : 1;
@@ -1150,29 +1255,15 @@ class CalloutLayoutEngine {
       final tierMeanX = tierSumX / tClusters.length;
       final tierMeanY = tierSumY / tClusters.length;
 
-      final double tierX;
-      final double yCenter;
+      final v = branch.branchVector2D;
+      final targetX = tierMeanX + dirVector.dx * clearance + v.dx * shiftAlongBranch;
+      final targetY = tierMeanY + dirVector.dy * clearance + v.dy * shiftAlongBranch;
 
-      if (branch.branchVector2D.dy.abs() < 0.25) {
-        // Почти горизонтальная ветка: полочки размещаются над/под трубой со стандартным ГОСТ-изломом ~8 мм
-        final baseX = isRight
-            ? math.max(tierMeanX + 8.0, tierMaxX + 6.0)
-            : math.min(tierMeanX - 8.0, tierMinX - 6.0);
-        tierX = isRight
-            ? baseX + tier * (maxTierTextW + 8.0)
-            : baseX - tier * (maxTierTextW + 8.0);
-        final shiftY = normal.dy < 0 ? -clearance : clearance;
-        yCenter = tierMeanY + shiftY;
-      } else {
-        // Наклонная или вертикальная ветка: смещение строго вдоль 2D-нормали ветки
-        final shiftX = normal.dx * clearance;
-        final shiftY = normal.dy * clearance;
-        final baseX = tierMeanX + shiftX;
-        tierX = isRight
-            ? baseX + tier * (maxTierTextW + 8.0)
-            : baseX - tier * (maxTierTextW + 8.0);
-        yCenter = tierMeanY + shiftY;
-      }
+      final double tierX = isRight
+          ? targetX + tier * (maxTierTextW + 8.0)
+          : targetX - tier * (maxTierTextW + 8.0);
+      final double yCenter = targetY;
+
       if (tier == 0) firstTierX = tierX;
 
       double topLimit = frameTop + avgTextH + 2.0;
@@ -1233,11 +1324,24 @@ class CalloutLayoutEngine {
             ? clusterSlotStarts[ci]
             : (tItemCount - clusterSlotStarts[ci] - cl.items.length);
 
+        double clusterMinY = double.infinity;
+        double clusterMaxY = -double.infinity;
+        Offset? entryShelfStart;
+        double minDy = double.infinity;
+
         for (int k = 0; k < cl.items.length; k++) {
           final item = cl.items[k];
           final currentSlot = baseSlot + k;
           final slotY = startY + currentSlot * tierPitch;
           final shelfStart = Offset(tierX, slotY);
+
+          clusterMinY = math.min(clusterMinY, slotY);
+          clusterMaxY = math.max(clusterMaxY, slotY);
+          final dy = (slotY - cl.anchorMm.dy).abs();
+          if (dy < minDy) {
+            minDy = dy;
+            entryShelfStart = shelfStart;
+          }
 
           final shelfRect = isRight
               ? Rect.fromLTWH(shelfStart.dx, shelfStart.dy - item.textHeightMm - 1.0, item.textWidthMm, item.textHeightMm + 2.0)
@@ -1248,55 +1352,74 @@ class CalloutLayoutEngine {
           allPlacedItems.add(item);
 
           // Штрафы за выход за рамку чертежа
-          if (shelfRect.left < frameLeft) totalCost += (frameLeft - shelfRect.left) * 2000.0 + 20000.0;
-          if (shelfRect.right > frameRight) totalCost += (shelfRect.right - frameRight) * 2000.0 + 20000.0;
-          if (shelfRect.top < frameTop) totalCost += (frameTop - shelfRect.top) * 2000.0 + 20000.0;
-          if (shelfRect.bottom > frameBottom) totalCost += (shelfRect.bottom - frameBottom) * 2000.0 + 20000.0;
+          if (shelfRect.left < frameLeft) totalCost += (frameLeft - shelfRect.left) * 2000.0 + 50000.0;
+          if (shelfRect.right > frameRight) totalCost += (shelfRect.right - frameRight) * 2000.0 + 50000.0;
+          if (shelfRect.top < frameTop) totalCost += (frameTop - shelfRect.top) * 2000.0 + 50000.0;
+          if (shelfRect.bottom > frameBottom) totalCost += (shelfRect.bottom - frameBottom) * 2000.0 + 50000.0;
 
-          // Штрафы за штамп и таблицы
-          if (stampRect.overlaps(shelfRect)) totalCost += 100000.0;
+          // Штрафы за штамп и таблицы (строжайший запрет: 1 000 000)
+          if (stampRect.overlaps(shelfRect)) totalCost += 1000000.0;
 
           for (final r in obstacleMap.rects) {
             if (r.id == 'stamp') continue;
             if (r.id != null && (r.id!.startsWith('table_') || r.id == 'tech_reqs')) {
-              if (r.rect.overlaps(shelfRect)) totalCost += 100000.0;
+              if (r.rect.overlaps(shelfRect)) totalCost += 1000000.0;
             } else {
-              if (r.rect.overlaps(shelfRect)) totalCost += 8000.0;
+              // Перекрытие с уже размещенными полками других выносок
+              if (r.rect.overlaps(shelfRect)) totalCost += shelfTextOverlapPenalty;
             }
           }
 
-          // Штраф за наложение на трубу
+          // Штраф за наложение полки на трубу
           if (obstacleMap.testShelfPipeCollision(shelfRect)) {
-            totalCost += 15000.0;
+            totalCost += shelfPipeOverlapPenalty;
           }
+        }
 
-          // Штраф за пересечение стрелки-выноски с чужими трубами и другими линиями-выносками
-          int leaderIntersections = 0;
+        // Оценка линий по логике ГОСТ этажерки (1 наклонная ножка к ближайшей полке + вертикальная стойка)
+        if (entryShelfStart != null) {
+          // 1. Проверяем общую наклонную линию-ножку от объекта к этажерке
           for (final p in obstacleMap.pipes) {
             if (p.id != null && branchSegIds.contains(p.id)) continue;
-            if (CalloutObstacleMap.segmentsIntersect(item.anchorMm, shelfStart, p.p1, p.p2)) {
-              leaderIntersections++;
+            if (CalloutObstacleMap.segmentsIntersect(cl.anchorMm, entryShelfStart, p.p1, p.p2)) {
+              totalCost += leaderCrossPenalty;
             }
           }
           for (final leader in obstacleMap.leaderLines) {
-            if (CalloutObstacleMap.segmentsIntersect(item.anchorMm, shelfStart, leader.p1, leader.p2)) {
-              leaderIntersections++;
+            if (CalloutObstacleMap.segmentsIntersect(cl.anchorMm, entryShelfStart, leader.p1, leader.p2)) {
+              totalCost += 60000.0;
             }
           }
-          totalCost += leaderIntersections * 5000.0;
 
-          // Штраф за удаленность линии-выноски (ГОСТ требует компактные выноски 15..25 мм)
-          final leaderDist = (shelfStart - item.anchorMm).distance;
-          totalCost += leaderDist * 15.0;
-          if (leaderDist > 30.0) {
-            totalCost += (leaderDist - 30.0) * 100.0;
+          // 2. Если в кластере несколько полок — проверяем вертикальную стойку этажерки
+          if (cl.items.length > 1) {
+            final stemP1 = Offset(tierX, clusterMinY);
+            final stemP2 = Offset(tierX, clusterMaxY);
+            for (final p in obstacleMap.pipes) {
+              if (p.id != null && branchSegIds.contains(p.id)) continue;
+              if (CalloutObstacleMap.segmentsIntersect(stemP1, stemP2, p.p1, p.p2)) {
+                totalCost += leaderCrossPenalty;
+              }
+            }
+            for (final leader in obstacleMap.leaderLines) {
+              if (CalloutObstacleMap.segmentsIntersect(stemP1, stemP2, leader.p1, leader.p2)) {
+                totalCost += 60000.0;
+              }
+            }
+          }
+
+          // Штраф за длину ножки-выноски
+          final leaderDist = (entryShelfStart - cl.anchorMm).distance;
+          totalCost += leaderDist * distancePenaltyWeight;
+          if (leaderDist > 35.0) {
+            totalCost += (leaderDist - 35.0) * 150.0;
           }
         }
       }
     }
 
-    if (normal.dy < 0) totalCost -= 25.0; // приоритет вверх
-    if (isRight) totalCost -= 15.0; // приоритет вправо
+    if (dirVector.dy < 0) totalCost -= 30.0; // приоритет вверх
+    if (isRight) totalCost -= 20.0; // приоритет вправо
 
     return _CandidateStack(
       xStack: firstTierX,

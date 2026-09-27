@@ -161,6 +161,7 @@ class VectorText extends VectorPrimitive {
   final Offset position;
   final double fontSizePt;
   final bool isBold;
+  final bool isLeftAligned;
   final double rotationAngleRad;
   final int colorValue;
   final double? maskPaddingMm;
@@ -171,6 +172,7 @@ class VectorText extends VectorPrimitive {
     required this.position,
     required this.fontSizePt,
     this.isBold = false,
+    this.isLeftAligned = false,
     this.rotationAngleRad = 0.0,
     required this.colorValue,
     this.maskPaddingMm,
@@ -304,6 +306,7 @@ class VectorScene {
     required Offset position,
     required double fontSizePt,
     bool isBold = false,
+    bool isLeftAligned = false,
     double rotationAngleRad = 0.0,
     required int colorValue,
     double? maskPaddingMm,
@@ -318,6 +321,7 @@ class VectorScene {
         position: position,
         fontSizePt: fontSizePt,
         isBold: isBold,
+        isLeftAligned: isLeftAligned,
         rotationAngleRad: rotationAngleRad,
         colorValue: colorValue,
         maskPaddingMm: maskPaddingMm,

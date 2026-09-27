@@ -925,6 +925,10 @@ class SheetGeometryBuilder {
     DrawingStyleConfig styleConfig,
     Map<String, String>? calloutTemplates,
   ) {
+    final templates = calloutTemplates ?? defaultCalloutTemplates;
+    const offsetScale = 0.35;
+
+    final drawItems = <_SheetCalloutDrawItem>[];
     for (final callout in network.callouts.values) {
       if (!sheet.isCalloutVisible(callout)) continue;
 
@@ -932,13 +936,11 @@ class SheetGeometryBuilder {
       if (anchor3D == null) continue;
 
       final anchorMm = _projectPoint(anchor3D.x, anchor3D.y, anchor3D.z, projector, vp);
-      const offsetScale = 0.35;
       final effOffsetX = callout.getEffectiveOffsetX(sheet.id);
       final effOffsetY = callout.getEffectiveOffsetY(sheet.id);
       final leaderEndMm = anchorMm + Offset(effOffsetX * offsetScale, effOffsetY * offsetScale);
 
       final isRight = effOffsetX >= 0;
-      final templates = calloutTemplates ?? defaultCalloutTemplates;
       final topText = network.generateCalloutText(callout, templates);
       final bottomText = network.generateCalloutBottomText(callout, templates);
 
@@ -950,44 +952,151 @@ class SheetGeometryBuilder {
       final shelfDir = isRight ? 1.0 : -1.0;
       final shelfEndMm = leaderEndMm + Offset(shelfLengthMm * shelfDir, 0);
 
-      // Линия-выноска
-      scene.addPolyline(
-        layer: VectorSceneLayer.callouts,
-        points: [anchorMm, leaderEndMm],
-        strokeWidthMm: styleConfig.thinLineWidthMm,
-        colorValue: 0xFF37474F,
-        smoothJoin: true,
-      );
+      drawItems.add(_SheetCalloutDrawItem(
+        callout: callout,
+        anchorMm: anchorMm,
+        leaderEndMm: leaderEndMm,
+        shelfEndMm: shelfEndMm,
+        shelfLengthMm: shelfLengthMm,
+        isRight: isRight,
+        topText: topText,
+        bottomText: bottomText,
+      ));
+    }
 
-      // Полка выноски
-      scene.addPolyline(
-        layer: VectorSceneLayer.callouts,
-        points: [leaderEndMm, shelfEndMm],
-        strokeWidthMm: styleConfig.thinLineWidthMm,
-        colorValue: 0xFF37474F,
-        smoothJoin: true,
-      );
+    // Группируем выноски в этажерки по ГОСТ 2.316:
+    // элементы одного узла (< 3.0 мм) на одной вертикальной оси полки (|dx| < 1.5 мм)
+    final visited = <int>{};
+    for (int i = 0; i < drawItems.length; i++) {
+      if (visited.contains(i)) continue;
+      final group = <_SheetCalloutDrawItem>[drawItems[i]];
+      visited.add(i);
 
-      // Точка-стрелка у объекта
-      scene.addCircle(
-        layer: VectorSceneLayer.callouts,
-        center: anchorMm,
-        radiusMm: 0.6,
-        isFilled: true,
-        strokeColorValue: 0xFF37474F,
-        fillColorValue: 0xFF37474F,
-      );
-
-      // Текст над полкой
-      if (topText.isNotEmpty) {
-        scene.addText(
-          layer: VectorSceneLayer.callouts,
-          text: topText,
-          position: Offset(isRight ? leaderEndMm.dx + 1.0 : shelfEndMm.dx + 1.0, leaderEndMm.dy - 1.2),
-          fontSizePt: callout.textHeight * 2.83465,
-          colorValue: 0xFF263238,
-        );
+      for (int j = i + 1; j < drawItems.length; j++) {
+        if (visited.contains(j)) continue;
+        final itemA = drawItems[i];
+        final itemB = drawItems[j];
+        if ((itemA.anchorMm - itemB.anchorMm).distance < 3.0 &&
+            (itemA.leaderEndMm.dx - itemB.leaderEndMm.dx).abs() < 1.5 &&
+            itemA.isRight == itemB.isRight) {
+          group.add(itemB);
+          visited.add(j);
+        }
       }
+
+      if (group.length == 1) {
+        // Одиночная выноска
+        final item = group.first;
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [item.anchorMm, item.leaderEndMm],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [item.leaderEndMm, item.shelfEndMm],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+        scene.addCircle(
+          layer: VectorSceneLayer.callouts,
+          center: item.anchorMm,
+          radiusMm: 0.6,
+          isFilled: true,
+          strokeColorValue: 0xFF37474F,
+          fillColorValue: 0xFF37474F,
+        );
+        _renderVectorCalloutTexts(scene, item);
+      } else {
+        // Этажерка по ГОСТ 2.316 (1 общая ножка + вертикальная стойка)
+        group.sort((a, b) => a.leaderEndMm.dy.compareTo(b.leaderEndMm.dy));
+        final anchor = group.first.anchorMm;
+        final shelfX = group.first.leaderEndMm.dx;
+        final minY = group.first.leaderEndMm.dy;
+        final maxY = group.last.leaderEndMm.dy;
+
+        // Ищем полку, ближайшую к anchor.dy для ввода общей ножки
+        _SheetCalloutDrawItem entryItem = group.first;
+        double minDy = double.infinity;
+        for (final gItem in group) {
+          final dy = (gItem.leaderEndMm.dy - anchor.dy).abs();
+          if (dy < minDy) {
+            minDy = dy;
+            entryItem = gItem;
+          }
+        }
+
+        // Общая наклонная линия-ножка к вертикальной стойке
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [anchor, entryItem.leaderEndMm],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+
+        // Вертикальная линия-стойка этажерки
+        scene.addPolyline(
+          layer: VectorSceneLayer.callouts,
+          points: [Offset(shelfX, minY), Offset(shelfX, maxY)],
+          strokeWidthMm: styleConfig.thinLineWidthMm,
+          colorValue: 0xFF37474F,
+          smoothJoin: true,
+        );
+
+        // Точка-стрелка у объекта (одна общая)
+        scene.addCircle(
+          layer: VectorSceneLayer.callouts,
+          center: anchor,
+          radiusMm: 0.6,
+          isFilled: true,
+          strokeColorValue: 0xFF37474F,
+          fillColorValue: 0xFF37474F,
+        );
+
+        // Полки и тексты для каждого элемента этажерки
+        for (final gItem in group) {
+          scene.addPolyline(
+            layer: VectorSceneLayer.callouts,
+            points: [gItem.leaderEndMm, gItem.shelfEndMm],
+            strokeWidthMm: styleConfig.thinLineWidthMm,
+            colorValue: 0xFF37474F,
+            smoothJoin: true,
+          );
+          _renderVectorCalloutTexts(scene, gItem);
+        }
+      }
+    }
+  }
+
+  static void _renderVectorCalloutTexts(VectorScene scene, _SheetCalloutDrawItem item) {
+    final textX = item.isRight ? item.leaderEndMm.dx + 1.0 : item.shelfEndMm.dx + 1.0;
+    if (item.topText.isNotEmpty) {
+      scene.addText(
+        layer: VectorSceneLayer.callouts,
+        text: item.topText,
+        position: Offset(textX, item.leaderEndMm.dy - 1.2),
+        fontSizePt: item.callout.textHeight * 2.83465,
+        colorValue: 0xFF263238,
+        isLeftAligned: true,
+        maskFillColorValue: 0xFFFFFFFF,
+        maskPaddingMm: 0.3,
+      );
+    }
+    if (item.bottomText != null && item.bottomText!.trim().isNotEmpty) {
+      scene.addText(
+        layer: VectorSceneLayer.callouts,
+        text: item.bottomText!,
+        position: Offset(textX, item.leaderEndMm.dy + item.callout.textHeight * 0.85 * 0.8),
+        fontSizePt: item.callout.textHeight * 0.85 * 2.83465,
+        colorValue: 0xFF263238,
+        isLeftAligned: true,
+        maskFillColorValue: 0xFFFFFFFF,
+        maskPaddingMm: 0.3,
+      );
     }
   }
 
@@ -1148,4 +1257,26 @@ class SheetGeometryBuilder {
       smoothJoin: false,
     );
   }
+}
+
+class _SheetCalloutDrawItem {
+  final Callout callout;
+  final Offset anchorMm;
+  final Offset leaderEndMm;
+  final Offset shelfEndMm;
+  final double shelfLengthMm;
+  final bool isRight;
+  final String topText;
+  final String? bottomText;
+
+  _SheetCalloutDrawItem({
+    required this.callout,
+    required this.anchorMm,
+    required this.leaderEndMm,
+    required this.shelfEndMm,
+    required this.shelfLengthMm,
+    required this.isRight,
+    required this.topText,
+    this.bottomText,
+  });
 }

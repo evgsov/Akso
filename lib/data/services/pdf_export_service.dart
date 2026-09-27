@@ -9,7 +9,6 @@ import 'package:printing/printing.dart';
 
 import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
-import '../../domain/models/callout.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/node_3d.dart';
@@ -19,7 +18,6 @@ import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import '../../domain/models/vector_scene.dart';
 import '../../domain/services/sheet_geometry_builder.dart';
-import '../../ui/canvas/painters/callout_painter.dart';
 
 /// Сервис векторной генерации, сохранения и печати чертежей в формате PDF (1:1)
 /// по стандартам ГОСТ 21.101-2020 / СПДС.
@@ -421,7 +419,9 @@ class PdfExportService {
     final textW = metrics.width * text.fontSizePt;
     final textH = metrics.ascent * text.fontSizePt;
 
-    final xPt = text.position.dx * mm - textW / 2.0;
+    final xPt = text.isLeftAligned
+        ? text.position.dx * mm
+        : text.position.dx * mm - textW / 2.0;
     final yPt = (heightMm - text.position.dy) * mm - textH / 2.0;
 
     if (text.maskFillColorValue != null) {
@@ -452,7 +452,6 @@ class PdfExportService {
     required double mm,
   }) {
     final vp = sheet.viewport;
-    final templates = calloutTemplates ?? defaultCalloutTemplates;
     final projector = AxonometryProjector(
       projectionType: projectionType,
       orbitAzimuth: orbitAzimuth,
@@ -529,113 +528,6 @@ class PdfExportService {
           ),
         ),
       );
-    }
-
-    // Выноски (текст на полке)
-    for (final callout in network.callouts.values) {
-      if (!sheet.isCalloutVisible(callout)) continue;
-
-      final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
-      if (anchor3D == null) continue;
-
-      final anchorRaw = projector.projectRaw(
-        anchor3D.x,
-        anchor3D.y,
-        anchor3D.z,
-      );
-      final anchorMm = ViewportTransformService.model2dToSheetMm(anchorRaw, vp);
-
-      final effOffsetX = callout.getEffectiveOffsetX(sheet.id);
-      final effOffsetY = callout.getEffectiveOffsetY(sheet.id);
-
-      final isRight = callout.shelfDirection == ShelfDirection.right
-          ? true
-          : (callout.shelfDirection == ShelfDirection.left
-                ? false
-                : effOffsetX >= 0);
-
-      // Корректный пересчёт экранного смещения на миллиметры листа
-      const offsetScale = 0.35;
-      final leaderEndMm =
-          anchorMm +
-          Offset(
-            effOffsetX * offsetScale,
-            effOffsetY * offsetScale,
-          );
-
-      if (leaderEndMm.dx < vp.xMm - 20 ||
-          leaderEndMm.dx > vp.xMm + vp.widthMm + 20 ||
-          leaderEndMm.dy < vp.yMm - 20 ||
-          leaderEndMm.dy > vp.yMm + vp.heightMm + 20) {
-        continue;
-      }
-
-      final topText = network.generateCalloutText(callout, templates);
-      final bottomText = network.generateCalloutBottomText(callout, templates);
-
-      final fontSizePt = callout.textHeight * 2.83465;
-      final bottomFontSizePt = callout.textHeight * 0.85 * 2.83465;
-
-      final topMetrics = pdfFontRegular.stringMetrics(topText);
-      final topTextWidthMm = topMetrics.width * fontSizePt / mm;
-
-      final textX = isRight
-          ? leaderEndMm.dx + 1.0
-          : leaderEndMm.dx - topTextWidthMm - 2.0;
-
-      double shelfDy = leaderEndMm.dy;
-      if (callout.targetType == CalloutTargetType.node ||
-          callout.elevationStyle != null) {
-        if (!callout.arrowOnNode) {
-          final styleName = templates['elevation_style'];
-          final defaultStyle = ElevationMarkStyleExt.fromString(
-            styleName,
-            fallback: ElevationMarkStyle.gostOutline,
-          );
-          final effectiveStyle = callout.elevationStyle ?? defaultStyle;
-
-          if (effectiveStyle == ElevationMarkStyle.compactFlag) {
-            shelfDy -= (callout.textHeight * 1.1);
-          } else {
-            shelfDy -= (callout.textHeight * 1.3);
-          }
-        }
-      }
-
-      final textY = shelfDy - (callout.textHeight * 1.05);
-      final bottomTextY = shelfDy + 0.5; // Верхняя строка (над полкой)
-      widgets.add(
-        pw.Positioned(
-          left: textX * mm,
-          top: textY * mm,
-          child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 1.0),
-            color: PdfColors.white,
-            child: pw.Text(
-              topText,
-              style: pw.TextStyle(font: fontRegular, fontSize: fontSizePt),
-            ),
-          ),
-        ),
-      );
-
-      // Нижняя строка (под полкой)
-      if (bottomText != null && bottomText.trim().isNotEmpty) {
-        widgets.add(
-          pw.Positioned(
-            left: textX * mm,
-            top: bottomTextY * mm,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 1.0),
-              color: PdfColors.white,
-              child: pw.Text(
-                bottomText,
-                style: pw.TextStyle(font: fontRegular, fontSize: bottomFontSizePt),
-              ),
-            ),
-          ),
-        );
-      }
     }
 
     // Подписи штуцеров оборудования
