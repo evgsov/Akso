@@ -1717,23 +1717,31 @@ class CalloutLayoutEngine {
           }
           if (outOfBounds) continue;
 
-          int shelfCollisions = 0;
-          int lineCollisions = 0;
+          int calloutCollisions = 0; // Наложение на другие выноски (наивысший штраф 150 000!)
+          int shelfPipeCollisions = 0; // Наложение полки на трубы
+          int shelfElementCollisions = 0; // Наложение полки на арматуру, фитинги, оборудование, штамп
+          int linePipeCollisions = 0; // Пересечение ножки с чужой трубой
 
           // 1. Проверяем попадание области выноски (полочка + текст):
           for (final rect in rects) {
-            // а) На другие выноски, арматуру, фитинги, оборудование, опоры, стыки, штамп и таблицы:
+            // а) На другие выноски и элементы чертежа:
             for (final obs in obstacleMap.rects) {
-              if (rect.overlaps(obs.rect)) shelfCollisions++;
+              if (rect.overlaps(obs.rect)) {
+                if (obs.id != null && obs.id!.startsWith('callout_')) {
+                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
+                } else {
+                  shelfElementCollisions++; // На арматуру, фитинги, оборудование, штамп
+                }
+              }
             }
             // б) На коридоры трубопроводов (с защитным зазором 1.0 мм):
             if (obstacleMap.testShelfPipeCollision(rect, extraClearance: 1.0)) {
-              shelfCollisions++;
+              shelfPipeCollisions++;
             }
             // в) На существующие линии-выноски и полочки других выносок:
             for (final line in obstacleMap.leaderLines) {
               if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
-                shelfCollisions++;
+                calloutCollisions++; // Полочка/текст попадает на стрелку/полку другой выноски!
               }
             }
           }
@@ -1741,7 +1749,7 @@ class CalloutLayoutEngine {
           // 2. Линия-выноска не должна пересекать чужие стрелки и полки:
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
-              lineCollisions++;
+              calloutCollisions++; // Стрелка пересекает стрелку/полку другой выноски!
             }
           }
 
@@ -1749,7 +1757,7 @@ class CalloutLayoutEngine {
           for (final obs in obstacleMap.rects) {
             if (obs.id != null && obs.id!.startsWith('callout_')) {
               if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
-                lineCollisions++;
+                calloutCollisions++; // Стрелка пересекает текст/полку другой выноски!
               }
             }
           }
@@ -1758,7 +1766,7 @@ class CalloutLayoutEngine {
           for (final pipe in obstacleMap.pipes) {
             if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, pipe.p1, pipe.p2, tolerance: 0.05)) {
-              lineCollisions++;
+              linePipeCollisions++;
             }
           }
 
@@ -1772,8 +1780,11 @@ class CalloutLayoutEngine {
           // Оценка направления относительно трубы (штраф за параллельность, плюс за перпендикуляр)
           cost += evalPipeDirectionCost(entryShelf - anchor);
 
-          cost += shelfCollisions * 80000.0;
-          cost += lineCollisions * 100000.0;
+          // Выноска на выноску карается наивысшим штрафом 150 000 очков!
+          cost += calloutCollisions * 150000.0;
+          cost += linePipeCollisions * 100000.0;
+          cost += shelfPipeCollisions * 80000.0;
+          cost += shelfElementCollisions * 80000.0;
 
           if (cost < lowestCost) {
             lowestCost = cost;
@@ -1831,23 +1842,31 @@ class CalloutLayoutEngine {
           }
           if (outOfBounds) continue;
 
-          int shelfCollisions = 0;
-          int lineCollisions = 0;
+          int calloutCollisions = 0; // Наложение на другие выноски (наивысший штраф 150 000!)
+          int shelfPipeCollisions = 0; // Наложение полки на трубы
+          int shelfElementCollisions = 0; // Наложение полки на арматуру, фитинги, оборудование, штамп
+          int linePipeCollisions = 0; // Пересечение ножки с чужой трубой
 
           // 1. Проверяем попадание области выноски (полочка + текст):
           for (final rect in rects) {
-            // а) На другие выноски, арматуру, фитинги, оборудование, опоры, стыки, штамп и таблицы:
+            // а) На другие выноски и элементы чертежа:
             for (final obs in obstacleMap.rects) {
-              if (rect.overlaps(obs.rect)) shelfCollisions++;
+              if (rect.overlaps(obs.rect)) {
+                if (obs.id != null && obs.id!.startsWith('callout_')) {
+                  calloutCollisions++; // Полочка/текст попадает на другую выноску!
+                } else {
+                  shelfElementCollisions++; // На арматуру, фитинги, оборудование, штамп
+                }
+              }
             }
             // б) На коридоры трубопроводов (с защитным зазором 1.0 мм):
             if (obstacleMap.testShelfPipeCollision(rect, extraClearance: 1.0)) {
-              shelfCollisions++;
+              shelfPipeCollisions++;
             }
             // в) На существующие линии-выноски и полочки других выносок:
             for (final line in obstacleMap.leaderLines) {
               if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
-                shelfCollisions++;
+                calloutCollisions++; // Полочка/текст попадает на стрелку/полку другой выноски!
               }
             }
           }
@@ -1855,7 +1874,7 @@ class CalloutLayoutEngine {
           // 2. Линия-выноска не должна пересекать чужие стрелки и полки:
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
-              lineCollisions++;
+              calloutCollisions++; // Стрелка пересекает стрелку/полку другой выноски!
             }
           }
 
@@ -1863,7 +1882,7 @@ class CalloutLayoutEngine {
           for (final obs in obstacleMap.rects) {
             if (obs.id != null && obs.id!.startsWith('callout_')) {
               if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
-                lineCollisions++;
+                calloutCollisions++; // Стрелка пересекает текст/полку другой выноски!
               }
             }
           }
@@ -1872,7 +1891,7 @@ class CalloutLayoutEngine {
           for (final pipe in obstacleMap.pipes) {
             if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, pipe.p1, pipe.p2, tolerance: 0.05)) {
-              lineCollisions++;
+              linePipeCollisions++;
             }
           }
 
@@ -1906,8 +1925,11 @@ class CalloutLayoutEngine {
             cost += 45.0; // Штраф за отказ от каскадного выравнивания
           }
 
-          cost += shelfCollisions * 80000.0;
-          cost += lineCollisions * 100000.0;
+          // Выноска на выноску карается наивысшим штрафом 150 000 очков!
+          cost += calloutCollisions * 150000.0;
+          cost += linePipeCollisions * 100000.0;
+          cost += shelfPipeCollisions * 80000.0;
+          cost += shelfElementCollisions * 80000.0;
 
           if (cost < lowestCost) {
             lowestCost = cost;
