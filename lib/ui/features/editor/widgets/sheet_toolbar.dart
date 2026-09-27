@@ -352,6 +352,7 @@ class SheetToolbar extends StatelessWidget {
                         tooltip: 'Опции авторасстановки',
                         color: const Color(0xFF1E293B),
                         padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 260, maxWidth: 320),
                         icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.tealAccent),
                         onSelected: (action) {
                           if (action == 'auto_smart_animated') {
@@ -461,7 +462,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.psychology, size: 16, color: Colors.purpleAccent),
                                 SizedBox(width: 8),
-                                Text('Умная оптимизация (с анимацией)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Умная оптимизация (с анимацией)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -471,7 +474,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
                                 SizedBox(width: 8),
-                                Text('Авторасстановка (с этажерками)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Авторасстановка (с этажерками)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -481,7 +486,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.view_headline, size: 16, color: Colors.cyanAccent),
                                 SizedBox(width: 8),
-                                Text('Авторасстановка (построчно)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Авторасстановка (построчно)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -491,7 +498,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
                                 SizedBox(width: 8),
-                                Text('Все выноски (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Все выноски (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -499,12 +508,10 @@ class SheetToolbar extends StatelessWidget {
                           CheckedPopupMenuItem(
                             value: 'toggle_merge_identical',
                             checked: sheet.mergeIdenticalCallouts,
-                            child: const Row(
-                              children: [
-                                Icon(Icons.call_merge, size: 16, color: Colors.tealAccent),
-                                SizedBox(width: 8),
-                                Text('Объединять одинаковые (Ласточкин хвост)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                              ],
+                            child: const Text(
+                              'Объединять одинаковые (ГОСТ)',
+                              style: TextStyle(color: Colors.white, fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const PopupMenuItem(
@@ -513,7 +520,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.merge_type, size: 16, color: Colors.tealAccent),
                                 SizedBox(width: 8),
-                                Text('Объединить одинаковые сейчас', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Объединить одинаковые сейчас', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -523,7 +532,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.call_split, size: 16, color: Colors.blueGrey),
                                 SizedBox(width: 8),
-                                Text('Разъединить все вилочные выноски', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Разъединить все вилочные выноски', style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -534,7 +545,9 @@ class SheetToolbar extends StatelessWidget {
                               children: [
                                 Icon(Icons.restore, size: 16, color: Colors.orangeAccent),
                                 SizedBox(width: 8),
-                                Text('Сбросить выноски к 3D-модели', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                Expanded(
+                                  child: Text('Сбросить выноски к 3D-модели', style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
