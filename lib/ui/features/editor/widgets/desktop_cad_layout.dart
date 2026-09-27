@@ -813,6 +813,45 @@ class DesktopCadLayout extends StatelessWidget {
                         duration: const Duration(seconds: 2),
                       ),
                     );
+                  } else if (val == 'auto_merge_identical') {
+                    final mergedCount = controller.autoMergeIdenticalCallouts(sheetId: controller.activeSheet?.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          mergedCount > 0
+                              ? 'Объединено групп одинаковых выносок: $mergedCount'
+                              : 'Одинаковых элементов рядом для объединения не найдено',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (val == 'toggle_merge_identical') {
+                    if (controller.activeSheet != null) {
+                      controller.toggleSheetMergeIdenticalCallouts(controller.activeSheet!.id);
+                      final isMerged = controller.activeSheet!.mergeIdenticalCallouts;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isMerged
+                                ? 'Объединение одинаковых выносок ВКЛЮЧЕНО'
+                                : 'Объединение одинаковых выносок ВЫКЛЮЧЕНО',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } else if (val == 'unmerge_all') {
+                    final count = controller.unmergeAllCallouts(sheetId: controller.activeSheet?.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          count > 0
+                              ? 'Разъединено вилочных выносок: $count'
+                              : 'Объединенных выносок на чертеже нет',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   } else if (val == 'reset') {
                     if (!controller.isModelSpaceActive && controller.activeSheet != null) {
                       controller.resetAllSheetCalloutOffsets(controller.activeSheet!.id);
@@ -820,18 +859,6 @@ class DesktopCadLayout extends StatelessWidget {
                         const SnackBar(
                           content: Text('Позиции выносок на листе сброшены к 3D-модели'),
                           duration: Duration(seconds: 2),
-                        ),
-                      );
-                    } else if (val == 'auto_merge_identical') {
-                      final mergedCount = controller.autoMergeIdenticalCallouts(sheetId: controller.activeSheet?.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            mergedCount > 0
-                                ? 'Объединено групп одинаковых выносок: $mergedCount'
-                                : 'Одинаковых элементов рядом для объединения не найдено',
-                          ),
-                          duration: const Duration(seconds: 2),
                         ),
                       );
                     }
@@ -846,11 +873,21 @@ class DesktopCadLayout extends StatelessWidget {
                     value: 'auto_merge_identical',
                     child: Text('Объединить одинаковые выноски (Ласточкин хвост)', style: TextStyle(color: Colors.white, fontSize: 13)),
                   ),
-                  if (!controller.isModelSpaceActive && controller.activeSheet != null)
+                  if (!controller.isModelSpaceActive && controller.activeSheet != null) ...[
+                    CheckedPopupMenuItem(
+                      value: 'toggle_merge_identical',
+                      checked: controller.activeSheet?.mergeIdenticalCallouts ?? true,
+                      child: const Text('Автообъединение при компоновке', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    ),
+                    const PopupMenuItem(
+                      value: 'unmerge_all',
+                      child: Text('Разъединить все вилочные выноски', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    ),
                     const PopupMenuItem(
                       value: 'reset',
                       child: Text('Сбросить позиции листа к 3D-модели', style: TextStyle(color: Colors.white, fontSize: 13)),
                     ),
+                  ],
                 ],
               ),
             ],

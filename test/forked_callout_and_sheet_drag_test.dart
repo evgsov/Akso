@@ -3,8 +3,10 @@ import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/domain/enums/projection_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
 import 'package:akso/domain/models/callout.dart';
+import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
+import 'package:akso/domain/models/pipe_spool.dart';
 import 'package:akso/domain/models/piping_network.dart';
 import 'package:akso/domain/models/valve.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
@@ -320,6 +322,165 @@ void main() {
       );
 
       expect(hitId, equals('c1'));
+    });
+  });
+
+  group('DrawingSheet mergeIdenticalCallouts Setting Tests', () {
+    test('DrawingSheet default mergeIdenticalCallouts is true', () {
+      final sheet = DrawingSheet(id: 's1', name: 'Лист 1');
+      expect(sheet.mergeIdenticalCallouts, isTrue);
+    });
+
+    test('DrawingSheet JSON serialization preserves mergeIdenticalCallouts', () {
+      final sheet = DrawingSheet(
+        id: 's1',
+        name: 'Лист 1',
+        mergeIdenticalCallouts: false,
+      );
+      final json = sheet.toJson();
+      expect(json['mergeIdenticalCallouts'], isFalse);
+
+      final reconstructed = DrawingSheet.fromJson(json);
+      expect(reconstructed.mergeIdenticalCallouts, isFalse);
+    });
+
+    test('DrawingSheet copyWith updates mergeIdenticalCallouts', () {
+      final sheet = DrawingSheet(id: 's1', name: 'Лист 1');
+      final updated = sheet.copyWith(mergeIdenticalCallouts: false);
+      expect(updated.mergeIdenticalCallouts, isFalse);
+      expect(sheet.mergeIdenticalCallouts, isTrue);
+    });
+  });
+
+  group('CalloutPainter Anchor Fallback Tests', () {
+    test('Spool anchor falls back to segment when spool.startPoint is null', () {
+      final network = PipingNetwork();
+      network.nodes['n1'] = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      network.nodes['n2'] = Node3D(id: 'n2', x: 2000, y: 0, z: 0);
+      network.segments['seg1'] = PipeSegment(
+        id: 'seg1',
+        startNodeId: 'n1',
+        endNodeId: 'n2',
+        dn: 100,
+      );
+      network.spools['spool1'] = PipeSpool(
+        id: 'spool1',
+        segmentId: 'seg1',
+        number: '1',
+        dn: 100,
+        cutLengthMm: 2000,
+        startPoint: null,
+        endPoint: null,
+      );
+
+      final anchor = CalloutPainter.getTarget3DPointForTarget(
+        network,
+        CalloutTargetType.segment,
+        'spool1',
+      );
+
+      expect(anchor, isNotNull);
+      expect(anchor!.x, equals(1000.0));
+      expect(anchor.y, equals(0.0));
+      expect(anchor.z, equals(0.0));
+    });
+
+    test('Fitting anchor falls back to network.nodes when fitting not in map', () {
+      final network = PipingNetwork();
+      network.nodes['node_fit'] = Node3D(id: 'node_fit', x: 500, y: 300, z: 0);
+
+      final anchor = CalloutPainter.getTarget3DPointForTarget(
+        network,
+        CalloutTargetType.fitting,
+        'node_fit',
+      );
+
+      expect(anchor, isNotNull);
+      expect(anchor!.x, equals(500.0));
+      expect(anchor.y, equals(300.0));
+    });
+  });
+
+  group('Sheet Auto-Layout with Forked Callouts Tests', () {
+    test('runSheetCalloutAutoLayout automatically merges identical callouts when enabled', () {
+      final controller = PipingInputController();
+      final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      final n2 = Node3D(id: 'n2', x: 1000, y: 0, z: 0);
+      controller.network.nodes['n1'] = n1;
+      controller.network.nodes['n2'] = n2;
+
+      final seg = PipeSegment(id: 'seg1', startNodeId: 'n1', endNodeId: 'n2', dn: 50);
+      controller.network.segments['seg1'] = seg;
+
+      final v1 = Valve(id: 'v1', segmentId: 'seg1', ratio: 0.2, name: 'Кран 1', dn: 50, lengthMm: 100.0, valveType: ValveType.ballValve);
+      final v2 = Valve(id: 'v2', segmentId: 'seg1', ratio: 0.4, name: 'Кран 1', dn: 50, lengthMm: 100.0, valveType: ValveType.ballValve);
+      controller.network.valves['v1'] = v1;
+      controller.network.valves['v2'] = v2;
+
+      controller.network.callouts['c1'] = const Callout(
+        id: 'c1',
+        targetId: 'v1',
+        targetType: CalloutTargetType.valve,
+        customText: 'Кран Ду50',
+      );
+      controller.network.callouts['c2'] = const Callout(
+        id: 'c2',
+        targetId: 'v2',
+        targetType: CalloutTargetType.valve,
+        customText: 'Кран Ду50',
+      );
+
+      final sheet = DrawingSheet(
+        id: 'sheet_merge_test',
+        name: 'Лист с объединением',
+        mergeIdenticalCallouts: true,
+      );
+      controller.currentProject.sheets.add(sheet);
+      controller.selectSheet('sheet_merge_test');
+
+      controller.runSheetCalloutAutoLayout('sheet_merge_test');
+
+      expect(controller.network.callouts.length, equals(1));
+      final merged = controller.network.callouts.values.first;
+      expect(merged.additionalTargetIds, contains('v2'));
+      final text = controller.getCalloutText(merged);
+      expect(text, contains('(2 шт.)'));
+    });
+
+    test('unmergeAllCallouts restores all merged callouts on sheet', () {
+      final controller = PipingInputController();
+      final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      final n2 = Node3D(id: 'n2', x: 1000, y: 0, z: 0);
+      controller.network.nodes['n1'] = n1;
+      controller.network.nodes['n2'] = n2;
+
+      final seg = PipeSegment(id: 'seg1', startNodeId: 'n1', endNodeId: 'n2', dn: 50);
+      controller.network.segments['seg1'] = seg;
+
+      final v1 = Valve(id: 'v1', segmentId: 'seg1', ratio: 0.2, name: 'Кран', dn: 50, lengthMm: 100.0, valveType: ValveType.ballValve);
+      final v2 = Valve(id: 'v2', segmentId: 'seg1', ratio: 0.4, name: 'Кран', dn: 50, lengthMm: 100.0, valveType: ValveType.ballValve);
+      final v3 = Valve(id: 'v3', segmentId: 'seg1', ratio: 0.6, name: 'Кран', dn: 50, lengthMm: 100.0, valveType: ValveType.ballValve);
+      controller.network.valves['v1'] = v1;
+      controller.network.valves['v2'] = v2;
+      controller.network.valves['v3'] = v3;
+
+      controller.network.callouts['c1'] = const Callout(
+        id: 'c1',
+        targetId: 'v1',
+        targetType: CalloutTargetType.valve,
+        additionalTargetIds: ['v2', 'v3'],
+        customText: 'Кран Ду50',
+      );
+
+      final sheet = DrawingSheet(id: 'sheet_unmerge_test', name: 'Лист');
+      controller.currentProject.sheets.add(sheet);
+      controller.selectSheet('sheet_unmerge_test');
+
+      final count = controller.unmergeAllCallouts(sheetId: 'sheet_unmerge_test');
+      expect(count, equals(1));
+      expect(controller.network.callouts.length, equals(3));
+      final all = controller.network.callouts.values.toList();
+      expect(all.every((c) => c.additionalTargetIds.isEmpty), isTrue);
     });
   });
 }

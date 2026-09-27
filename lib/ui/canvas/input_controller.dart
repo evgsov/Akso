@@ -5971,6 +5971,7 @@ class PipingInputController extends ChangeNotifier {
 
     final targetSet = <String>{};
     targetSet.addAll(primary.additionalTargetIds);
+    final combinedOffsets = Map<String, Offset>.from(primary.sheetOffsets);
 
     for (final id in calloutIds) {
       if (id == primaryId) continue;
@@ -5984,12 +5985,16 @@ class PipingInputController extends ChangeNotifier {
           targetSet.add(addT);
         }
       }
+      for (final entry in other.sheetOffsets.entries) {
+        combinedOffsets.putIfAbsent(entry.key, () => entry.value);
+      }
       network.callouts.remove(id);
     }
 
     network.callouts[primaryId] = primary.copyWith(
       additionalTargetIds: targetSet.toList(),
       showQuantity: true,
+      sheetOffsets: combinedOffsets,
     );
 
     selectedCalloutId = primaryId;
@@ -6038,6 +6043,32 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Разъединение всех объединенных вилочных выносок обратно в отдельные выноски
+  int unmergeAllCallouts({String? sheetId}) {
+    final effectiveSheet = sheetId != null
+        ? currentProject.sheets.where((s) => s.id == sheetId).firstOrNull
+        : activeSheet;
+
+    final forkedCalloutIds = network.callouts.values
+        .where((c) {
+          if (c.additionalTargetIds.isEmpty) return false;
+          if (effectiveSheet != null && !effectiveSheet.isCalloutVisible(c, network)) return false;
+          return true;
+        })
+        .map((c) => c.id)
+        .toList();
+
+    for (final id in forkedCalloutIds) {
+      unmergeCallout(id);
+    }
+
+    if (forkedCalloutIds.isNotEmpty) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return forkedCalloutIds.length;
+  }
+
   /// Переключение отображения количества "(N шт.)" на выноске
   void toggleCalloutShowQuantity(String calloutId) {
     final c = network.callouts[calloutId];
@@ -6048,21 +6079,23 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Поиск одинаковых выносок рядом для возможности объединения в "Ласточкин хвост"
-  List<Callout> findSimilarCalloutsNearby(String calloutId, {double maxDistanceMm = 80.0}) {
+  List<Callout> findSimilarCalloutsNearby(String calloutId, {double maxDistanceMm = 120.0, String? sheetId}) {
     final baseCallout = network.callouts[calloutId];
     if (baseCallout == null) return [];
+    if (baseCallout.elevationStyle != null || baseCallout.targetType == CalloutTargetType.node) return [];
 
-    final vpProjector = !isModelSpaceActive && activeSheet != null
-        ? getActiveSheetViewportProjector()
-        : null;
-    final vp = activeSheet?.viewport;
+    final effectiveSheet = sheetId != null
+        ? currentProject.sheets.where((s) => s.id == sheetId).firstOrNull
+        : activeSheet;
+
+    final vp = effectiveSheet?.viewport;
 
     final baseAnchor3D = CalloutPainter.getTarget3DPoint(network, baseCallout);
     if (baseAnchor3D == null) return [];
 
     Offset? baseAnchorSheetMm;
-    if (vp != null && vpProjector != null) {
-      final raw = vpProjector.projectRaw(baseAnchor3D.x, baseAnchor3D.y, baseAnchor3D.z);
+    if (vp != null) {
+      final raw = projector.projectRaw(baseAnchor3D.x, baseAnchor3D.y, baseAnchor3D.z);
       baseAnchorSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
     }
 
@@ -6075,10 +6108,11 @@ class PipingInputController extends ChangeNotifier {
     final results = <Callout>[];
     for (final other in network.callouts.values) {
       if (other.id == calloutId) continue;
+      if (other.elevationStyle != null || other.targetType == CalloutTargetType.node) continue;
       if (other.targetType != baseCallout.targetType) continue;
 
       // Если лист задан, проверяем видимость
-      if (activeSheet != null && !activeSheet!.isCalloutVisible(other, network)) continue;
+      if (effectiveSheet != null && !effectiveSheet.isCalloutVisible(other, network)) continue;
 
       final otherRawText = network.generateCalloutText(
         other.copyWith(additionalTargetIds: const [], showQuantity: false),
@@ -6089,8 +6123,8 @@ class PipingInputController extends ChangeNotifier {
       final otherAnchor3D = CalloutPainter.getTarget3DPoint(network, other);
       if (otherAnchor3D == null) continue;
 
-      if (baseAnchorSheetMm != null && vp != null && vpProjector != null) {
-        final raw = vpProjector.projectRaw(otherAnchor3D.x, otherAnchor3D.y, otherAnchor3D.z);
+      if (baseAnchorSheetMm != null && vp != null) {
+        final raw = projector.projectRaw(otherAnchor3D.x, otherAnchor3D.y, otherAnchor3D.z);
         final otherAnchorSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
         final dist = (baseAnchorSheetMm - otherAnchorSheetMm).distance;
         if (dist <= maxDistanceMm) {
@@ -6111,7 +6145,7 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Автоматическое объединение всех близлежащих одинаковых выносок на листе
-  int autoMergeIdenticalCallouts({double maxDistanceMm = 80.0, String? sheetId}) {
+  int autoMergeIdenticalCallouts({double maxDistanceMm = 120.0, String? sheetId}) {
     final effectiveSheet = sheetId != null
         ? currentProject.sheets.where((s) => s.id == sheetId).firstOrNull
         : activeSheet;
@@ -6126,7 +6160,7 @@ class PipingInputController extends ChangeNotifier {
 
     for (final c in candidates) {
       if (processedIds.contains(c.id) || !network.callouts.containsKey(c.id)) continue;
-      final similar = findSimilarCalloutsNearby(c.id, maxDistanceMm: maxDistanceMm)
+      final similar = findSimilarCalloutsNearby(c.id, maxDistanceMm: maxDistanceMm, sheetId: effectiveSheet?.id)
           .where((s) => !processedIds.contains(s.id))
           .toList();
 
@@ -6143,6 +6177,21 @@ class PipingInputController extends ChangeNotifier {
       notifyListeners();
     }
     return mergedGroupsCount;
+  }
+
+  /// Переключение опции объединения одинаковых выносок на листе
+  void toggleSheetMergeIdenticalCallouts(String sheetId) {
+    final idx = currentProject.sheets.indexWhere((s) => s.id == sheetId);
+    if (idx < 0) return;
+    final sheet = currentProject.sheets[idx];
+    final newValue = !sheet.mergeIdenticalCallouts;
+    currentProject.sheets[idx] = sheet.copyWith(mergeIdenticalCallouts: newValue);
+
+    if (!newValue) {
+      unmergeAllCallouts(sheetId: sheetId);
+    }
+    runSheetCalloutAutoLayout(sheetId, mergeIdentical: newValue);
+    notifyListeners();
   }
 
   /// Сброс смещений всех выносок на листе к положению 3D-модели
@@ -6163,11 +6212,22 @@ class PipingInputController extends ChangeNotifier {
 
   /// Автоматическая расстановка выносок конкретного листа
   /// методом локальных вертикальных мини-стеков вдоль веток трассы без пересечений
-  int runSheetCalloutAutoLayout(String sheetId, {bool? groupMultiLevel, bool onlyUnpinned = true}) {
+  int runSheetCalloutAutoLayout(
+    String sheetId, {
+    bool? groupMultiLevel,
+    bool? mergeIdentical,
+    bool onlyUnpinned = true,
+  }) {
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     if (sheet == null || network.callouts.isEmpty) return 0;
 
     network.cleanOrphanedCallouts();
+
+    // 1. Если включено объединение одинаковых выносок (по умолчанию из настроек листа)
+    final shouldMerge = mergeIdentical ?? sheet.mergeIdenticalCallouts;
+    if (shouldMerge) {
+      autoMergeIdenticalCallouts(sheetId: sheetId, maxDistanceMm: 120.0);
+    }
 
     final sheetLayout = CalloutLayoutEngine.calculateSheetLayout(
       network: network,
@@ -6213,6 +6273,11 @@ class PipingInputController extends ChangeNotifier {
     if (sheet == null || network.callouts.isEmpty) return 0;
 
     network.cleanOrphanedCallouts();
+
+    // Объединяем одинаковые выноски перед запуском оптимизации
+    if (sheet.mergeIdenticalCallouts) {
+      autoMergeIdenticalCallouts(sheetId: sheetId, maxDistanceMm: 120.0);
+    }
 
     // 1. Создаем карту препятствий листа
     final obstacleMap = CalloutObstacleMap.buildSheetMap(
@@ -6296,11 +6361,12 @@ class PipingInputController extends ChangeNotifier {
     return updatedCount;
   }
 
-  /// Настройка фильтра видимости выносок на листе (категории, высотные отметки и этажерки)
+  /// Настройка фильтра видимости выносок на листе (категории, высотные отметки, этажерки и вилочные выноски)
   void setSheetCalloutFilter(String sheetId, {
     Set<CalloutTargetType>? types,
     bool? showElevations,
     bool? groupMultiLevel,
+    bool? mergeIdentical,
   }) {
     final sheetIndex = currentProject.sheets.indexWhere((s) => s.id == sheetId);
     if (sheetIndex == -1) return;
@@ -6309,6 +6375,7 @@ class PipingInputController extends ChangeNotifier {
       enabledCalloutTypes: types,
       showElevationCallouts: showElevations ?? current.showElevationCallouts,
       groupMultiLevelCallouts: groupMultiLevel ?? current.groupMultiLevelCallouts,
+      mergeIdenticalCallouts: mergeIdentical ?? current.mergeIdenticalCallouts,
     );
     updateSheet(updated);
   }

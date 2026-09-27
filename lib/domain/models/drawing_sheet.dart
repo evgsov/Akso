@@ -292,6 +292,9 @@ class DrawingSheet {
   /// Группировать ли элементы одного узла в многополочные этажерки
   final bool groupMultiLevelCallouts;
 
+  /// Автоматически объединять одинаковые элементы в вилочные выноски ("Ласточкин хвост" по ГОСТ 2.316)
+  final bool mergeIdenticalCallouts;
+
   /// Показывать ли визуальный отладочный слой препятствий (коридоры труб, боксы деталей)
   final bool debugShowObstacles;
 
@@ -309,6 +312,7 @@ class DrawingSheet {
     this.enabledCalloutTypes,
     this.showElevationCallouts = true,
     this.groupMultiLevelCallouts = true,
+    this.mergeIdenticalCallouts = true,
     this.debugShowObstacles = false,
   });
 
@@ -561,6 +565,7 @@ class DrawingSheet {
           'enabledCalloutTypes': enabledCalloutTypes!.map((e) => e.name).toList(),
         'showElevationCallouts': showElevationCallouts,
         'groupMultiLevelCallouts': groupMultiLevelCallouts,
+        'mergeIdenticalCallouts': mergeIdenticalCallouts,
         'debugShowObstacles': debugShowObstacles,
       };
 
@@ -602,6 +607,7 @@ class DrawingSheet {
             : null,
         showElevationCallouts: json['showElevationCallouts'] as bool? ?? true,
         groupMultiLevelCallouts: json['groupMultiLevelCallouts'] as bool? ?? true,
+        mergeIdenticalCallouts: json['mergeIdenticalCallouts'] as bool? ?? true,
         debugShowObstacles: json['debugShowObstacles'] as bool? ?? false,
       );
 
@@ -622,6 +628,7 @@ class DrawingSheet {
     bool clearEnabledCalloutTypes = false,
     bool? showElevationCallouts,
     bool? groupMultiLevelCallouts,
+    bool? mergeIdenticalCallouts,
     bool? debugShowObstacles,
   }) {
     return DrawingSheet(
@@ -642,6 +649,7 @@ class DrawingSheet {
           : (enabledCalloutTypes ?? this.enabledCalloutTypes),
       showElevationCallouts: showElevationCallouts ?? this.showElevationCallouts,
       groupMultiLevelCallouts: groupMultiLevelCallouts ?? this.groupMultiLevelCallouts,
+      mergeIdenticalCallouts: mergeIdenticalCallouts ?? this.mergeIdenticalCallouts,
       debugShowObstacles: debugShowObstacles ?? this.debugShowObstacles,
     );
   }

@@ -158,7 +158,8 @@ class CalloutPainter {
           );
         }
 
-        final seg = network.segments[targetId];
+        final seg = network.segments[targetId] ??
+            (spool != null ? network.segments[spool.segmentId] : null);
         if (seg == null) return null;
 
         // 2. Если выноска привязана к сегменту, у которого ровно одна катушка —
@@ -264,7 +265,11 @@ class CalloutPainter {
       case CalloutTargetType.fitting:
         final fit = network.fittings[targetId] ??
             network.fittings.values.where((f) => f.id == targetId).firstOrNull;
-        if (fit == null) return null;
+        if (fit == null) {
+          final node = network.nodes[targetId];
+          if (node != null) return node;
+          return null;
+        }
         return network.nodes[fit.nodeId];
     }
   }

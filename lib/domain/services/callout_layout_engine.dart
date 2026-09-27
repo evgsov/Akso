@@ -395,7 +395,8 @@ class CalloutLayoutEngine {
           );
         }
 
-        final seg = network.segments[callout.targetId];
+        final seg = network.segments[callout.targetId] ??
+            (spool != null ? network.segments[spool.segmentId] : null);
         if (seg == null) return null;
 
         final segSpools = network.spools.values.where((s) => s.segmentId == seg.id).toList();

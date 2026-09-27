@@ -407,6 +407,43 @@ class SheetToolbar extends StatelessWidget {
                                 duration: const Duration(seconds: 2),
                               ),
                             );
+                          } else if (action == 'auto_merge_now') {
+                            final count = controller.autoMergeIdenticalCallouts(sheetId: sheet.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  count > 0
+                                      ? 'Объединено групп одинаковых выносок: $count'
+                                      : 'Одинаковых элементов рядом для объединения не найдено',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'toggle_merge_identical') {
+                            controller.toggleSheetMergeIdenticalCallouts(sheet.id);
+                            final isMerged = controller.activeSheet?.mergeIdenticalCallouts ?? true;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isMerged
+                                      ? 'Автообъединение одинаковых выносок включено'
+                                      : 'Автообъединение одинаковых выносок выключено',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'unmerge_all') {
+                            final count = controller.unmergeAllCallouts(sheetId: sheet.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  count > 0
+                                      ? 'Разъединено вилочных выносок: $count'
+                                      : 'Объединенных выносок на листе нет',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
                           } else if (action == 'reset_sheet') {
                             controller.resetAllSheetCalloutOffsets(sheet.id);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -455,6 +492,38 @@ class SheetToolbar extends StatelessWidget {
                                 Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
                                 SizedBox(width: 8),
                                 Text('Все выноски (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          CheckedPopupMenuItem(
+                            value: 'toggle_merge_identical',
+                            checked: sheet.mergeIdenticalCallouts,
+                            child: const Row(
+                              children: [
+                                Icon(Icons.call_merge, size: 16, color: Colors.tealAccent),
+                                SizedBox(width: 8),
+                                Text('Объединять одинаковые (Ласточкин хвост)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'auto_merge_now',
+                            child: Row(
+                              children: [
+                                Icon(Icons.merge_type, size: 16, color: Colors.tealAccent),
+                                SizedBox(width: 8),
+                                Text('Объединить одинаковые сейчас', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'unmerge_all',
+                            child: Row(
+                              children: [
+                                Icon(Icons.call_split, size: 16, color: Colors.blueGrey),
+                                SizedBox(width: 8),
+                                Text('Разъединить все вилочные выноски', style: TextStyle(color: Colors.white70, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -624,6 +693,7 @@ class SheetToolbar extends StatelessWidget {
         : categories.map((c) => c.type).toSet();
     bool showElevations = sheet.showElevationCallouts;
     bool groupMultiLevel = sheet.groupMultiLevelCallouts;
+    bool mergeIdentical = sheet.mergeIdenticalCallouts;
 
     showDialog(
       context: context,
@@ -782,6 +852,19 @@ class SheetToolbar extends StatelessWidget {
                             });
                           },
                         ),
+                        SwitchListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Объединять одинаковые выноски (Ласточкин хвост)', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          subtitle: const Text('Группировать одинаковые элементы рядом под одну полочку по ГОСТ 2.316', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          value: mergeIdentical,
+                          activeThumbColor: Colors.tealAccent,
+                          onChanged: (val) {
+                            setState(() {
+                              mergeIdentical = val;
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -801,6 +884,7 @@ class SheetToolbar extends StatelessWidget {
                   types: isAllSelected ? null : selected,
                   showElevations: showElevations,
                   groupMultiLevel: groupMultiLevel,
+                  mergeIdentical: mergeIdentical,
                 );
                 Navigator.of(ctx).pop();
               },

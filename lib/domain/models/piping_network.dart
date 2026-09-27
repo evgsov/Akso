@@ -3428,7 +3428,11 @@ class PipingNetwork {
     double margin = 20.0,
   }) {
     int addedCount = 0;
-    final existingTargetIds = callouts.values.map((c) => c.targetId).toSet();
+    final existingTargetIds = <String>{};
+    for (final c in callouts.values) {
+      existingTargetIds.add(c.targetId);
+      existingTargetIds.addAll(c.additionalTargetIds);
+    }
     const step = 25.0;
 
     double resolveNonCollidingOffsetY(String? segmentId, double initialOffsetY) {

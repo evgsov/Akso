@@ -178,11 +178,14 @@ class CalloutCandidateGenerator {
       final connectedSegIds = <String>{};
       if (callout.targetType == CalloutTargetType.segment) {
         connectedSegIds.add(callout.targetId);
+        final spool = network.spools[callout.targetId];
+        if (spool != null) connectedSegIds.add(spool.segmentId);
       } else if (callout.targetType == CalloutTargetType.valve) {
         final v = network.valves[callout.targetId];
         if (v != null) connectedSegIds.add(v.segmentId);
       } else if (callout.targetType == CalloutTargetType.fitting) {
-        final fit = network.fittings[callout.targetId];
+        final fit = network.fittings[callout.targetId] ??
+            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
         final nId = fit?.nodeId ?? callout.targetId;
         for (final s in network.getConnectedSegments(nId)) {
           connectedSegIds.add(s.id);
