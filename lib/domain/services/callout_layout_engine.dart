@@ -1525,6 +1525,60 @@ class CalloutLayoutEngine {
         }
       }
 
+      // Вычисляем 2D-вектор направления трубы на листе для ориентации выноски
+      Offset? pipeDir2D;
+      for (final item in cluster.items) {
+        String? segId = network.getTargetSegmentId(item.callout.targetType, item.callout.targetId);
+        if (segId == null && item.callout.targetType == CalloutTargetType.node) {
+          final conn = network.getConnectedSegments(item.callout.targetId);
+          if (conn.isNotEmpty) segId = conn.first.id;
+        }
+        if (segId != null) {
+          final seg = network.segments[segId];
+          if (seg != null) {
+            final s = network.nodes[seg.startNodeId];
+            final e = network.nodes[seg.endNodeId];
+            if (s != null && e != null) {
+              final p1 = ViewportTransformService.model2dToSheetMm(projector.projectRaw(s.x, s.y, s.z), vp);
+              final p2 = ViewportTransformService.model2dToSheetMm(projector.projectRaw(e.x, e.y, e.z), vp);
+              final v = p2 - p1;
+              final len = v.distance;
+              if (len > 1e-4) {
+                pipeDir2D = Offset(v.dx / len, v.dy / len);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      double evalPipeDirectionCost(Offset leaderVec) {
+        final pipeDir = pipeDir2D;
+        if (pipeDir == null) return 0.0;
+        final leaderDist = leaderVec.distance;
+        if (leaderDist < 1e-4) return 0.0;
+        final leaderDir = Offset(leaderVec.dx / leaderDist, leaderVec.dy / leaderDist);
+
+        // |cos(theta)|:
+        // 1.0 = выноска идет строго соосно / по направлению с трубой
+        // 0.0 = выноска идет строго перпендикулярно трубе
+        final cosTheta = (leaderDir.dx * pipeDir.dx + leaderDir.dy * pipeDir.dy).abs();
+
+        double penalty = 0.0;
+
+        // 1. Штраф, если выноска идет по направлению с трубой (параллельно/соосно)
+        if (cosTheta > 0.4) {
+          penalty += (cosTheta - 0.4) * 60.0; // от 0 до +36 штрафа
+        }
+
+        // 2. Плюс ("+"), если выноска идет перпендикулярно трубе (вбок от трассы)
+        if (cosTheta < 0.3) {
+          penalty -= 15.0; // поощрение за чистый перпендикулярный отвод
+        }
+
+        return penalty;
+      }
+
       _GenerativeCandidate? best;
       double lowestCost = double.infinity;
 
@@ -1585,11 +1639,29 @@ class CalloutLayoutEngine {
               if (rect.overlaps(obs.rect)) collisions++;
             }
             if (obstacleMap.testShelfPipeCollision(rect)) collisions++;
+
+            // Защита: прямоугольник полки не должен пересекать существующие линии-выноски
+            for (final line in obstacleMap.leaderLines) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
+                collisions++;
+              }
+            }
           }
 
+          // Проверяем пересечение линии-выноски с чужими линиями-выносками и чужими полками
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
               lineCollisions++;
+            }
+          }
+
+          // Защита: линия-выноска не должна пересекать прямоугольники чужих выносок
+          for (final obs in obstacleMap.rects) {
+            if (obs.id != null && clusterTargetValveIds.contains(obs.id)) continue;
+            if (obs.id != null && obs.id!.startsWith('callout_')) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
+                lineCollisions++;
+              }
             }
           }
 
@@ -1600,24 +1672,15 @@ class CalloutLayoutEngine {
             }
           }
 
-          if (numItems > 1) {
-            final stemP1 = Offset(entryShelf.dx, candStartY);
-            final stemP2 = Offset(entryShelf.dx, candStartY + (numItems - 1) * pitch);
-            for (final pipe in obstacleMap.pipes) {
-              if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
-              if (CalloutObstacleMap.segmentsIntersect(stemP1, stemP2, pipe.p1, pipe.p2, tolerance: 0.05)) {
-                lineCollisions++;
-              }
-            }
-          }
-
           // Базовая стоимость каскадного кандидата:
-          // Он НЕ получает штрафа за разрозненность (+45.0), поэтому выигрывает у обычных кандидатов!
           double cost = dist * 4.0;
           if (dist > 18.0) {
             final extra = dist - 18.0;
             cost += extra * extra * 30.0;
           }
+
+          // Оценка направления относительно трубы (штраф за параллельность, плюс за перпендикуляр)
+          cost += evalPipeDirectionCost(entryShelf - anchor);
 
           cost += collisions * 50000.0;
           cost += lineCollisions * 100000.0;
@@ -1684,12 +1747,29 @@ class CalloutLayoutEngine {
             if (obstacleMap.testShelfPipeCollision(rect)) {
               collisions++;
             }
+
+            // Защита: прямоугольник полки не должен пересекать существующие линии-выноски
+            for (final line in obstacleMap.leaderLines) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(rect, line.p1, line.p2, 0.5)) {
+                collisions++;
+              }
+            }
           }
 
-          // 2. Проверяем пересечение линии-выноски с чужими линиями-выносками
+          // 2. Проверяем пересечение линии-выноски с чужими линиями-выносками и чужими полками
           for (final line in obstacleMap.leaderLines) {
             if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
               lineCollisions++;
+            }
+          }
+
+          // Защита: линия-выноска не должна пересекать прямоугольники чужих выносок
+          for (final obs in obstacleMap.rects) {
+            if (obs.id != null && clusterTargetValveIds.contains(obs.id)) continue;
+            if (obs.id != null && obs.id!.startsWith('callout_')) {
+              if (CalloutObstacleMap._rectCollidesWithSegment(obs.rect, anchor, entryShelf, 0.5)) {
+                lineCollisions++;
+              }
             }
           }
 
@@ -1720,6 +1800,9 @@ class CalloutLayoutEngine {
             final extra = radius - 18.0;
             cost += extra * extra * 30.0; // Очень сильный штраф за дальность!
           }
+
+          // Оценка направления относительно трубы (штраф за параллельность, плюс за перпендикуляр)
+          cost += evalPipeDirectionCost(entryShelf - anchor);
 
           if (isOrthogonal) cost += 30.0;
           
@@ -1770,11 +1853,19 @@ class CalloutLayoutEngine {
           result[item.callout.id] = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
           handledCalloutIds.add(item.callout.id);
 
-          obstacleMap.addRect(best.rects[i], item.callout.id);
+          obstacleMap.addRect(best.rects[i], 'callout_${item.callout.id}');
         }
         
         final trunkId = cluster.items.first.callout.id;
         obstacleMap.addLeaderLine(anchor, best.entryShelf, trunkId);
+
+        // Регистрируем горизонтальную линию полки как leaderLine чтобы чужие выноски не рассекали её
+        final shelfEnd = Offset(
+          best.isRight ? best.entryShelf.dx + maxW : best.entryShelf.dx - maxW,
+          best.entryShelf.dy,
+        );
+        obstacleMap.addLeaderLine(best.entryShelf, shelfEnd, '${trunkId}_shelf');
+
         if (cluster.items.length > 1) {
           obstacleMap.addLeaderLine(
             Offset(best.entryShelf.dx, best.startY),
