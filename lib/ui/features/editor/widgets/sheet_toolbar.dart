@@ -354,7 +354,28 @@ class SheetToolbar extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.tealAccent),
                         onSelected: (action) {
-                          if (action == 'auto_grouped') {
+                          if (action == 'auto_smart_animated') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Оптимизация Simulated Annealing запущена...'),
+                                duration: Duration(milliseconds: 1200),
+                              ),
+                            );
+                            controller.runAnimatedSheetCalloutOptimization(sheet.id).then((updated) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      updated > 0
+                                          ? 'Умная оптимизация завершена! Оптимизировано: $updated'
+                                          : 'Все выноски листа уже расположены оптимально',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            });
+                          } else if (action == 'auto_grouped') {
                             final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -397,6 +418,16 @@ class SheetToolbar extends StatelessWidget {
                           }
                         },
                         itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'auto_smart_animated',
+                            child: Row(
+                              children: [
+                                Icon(Icons.psychology, size: 16, color: Colors.purpleAccent),
+                                SizedBox(width: 8),
+                                Text('Умная оптимизация (с анимацией)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
                           const PopupMenuItem(
                             value: 'auto_grouped',
                             child: Row(

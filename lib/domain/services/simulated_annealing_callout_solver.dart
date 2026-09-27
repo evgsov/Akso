@@ -143,4 +143,105 @@ class SimulatedAnnealingCalloutSolver {
 
     return result;
   }
+
+  /// Асинхронная глобальная оптимизация с периодическим возвратом управления в event loop
+  /// для плавной анимации процесса отжига в интерфейсе Flutter
+  static Future<Map<String, CalloutCandidateSlot>> solveAsync({
+    required Map<String, List<CalloutCandidateSlot>> candidatePools,
+    CalloutObstacleMap? obstacleMap,
+    int iterations = 30000,
+    double initialTemperature = 1000.0,
+    double minTemperature = 0.05,
+    Future<void> Function(Map<String, CalloutCandidateSlot> currentSolution, double progress)? onStep,
+    int stepInterval = 1000,
+    Duration stepDelay = const Duration(milliseconds: 20),
+  }) async {
+    final result = <String, CalloutCandidateSlot>{};
+    if (candidatePools.isEmpty) return result;
+
+    final calloutIds = candidatePools.keys.toList();
+    final pools = calloutIds.map((id) => candidatePools[id]!).toList();
+    final n = calloutIds.length;
+
+    final state = List<int>.filled(n, 0);
+
+    double currentEnergy = 0.0;
+    for (int i = 0; i < n; i++) {
+      currentEnergy += pools[i][state[i]].localStaticCost;
+      for (int j = i + 1; j < n; j++) {
+        currentEnergy += computePairwiseConflict(pools[i][state[i]], pools[j][state[j]]);
+      }
+    }
+
+    double bestEnergy = currentEnergy;
+    final bestState = List<int>.from(state);
+
+    final random = math.Random(42);
+    double temperature = initialTemperature;
+    final coolingFactor = math.pow(minTemperature / initialTemperature, 1.0 / math.max(1, iterations)).toDouble();
+
+    for (int iter = 0; iter < iterations; iter++) {
+      final i = random.nextInt(n);
+      final pool = pools[i];
+      if (pool.length <= 1) continue;
+
+      final oldIdx = state[i];
+      int newIdx = random.nextInt(pool.length);
+      if (newIdx == oldIdx) {
+        newIdx = (oldIdx + 1) % pool.length;
+      }
+
+      final oldSlot = pool[oldIdx];
+      final newSlot = pool[newIdx];
+
+      double deltaE = newSlot.localStaticCost - oldSlot.localStaticCost;
+      for (int j = 0; j < n; j++) {
+        if (j == i) continue;
+        final otherSlot = pools[j][state[j]];
+        final oldConflict = computePairwiseConflict(oldSlot, otherSlot);
+        final newConflict = computePairwiseConflict(newSlot, otherSlot);
+        deltaE += (newConflict - oldConflict);
+      }
+
+      bool accept = false;
+      if (deltaE < 0) {
+        accept = true;
+      } else {
+        final prob = math.exp(-deltaE / temperature);
+        if (random.nextDouble() < prob) {
+          accept = true;
+        }
+      }
+
+      if (accept) {
+        state[i] = newIdx;
+        currentEnergy += deltaE;
+        if (currentEnergy < bestEnergy) {
+          bestEnergy = currentEnergy;
+          for (int k = 0; k < n; k++) {
+            bestState[k] = state[k];
+          }
+        }
+      }
+
+      temperature *= coolingFactor;
+
+      if (onStep != null && (iter % stepInterval == 0 || iter == iterations - 1)) {
+        final intermediate = <String, CalloutCandidateSlot>{};
+        for (int k = 0; k < n; k++) {
+          intermediate[calloutIds[k]] = pools[k][state[k]];
+        }
+        await onStep(intermediate, iter / iterations);
+        if (stepDelay > Duration.zero) {
+          await Future.delayed(stepDelay);
+        }
+      }
+    }
+
+    for (int k = 0; k < n; k++) {
+      result[calloutIds[k]] = pools[k][bestState[k]];
+    }
+
+    return result;
+  }
 }

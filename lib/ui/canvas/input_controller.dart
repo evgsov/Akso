@@ -27,6 +27,10 @@ import '../../domain/models/project_model.dart';
 import '../../domain/services/custom_valve_catalog.dart';
 import '../../domain/services/element_3d_geometry.dart';
 import '../../domain/services/callout_layout_engine.dart';
+import '../../domain/models/callout_candidate_slot.dart';
+import '../../domain/services/callout_candidate_generator.dart';
+import '../../domain/services/cascade_spring_aligner.dart';
+import '../../domain/services/simulated_annealing_callout_solver.dart';
 import '../../domain/services/fitting_detector.dart';
 import '../../domain/services/segment_positioning_service.dart';
 import '../../domain/services/grid_system_engine.dart';
@@ -6003,6 +6007,98 @@ class PipingInputController extends ChangeNotifier {
         );
         updatedCount++;
       }
+    }
+
+    if (updatedCount > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updatedCount;
+  }
+
+  /// Анимированная глобальная оптимизация расстановки выносок листа методом Simulated Annealing
+  /// с интерактивной отрисовкой промежуточных шагов на холсте листа
+  Future<int> runAnimatedSheetCalloutOptimization(
+    String sheetId, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null || network.callouts.isEmpty) return 0;
+
+    network.cleanOrphanedCallouts();
+
+    // 1. Создаем карту препятствий листа
+    final obstacleMap = CalloutObstacleMap.buildSheetMap(
+      sheet: sheet,
+      network: network,
+      projector: projector,
+    );
+
+    final handledCalloutIds = <String>{};
+
+    // Закрепленные выноски и высотные отметки
+    for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout, network)) continue;
+      if (callout.isPinned || callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
+        handledCalloutIds.add(callout.id);
+      }
+    }
+
+    final candidatePools = CalloutCandidateGenerator.generateCandidatePools(
+      sheet: sheet,
+      network: network,
+      projector: projector,
+      obstacleMap: obstacleMap,
+    );
+
+    final unhandledPools = <String, List<CalloutCandidateSlot>>{};
+    for (final entry in candidatePools.entries) {
+      if (!handledCalloutIds.contains(entry.key)) {
+        unhandledPools[entry.key] = entry.value;
+      }
+    }
+
+    if (unhandledPools.isEmpty) return 0;
+
+    final rawSolution = await SimulatedAnnealingCalloutSolver.solveAsync(
+      candidatePools: unhandledPools,
+      obstacleMap: obstacleMap,
+      iterations: 30000,
+      stepInterval: 1000,
+      stepDelay: const Duration(milliseconds: 20),
+      onStep: (intermediate, progress) async {
+        for (final entry in intermediate.entries) {
+          final callout = network.callouts[entry.key];
+          if (callout == null) continue;
+          final slot = entry.value;
+          final offMm = slot.entryShelf - slot.anchor;
+          final newOffset = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+          final updatedMap = Map<String, Offset>.from(callout.sheetOffsets);
+          updatedMap[sheetId] = newOffset;
+          network.callouts[callout.id] = callout.copyWith(sheetOffsets: updatedMap);
+        }
+        notifyListeners();
+        onProgress?.call(progress);
+      },
+    );
+
+    // 2. Финальное 1D-пружинное каскадное выравнивание
+    final alignedSolution = CascadeSpringAligner.align(
+      rawSolution,
+      pitchMm: null,
+    );
+
+    int updatedCount = 0;
+    for (final entry in alignedSolution.entries) {
+      final callout = network.callouts[entry.key];
+      if (callout == null) continue;
+      final slot = entry.value;
+      final offMm = slot.entryShelf - slot.anchor;
+      final newOffset = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+      final updatedMap = Map<String, Offset>.from(callout.sheetOffsets);
+      updatedMap[sheetId] = newOffset;
+      network.callouts[callout.id] = callout.copyWith(sheetOffsets: updatedMap);
+      updatedCount++;
     }
 
     if (updatedCount > 0) {
