@@ -930,7 +930,7 @@ class SheetGeometryBuilder {
 
     final drawItems = <_SheetCalloutDrawItem>[];
     for (final callout in network.callouts.values) {
-      if (!sheet.isCalloutVisible(callout)) continue;
+      if (!sheet.isCalloutVisible(callout, network)) continue;
 
       final anchor3D = CalloutPainter.getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;

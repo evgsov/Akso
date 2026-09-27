@@ -159,7 +159,7 @@ class PipelineBranchExtractor {
     final branchCallouts = List.generate(rawBranches.length, (_) => <Callout>[]);
 
     for (final callout in network.callouts.values) {
-      if (!sheet.isCalloutVisible(callout)) continue;
+      if (!sheet.isCalloutVisible(callout, network)) continue;
 
       // Высотные отметки не привязываются к веткам (остаются у узла)
       if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {

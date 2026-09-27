@@ -6446,7 +6446,7 @@ class PipingInputController extends ChangeNotifier {
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     if (sheet != null && network.callouts.isNotEmpty) {
       final hasUnplaced = network.callouts.values.any(
-        (c) => sheet.isCalloutVisible(c) && !c.hasSheetOffset(sheet.id),
+        (c) => sheet.isCalloutVisible(c, network) && !c.hasSheetOffset(sheet.id),
       );
       if (hasUnplaced) {
         runSheetCalloutAutoLayout(sheet.id, onlyUnpinned: true);

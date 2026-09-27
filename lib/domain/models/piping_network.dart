@@ -3347,6 +3347,28 @@ class PipingNetwork {
     }
   }
 
+  /// Определение идентификатора системы трубопровода, к которой принадлежит выноска.
+  /// Для оборудования и штуцеров возвращает null (они не привязаны к конкретной системе).
+  /// Для узлов (node) определяет систему через подключенные сегменты.
+  String? getCalloutSystemId(CalloutTargetType type, String targetId) {
+    // Для типов, у которых можно получить сегмент напрямую
+    final segId = getTargetSegmentId(type, targetId);
+    if (segId != null) {
+      return segments[segId]?.systemId;
+    }
+    // Узлы: определяем систему через подключенные сегменты
+    if (type == CalloutTargetType.node) {
+      final node = nodes[targetId];
+      if (node != null) {
+        final conn = getConnectedSegments(node.id);
+        if (conn.isNotEmpty) return conn.first.systemId;
+      }
+      return null;
+    }
+    // Equipment и Nozzle не привязаны к системе — всегда видны
+    return null;
+  }
+
   /// Автогенерация недостающих выносок для сегментов/катушек, арматуры и сварных стыков
   /// с предотвращением наложения (Collision Avoidance) смещений текста.
   /// При передаче [targetTypes] генерируются выноски только для указанных типов.

@@ -753,18 +753,11 @@ class CalloutLayoutEngine {
       55.0 + 4.0,
     );
 
-    final visibleSys = vp.visibleSystemIds;
     final handledCalloutIds = <String>{};
 
     // 3. Предварительная обработка: закрепленные выноски и изоляция высотных отметок
     for (final callout in network.callouts.values) {
-      if (!sheet.isCalloutVisible(callout)) continue;
-
-      final segId = network.getTargetSegmentId(callout.targetType, callout.targetId);
-      if (segId != null && visibleSys != null && visibleSys.isNotEmpty) {
-        final seg = network.segments[segId];
-        if (seg != null && !visibleSys.contains(seg.systemId)) continue;
-      }
+      if (!sheet.isCalloutVisible(callout, network)) continue;
 
       // Закрепленные выноски (isPinned)
       if (onlyUnpinned && callout.isPinned) {
@@ -988,13 +981,7 @@ class CalloutLayoutEngine {
     // 7. Обработка неназначенных выносок (например, автономное оборудование)
     for (final callout in network.callouts.values) {
       if (handledCalloutIds.contains(callout.id)) continue;
-      if (!sheet.isCalloutVisible(callout)) continue;
-
-      final segId = network.getTargetSegmentId(callout.targetType, callout.targetId);
-      if (segId != null && visibleSys != null && visibleSys.isNotEmpty) {
-        final seg = network.segments[segId];
-        if (seg != null && !visibleSys.contains(seg.systemId)) continue;
-      }
+      if (!sheet.isCalloutVisible(callout, network)) continue;
 
       final anchor3D = computeAnchorNode(callout, network);
       if (anchor3D == null) continue;

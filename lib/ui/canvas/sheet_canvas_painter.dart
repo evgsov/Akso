@@ -1081,7 +1081,7 @@ class SheetCanvasPainter extends CustomPainter {
     }
 
     final visibleCallouts = Map<String, Callout>.fromEntries(
-      net.callouts.entries.where((e) => sheet.isCalloutVisible(e.value)),
+      net.callouts.entries.where((e) => sheet.isCalloutVisible(e.value, net)),
     );
     return net.copyWith(callouts: visibleCallouts);
   }

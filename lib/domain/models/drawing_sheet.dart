@@ -299,13 +299,24 @@ class DrawingSheet {
     this.groupMultiLevelCallouts = true,
   });
 
-  /// Проверяет, должна ли отображаться данная выноска на текущем листе
-  bool isCalloutVisible(Callout callout) {
+  /// Проверяет, должна ли отображаться данная выноска на текущем листе.
+  /// При передаче [network] дополнительно проверяет фильтр видимых систем
+  /// видового экрана ([viewport.visibleSystemIds]).
+  bool isCalloutVisible(Callout callout, [dynamic network]) {
     if (callout.elevationStyle != null && !showElevationCallouts) {
       return false;
     }
     if (enabledCalloutTypes != null && !enabledCalloutTypes!.contains(callout.targetType)) {
       return false;
+    }
+    // Фильтрация по видимым системам видового экрана
+    final visibleSys = viewport.visibleSystemIds;
+    if (visibleSys != null && visibleSys.isNotEmpty && network != null) {
+      final systemId = network.getCalloutSystemId(callout.targetType, callout.targetId);
+      // systemId == null означает оборудование/штуцер — они всегда видны
+      if (systemId != null && !visibleSys.contains(systemId)) {
+        return false;
+      }
     }
     return true;
   }
