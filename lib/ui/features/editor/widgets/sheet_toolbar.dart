@@ -52,34 +52,39 @@ class SheetToolbar extends StatelessWidget {
                   child: Row(
                     children: [
                       // Индикатор активного режима (Лист / Фокус ВЭ)
-                      InkWell(
-                        key: const Key('sheet_viewport_focus_toggle'),
-                        onTap: () => controller.toggleViewportFocus(),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: isFocused ? const Color(0xFF1976D2) : const Color(0xFF334155),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isFocused ? Colors.lightBlueAccent : Colors.transparent,
-                              width: 1.5,
+                      Tooltip(
+                        message: isFocused
+                            ? 'Выйти в пространство листа (Esc)'
+                            : 'Перейти в режим модели (двойной клик по ВЭ)',
+                        child: InkWell(
+                          key: const Key('sheet_viewport_focus_toggle'),
+                          onTap: () => controller.toggleViewportFocus(),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isFocused ? const Color(0xFF1976D2) : const Color(0xFF334155),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isFocused ? Colors.lightBlueAccent : Colors.transparent,
+                                width: 1.5,
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isFocused ? Icons.crop_free : Icons.layers_outlined,
-                                size: 15,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isFocused ? 'Фокус ВЭ (Модель)' : 'Пространство листа',
-                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isFocused ? Icons.crop_free : Icons.layers_outlined,
+                                  size: 15,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isFocused ? 'Фокус ВЭ (Модель)' : 'Пространство листа',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -120,12 +125,21 @@ class SheetToolbar extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
 
-                      // Кнопка автоподбора масштаба (Auto-Fit)
+                      // Кнопка автоподбора масштаба модели в ВЭ (Auto-Fit)
                       IconButton(
                         key: const Key('viewport_autofit_button'),
                         tooltip: 'Вписать трассу в видовой экран (Auto-Fit)',
                         icon: const Icon(Icons.fit_screen_outlined, size: 18, color: Colors.cyanAccent),
                         onPressed: () => controller.autoFitActiveSheetViewport(),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Кнопка вписывания чертежного листа в экран
+                      IconButton(
+                        key: const Key('sheet_zoom_to_fit_button'),
+                        tooltip: 'Вписать лист в экран (Home)',
+                        icon: const Icon(Icons.aspect_ratio, size: 18, color: Colors.white70),
+                        onPressed: () => controller.zoomToFitSheet(),
                       ),
                       const SizedBox(width: 4),
 

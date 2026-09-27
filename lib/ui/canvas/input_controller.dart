@@ -507,8 +507,43 @@ class PipingInputController extends ChangeNotifier {
     );
   }
 
+  /// Проверяет, есть ли активное выделение или незавершенная операция черчения/трансформации
+  bool get hasActiveSelectionOrOperation {
+    return selectedNodeId != null ||
+        selectedSegmentId != null ||
+        selectedEquipmentId != null ||
+        selectedDimensionId != null ||
+        selectedAxisId != null ||
+        selectedValveId != null ||
+        selectedSupportId != null ||
+        selectedWeldId != null ||
+        selectedCalloutId != null ||
+        selectedNodeIds.isNotEmpty ||
+        selectedSegmentIds.isNotEmpty ||
+        selectedEquipmentIds.isNotEmpty ||
+        selectedDimensionIds.isNotEmpty ||
+        selectedAxisIds.isNotEmpty ||
+        traceStartNode != null ||
+        axisStartNode != null ||
+        dimensionStartNode != null ||
+        activeGripNodeId != null ||
+        activeGripAxisId != null ||
+        activeViewportGrip != null ||
+        selectedSheetBlock != null ||
+        isViewportSelected ||
+        isDraggingNode ||
+        isDraggingSegment ||
+        isDraggingEquipment ||
+        isDraggingCallout ||
+        isDraggingValve ||
+        isDraggingSupport ||
+        isDraggingWeld ||
+        (currentTool != CanvasTool.select && currentTool != CanvasTool.pan);
+  }
+
   /// Отмена текущей операции (по клавише Esc, ПКМ или кнопке на экране)
   void cancelCurrentOperation({bool keepTool = false}) {
+    final hadActive = hasActiveSelectionOrOperation;
     _longPressTimer?.cancel();
     _canDragElement = false;
     clearSelection();
@@ -578,6 +613,9 @@ class PipingInputController extends ChangeNotifier {
         currentTool != CanvasTool.trace &&
         currentTool != CanvasTool.pan) {
       currentTool = CanvasTool.select;
+    }
+    if (!hadActive && isViewportFocused) {
+      isViewportFocused = false;
     }
     notifyListeners();
   }
@@ -4099,14 +4137,19 @@ class PipingInputController extends ChangeNotifier {
   /// Центр рабочей области холста
   Offset get viewportCenter => Offset(lastViewportSize.width / 2, lastViewportSize.height / 2);
 
-  /// Текущий процент масштабирования (100% соответствует 0.25 px/мм)
-  int get zoomPercentage => (projector.scale / 0.25 * 100).round();
+  /// Текущий процент масштабирования (100% соответствует 0.25 px/мм в модели или 1.0 на листе)
+  int get zoomPercentage {
+    if (!isModelSpaceActive && activeSheet != null) {
+      return (sheetZoom * 100).round();
+    }
+    return (projector.scale / 0.25 * 100).round();
+  }
 
   /// Масштабирование сцены с удержанием точки focalPoint под курсором/пальцами
-  void zoom(double factor, Offset focalPoint) {
+  void zoom(double factor, Offset focalPoint, {bool forceSheetZoom = false}) {
     if (factor.isNaN || factor <= 0.0) return;
     if (!isModelSpaceActive) {
-      if (isViewportFocused && activeSheet != null) {
+      if (isViewportFocused && activeSheet != null && !forceSheetZoom) {
         // Масштабирование видового экрана
         final vp = activeSheet!.viewport;
         final newScale = (vp.viewScale * factor).clamp(0.0005, 1.0);
@@ -4137,24 +4180,71 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Быстрое приближение (+25%)
-  void zoomIn([Offset? focalPoint]) {
-    zoom(1.25, focalPoint ?? viewportCenter);
+  void zoomIn([Offset? focalPoint, bool forceSheetZoom = false]) {
+    zoom(1.25, focalPoint ?? viewportCenter, forceSheetZoom: forceSheetZoom);
   }
 
   /// Быстрое отдаление (-20%)
-  void zoomOut([Offset? focalPoint]) {
-    zoom(0.8, focalPoint ?? viewportCenter);
+  void zoomOut([Offset? focalPoint, bool forceSheetZoom = false]) {
+    zoom(0.8, focalPoint ?? viewportCenter, forceSheetZoom: forceSheetZoom);
   }
 
-  /// Сброс масштаба к 100% (1:1 standard scale = 0.25 px/мм)
+  /// Сброс масштаба к 100% (1:1 standard scale = 0.25 px/мм в модели или 1.0 на листе)
   void zoom100([Offset? focalPoint]) {
+    if (!isModelSpaceActive && activeSheet != null) {
+      if (isViewportFocused) {
+        final vp = activeSheet!.viewport;
+        final updatedVp = vp.copyWith(viewScale: 0.02);
+        updateSheet(activeSheet!.copyWith(viewport: updatedVp));
+      } else {
+        setSheetZoom(1.0);
+      }
+      return;
+    }
     final targetScale = 0.25;
     final factor = targetScale / projector.scale;
     zoom(factor, focalPoint ?? viewportCenter);
   }
 
+  /// Вписать весь чертежный лист в экран и вернуться в пространство листа
+  void zoomToFitSheet({Size? viewportSize, EdgeInsets padding = const EdgeInsets.all(32.0)}) {
+    final sheet = activeSheet;
+    if (sheet == null) return;
+    final vp = viewportSize ?? lastViewportSize;
+    if (vp.width <= 0 || vp.height <= 0) return;
+
+    final sheetW = sheet.format.widthMm;
+    final sheetH = sheet.format.heightMm;
+    if (sheetW <= 0 || sheetH <= 0) return;
+
+    final availWidth = math.max(vp.width - padding.horizontal, 100.0);
+    final availHeight = math.max(vp.height - padding.vertical, 100.0);
+
+    final fitScaleX = availWidth / sheetW;
+    final fitScaleY = availHeight / sheetH;
+    final newZoom = math.min(fitScaleX, fitScaleY).clamp(0.2, 10.0);
+
+    final paperW = sheetW * newZoom;
+    final paperH = sheetH * newZoom;
+
+    sheetZoom = newZoom;
+    sheetPan = Offset(
+      padding.left + (availWidth - paperW) / 2,
+      padding.top + (availHeight - paperH) / 2,
+    );
+    isViewportFocused = false;
+    isViewportSelected = false;
+    selectedSheetBlock = null;
+    activeViewportGrip = null;
+    notifyListeners();
+  }
+
   /// Вписать всю геометрию сети и строительных осей в экран (Zoom to Fit / Zoom Extents)
   void zoomToFit({Size? viewportSize, EdgeInsets padding = const EdgeInsets.all(72.0)}) {
+    if (!isModelSpaceActive && activeSheet != null) {
+      zoomToFitSheet(viewportSize: viewportSize, padding: const EdgeInsets.all(32.0));
+      return;
+    }
     final vp = viewportSize ?? lastViewportSize;
     if (vp.width <= 0 || vp.height <= 0) return;
 

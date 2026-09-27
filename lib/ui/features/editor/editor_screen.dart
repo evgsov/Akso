@@ -146,7 +146,11 @@ class _EditorScreenState extends State<EditorScreen> {
         _focusNode.requestFocus();
         return KeyEventResult.handled;
       }
+      final hadActive = widget.controller.hasActiveSelectionOrOperation;
       widget.controller.cancelCurrentOperation();
+      if (!hadActive && widget.controller.isViewportFocused) {
+        widget.controller.setViewportFocus(false);
+      }
       return KeyEventResult.handled;
     }
 
@@ -399,7 +403,11 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (!controller.isModelSpaceActive && controller.activeSheet != null) {
                     final hitVp = controller.hitTestSheetViewport(event.localPosition);
                     if (hitVp) {
-                      controller.setViewportFocus(true);
+                      if (controller.isViewportFocused) {
+                        controller.setViewportFocus(false);
+                      } else {
+                        controller.setViewportFocus(true);
+                      }
                     } else {
                       controller.setViewportFocus(false);
                     }
@@ -468,7 +476,9 @@ class _EditorScreenState extends State<EditorScreen> {
                 // Стандартный щелчок мыши (~100-120) дает ~1.15x / 0.87x.
                 // Небольшие движения тачпада дают пропорционально мягкий отклик.
                 final factor = math.pow(0.87, (dy / 100.0).clamp(-2.0, 2.0)).toDouble();
-                controller.zoom(factor, event.localPosition);
+                final isShift = HardwareKeyboard.instance.isShiftPressed;
+                final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+                controller.zoom(factor, event.localPosition, forceSheetZoom: isShift || isCtrl);
               }
             },
             child: GestureDetector(

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/domain/enums/projection_type.dart';
+import 'package:akso/domain/enums/sheet_format_type.dart';
 import 'package:akso/domain/enums/valve_type.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/pipe_segment.dart';
@@ -217,6 +218,101 @@ void main() {
       controller.zoomOut();
       expect(controller.projector.scale, closeTo(0.25, 1e-4));
       expect(controller.zoomPercentage, equals(100));
+    });
+
+    test('zoomToFitSheet вписывает лист в экран и сбрасывает фокус видового экрана', () {
+      final sheet = controller.addSheet(name: 'Лист 1', formatType: SheetFormatType.a3);
+      controller.selectSheet(sheet.id);
+
+      // Имитируем сильное приближение листа и фокус на модели внутри ВЭ
+      controller.setSheetZoom(3.5);
+      controller.setViewportFocus(true);
+      controller.isViewportSelected = true;
+
+      expect(controller.isViewportFocused, isTrue);
+      expect(controller.sheetZoom, equals(3.5));
+
+      const viewport = Size(1920, 1080);
+      controller.zoomToFitSheet(viewportSize: viewport);
+
+      // Фокус сброшен в пространство листа
+      expect(controller.isViewportFocused, isFalse);
+      expect(controller.isViewportSelected, isFalse);
+
+      // Масштаб листа подогнан под размер экрана
+      final paperW = controller.activeSheet!.format.widthMm * controller.sheetZoom;
+      final paperH = controller.activeSheet!.format.heightMm * controller.sheetZoom;
+      expect(paperW, lessThanOrEqualTo(viewport.width));
+      expect(paperH, lessThanOrEqualTo(viewport.height));
+
+      // Лист отцентрирован
+      expect(controller.sheetPan.dx, greaterThan(0.0));
+      expect(controller.sheetPan.dy, greaterThan(0.0));
+    });
+
+    test('zoomToFit на листе автоматически вызывает zoomToFitSheet', () {
+      final sheet = controller.addSheet(name: 'Лист 1');
+      controller.selectSheet(sheet.id);
+      controller.setSheetZoom(4.0);
+      controller.setViewportFocus(true);
+
+      controller.zoomToFit(viewportSize: const Size(1600, 900));
+
+      expect(controller.isViewportFocused, isFalse);
+      expect(controller.sheetZoom, lessThan(4.0));
+    });
+
+    test('cancelCurrentOperation в режиме фокуса ВЭ сбрасывает фокус, если ничего не выбрано', () {
+      final sheet = controller.addSheet(name: 'Лист 1');
+      controller.selectSheet(sheet.id);
+      controller.setViewportFocus(true);
+
+      expect(controller.isViewportFocused, isTrue);
+      expect(controller.hasActiveSelectionOrOperation, isFalse);
+
+      controller.cancelCurrentOperation();
+
+      // Так как ничего не было выбрано, Esc / cancelCurrentOperation выходит в пространство листа
+      expect(controller.isViewportFocused, isFalse);
+    });
+
+    test('cancelCurrentOperation в режиме фокуса ВЭ сначала снимает выделение, а вторым вызовом выходит в лист', () {
+      final sheet = controller.addSheet(name: 'Лист 1');
+      controller.selectSheet(sheet.id);
+      controller.setViewportFocus(true);
+
+      // Выбираем элемент
+      network.nodes['n1'] = const Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      controller.selectedNodeId = 'n1';
+
+      expect(controller.hasActiveSelectionOrOperation, isTrue);
+
+      // 1-й вызов: снимает выбор
+      controller.cancelCurrentOperation();
+      expect(controller.selectedNodeId, isNull);
+      expect(controller.isViewportFocused, isTrue);
+
+      // 2-й вызов: выходит из режима ВЭ в лист
+      controller.cancelCurrentOperation();
+      expect(controller.isViewportFocused, isFalse);
+    });
+
+    test('zoom с forceSheetZoom масштабирует лист даже при активном фокусе видового экрана', () {
+      final sheet = controller.addSheet(name: 'Лист 1');
+      controller.selectSheet(sheet.id);
+      controller.setViewportFocus(true);
+
+      final initialSheetZoom = controller.sheetZoom;
+      final initialVpScale = controller.activeSheet!.viewport.viewScale;
+
+      // Обычный зум в фокусе ВЭ меняет viewScale модели
+      controller.zoom(1.2, const Offset(500, 500), forceSheetZoom: false);
+      expect(controller.sheetZoom, equals(initialSheetZoom));
+      expect(controller.activeSheet!.viewport.viewScale, greaterThan(initialVpScale));
+
+      // Зум с forceSheetZoom меняет sheetZoom чертежного листа
+      controller.zoom(0.8, const Offset(500, 500), forceSheetZoom: true);
+      expect(controller.sheetZoom, lessThan(initialSheetZoom));
     });
   });
 }

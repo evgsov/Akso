@@ -33,6 +33,7 @@ import 'riser_sectioning_dialog.dart';
 import 'sheet_tab_bar.dart';
 import 'sheet_toolbar.dart';
 import '../../../../data/services/pdf_export_service.dart';
+import '../../../../domain/services/viewport_transform_service.dart';
 import '../../../../domain/models/construction_axis.dart';
 import '../../../../domain/services/grid_system_engine.dart';
 
@@ -92,6 +93,17 @@ class DesktopCadLayout extends StatelessWidget {
                       right: 16,
                       child: ElevationPanel(controller: controller),
                     ),
+
+                    // Плавающий баннер активного фокуса видового экрана (режим модели на листе)
+                    if (!controller.isModelSpaceActive && controller.isViewportFocused)
+                      Positioned(
+                        top: 14,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _buildViewportFocusBanner(context),
+                        ),
+                      ),
 
                     // Кнопка точного ввода длины (для тач-устройств), появляется при черчении
                     if (controller.traceStartNode != null || controller.axisStartNode != null)
@@ -3103,6 +3115,102 @@ class DesktopCadLayout extends StatelessWidget {
     );
   }
 
+  Widget _buildViewportFocusBanner(BuildContext context) {
+    final sheet = controller.activeSheet;
+    if (sheet == null) return const SizedBox.shrink();
+    final scaleText = ViewportTransformService.formatScaleText(sheet.viewport.viewScale);
+
+    return Material(
+      color: Colors.transparent,
+      elevation: 6,
+      shadowColor: Colors.black45,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xF20F172A),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFF38BDF8),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Фокус ВЭ (Модель)',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFF475569)),
+              ),
+              child: Text(
+                scaleText,
+                style: const TextStyle(
+                  color: Color(0xFF38BDF8),
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(width: 1, height: 18, color: const Color(0xFF334155)),
+            const SizedBox(width: 8),
+            // Кнопка: Вписать лист
+            TextButton.icon(
+              key: const Key('focus_banner_fit_sheet_button'),
+              onPressed: () => controller.zoomToFitSheet(),
+              icon: const Icon(Icons.fit_screen_outlined, size: 14, color: Colors.white70),
+              label: const Text(
+                'Вписать лист',
+                style: TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Кнопка: Выйти в лист (Esc)
+            FilledButton.icon(
+              key: const Key('focus_banner_exit_button'),
+              onPressed: () => controller.setViewportFocus(false),
+              icon: const Icon(Icons.layers_outlined, size: 14, color: Colors.white),
+              label: const Text(
+                'Выйти в лист (Esc)',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusBar(BuildContext context) {
     final curPos = controller.currentCursorScreenPos;
     final world = curPos != null
@@ -3371,6 +3479,12 @@ class DesktopCadLayout extends StatelessWidget {
   }
 
   String _getHintText(CanvasTool tool, bool isTracing) {
+    if (!controller.isModelSpaceActive && controller.activeSheet != null) {
+      if (controller.isViewportFocused) {
+        return 'Фокус видового экрана (Модель) • Двойной клик или Esc: выход в пространство листа • Home: вписать лист';
+      }
+      return 'Пространство листа • Двойной клик по ВЭ: переход в режим модели • Home: вписать лист';
+    }
     if (isTracing) return 'Кликните на узел или точку для завершения сегмента • Esc или ПКМ: отмена черчения';
     switch (tool) {
       case CanvasTool.trace:
