@@ -403,7 +403,6 @@ class DrawingSheet {
       );
       final visibleFittings = Map<String, Fitting>.fromEntries(
         baseNetwork.fittings.entries.where((e) =>
-          e.value.fittingType != FittingType.directBranch &&
           baseNetwork.getConnectedSegments(e.value.nodeId).any((s) => visibleSegIds.contains(s.id)),
         ),
       );
