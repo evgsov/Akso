@@ -103,8 +103,8 @@ class CalloutObstacleMap {
     for (final eq in network.equipments.values) {
       final centerRaw = projector.projectRaw(eq.x, eq.y, eq.z + eq.height / 2.0);
       final centerMm = ViewportTransformService.model2dToSheetMm(centerRaw, vp);
-      final wMm = math.max(12.0, eq.diameter * vp.scale) + 6.0;
-      final hMm = math.max(12.0, eq.height * vp.scale) + 6.0;
+      final wMm = math.max(8.0, eq.diameter * vp.scale) + 3.0;
+      final hMm = math.max(8.0, eq.height * vp.scale) + 3.0;
       final eqRect = Rect.fromCenter(center: centerMm, width: wMm, height: hMm);
       map.addRect(eqRect, 'eq_${eq.id}');
     }
@@ -126,7 +126,7 @@ class CalloutObstacleMap {
 
       final raw = projector.projectRaw(vx, vy, vz);
       final vMm = ViewportTransformService.model2dToSheetMm(raw, vp);
-      final valveRect = Rect.fromCenter(center: vMm, width: 14.0, height: 14.0);
+      final valveRect = Rect.fromCenter(center: vMm, width: 8.0, height: 8.0);
       map.addRect(valveRect, 'valve_${valve.id}');
     }
 
@@ -820,6 +820,28 @@ class CalloutLayoutEngine {
 
     final effectiveGroup = groupMultiLevel ?? sheet.groupMultiLevelCallouts;
 
+    bool useCombLayout = sheet.id == "ENABLE_COMB"; // Тумблер для жесткой табличной гребенки
+    if (!useCombLayout) {
+      _runGenerativeSectorLayout(
+        network: network,
+        sheet: sheet,
+        projector: projector,
+        vp: vp,
+        obstacleMap: obstacleMap,
+        result: result,
+        handledCalloutIds: handledCalloutIds,
+        onlyUnpinned: onlyUnpinned,
+        groupMultiLevel: effectiveGroup,
+        frameLeft: frameLeft,
+        frameRight: frameRight,
+        frameTop: frameTop,
+        frameBottom: frameBottom,
+        stampRect: stampRect,
+        defaultCalloutTemplates: defaultCalloutTemplates,
+      );
+      return result;
+    }
+
     // 5. Обработка каждой ветки
     for (final branch in branches) {
       final branchCallouts = branch.callouts.where((c) {
@@ -1417,6 +1439,269 @@ class CalloutLayoutEngine {
       cost: totalCost,
     );
   }
+
+  static void _runGenerativeSectorLayout({
+    required PipingNetwork network,
+    required DrawingSheet sheet,
+    required AxonometryProjector projector,
+    required SheetViewport vp,
+    required CalloutObstacleMap obstacleMap,
+    required Map<String, Offset> result,
+    required Set<String> handledCalloutIds,
+    required bool onlyUnpinned,
+    required bool groupMultiLevel,
+    required double frameLeft,
+    required double frameRight,
+    required double frameTop,
+    required double frameBottom,
+    required Rect stampRect,
+    required Map<String, String> defaultCalloutTemplates,
+  }) {
+    final allItems = <_SheetCalloutItem>[];
+    for (final callout in network.callouts.values) {
+      if (handledCalloutIds.contains(callout.id)) continue;
+      if (onlyUnpinned && callout.isPinned) continue;
+      if (!sheet.isCalloutVisible(callout, network)) continue;
+
+      final anchor3D = computeAnchorNode(callout, network);
+      if (anchor3D == null) continue;
+
+      final raw2D = projector.projectRaw(anchor3D.x, anchor3D.y, anchor3D.z);
+      final anchorMm = ViewportTransformService.model2dToSheetMm(raw2D, vp);
+
+      final charWidthMm = callout.textHeight * 0.65;
+      final textMm = network.generateCalloutText(callout, defaultCalloutTemplates);
+      final textWidthMm = math.max(10.0, textMm.length * charWidthMm + 3.0);
+
+      allItems.add(_SheetCalloutItem(
+        callout: callout,
+        anchorMm: anchorMm,
+        textWidthMm: textWidthMm,
+        textHeightMm: callout.textHeight,
+        t: anchorMm.dx,
+      ));
+    }
+
+    final clusters = <_SheetNodeCluster>[];
+    if (groupMultiLevel) {
+      final visited = <String>{};
+      for (int i = 0; i < allItems.length; i++) {
+        final itemA = allItems[i];
+        if (visited.contains(itemA.callout.id)) continue;
+
+        final clusterItems = <_SheetCalloutItem>[itemA];
+        visited.add(itemA.callout.id);
+
+        for (int j = i + 1; j < allItems.length; j++) {
+          final itemB = allItems[j];
+          if (visited.contains(itemB.callout.id)) continue;
+
+          if ((itemA.anchorMm - itemB.anchorMm).distance < 18.0) {
+            clusterItems.add(itemB);
+            visited.add(itemB.callout.id);
+          }
+        }
+        clusters.add(_SheetNodeCluster(
+          anchorMm: itemA.anchorMm,
+          items: clusterItems,
+          t: itemA.anchorMm.dx,
+        ));
+      }
+    } else {
+      for (final item in allItems) {
+        clusters.add(_SheetNodeCluster(
+          anchorMm: item.anchorMm,
+          items: [item],
+          t: item.anchorMm.dx,
+        ));
+      }
+    }
+
+    clusters.sort((a, b) => a.t.compareTo(b.t));
+
+    final angles = <double>[
+      math.pi / 6, math.pi / 4, math.pi / 3,
+      2 * math.pi / 3, 3 * math.pi / 4, 5 * math.pi / 6,
+      7 * math.pi / 6, 5 * math.pi / 4, 4 * math.pi / 3,
+      5 * math.pi / 3, 7 * math.pi / 4, 11 * math.pi / 6,
+      0.0, math.pi, math.pi / 2, 3 * math.pi / 2
+    ];
+
+    // Компактные дистанции поиска (от 10 до 42 мм)
+    final radii = <double>[10.0, 14.0, 18.0, 22.0, 28.0, 34.0, 42.0];
+
+    for (final cluster in clusters) {
+      final anchor = cluster.anchorMm;
+      final numItems = cluster.items.length;
+      final avgTextH = cluster.items.first.textHeightMm;
+      final pitch = avgTextH + 1.5;
+      final maxW = cluster.items.map((e) => e.textWidthMm).reduce(math.max);
+
+      // Собираем ID целевых сегментов и задвижек для текущего кластера
+      final clusterTargetSegIds = <String>{};
+      final clusterTargetValveIds = <String>{};
+      for (final item in cluster.items) {
+        if (item.callout.targetType == CalloutTargetType.segment) {
+          clusterTargetSegIds.add(item.callout.targetId);
+        } else if (item.callout.targetType == CalloutTargetType.valve) {
+          clusterTargetValveIds.add('valve_${item.callout.targetId}');
+        }
+      }
+
+      _GenerativeCandidate? best;
+      double lowestCost = double.infinity;
+
+      for (final radius in radii) {
+        for (final angle in angles) {
+          final isOrthogonal = (angle % (math.pi / 2) == 0.0);
+          final dx = radius * math.cos(angle);
+          final dy = radius * math.sin(angle);
+          final isRight = math.cos(angle) >= 0;
+
+          final entryShelf = Offset(anchor.dx + dx, anchor.dy + dy);
+          final stackH = (numItems - 1) * pitch;
+          final startY = entryShelf.dy - stackH / 2.0;
+
+          final rects = <Rect>[];
+          bool outOfBounds = false;
+
+          for (int i = 0; i < numItems; i++) {
+            final y = startY + i * pitch;
+            final shelfStartX = entryShelf.dx;
+            final rect = Rect.fromLTWH(
+              isRight ? shelfStartX : shelfStartX - maxW,
+              y - avgTextH - 1.0,
+              maxW,
+              avgTextH + 2.0,
+            );
+            rects.add(rect);
+
+            if (rect.left < frameLeft || rect.right > frameRight ||
+                rect.top < frameTop || rect.bottom > frameBottom ||
+                rect.overlaps(stampRect)) {
+              outOfBounds = true;
+              break;
+            }
+          }
+          if (outOfBounds) continue;
+
+          int collisions = 0;
+          int lineCollisions = 0;
+
+          // 1. Проверяем наложение полок на штамп, таблицы, оборудование и другие выноски
+          for (final rect in rects) {
+            for (final obs in obstacleMap.rects) {
+              // Целевая задвижка самой выноски не блокирует близкое размещение
+              if (obs.id != null && clusterTargetValveIds.contains(obs.id)) continue;
+              if (rect.overlaps(obs.rect)) collisions++;
+            }
+            // Проверяем наложение полочки на коридоры трубопроводов
+            if (obstacleMap.testShelfPipeCollision(rect)) {
+              collisions++;
+            }
+          }
+
+          // 2. Проверяем пересечение линии-выноски с чужими линиями-выносками
+          for (final line in obstacleMap.leaderLines) {
+            if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
+              lineCollisions++;
+            }
+          }
+
+          // 3. Проверяем пересечение линии-выноски с чужими трубами
+          for (final pipe in obstacleMap.pipes) {
+            if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
+            if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, pipe.p1, pipe.p2, tolerance: 0.05)) {
+              lineCollisions++;
+            }
+          }
+
+          // 4. Если в этажерке несколько полок — проверяем вертикальную стойку
+          if (numItems > 1) {
+            final stemP1 = Offset(entryShelf.dx, startY);
+            final stemP2 = Offset(entryShelf.dx, startY + (numItems - 1) * pitch);
+            for (final pipe in obstacleMap.pipes) {
+              if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
+              if (CalloutObstacleMap.segmentsIntersect(stemP1, stemP2, pipe.p1, pipe.p2, tolerance: 0.05)) {
+                lineCollisions++;
+              }
+            }
+          }
+
+          // Оценка эстетики (Scoring):
+          // Базовая стоимость за расстояние + жесткий квадратичный штраф за удаление больше 18 мм
+          double cost = radius * 4.0;
+          if (radius > 18.0) {
+            final extra = radius - 18.0;
+            cost += extra * extra * 30.0; // Очень сильный штраф за дальность!
+          }
+
+          if (isOrthogonal) cost += 30.0;
+          
+          final angleDeg = (angle * 180 / math.pi).abs() % 90;
+          if ((angleDeg - 45).abs() < 5.0) cost -= 5.0;
+
+          cost += collisions * 50000.0;
+          cost += lineCollisions * 100000.0;
+
+          if (cost < lowestCost) {
+            lowestCost = cost;
+            best = _GenerativeCandidate(
+              entryShelf: entryShelf,
+              startY: startY,
+              pitch: pitch,
+              isRight: isRight,
+              cost: cost,
+              rects: rects,
+            );
+          }
+        }
+        if (best != null && best.cost < 50000.0) break;
+      }
+
+      if (best != null) {
+        for (int i = 0; i < cluster.items.length; i++) {
+          final item = cluster.items[i];
+          final y = best.startY + i * best.pitch;
+          final shelfStart = Offset(best.entryShelf.dx, y);
+
+          final offMm = shelfStart - item.anchorMm;
+          result[item.callout.id] = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+          handledCalloutIds.add(item.callout.id);
+
+          obstacleMap.addRect(best.rects[i], item.callout.id);
+        }
+        
+        final trunkId = cluster.items.first.callout.id;
+        obstacleMap.addLeaderLine(anchor, best.entryShelf, trunkId);
+        if (cluster.items.length > 1) {
+          obstacleMap.addLeaderLine(
+            Offset(best.entryShelf.dx, best.startY),
+            Offset(best.entryShelf.dx, best.startY + (numItems - 1) * best.pitch),
+            trunkId,
+          );
+        }
+      }
+    }
+  }
+}
+
+class _GenerativeCandidate {
+  final Offset entryShelf;
+  final double startY;
+  final double pitch;
+  final bool isRight;
+  final double cost;
+  final List<Rect> rects;
+
+  _GenerativeCandidate({
+    required this.entryShelf,
+    required this.startY,
+    required this.pitch,
+    required this.isRight,
+    required this.cost,
+    required this.rects,
+  });
 }
 
 class _CandidateStack {

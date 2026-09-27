@@ -976,7 +976,7 @@ class SheetGeometryBuilder {
         if (visited.contains(j)) continue;
         final itemA = drawItems[i];
         final itemB = drawItems[j];
-        if ((itemA.anchorMm - itemB.anchorMm).distance < 3.0 &&
+        if ((itemA.anchorMm - itemB.anchorMm).distance < 18.0 &&
             (itemA.leaderEndMm.dx - itemB.leaderEndMm.dx).abs() < 1.5 &&
             itemA.isRight == itemB.isRight) {
           group.add(itemB);

@@ -139,7 +139,7 @@ class CalloutPainter {
         final isElevB = itemB.callout.targetType == CalloutTargetType.node || itemB.callout.elevationStyle != null;
         if (isElevB) continue;
 
-        if ((itemA.anchorScreen - itemB.anchorScreen).distance < 6.0 * annotationScale &&
+        if ((itemA.anchorScreen - itemB.anchorScreen).distance < 18.0 * annotationScale &&
             (itemA.textPos.dx - itemB.textPos.dx).abs() < 2.5 * annotationScale &&
             itemA.isRight == itemB.isRight) {
           group.add(itemB);
