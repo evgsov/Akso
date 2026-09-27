@@ -311,7 +311,7 @@ class DrawingSheet {
   /// Проверяет, должна ли отображаться данная выноска на текущем листе.
   /// При передаче [network] дополнительно проверяет фильтр видимых систем
   /// видового экрана ([viewport.visibleSystemIds]).
-  bool isCalloutVisible(Callout callout, [dynamic network]) {
+  bool isCalloutVisible(Callout callout, [PipingNetwork? network]) {
     if (callout.elevationStyle != null && !showElevationCallouts) {
       return false;
     }
@@ -320,8 +320,15 @@ class DrawingSheet {
     }
     // Прямая врезка (directBranch) не является фасонной деталью/элементом сети
     if (callout.targetType == CalloutTargetType.fitting && network != null) {
-      final fit = network.fittings[callout.targetId] ??
-          network.fittings.values.where((f) => f.id == callout.targetId || f.nodeId == callout.targetId).firstOrNull;
+      Fitting? fit = network.fittings[callout.targetId];
+      if (fit == null) {
+        for (final f in network.fittings.values) {
+          if (f.id == callout.targetId || f.nodeId == callout.targetId) {
+            fit = f;
+            break;
+          }
+        }
+      }
       if (fit != null && fit.fittingType == FittingType.directBranch) {
         return false;
       }
@@ -336,8 +343,15 @@ class DrawingSheet {
 
       // Для фитингов: проверяем, видна ли хотя бы одна подключенная труба
       if (callout.targetType == CalloutTargetType.fitting) {
-        final fit = network.fittings[callout.targetId] ??
-            network.fittings.values.where((f) => f.id == callout.targetId || f.nodeId == callout.targetId).firstOrNull;
+        Fitting? fit = network.fittings[callout.targetId];
+        if (fit == null) {
+          for (final f in network.fittings.values) {
+            if (f.id == callout.targetId || f.nodeId == callout.targetId) {
+              fit = f;
+              break;
+            }
+          }
+        }
         final nodeId = fit?.nodeId ?? callout.targetId;
         final conn = network.getConnectedSegments(nodeId);
         if (conn.isEmpty || !conn.any((s) => visibleSys.contains(s.systemId))) {

@@ -3323,20 +3323,42 @@ class PipingNetwork {
   String? getTargetSegmentId(CalloutTargetType type, String targetId) {
     switch (type) {
       case CalloutTargetType.segment:
-        final spool = spools[targetId] ??
-            spools.values.where((s) => s.id == targetId).firstOrNull;
+        var spool = spools[targetId];
+        if (spool == null) {
+          for (final s in spools.values) {
+            if (s.id == targetId) {
+              spool = s;
+              break;
+            }
+          }
+        }
         if (spool != null) return spool.segmentId;
         if (segments.containsKey(targetId)) return targetId;
         return null;
       case CalloutTargetType.valve:
-        return valves[targetId]?.segmentId ??
-            valves.values.where((v) => v.id == targetId).firstOrNull?.segmentId;
+        final direct = valves[targetId];
+        if (direct != null) return direct.segmentId;
+        for (final v in valves.values) {
+          if (v.id == targetId) return v.segmentId;
+        }
+        return null;
       case CalloutTargetType.weld:
-        return weldJoints[targetId]?.segmentId ??
-            weldJoints.values.where((w) => w.id == targetId).firstOrNull?.segmentId;
+        final direct = weldJoints[targetId];
+        if (direct != null) return direct.segmentId;
+        for (final w in weldJoints.values) {
+          if (w.id == targetId) return w.segmentId;
+        }
+        return null;
       case CalloutTargetType.fitting:
-        final fit = fittings[targetId] ??
-            fittings.values.where((f) => f.id == targetId || f.nodeId == targetId).firstOrNull;
+        var fit = fittings[targetId];
+        if (fit == null) {
+          for (final f in fittings.values) {
+            if (f.id == targetId || f.nodeId == targetId) {
+              fit = f;
+              break;
+            }
+          }
+        }
         if (fit != null) {
           final conn = getConnectedSegments(fit.nodeId);
           return conn.isNotEmpty ? conn.first.id : null;
@@ -3344,8 +3366,12 @@ class PipingNetwork {
         final conn = getConnectedSegments(targetId);
         return conn.isNotEmpty ? conn.first.id : null;
       case CalloutTargetType.support:
-        return supports[targetId]?.segmentId ??
-            supports.values.where((s) => s.id == targetId).firstOrNull?.segmentId;
+        final direct = supports[targetId];
+        if (direct != null) return direct.segmentId;
+        for (final s in supports.values) {
+          if (s.id == targetId) return s.segmentId;
+        }
+        return null;
       case CalloutTargetType.nozzle:
       case CalloutTargetType.node:
       case CalloutTargetType.equipment:
