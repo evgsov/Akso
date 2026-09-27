@@ -9,6 +9,10 @@ import 'package:akso/domain/services/viewport_transform_service.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/domain/models/pipeline_branch.dart';
 import 'package:akso/domain/services/pipeline_branch_extractor.dart';
+import 'package:akso/domain/models/callout_candidate_slot.dart';
+import 'package:akso/domain/services/callout_candidate_generator.dart';
+import 'package:akso/domain/services/cascade_spring_aligner.dart';
+import 'package:akso/domain/services/simulated_annealing_callout_solver.dart';
 
 /// Прямоугольное препятствие (полочка выноски, оборудование и т.д.)
 class RectObstacle {
@@ -813,6 +817,7 @@ class CalloutLayoutEngine {
     double? customPitchMm,
     double minRadiusMm = 12.0,
     double maxRadiusMm = 35.0,
+    bool useSimulatedAnnealing = true,
   }) {
     final result = <String, Offset>{};
     final vp = sheet.viewport;
@@ -915,6 +920,48 @@ class CalloutLayoutEngine {
     final effectiveGroup = groupMultiLevel ?? sheet.groupMultiLevelCallouts;
 
     bool useCombLayout = sheet.id == "ENABLE_COMB"; // Тумблер для жесткой табличной гребенки
+    if (useSimulatedAnnealing && !useCombLayout) {
+      final candidatePools = CalloutCandidateGenerator.generateCandidatePools(
+        sheet: sheet,
+        network: network,
+        projector: projector,
+        obstacleMap: obstacleMap,
+      );
+
+      final unhandledPools = <String, List<CalloutCandidateSlot>>{};
+      for (final entry in candidatePools.entries) {
+        if (!handledCalloutIds.contains(entry.key)) {
+          unhandledPools[entry.key] = entry.value;
+        }
+      }
+
+      if (unhandledPools.isNotEmpty) {
+        final rawSolution = SimulatedAnnealingCalloutSolver.solve(
+          candidatePools: unhandledPools,
+          obstacleMap: obstacleMap,
+        );
+
+        final alignedSolution = CascadeSpringAligner.align(
+          rawSolution,
+          pitchMm: customPitchMm,
+        );
+
+        for (final entry in alignedSolution.entries) {
+          final id = entry.key;
+          final slot = entry.value;
+          final offMm = slot.entryShelf - slot.anchor;
+          result[id] = Offset(offMm.dx / 0.35, offMm.dy / 0.35);
+          handledCalloutIds.add(id);
+
+          obstacleMap.addRect(slot.boundingBox, 'callout_$id');
+          obstacleMap.addLeaderLine(slot.anchor, slot.entryShelf, id);
+          obstacleMap.addLeaderLine(slot.entryShelf, slot.shelfEnd, '${id}_shelf');
+        }
+      }
+
+      return result;
+    }
+
     if (!useCombLayout) {
       _runGenerativeSectorLayout(
         network: network,
