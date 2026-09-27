@@ -310,77 +310,120 @@ class SheetToolbar extends StatelessWidget {
                   const SizedBox(width: 6),
 
                   // Кнопка Авто-расстановка выносок листа (ГОСТ) и сброс
-                  PopupMenuButton<String>(
-                    key: const Key('sheet_auto_layout_callouts_button'),
-                    tooltip: 'Выноски листа: авторасстановка / сброс',
-                    color: const Color(0xFF1E293B),
-                    icon: const Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
-                    onSelected: (action) {
-                      if (action == 'auto_grouped') {
-                        final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              updated > 0
-                                  ? 'Авторасстановка (с этажерками): оптимизировано: $updated'
-                                  : 'Все выноски листа уже расположены оптимально',
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const Key('sheet_auto_layout_callouts_button'),
+                        tooltip: 'Авторасстановка выносок листа (ГОСТ)',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
+                        onPressed: () {
+                          final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                updated > 0
+                                    ? 'Авторасстановка (с этажерками): оптимизировано: $updated'
+                                    : 'Все выноски листа уже расположены оптимально',
+                              ),
+                              duration: const Duration(seconds: 2),
                             ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      } else if (action == 'auto_single') {
-                        final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              updated > 0
-                                  ? 'Авторасстановка (построчно): оптимизировано: $updated'
-                                  : 'Все выноски листа уже расположены оптимально',
+                          );
+                        },
+                      ),
+                      PopupMenuButton<String>(
+                        key: const Key('sheet_auto_layout_callouts_options_button'),
+                        tooltip: 'Опции авторасстановки',
+                        color: const Color(0xFF1E293B),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.tealAccent),
+                        onSelected: (action) {
+                          if (action == 'auto_grouped') {
+                            final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  updated > 0
+                                      ? 'Авторасстановка (с этажерками): оптимизировано: $updated'
+                                      : 'Все выноски листа уже расположены оптимально',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'auto_single') {
+                            final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  updated > 0
+                                      ? 'Авторасстановка (построчно): оптимизировано: $updated'
+                                      : 'Все выноски листа уже расположены оптимально',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'auto_unpin_all') {
+                            final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true, onlyUnpinned: false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Снята фиксация и перераспределено: $updated выносок'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'reset_sheet') {
+                            controller.resetAllSheetCalloutOffsets(sheet.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Позиции выносок на листе сброшены к 3D-модели'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'auto_grouped',
+                            child: Row(
+                              children: [
+                                Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
+                                SizedBox(width: 8),
+                                Text('Авторасстановка (с этажерками)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
                             ),
-                            duration: const Duration(seconds: 2),
                           ),
-                        );
-                      } else if (action == 'reset_sheet') {
-                        controller.resetAllSheetCalloutOffsets(sheet.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Позиции выносок на листе сброшены к 3D-модели'),
-                            duration: Duration(seconds: 2),
+                          const PopupMenuItem(
+                            value: 'auto_single',
+                            child: Row(
+                              children: [
+                                Icon(Icons.view_headline, size: 16, color: Colors.cyanAccent),
+                                SizedBox(width: 8),
+                                Text('Авторасстановка (построчно)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
                           ),
-                        );
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'auto_grouped',
-                        child: Row(
-                          children: [
-                            Icon(Icons.auto_fix_high, size: 16, color: Colors.tealAccent),
-                            SizedBox(width: 8),
-                            Text('Авторасстановка (с этажерками)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'auto_single',
-                        child: Row(
-                          children: [
-                            Icon(Icons.view_headline, size: 16, color: Colors.cyanAccent),
-                            SizedBox(width: 8),
-                            Text('Авторасстановка (построчно)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(
-                        value: 'reset_sheet',
-                        child: Row(
-                          children: [
-                            Icon(Icons.restore, size: 16, color: Colors.orangeAccent),
-                            SizedBox(width: 8),
-                            Text('Сбросить выноски к 3D-модели', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                          ],
-                        ),
+                          const PopupMenuItem(
+                            value: 'auto_unpin_all',
+                            child: Row(
+                              children: [
+                                Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
+                                SizedBox(width: 8),
+                                Text('Все выноски (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
+                            value: 'reset_sheet',
+                            child: Row(
+                              children: [
+                                Icon(Icons.restore, size: 16, color: Colors.orangeAccent),
+                                SizedBox(width: 8),
+                                Text('Сбросить выноски к 3D-модели', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

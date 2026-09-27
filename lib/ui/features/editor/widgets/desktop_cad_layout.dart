@@ -155,6 +155,14 @@ class DesktopCadLayout extends StatelessWidget {
     final sheet = controller.activeSheet;
     if (sheet == null) return;
     try {
+      // Гарантируем, что для всех видимых выносок листа рассчитана раскладка (если еще не была рассчитана)
+      final hasUnplaced = controller.network.callouts.values.any(
+        (c) => sheet.isCalloutVisible(c) && !c.hasSheetOffset(sheet.id),
+      );
+      if (hasUnplaced) {
+        controller.runSheetCalloutAutoLayout(sheet.id, onlyUnpinned: true);
+      }
+
       final bytes = await PdfExportService.generateSheetPdf(
         sheet: sheet,
         network: controller.network,

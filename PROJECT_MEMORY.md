@@ -34,6 +34,18 @@
 - `PipelineBranch`: топологическая ветка трассы трубопровода (упорядоченная последовательность сегментов `PipeSegment`, привязанные выноски листа, вектор направления `branchVector2D`, габаритный прямоугольник `boundingBoxSheetMm`, единичные нормали `normal1` и `normal2`).
 
 ## 4. Implemented Features & Current Status
+- **Унификация UI-кнопок авторасстановки, автообновление холста и сброс фиксаций (UI & Auto-Refresh Integration):**
+  - **Мгновенное автообновление экрана (`SheetCanvasPainter.shouldRepaint`):**
+    - Ранее `shouldRepaint` выполнял проверку `oldDelegate.network != network`. Так как контроллер мутирует объект `PipingNetwork` in-place, ссылка оставалась неизменной, и Flutter пропускал перерисовку листа, из-за чего холст оставался «замороженным» после авторасстановки или ручного редактирования.
+    - Исправлено на `bool shouldRepaint(covariant SheetCanvasPainter oldDelegate) => true;` (полная аналогия с `PipingCanvasPainter`). Теперь любой вызов `notifyListeners()` мгновенно и без задержек обновляет чертежный холст.
+  - **Единая точка входа авторасстановки в UI (`InputController.autoLayoutCallouts`):**
+    - Ранее кнопка на главной панели CAD (`DesktopCadLayout`) и кнопка в боковой панели диспетчера выносок (`CalloutManagerPanel`) вызывали старый 3D-алгоритм `CalloutLayoutEngine.calculateLayout`, который обновлял экранные пиксели `screenOffsetX/Y` 3D-пространства и игнорировал лист чертежа (`sheetOffsets[sheet.id]`). При экспорте в PDF выноски «улетали» на внешние поля.
+    - В `InputController.autoLayoutCallouts({bool onlyUnpinned = true})` добавлено интеллектуальное ветвление: если открыт лист чертежа (`!isModelSpaceActive && activeSheet != null`), вызов автоматически перенаправляется на `runSheetCalloutAutoLayout(activeSheet.id)`. Если активно 3D-пространство, расстановка выполняется для модели и каскадно обновляет все листы.
+  - **Опция снятия фиксации со «залипших» выносок (`onlyUnpinned: false`):**
+    - Если пользователь ранее вручную перетаскивал выноски, они получали флаг `isPinned = true` и оставались на полях даже при повторном запуске авторасстановки.
+    - В `runSheetCalloutAutoLayout` и `calculateSheetLayout` добавлен параметр `onlyUnpinned`. В `SheetToolbar` добавлена опция в меню: *«Все выноски (снять фиксацию)»*, которая сбрасывает `isPinned: false` и заново оптимально пересчитывает координаты абсолютно всех выносок листа.
+  - **Гарантированная предпечатная проверка PDF (Pre-flight PDF Layout):**
+    - В `DesktopCadLayout._exportSheetPdf` перед экспортом проверяется наличие рассчитанных координат `sheetOffsets[sheet.id]`. Если у видимых выносок они отсутствуют, авторасстановка запускается автоматически перед формированием PDF.
 - **Кластерная авторасстановка выносок по веткам трассы (Branch-Oriented Local Stacking Layout):**
   - **Архитектурный контекст и эволюция:**
     - Ранее выноски выносились на дальние внешние поля чертежа (`Boundary Column Stacking`), что приводило к паутине перерезающих чертеж линий-выносок и визуальному отрыву аннотаций от физических участков трубопровода.

@@ -5757,10 +5757,21 @@ class PipingInputController extends ChangeNotifier {
 
   /// Автоматическая интеллектуальная расстановка выносок для предотвращения
   /// наложения полочек, текста и пересечения стрелок с трубами.
+  /// Авто-расстановка выносок (ГОСТ) с интеллектуальным выбором контекста (лист / 3D-модель).
   /// По умолчанию [onlyUnpinned] = true (не перемещает выноски, зафиксированные пользователем вручную).
   int autoLayoutCallouts({bool onlyUnpinned = true}) {
     if (network.callouts.isEmpty) return 0;
 
+    // Если сейчас открыт чертежный лист — выполняем расстановку для этого листа
+    if (!isModelSpaceActive && activeSheet != null) {
+      return runSheetCalloutAutoLayout(
+        activeSheet!.id,
+        groupMultiLevel: activeSheet!.groupMultiLevelCallouts,
+        onlyUnpinned: onlyUnpinned,
+      );
+    }
+
+    // Если открыто 3D-пространство модели:
     final newOffsets = CalloutLayoutEngine.calculateLayout(
       network: network,
       projector: projector,
@@ -5777,9 +5788,20 @@ class PipingInputController extends ChangeNotifier {
         network.callouts[callout.id] = callout.copyWith(
           screenOffsetX: off.dx,
           screenOffsetY: off.dy,
+          isPinned: onlyUnpinned ? callout.isPinned : false,
         );
         updatedCount++;
       }
+    }
+
+    // Также выполняем авто-расстановку для всех листов проекта, чтобы при переключении
+    // на любой лист или экспорте в PDF выноски уже были разложены по веткам
+    for (final sheet in currentProject.sheets) {
+      runSheetCalloutAutoLayout(
+        sheet.id,
+        groupMultiLevel: sheet.groupMultiLevelCallouts,
+        onlyUnpinned: onlyUnpinned,
+      );
     }
 
     if (updatedCount > 0) {
@@ -5948,8 +5970,8 @@ class PipingInputController extends ChangeNotifier {
   }
 
   /// Автоматическая расстановка выносок конкретного листа
-  /// методом периферийных упорядоченных колонок без пересечений
-  int runSheetCalloutAutoLayout(String sheetId, {bool? groupMultiLevel}) {
+  /// методом локальных вертикальных мини-стеков вдоль веток трассы без пересечений
+  int runSheetCalloutAutoLayout(String sheetId, {bool? groupMultiLevel, bool onlyUnpinned = true}) {
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     if (sheet == null || network.callouts.isEmpty) return 0;
 
@@ -5957,7 +5979,8 @@ class PipingInputController extends ChangeNotifier {
       network: network,
       sheet: sheet,
       projector: projector,
-      groupMultiLevel: groupMultiLevel,
+      groupMultiLevel: groupMultiLevel ?? sheet.groupMultiLevelCallouts,
+      onlyUnpinned: onlyUnpinned,
     );
 
     int updatedCount = 0;
@@ -5965,12 +5988,16 @@ class PipingInputController extends ChangeNotifier {
       final callout = network.callouts[entry.key];
       if (callout == null) continue;
       final currentSheetOffset = callout.sheetOffsets[sheetId];
-      if (currentSheetOffset == null ||
+      final isChanged = currentSheetOffset == null ||
           (currentSheetOffset.dx - entry.value.dx).abs() > 0.01 ||
-          (currentSheetOffset.dy - entry.value.dy).abs() > 0.01) {
+          (currentSheetOffset.dy - entry.value.dy).abs() > 0.01;
+      if (isChanged || (!onlyUnpinned && callout.isPinned)) {
         final updatedMap = Map<String, Offset>.from(callout.sheetOffsets);
         updatedMap[sheetId] = entry.value;
-        network.callouts[callout.id] = callout.copyWith(sheetOffsets: updatedMap);
+        network.callouts[callout.id] = callout.copyWith(
+          sheetOffsets: updatedMap,
+          isPinned: onlyUnpinned ? callout.isPinned : false,
+        );
         updatedCount++;
       }
     }

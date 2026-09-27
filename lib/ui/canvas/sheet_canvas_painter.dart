@@ -1369,39 +1369,5 @@ class SheetCanvasPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant SheetCanvasPainter oldDelegate) {
-    return oldDelegate.sheet != sheet ||
-        oldDelegate.network != network ||
-        oldDelegate.sheetZoom != sheetZoom ||
-        oldDelegate.sheetPan != sheetPan ||
-        oldDelegate.isViewportFocused != isViewportFocused ||
-        oldDelegate.isViewportSelected != isViewportSelected ||
-        oldDelegate.selectedSheetBlock != selectedSheetBlock ||
-        oldDelegate.activeGrip != activeGrip ||
-        oldDelegate.projectionType != projectionType ||
-        oldDelegate.styleConfig != styleConfig ||
-        oldDelegate.isVolumeMode != isVolumeMode ||
-        oldDelegate.isCenterlineMode != isCenterlineMode ||
-        oldDelegate.showWelds != showWelds ||
-        oldDelegate.showCallouts != showCallouts ||
-        oldDelegate.calloutTemplates != calloutTemplates ||
-        oldDelegate.selectedNodeId != selectedNodeId ||
-        oldDelegate.selectedNodeIds != selectedNodeIds ||
-        oldDelegate.selectedSegmentId != selectedSegmentId ||
-        oldDelegate.selectedSegmentIds != selectedSegmentIds ||
-        oldDelegate.selectedEquipmentId != selectedEquipmentId ||
-        oldDelegate.selectedEquipmentIds != selectedEquipmentIds ||
-        oldDelegate.selectedValveId != selectedValveId ||
-        oldDelegate.selectedSupportId != selectedSupportId ||
-        oldDelegate.selectedWeldId != selectedWeldId ||
-        oldDelegate.selectedSpoolId != selectedSpoolId ||
-        oldDelegate.selectedSpoolIds != selectedSpoolIds ||
-        oldDelegate.selectedDimensionId != selectedDimensionId ||
-        oldDelegate.selectedDimensionIds != selectedDimensionIds ||
-        oldDelegate.previewDimension != previewDimension ||
-        oldDelegate.selectedCalloutId != selectedCalloutId ||
-        oldDelegate.orbitAzimuth != orbitAzimuth ||
-        oldDelegate.orbitElevation != orbitElevation ||
-        oldDelegate.targetCenter != targetCenter;
-  }
+  bool shouldRepaint(covariant SheetCanvasPainter oldDelegate) => true;
 }

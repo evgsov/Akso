@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790478575.627837,
-    "seen": 1790478712.688264,
-    "ast_hash": "998cf9d28badfe3596e63b4e132e795f",
+    "mtime": 1790432587.7882092,
+    "seen": 1790432801.0278883,
+    "ast_hash": "9b997afc4d22b2c0c13c60747ac25ea2",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790478697.7957911,
-    "seen": 1790478712.688539,
-    "ast_hash": "ad7f4188ff34f48924ed8249aab6ca55",
+    "mtime": 1790448362.6588666,
+    "seen": 1790448382.753925,
+    "ast_hash": "dbb4295678208b9f09c557649bddade9",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1790478590.2488556,
-    "seen": 1790478712.688286,
-    "ast_hash": "ae5fbb667091cc8633233c282eebd2ac",
+    "mtime": 1790414253.4354343,
+    "seen": 1790414507.3906524,
+    "ast_hash": "bbde08efe5905dc2be80a5334704bdc2",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -2100,9 +2100,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/sheet_canvas_painter.dart": {
-    "mtime": 1790478532.81802,
-    "seen": 1790478712.6882775,
-    "ast_hash": "2fb9fc694684821ee283815816396b27",
+    "mtime": 1790414057.7725458,
+    "seen": 1790414507.3906443,
+    "ast_hash": "36a5ccdca948aacdc0701d93311c1533",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_tab_bar.dart": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
-    "mtime": 1790478636.4242835,
-    "seen": 1790478712.6883025,
-    "ast_hash": "a35ea6081abb1e5316c1a77f871606dd",
+    "mtime": 1790432697.7779174,
+    "seen": 1790432801.0279632,
+    "ast_hash": "48f4345242d73c97a704f6d02827fa7d",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
