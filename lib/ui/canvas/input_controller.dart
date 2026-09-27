@@ -5908,7 +5908,7 @@ class PipingInputController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Поиск выноски под курсором (hit-test по тексту и полочке)
+  /// Поиск выноски под курсором (hit-test по тексту, полке и ножкам)
   String? _findCalloutAtScreenPos(Offset screenPos) {
     if (!isModelSpaceActive && activeSheet != null) {
       final vpProjector = getActiveSheetViewportProjector();
@@ -5919,6 +5919,7 @@ class PipingInputController extends ChangeNotifier {
           vpProjector,
           templates: currentProject.calloutTemplates,
           project: currentProject,
+          hitTolerance: 14.0 * math.max(1.0, sheetZoom),
           annotationScale: sheetZoom,
           isPaperSpace: true,
           activeSheetId: activeSheet!.id,
@@ -5932,6 +5933,7 @@ class PipingInputController extends ChangeNotifier {
       projector,
       templates: currentProject.calloutTemplates,
       project: currentProject,
+      hitTolerance: 12.0 * zoomFactor,
       annotationScale: zoomFactor,
       isPaperSpace: false,
     );
@@ -5956,6 +5958,191 @@ class PipingInputController extends ChangeNotifier {
     network.callouts[calloutId] = callout.copyWith(sheetOffsets: updatedMap);
     history.recordState(network);
     notifyListeners();
+  }
+
+  /// Объединение нескольких выносок в одну вилочную ("Ласточкин хвост / Звезда" по ГОСТ 2.316 п. 4.4)
+  void mergeCallouts(List<String> calloutIds) {
+    if (calloutIds.length < 2) return;
+    final primaryId = selectedCalloutId != null && calloutIds.contains(selectedCalloutId)
+        ? selectedCalloutId!
+        : calloutIds.first;
+    final primary = network.callouts[primaryId];
+    if (primary == null) return;
+
+    final targetSet = <String>{};
+    targetSet.addAll(primary.additionalTargetIds);
+
+    for (final id in calloutIds) {
+      if (id == primaryId) continue;
+      final other = network.callouts[id];
+      if (other == null) continue;
+      if (other.targetId != primary.targetId) {
+        targetSet.add(other.targetId);
+      }
+      for (final addT in other.additionalTargetIds) {
+        if (addT != primary.targetId) {
+          targetSet.add(addT);
+        }
+      }
+      network.callouts.remove(id);
+    }
+
+    network.callouts[primaryId] = primary.copyWith(
+      additionalTargetIds: targetSet.toList(),
+      showQuantity: true,
+    );
+
+    selectedCalloutId = primaryId;
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Разъединение вилочной выноски обратно на отдельные выноски
+  void unmergeCallout(String calloutId) {
+    final parent = network.callouts[calloutId];
+    if (parent == null || parent.additionalTargetIds.isEmpty) return;
+
+    int counter = 1;
+    for (final targetId in parent.additionalTargetIds) {
+      final newId = 'callout_${DateTime.now().millisecondsSinceEpoch}_${counter++}';
+      final newOffsets = <String, Offset>{};
+      for (final entry in parent.sheetOffsets.entries) {
+        newOffsets[entry.key] = Offset(entry.value.dx, entry.value.dy + counter * 6.0);
+      }
+      final newCallout = Callout(
+        id: newId,
+        targetId: targetId,
+        targetType: parent.targetType,
+        customText: parent.customText,
+        customBottomText: parent.customBottomText,
+        screenOffsetX: parent.screenOffsetX,
+        screenOffsetY: parent.screenOffsetY + counter * 15.0,
+        textHeight: parent.textHeight,
+        textColor: parent.textColor,
+        elevationStyle: parent.elevationStyle,
+        shelfDirection: parent.shelfDirection,
+        arrowOnNode: parent.arrowOnNode,
+        isPinned: false,
+        sheetOffsets: newOffsets,
+        additionalTargetIds: const [],
+        showQuantity: true,
+      );
+      network.callouts[newId] = newCallout;
+    }
+
+    network.callouts[calloutId] = parent.copyWith(
+      additionalTargetIds: const [],
+    );
+
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Переключение отображения количества "(N шт.)" на выноске
+  void toggleCalloutShowQuantity(String calloutId) {
+    final c = network.callouts[calloutId];
+    if (c == null) return;
+    network.callouts[calloutId] = c.copyWith(showQuantity: !c.showQuantity);
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Поиск одинаковых выносок рядом для возможности объединения в "Ласточкин хвост"
+  List<Callout> findSimilarCalloutsNearby(String calloutId, {double maxDistanceMm = 80.0}) {
+    final baseCallout = network.callouts[calloutId];
+    if (baseCallout == null) return [];
+
+    final vpProjector = !isModelSpaceActive && activeSheet != null
+        ? getActiveSheetViewportProjector()
+        : null;
+    final vp = activeSheet?.viewport;
+
+    final baseAnchor3D = CalloutPainter.getTarget3DPoint(network, baseCallout);
+    if (baseAnchor3D == null) return [];
+
+    Offset? baseAnchorSheetMm;
+    if (vp != null && vpProjector != null) {
+      final raw = vpProjector.projectRaw(baseAnchor3D.x, baseAnchor3D.y, baseAnchor3D.z);
+      baseAnchorSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
+    }
+
+    // Текст шаблона без количества
+    final baseRawText = network.generateCalloutText(
+      baseCallout.copyWith(additionalTargetIds: const [], showQuantity: false),
+      currentProject.calloutTemplates,
+    );
+
+    final results = <Callout>[];
+    for (final other in network.callouts.values) {
+      if (other.id == calloutId) continue;
+      if (other.targetType != baseCallout.targetType) continue;
+
+      // Если лист задан, проверяем видимость
+      if (activeSheet != null && !activeSheet!.isCalloutVisible(other, network)) continue;
+
+      final otherRawText = network.generateCalloutText(
+        other.copyWith(additionalTargetIds: const [], showQuantity: false),
+        currentProject.calloutTemplates,
+      );
+      if (otherRawText != baseRawText || baseRawText.trim().isEmpty) continue;
+
+      final otherAnchor3D = CalloutPainter.getTarget3DPoint(network, other);
+      if (otherAnchor3D == null) continue;
+
+      if (baseAnchorSheetMm != null && vp != null && vpProjector != null) {
+        final raw = vpProjector.projectRaw(otherAnchor3D.x, otherAnchor3D.y, otherAnchor3D.z);
+        final otherAnchorSheetMm = ViewportTransformService.model2dToSheetMm(raw, vp);
+        final dist = (baseAnchorSheetMm - otherAnchorSheetMm).distance;
+        if (dist <= maxDistanceMm) {
+          results.add(other);
+        }
+      } else {
+        // В 3D-пространстве модели проверяем 3D-расстояние
+        final dx = baseAnchor3D.x - otherAnchor3D.x;
+        final dy = baseAnchor3D.y - otherAnchor3D.y;
+        final dz = baseAnchor3D.z - otherAnchor3D.z;
+        final dist3D = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist3D <= maxDistanceMm * 35.0) {
+          results.add(other);
+        }
+      }
+    }
+    return results;
+  }
+
+  /// Автоматическое объединение всех близлежащих одинаковых выносок на листе
+  int autoMergeIdenticalCallouts({double maxDistanceMm = 80.0, String? sheetId}) {
+    final effectiveSheet = sheetId != null
+        ? currentProject.sheets.where((s) => s.id == sheetId).firstOrNull
+        : activeSheet;
+
+    final candidates = network.callouts.values.where((c) {
+      if (effectiveSheet != null && !effectiveSheet.isCalloutVisible(c, network)) return false;
+      return true;
+    }).toList();
+
+    int mergedGroupsCount = 0;
+    final processedIds = <String>{};
+
+    for (final c in candidates) {
+      if (processedIds.contains(c.id) || !network.callouts.containsKey(c.id)) continue;
+      final similar = findSimilarCalloutsNearby(c.id, maxDistanceMm: maxDistanceMm)
+          .where((s) => !processedIds.contains(s.id))
+          .toList();
+
+      if (similar.isNotEmpty) {
+        final groupIds = [c.id, ...similar.map((s) => s.id)];
+        mergeCallouts(groupIds);
+        processedIds.addAll(groupIds);
+        mergedGroupsCount++;
+      }
+    }
+
+    if (mergedGroupsCount > 0) {
+      history.recordState(network);
+      notifyListeners();
+    }
+    return mergedGroupsCount;
   }
 
   /// Сброс смещений всех выносок на листе к положению 3D-модели

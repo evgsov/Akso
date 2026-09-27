@@ -219,6 +219,13 @@ class Callout {
   /// Индивидуальные смещения выноски для конкретных листов чертежа (sheetId -> Offset(dx, dy))
   final Map<String, Offset> sheetOffsets;
 
+  /// Дополнительные ID объектов сети, на которые ссылается данная выноска
+  /// (для объединенных вилочных выносок типа "Ласточкин хвост / Звезда" по ГОСТ 2.316 п. 4.4)
+  final List<String> additionalTargetIds;
+
+  /// Отображать ли суффикс количества "(N шт.)" в тексте выноски
+  final bool showQuantity;
+
   const Callout({
     required this.id,
     required this.targetId,
@@ -235,6 +242,8 @@ class Callout {
     this.arrowOnNode = true,
     this.isPinned = false,
     this.sheetOffsets = const {},
+    this.additionalTargetIds = const [],
+    this.showQuantity = true,
   }) : customText = text ?? customText;
 
   /// Алиас для customText
@@ -280,6 +289,8 @@ class Callout {
     bool? arrowOnNode,
     bool? isPinned,
     Map<String, Offset>? sheetOffsets,
+    List<String>? additionalTargetIds,
+    bool? showQuantity,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -296,6 +307,8 @@ class Callout {
       arrowOnNode: arrowOnNode ?? this.arrowOnNode,
       isPinned: isPinned ?? this.isPinned,
       sheetOffsets: sheetOffsets ?? this.sheetOffsets,
+      additionalTargetIds: additionalTargetIds ?? this.additionalTargetIds,
+      showQuantity: showQuantity ?? this.showQuantity,
     );
   }
 
@@ -315,6 +328,8 @@ class Callout {
         'isPinned': isPinned,
         if (sheetOffsets.isNotEmpty)
           'sheetOffsets': sheetOffsets.map((k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy})),
+        if (additionalTargetIds.isNotEmpty) 'additionalTargetIds': additionalTargetIds,
+        'showQuantity': showQuantity,
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -350,6 +365,15 @@ class Callout {
     final parsedArrowOnNode = rawArrowOnNode is bool ? rawArrowOnNode : true;
     final parsedIsPinned = (json['isPinned'] as bool?) ?? false;
 
+    final rawAddTargets = json['additionalTargetIds'];
+    final parsedAddTargets = <String>[];
+    if (rawAddTargets is List) {
+      for (final t in rawAddTargets) {
+        if (t is String && t.isNotEmpty) parsedAddTargets.add(t);
+      }
+    }
+    final parsedShowQuantity = (json['showQuantity'] as bool?) ?? true;
+
     final rawSheetOffsets = json['sheetOffsets'];
     final parsedSheetOffsets = <String, Offset>{};
     if (rawSheetOffsets is Map) {
@@ -382,6 +406,8 @@ class Callout {
       arrowOnNode: parsedArrowOnNode,
       isPinned: parsedIsPinned,
       sheetOffsets: parsedSheetOffsets,
+      additionalTargetIds: parsedAddTargets,
+      showQuantity: parsedShowQuantity,
     );
   }
 
@@ -402,7 +428,18 @@ class Callout {
           elevationStyle == other.elevationStyle &&
           shelfDirection == other.shelfDirection &&
           arrowOnNode == other.arrowOnNode &&
-          isPinned == other.isPinned;
+          isPinned == other.isPinned &&
+          showQuantity == other.showQuantity &&
+          _listEquals(additionalTargetIds, other.additionalTargetIds);
+
+  static bool _listEquals(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   @override
   int get hashCode => Object.hash(
@@ -419,9 +456,11 @@ class Callout {
         shelfDirection,
         arrowOnNode,
         isPinned,
+        showQuantity,
+        Object.hashAll(additionalTargetIds),
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned)';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned, addTargets: ${additionalTargetIds.length}, showQty: $showQuantity)';
 }

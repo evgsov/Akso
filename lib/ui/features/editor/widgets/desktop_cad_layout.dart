@@ -822,6 +822,18 @@ class DesktopCadLayout extends StatelessWidget {
                           duration: Duration(seconds: 2),
                         ),
                       );
+                    } else if (val == 'auto_merge_identical') {
+                      final mergedCount = controller.autoMergeIdenticalCallouts(sheetId: controller.activeSheet?.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            mergedCount > 0
+                                ? 'Объединено групп одинаковых выносок: $mergedCount'
+                                : 'Одинаковых элементов рядом для объединения не найдено',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     }
                   }
                 },
@@ -829,6 +841,10 @@ class DesktopCadLayout extends StatelessWidget {
                   const PopupMenuItem(
                     value: 'unpin_and_layout',
                     child: Text('Перераспределить все (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 13)),
+                  ),
+                  const PopupMenuItem(
+                    value: 'auto_merge_identical',
+                    child: Text('Объединить одинаковые выноски (Ласточкин хвост)', style: TextStyle(color: Colors.white, fontSize: 13)),
                   ),
                   if (!controller.isModelSpaceActive && controller.activeSheet != null)
                     const PopupMenuItem(
@@ -2542,6 +2558,75 @@ class DesktopCadLayout extends StatelessWidget {
     );
   }
 
+  Future<void> _showAttachCalloutDialog(BuildContext context, Callout parentCallout) async {
+    final candidates = controller.network.callouts.values.where((c) {
+      if (c.id == parentCallout.id) return false;
+      if (c.targetType != parentCallout.targetType) return false;
+      if (parentCallout.additionalTargetIds.contains(c.targetId)) return false;
+      if (!controller.isModelSpaceActive && controller.activeSheet != null) {
+        if (!controller.activeSheet!.isCalloutVisible(c, controller.network)) return false;
+      }
+      return true;
+    }).toList();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.add_link, color: Colors.indigo),
+              SizedBox(width: 8),
+              Text('Присоединить к выноске', style: TextStyle(fontSize: 15)),
+            ],
+          ),
+          content: SizedBox(
+            width: 360,
+            child: candidates.isEmpty
+                ? const Text(
+                    'Нет подходящих выносок того же типа на чертеже',
+                    style: TextStyle(fontSize: 12),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: candidates.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, idx) {
+                      final c = candidates[idx];
+                      final text = controller.getCalloutText(c);
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          text.isEmpty ? c.targetId : text,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          'Цель: ${c.targetId}',
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                        trailing: FilledButton.tonal(
+                          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                          child: const Text('Добавить', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            controller.mergeCallouts([parentCallout.id, c.id]);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Отмена'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildCalloutInspector(BuildContext context) {
     final calloutId = controller.selectedCalloutId;
     final callout = calloutId != null ? controller.network.callouts[calloutId] : null;
@@ -2635,6 +2720,147 @@ class DesktopCadLayout extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+        ],
+
+        // 1.2. Вилочная выноска (Ласточкин хвост / Звезда по ГОСТ 2.316 п. 4.4)
+        if (callout.additionalTargetIds.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.amber.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.call_split, size: 15, color: Colors.amber.shade900),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Вилочная выноска (${1 + callout.additionalTargetIds.length} шт.)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        foregroundColor: Colors.brown.shade800,
+                      ),
+                      icon: const Icon(Icons.call_merge, size: 12),
+                      label: const Text('Разъединить', style: TextStyle(fontSize: 10)),
+                      onPressed: () => controller.unmergeCallout(callout.id),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                SwitchListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  title: const Text('Количество в тексте "(X шт.)"', style: TextStyle(fontSize: 10)),
+                  value: callout.showQuantity,
+                  onChanged: (_) => controller.toggleCalloutShowQuantity(callout.id),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.amber.shade900,
+                      side: BorderSide(color: Colors.amber.shade400),
+                    ),
+                    icon: const Icon(Icons.add_link, size: 13),
+                    label: const Text('+ Добавить элемент вручную', style: TextStyle(fontSize: 10)),
+                    onPressed: () => _showAttachCalloutDialog(context, callout),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ] else ...[
+          () {
+            final similar = controller.findSimilarCalloutsNearby(callout.id);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: similar.isNotEmpty ? Colors.teal.shade50 : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: similar.isNotEmpty ? Colors.teal.shade300 : Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (similar.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.auto_awesome, size: 14, color: Colors.teal.shade900),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Найдено одинаковых рядом: ${similar.length} шт.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: Colors.teal.shade700,
+                          ),
+                          icon: const Icon(Icons.call_merge, size: 13),
+                          label: Text(
+                            'Объединить в вилочную (+${similar.length})',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          onPressed: () {
+                            controller.mergeCallouts([callout.id, ...similar.map((s) => s.id)]);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: Colors.blueGrey.shade800,
+                        ),
+                        icon: const Icon(Icons.add_link, size: 13),
+                        label: const Text('Присоединить элемент вручную...', style: TextStyle(fontSize: 10)),
+                        onPressed: () => _showAttachCalloutDialog(context, callout),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }(),
         ],
 
         // 2. Высота текста (мм)

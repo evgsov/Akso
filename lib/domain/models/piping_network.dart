@@ -3212,25 +3212,35 @@ class PipingNetwork {
     Map<String, String> templates, {
     bool ignoreCustomText = false,
   }) {
+    String baseText;
     if (!ignoreCustomText && callout.customText != null && callout.customText!.trim().isNotEmpty) {
       final lines = callout.customText!.split('\n');
       final firstLine = lines.first;
       if (firstLine.contains('{') && firstLine.contains('}')) {
-        return formatCalloutTemplate(
+        baseText = formatCalloutTemplate(
           callout.targetType,
           callout.targetId,
           firstLine,
           dateFormat: templates['date_format'],
           templates: templates,
         );
+      } else {
+        baseText = firstLine;
       }
-      return firstLine;
-    }
-
-    if (callout.elevationStyle != null) {
+    } else if (callout.elevationStyle != null) {
       final template = templates['node'] ?? '+{Z_M}';
       final topTemplate = template.split('\n').first;
-      return formatCalloutTemplate(
+      baseText = formatCalloutTemplate(
+        callout.targetType,
+        callout.targetId,
+        topTemplate,
+        dateFormat: templates['date_format'],
+        templates: templates,
+      );
+    } else {
+      final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
+      final topTemplate = template.split('\n').first;
+      baseText = formatCalloutTemplate(
         callout.targetType,
         callout.targetId,
         topTemplate,
@@ -3239,15 +3249,11 @@ class PipingNetwork {
       );
     }
 
-    final template = templates[callout.targetType.name] ?? callout.targetType.defaultTemplate;
-    final topTemplate = template.split('\n').first;
-    return formatCalloutTemplate(
-      callout.targetType,
-      callout.targetId,
-      topTemplate,
-      dateFormat: templates['date_format'],
-      templates: templates,
-    );
+    if (callout.additionalTargetIds.isNotEmpty && callout.showQuantity) {
+      final count = 1 + callout.additionalTargetIds.length;
+      return '$baseText ($count шт.)';
+    }
+    return baseText;
   }
 
   /// Генерация нижнего текста для двухполочной выноски (под полочкой)

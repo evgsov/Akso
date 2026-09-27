@@ -1090,6 +1090,31 @@ class SheetGeometryBuilder {
           fillColorValue: 0xFF37474F,
         );
 
+        // Дополнительные ножки для объединенных вилочных выносок ("Ласточкин хвост / Звезда")
+        if (callout.additionalTargetIds.isNotEmpty) {
+          for (final addTargetId in callout.additionalTargetIds) {
+            final addAnchor3D = CalloutPainter.getTarget3DPointForTarget(network, callout.targetType, addTargetId);
+            if (addAnchor3D != null) {
+              final addAnchorMm = _projectPoint(addAnchor3D.x, addAnchor3D.y, addAnchor3D.z, projector, vp);
+              scene.addPolyline(
+                layer: VectorSceneLayer.callouts,
+                points: [addAnchorMm, leaderEndMm],
+                strokeWidthMm: styleConfig.thinLineWidthMm,
+                colorValue: 0xFF37474F,
+                smoothJoin: true,
+              );
+              scene.addCircle(
+                layer: VectorSceneLayer.callouts,
+                center: addAnchorMm,
+                radiusMm: 0.6,
+                isFilled: true,
+                strokeColorValue: 0xFF37474F,
+                fillColorValue: 0xFF37474F,
+              );
+            }
+          }
+        }
+
         drawItems.add(_SheetCalloutDrawItem(
           callout: callout,
           anchorMm: anchorMm,

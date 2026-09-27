@@ -63,6 +63,7 @@ class CalloutPainter {
 
         _paintSingleCallout(
           canvas,
+          projector,
           network,
           callout,
           anchorScreen,
@@ -113,6 +114,7 @@ class CalloutPainter {
       final item = canvasItems[i];
       _paintSingleCallout(
         canvas,
+        projector,
         network,
         item.callout,
         item.anchorScreen,
@@ -131,23 +133,32 @@ class CalloutPainter {
   /// - для арматуры/стыка/опоры — положение на сегменте по ratio;
   /// - для оборудования — центр оборудования.
   static Node3D? getTarget3DPoint(PipingNetwork network, Callout callout) {
-    switch (callout.targetType) {
+    return getTarget3DPointForTarget(network, callout.targetType, callout.targetId);
+  }
+
+  /// Вычисляет абсолютную 3D-точку привязки для целевого объекта сети по типу и ID
+  static Node3D? getTarget3DPointForTarget(
+    PipingNetwork network,
+    CalloutTargetType targetType,
+    String targetId,
+  ) {
+    switch (targetType) {
       case CalloutTargetType.node:
-        return network.nodes[callout.targetId];
+        return network.nodes[targetId];
 
       case CalloutTargetType.segment:
         // 1. Проверяем, не привязана ли выноска напрямую к физической катушке
-        final spool = network.spools[callout.targetId];
+        final spool = network.spools[targetId];
         if (spool != null && spool.startPoint != null && spool.endPoint != null) {
           return Node3D(
-            id: 'anchor_${callout.id}',
+            id: 'anchor_$targetId',
             x: (spool.startPoint!.x + spool.endPoint!.x) / 2.0,
             y: (spool.startPoint!.y + spool.endPoint!.y) / 2.0,
             z: (spool.startPoint!.z + spool.endPoint!.z) / 2.0,
           );
         }
 
-        final seg = network.segments[callout.targetId];
+        final seg = network.segments[targetId];
         if (seg == null) return null;
 
         // 2. Если выноска привязана к сегменту, у которого ровно одна катушка —
@@ -158,7 +169,7 @@ class CalloutPainter {
             segSpools.first.endPoint != null) {
           final s = segSpools.first;
           return Node3D(
-            id: 'anchor_${callout.id}',
+            id: 'anchor_$targetId',
             x: (s.startPoint!.x + s.endPoint!.x) / 2.0,
             y: (s.startPoint!.y + s.endPoint!.y) / 2.0,
             z: (s.startPoint!.z + s.endPoint!.z) / 2.0,
@@ -170,14 +181,14 @@ class CalloutPainter {
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) return null;
         return Node3D(
-          id: 'anchor_${callout.id}',
+          id: 'anchor_$targetId',
           x: (start.x + end.x) / 2.0,
           y: (start.y + end.y) / 2.0,
           z: (start.z + end.z) / 2.0,
         );
 
       case CalloutTargetType.valve:
-        final valve = network.valves[callout.targetId];
+        final valve = network.valves[targetId];
         if (valve == null) return null;
         final seg = network.segments[valve.segmentId];
         if (seg == null) return null;
@@ -185,14 +196,14 @@ class CalloutPainter {
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) return null;
         return Node3D(
-          id: 'anchor_${callout.id}',
+          id: 'anchor_$targetId',
           x: start.x + (end.x - start.x) * valve.ratio,
           y: start.y + (end.y - start.y) * valve.ratio,
           z: start.z + (end.z - start.z) * valve.ratio,
         );
 
       case CalloutTargetType.weld:
-        final weld = network.weldJoints[callout.targetId];
+        final weld = network.weldJoints[targetId];
         if (weld == null) return null;
         final seg = network.segments[weld.segmentId];
         if (seg == null) return null;
@@ -200,14 +211,14 @@ class CalloutPainter {
         final end = network.nodes[seg.endNodeId];
         if (start == null || end == null) return null;
         return Node3D(
-          id: 'anchor_${callout.id}',
+          id: 'anchor_$targetId',
           x: start.x + (end.x - start.x) * weld.ratio,
           y: start.y + (end.y - start.y) * weld.ratio,
           z: start.z + (end.z - start.z) * weld.ratio,
         );
 
       case CalloutTargetType.support:
-        final sup = network.supports[callout.targetId];
+        final sup = network.supports[targetId];
         if (sup == null) return null;
         final seg = network.segments[sup.segmentId];
         if (seg == null) return null;
@@ -216,43 +227,43 @@ class CalloutPainter {
         if (start == null || end == null) return null;
         final r = sup.distanceRatio.clamp(0.0, 1.0);
         return Node3D(
-          id: 'anchor_${callout.id}',
+          id: 'anchor_$targetId',
           x: start.x + (end.x - start.x) * r,
           y: start.y + (end.y - start.y) * r,
           z: start.z + (end.z - start.z) * r,
         );
 
       case CalloutTargetType.equipment:
-        final eq = network.equipments[callout.targetId];
+        final eq = network.equipments[targetId];
         if (eq == null) return null;
         return Node3D(
-          id: 'anchor_${callout.id}',
+          id: 'anchor_$targetId',
           x: eq.x,
           y: eq.y,
           z: eq.z + eq.height / 2.0,
         );
 
       case CalloutTargetType.nozzle:
-        final node = network.nodes[callout.targetId];
+        final node = network.nodes[targetId];
         if (node != null) return node;
         for (final eq in network.equipments.values) {
           for (final noz in eq.nozzles) {
-            if (noz.id == callout.targetId) {
+            if (noz.id == targetId) {
               final rad = eq.rotationAngleDeg * math.pi / 180.0;
               final cosA = math.cos(rad);
               final sinA = math.sin(rad);
               final wx = eq.x + noz.localX * cosA - noz.localY * sinA;
               final wy = eq.y + noz.localX * sinA + noz.localY * cosA;
               final wz = eq.z + noz.localZ;
-              return Node3D(id: 'anchor_${callout.id}', x: wx, y: wy, z: wz);
+              return Node3D(id: 'anchor_$targetId', x: wx, y: wy, z: wz);
             }
           }
         }
         return null;
 
       case CalloutTargetType.fitting:
-        final fit = network.fittings[callout.targetId] ??
-            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
+        final fit = network.fittings[targetId] ??
+            network.fittings.values.where((f) => f.id == targetId).firstOrNull;
         if (fit == null) return null;
         return network.nodes[fit.nodeId];
     }
@@ -397,7 +408,17 @@ class CalloutPainter {
     }
   }
 
-  /// Проверка попадания клика в текст выноски (hit test)
+  static double _distanceToSegment(Offset p, Offset a, Offset b) {
+    final ab = b - a;
+    final ap = p - a;
+    final lengthSq = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (lengthSq <= 1e-6) return (p - a).distance;
+    final t = ((ap.dx * ab.dx + ap.dy * ab.dy) / lengthSq).clamp(0.0, 1.0);
+    final projection = Offset(a.dx + t * ab.dx, a.dy + t * ab.dy);
+    return (p - projection).distance;
+  }
+
+  /// Проверка попадания клика в текст, полку или ножку выноски (hit test)
   static String? hitTest(
     Offset screenPos,
     PipingNetwork network,
@@ -425,12 +446,55 @@ class CalloutPainter {
       if (bounds != null && bounds.inflate(hitTolerance).contains(screenPos)) {
         return callout.id;
       }
+
+      // Дополнительная проверка попадания в линию-полочку и ножки выноски
+      final anchor3D = getTarget3DPoint(network, callout);
+      if (anchor3D != null) {
+        final anchorScreen = projector.project(anchor3D);
+        final effOffsetX = activeSheetId != null ? callout.getEffectiveOffsetX(activeSheetId) : callout.screenOffsetX;
+        final effOffsetY = activeSheetId != null ? callout.getEffectiveOffsetY(activeSheetId) : callout.screenOffsetY;
+        final scaledOffsetX = isPaperSpace ? effOffsetX * 0.35 * annotationScale : effOffsetX * annotationScale;
+        final scaledOffsetY = isPaperSpace ? effOffsetY * 0.35 * annotationScale : effOffsetY * annotationScale;
+        final textPos = Offset(anchorScreen.dx + scaledOffsetX, anchorScreen.dy + scaledOffsetY);
+
+        // Проверяем основную линию-ножку
+        if (_distanceToSegment(screenPos, anchorScreen, textPos) <= hitTolerance) {
+          return callout.id;
+        }
+
+        // Проверяем дополнительные ножки вилочной выноски
+        if (callout.additionalTargetIds.isNotEmpty) {
+          for (final addTargetId in callout.additionalTargetIds) {
+            final addAnchor3D = getTarget3DPointForTarget(network, callout.targetType, addTargetId);
+            if (addAnchor3D != null) {
+              final addAnchorScreen = projector.project(addAnchor3D);
+              if (_distanceToSegment(screenPos, addAnchorScreen, textPos) <= hitTolerance) {
+                return callout.id;
+              }
+            }
+          }
+        }
+
+        // Проверяем линию горизонтальной полки
+        if (bounds != null) {
+          final shelfY = textPos.dy;
+          final shelfStart = textPos;
+          final isRight = callout.shelfDirection == ShelfDirection.right
+              ? true
+              : (callout.shelfDirection == ShelfDirection.left ? false : scaledOffsetX >= 0);
+          final shelfEnd = Offset(isRight ? bounds.right : bounds.left, shelfY);
+          if (_distanceToSegment(screenPos, shelfStart, shelfEnd) <= hitTolerance) {
+            return callout.id;
+          }
+        }
+      }
     }
     return null;
   }
 
   static void _paintSingleCallout(
     Canvas canvas,
+    AxonometryProjector projector,
     PipingNetwork network,
     Callout callout,
     Offset anchorScreen,
@@ -757,6 +821,22 @@ class CalloutPainter {
 
       // 2. Наклонная линия-ножка от объекта до излома (textPos)
       canvas.drawLine(anchorScreen, textPos, linePaint);
+
+      // Дополнительные ножки для объединенных вилочных выносок ("Ласточкин хвост / Звезда" по ГОСТ 2.316)
+      if (callout.additionalTargetIds.isNotEmpty) {
+        for (final addTargetId in callout.additionalTargetIds) {
+          final addAnchor3D = getTarget3DPointForTarget(network, callout.targetType, addTargetId);
+          if (addAnchor3D != null) {
+            final addAnchorScreen = projector.project(addAnchor3D);
+            canvas.drawCircle(
+              addAnchorScreen,
+              isPaperSpace ? math.max(0.8, 0.45 * annotationScale) : 3.0 * annotationScale,
+              dotPaint,
+            );
+            canvas.drawLine(addAnchorScreen, textPos, linePaint);
+          }
+        }
+      }
     }
 
     // 3. Фон для текста над и под полочкой (рисуем ДО линии полочки для четкости)

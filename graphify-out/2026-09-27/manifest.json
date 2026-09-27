@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790515313.6041267,
-    "seen": 1790515409.1913862,
-    "ast_hash": "331a322e9d0e8f5c3e5c4fcd077bddb6",
+    "mtime": 1790518541.8441026,
+    "seen": 1790518628.1677537,
+    "ast_hash": "9a7851856188e632ff1ea2084a07ef7e",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790515393.7951262,
-    "seen": 1790515409.191692,
-    "ast_hash": "34e3bfe1f6de44b52693790cc086eae9",
+    "mtime": 1790518612.2374609,
+    "seen": 1790518628.1680424,
+    "ast_hash": "4c5fb5d810bbb85b4752faabd9f20dc5",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2214,9 +2214,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_layout_engine.dart": {
-    "mtime": 1790515192.0468664,
-    "seen": 1790515409.1913671,
-    "ast_hash": "c26d0ee5e8e66bbc4ab39cebb9a7fe84",
+    "mtime": 1790518530.369722,
+    "seen": 1790518628.1677346,
+    "ast_hash": "ca3cca465f866cf8887dd558f5da9fa2",
     "semantic_hash": ""
   },
   "test/callout_layout_engine_test.dart": {
@@ -2598,21 +2598,21 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_candidate_generator.dart": {
-    "mtime": 1790514742.7568967,
-    "seen": 1790515409.191366,
-    "ast_hash": "e3423d5165b0eed576597696b2f665c2",
+    "mtime": 1790518455.2486193,
+    "seen": 1790518628.1677327,
+    "ast_hash": "1ec09b6cc43ead728993a88b76c9fd6e",
     "semantic_hash": ""
   },
   "lib/domain/services/cascade_spring_aligner.dart": {
-    "mtime": 1790514978.8558521,
-    "seen": 1790515409.191368,
-    "ast_hash": "0a9a6a7a23f56462da2924c7993cf581",
+    "mtime": 1790518512.9297087,
+    "seen": 1790518628.1677356,
+    "ast_hash": "d25ba222edb488615dfb4eb4de0c8a54",
     "semantic_hash": ""
   },
   "lib/domain/services/simulated_annealing_callout_solver.dart": {
-    "mtime": 1790515282.7260485,
-    "seen": 1790515409.1913784,
-    "ast_hash": "d69226c882323bdda54e50e6aeafc7c2",
+    "mtime": 1790518494.7779868,
+    "seen": 1790518628.1677463,
+    "ast_hash": "51dc9bc1e6e39bbb86b771bd85ad6dbd",
     "semantic_hash": ""
   },
   "test/callout_candidate_generator_test.dart": {
@@ -2634,9 +2634,9 @@
     "semantic_hash": ""
   },
   "test/simulated_annealing_solver_test.dart": {
-    "mtime": 1790514822.0195024,
-    "seen": 1790515409.1915846,
-    "ast_hash": "cc17fd49964e673e9cad5c3a5b8360d6",
+    "mtime": 1790518574.6837742,
+    "seen": 1790518628.167925,
+    "ast_hash": "9a6e2347d8489f7c97b37c0d89eed7f8",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-09-27-simulated-annealing-callout-solver.md": {
