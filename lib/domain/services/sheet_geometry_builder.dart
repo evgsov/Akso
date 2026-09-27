@@ -964,111 +964,31 @@ class SheetGeometryBuilder {
       ));
     }
 
-    // Группируем выноски в этажерки по ГОСТ 2.316:
-    // элементы одного узла (< 3.0 мм) на одной вертикальной оси полки (|dx| < 1.5 мм)
-    final visited = <int>{};
-    for (int i = 0; i < drawItems.length; i++) {
-      if (visited.contains(i)) continue;
-      final group = <_SheetCalloutDrawItem>[drawItems[i]];
-      visited.add(i);
-
-      for (int j = i + 1; j < drawItems.length; j++) {
-        if (visited.contains(j)) continue;
-        final itemA = drawItems[i];
-        final itemB = drawItems[j];
-        if ((itemA.anchorMm - itemB.anchorMm).distance < 18.0 &&
-            (itemA.leaderEndMm.dx - itemB.leaderEndMm.dx).abs() < 1.5 &&
-            itemA.isRight == itemB.isRight) {
-          group.add(itemB);
-          visited.add(j);
-        }
-      }
-
-      if (group.length == 1) {
-        // Одиночная выноска
-        final item = group.first;
-        scene.addPolyline(
-          layer: VectorSceneLayer.callouts,
-          points: [item.anchorMm, item.leaderEndMm],
-          strokeWidthMm: styleConfig.thinLineWidthMm,
-          colorValue: 0xFF37474F,
-          smoothJoin: true,
-        );
-        scene.addPolyline(
-          layer: VectorSceneLayer.callouts,
-          points: [item.leaderEndMm, item.shelfEndMm],
-          strokeWidthMm: styleConfig.thinLineWidthMm,
-          colorValue: 0xFF37474F,
-          smoothJoin: true,
-        );
-        scene.addCircle(
-          layer: VectorSceneLayer.callouts,
-          center: item.anchorMm,
-          radiusMm: 0.6,
-          isFilled: true,
-          strokeColorValue: 0xFF37474F,
-          fillColorValue: 0xFF37474F,
-        );
-        _renderVectorCalloutTexts(scene, item);
-      } else {
-        // Этажерка по ГОСТ 2.316 (1 общая ножка + вертикальная стойка)
-        group.sort((a, b) => a.leaderEndMm.dy.compareTo(b.leaderEndMm.dy));
-        final anchor = group.first.anchorMm;
-        final shelfX = group.first.leaderEndMm.dx;
-        final minY = group.first.leaderEndMm.dy;
-        final maxY = group.last.leaderEndMm.dy;
-
-        // Ищем полку, ближайшую к anchor.dy для ввода общей ножки
-        _SheetCalloutDrawItem entryItem = group.first;
-        double minDy = double.infinity;
-        for (final gItem in group) {
-          final dy = (gItem.leaderEndMm.dy - anchor.dy).abs();
-          if (dy < minDy) {
-            minDy = dy;
-            entryItem = gItem;
-          }
-        }
-
-        // Общая наклонная линия-ножка к вертикальной стойке
-        scene.addPolyline(
-          layer: VectorSceneLayer.callouts,
-          points: [anchor, entryItem.leaderEndMm],
-          strokeWidthMm: styleConfig.thinLineWidthMm,
-          colorValue: 0xFF37474F,
-          smoothJoin: true,
-        );
-
-        // Вертикальная линия-стойка этажерки
-        scene.addPolyline(
-          layer: VectorSceneLayer.callouts,
-          points: [Offset(shelfX, minY), Offset(shelfX, maxY)],
-          strokeWidthMm: styleConfig.thinLineWidthMm,
-          colorValue: 0xFF37474F,
-          smoothJoin: true,
-        );
-
-        // Точка-стрелка у объекта (одна общая)
-        scene.addCircle(
-          layer: VectorSceneLayer.callouts,
-          center: anchor,
-          radiusMm: 0.6,
-          isFilled: true,
-          strokeColorValue: 0xFF37474F,
-          fillColorValue: 0xFF37474F,
-        );
-
-        // Полки и тексты для каждого элемента этажерки
-        for (final gItem in group) {
-          scene.addPolyline(
-            layer: VectorSceneLayer.callouts,
-            points: [gItem.leaderEndMm, gItem.shelfEndMm],
-            strokeWidthMm: styleConfig.thinLineWidthMm,
-            colorValue: 0xFF37474F,
-            smoothJoin: true,
-          );
-          _renderVectorCalloutTexts(scene, gItem);
-        }
-      }
+    // Отрисовываем каждую выноску индивидуально с собственной стрелкой-ножкой
+    for (final item in drawItems) {
+      scene.addPolyline(
+        layer: VectorSceneLayer.callouts,
+        points: [item.anchorMm, item.leaderEndMm],
+        strokeWidthMm: styleConfig.thinLineWidthMm,
+        colorValue: 0xFF37474F,
+        smoothJoin: true,
+      );
+      scene.addPolyline(
+        layer: VectorSceneLayer.callouts,
+        points: [item.leaderEndMm, item.shelfEndMm],
+        strokeWidthMm: styleConfig.thinLineWidthMm,
+        colorValue: 0xFF37474F,
+        smoothJoin: true,
+      );
+      scene.addCircle(
+        layer: VectorSceneLayer.callouts,
+        center: item.anchorMm,
+        radiusMm: 0.6,
+        isFilled: true,
+        strokeColorValue: 0xFF37474F,
+        fillColorValue: 0xFF37474F,
+      );
+      _renderVectorCalloutTexts(scene, item);
     }
   }
 

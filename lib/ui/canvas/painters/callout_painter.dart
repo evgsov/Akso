@@ -108,115 +108,20 @@ class CalloutPainter {
       ));
     }
 
-    final visited = <int>{};
+    // Отрисовываем каждую выноску индивидуально с собственной стрелкой-ножкой
     for (int i = 0; i < canvasItems.length; i++) {
-      if (visited.contains(i)) continue;
-      final itemA = canvasItems[i];
-      final isElevation = itemA.callout.targetType == CalloutTargetType.node || itemA.callout.elevationStyle != null;
-
-      if (isElevation) {
-        visited.add(i);
-        _paintSingleCallout(
-          canvas,
-          network,
-          itemA.callout,
-          itemA.anchorScreen,
-          effectiveTemplates,
-          itemA.isSelected,
-          annotationScale: annotationScale,
-          isPaperSpace: true,
-          activeSheetId: activeSheetId,
-        );
-        continue;
-      }
-
-      final group = <_CanvasCalloutDrawItem>[itemA];
-      visited.add(i);
-
-      for (int j = i + 1; j < canvasItems.length; j++) {
-        if (visited.contains(j)) continue;
-        final itemB = canvasItems[j];
-        final isElevB = itemB.callout.targetType == CalloutTargetType.node || itemB.callout.elevationStyle != null;
-        if (isElevB) continue;
-
-        if ((itemA.anchorScreen - itemB.anchorScreen).distance < 18.0 * annotationScale &&
-            (itemA.textPos.dx - itemB.textPos.dx).abs() < 2.5 * annotationScale &&
-            itemA.isRight == itemB.isRight) {
-          group.add(itemB);
-          visited.add(j);
-        }
-      }
-
-      if (group.length == 1) {
-        _paintSingleCallout(
-          canvas,
-          network,
-          itemA.callout,
-          itemA.anchorScreen,
-          effectiveTemplates,
-          itemA.isSelected,
-          annotationScale: annotationScale,
-          isPaperSpace: true,
-          activeSheetId: activeSheetId,
-        );
-      } else {
-        // Этажерка по ГОСТ: 1 общая наклонная ножка к ближайшей полке + вертикальная стойка
-        group.sort((a, b) => a.textPos.dy.compareTo(b.textPos.dy));
-        final anchor = group.first.anchorScreen;
-        final shelfX = group.first.textPos.dx;
-        final minY = group.first.textPos.dy;
-        final maxY = group.last.textPos.dy;
-
-        _CanvasCalloutDrawItem entryItem = group.first;
-        double minDy = double.infinity;
-        for (final gItem in group) {
-          final dy = (gItem.textPos.dy - anchor.dy).abs();
-          if (dy < minDy) {
-            minDy = dy;
-            entryItem = gItem;
-          }
-        }
-
-        final primaryColor = Color(group.first.callout.textColor);
-        final linePaint = Paint()
-          ..color = primaryColor
-          ..strokeWidth = math.max(0.6, 0.25 * annotationScale)
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.square
-          ..strokeJoin = StrokeJoin.miter;
-
-        // Точка-стрелка у объекта (одна общая)
-        final dotPaint = Paint()
-          ..color = primaryColor
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(
-          anchor,
-          math.max(0.8, 0.45 * annotationScale),
-          dotPaint,
-        );
-
-        // Общая наклонная линия-ножка к вертикальной стойке
-        canvas.drawLine(anchor, entryItem.textPos, linePaint);
-
-        // Вертикальная линия-стойка этажерки
-        canvas.drawLine(Offset(shelfX, minY), Offset(shelfX, maxY), linePaint);
-
-        // Отрисовываем полки и текст для каждого элемента этажерки
-        for (final gItem in group) {
-          _paintSingleCallout(
-            canvas,
-            network,
-            gItem.callout,
-            gItem.anchorScreen,
-            effectiveTemplates,
-            gItem.isSelected,
-            annotationScale: annotationScale,
-            isPaperSpace: true,
-            activeSheetId: activeSheetId,
-            skipLeaderLineAndDot: true,
-          );
-        }
-      }
+      final item = canvasItems[i];
+      _paintSingleCallout(
+        canvas,
+        network,
+        item.callout,
+        item.anchorScreen,
+        effectiveTemplates,
+        item.isSelected,
+        annotationScale: annotationScale,
+        isPaperSpace: true,
+        activeSheetId: activeSheetId,
+      );
     }
   }
 

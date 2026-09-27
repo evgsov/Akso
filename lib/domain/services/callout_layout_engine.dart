@@ -1482,39 +1482,15 @@ class CalloutLayoutEngine {
       ));
     }
 
+    // Этажерки отключены по запросу: каждая выноска позиционируется строго индивидуально
+    // со своей собственной наклонной линией-выноской (чистый каскад)
     final clusters = <_SheetNodeCluster>[];
-    if (groupMultiLevel) {
-      final visited = <String>{};
-      for (int i = 0; i < allItems.length; i++) {
-        final itemA = allItems[i];
-        if (visited.contains(itemA.callout.id)) continue;
-
-        final clusterItems = <_SheetCalloutItem>[itemA];
-        visited.add(itemA.callout.id);
-
-        for (int j = i + 1; j < allItems.length; j++) {
-          final itemB = allItems[j];
-          if (visited.contains(itemB.callout.id)) continue;
-
-          if ((itemA.anchorMm - itemB.anchorMm).distance < 18.0) {
-            clusterItems.add(itemB);
-            visited.add(itemB.callout.id);
-          }
-        }
-        clusters.add(_SheetNodeCluster(
-          anchorMm: itemA.anchorMm,
-          items: clusterItems,
-          t: itemA.anchorMm.dx,
-        ));
-      }
-    } else {
-      for (final item in allItems) {
-        clusters.add(_SheetNodeCluster(
-          anchorMm: item.anchorMm,
-          items: [item],
-          t: item.anchorMm.dx,
-        ));
-      }
+    for (final item in allItems) {
+      clusters.add(_SheetNodeCluster(
+        anchorMm: item.anchorMm,
+        items: [item],
+        t: item.anchorMm.dx,
+      ));
     }
 
     clusters.sort((a, b) => a.t.compareTo(b.t));
