@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/math/axonometry_projector.dart';
 import '../../../domain/models/callout.dart';
+import '../../../domain/models/drawing_sheet.dart';
 import '../../../domain/models/node_3d.dart';
 import '../../../domain/models/piping_network.dart';
 import '../../../domain/models/project_model.dart';
@@ -395,22 +396,32 @@ class CalloutPainter {
       }
     }
 
-    final totalHeight = topTp.height + 6.0 + bottomHeight;
+    final shelfLength = maxTextWidth + (isPaperSpace ? 2.5 * annotationScale : 8.0 * annotationScale);
+    final bgTopPad = isPaperSpace ? 1.5 * annotationScale : 4.0;
+    final totalHeight = topTp.height + bgTopPad + (bottomHeight > 0 ? bottomHeight : (isPaperSpace ? 1.5 * annotationScale : 4.0));
+    final bgTop = textPos.dy - topTp.height - bgTopPad;
     if (isRight) {
       return Rect.fromLTWH(
         textPos.dx,
-        textPos.dy - topTp.height - 4.0,
-        maxTextWidth + 10.0,
+        bgTop,
+        shelfLength,
         totalHeight,
       );
     } else {
       return Rect.fromLTWH(
-        textPos.dx - maxTextWidth - 10.0,
-        textPos.dy - topTp.height - 4.0,
-        maxTextWidth + 10.0,
+        textPos.dx - shelfLength,
+        bgTop,
+        shelfLength,
         totalHeight,
       );
     }
+  }
+
+  static double _distanceToRect(Offset p, Rect r) {
+    if (r.contains(p)) return 0.0;
+    final dx = math.max(0.0, math.max(r.left - p.dx, p.dx - r.right));
+    final dy = math.max(0.0, math.max(r.top - p.dy, p.dy - r.bottom));
+    return math.sqrt(dx * dx + dy * dy);
   }
 
   static double _distanceToSegment(Offset p, Offset a, Offset b) {
@@ -424,20 +435,31 @@ class CalloutPainter {
   }
 
   /// Проверка попадания клика в текст, полку или ножку выноски (hit test)
+  /// с выбором наиболее близкой выноски к курсору (минимальное расстояние)
+  /// и абсолютным приоритетом прямого клика по тексту или полочке.
   static String? hitTest(
     Offset screenPos,
     PipingNetwork network,
     AxonometryProjector projector, {
     Map<String, String>? templates,
     ProjectModel? project,
-    double hitTolerance = 6.0,
+    double hitTolerance = 12.0,
     bool isPaperSpace = false,
     double annotationScale = 1.0,
     String? activeSheetId,
+    DrawingSheet? activeSheet,
+    String? selectedCalloutId,
   }) {
-    // Проверяем в обратном порядке (верхние выноски первыми)
-    final calloutList = network.callouts.values.toList().reversed;
-    for (final callout in calloutList) {
+    if (network.callouts.isEmpty) return null;
+
+    final candidates = <_CalloutHitCandidate>[];
+
+    for (final callout in network.callouts.values) {
+      // 1. Фильтрация по видимости на активном листе чертежа
+      if (activeSheet != null && !activeSheet.isCalloutVisible(callout, network)) {
+        continue;
+      }
+
       final bounds = getCalloutBounds(
         network,
         projector,
@@ -448,53 +470,113 @@ class CalloutPainter {
         annotationScale: annotationScale,
         activeSheetId: activeSheetId,
       );
-      if (bounds != null && bounds.inflate(hitTolerance).contains(screenPos)) {
-        return callout.id;
+
+      final anchor3D = getTarget3DPoint(network, callout);
+      if (anchor3D == null) continue;
+
+      final anchorScreen = projector.project(anchor3D);
+      final effOffsetX = activeSheetId != null ? callout.getEffectiveOffsetX(activeSheetId) : callout.screenOffsetX;
+      final effOffsetY = activeSheetId != null ? callout.getEffectiveOffsetY(activeSheetId) : callout.screenOffsetY;
+      final scaledOffsetX = isPaperSpace ? effOffsetX * 0.35 * annotationScale : effOffsetX * annotationScale;
+      final scaledOffsetY = isPaperSpace ? effOffsetY * 0.35 * annotationScale : effOffsetY * annotationScale;
+      final textPos = Offset(anchorScreen.dx + scaledOffsetX, anchorScreen.dy + scaledOffsetY);
+
+      final isRight = callout.shelfDirection == ShelfDirection.right
+          ? true
+          : (callout.shelfDirection == ShelfDirection.left ? false : scaledOffsetX >= 0);
+
+      // Проверяем прямое попадание в прямоугольник текста
+      final bool isInsideText = bounds != null && bounds.contains(screenPos);
+      final double distToBounds = bounds != null ? _distanceToRect(screenPos, bounds) : double.infinity;
+      final double distToCenter = bounds != null ? (screenPos - bounds.center).distance : double.infinity;
+
+      // Вычисляем линию горизонтальной полочки
+      Offset shelfStart = textPos;
+      Offset shelfEnd;
+      if (bounds != null) {
+        shelfEnd = Offset(isRight ? textPos.dx + bounds.width : textPos.dx - bounds.width, textPos.dy);
+      } else {
+        shelfEnd = Offset(isRight ? textPos.dx + 40.0 : textPos.dx - 40.0, textPos.dy);
       }
 
-      // Дополнительная проверка попадания в линию-полочку и ножки выноски
-      final anchor3D = getTarget3DPoint(network, callout);
-      if (anchor3D != null) {
-        final anchorScreen = projector.project(anchor3D);
-        final effOffsetX = activeSheetId != null ? callout.getEffectiveOffsetX(activeSheetId) : callout.screenOffsetX;
-        final effOffsetY = activeSheetId != null ? callout.getEffectiveOffsetY(activeSheetId) : callout.screenOffsetY;
-        final scaledOffsetX = isPaperSpace ? effOffsetX * 0.35 * annotationScale : effOffsetX * annotationScale;
-        final scaledOffsetY = isPaperSpace ? effOffsetY * 0.35 * annotationScale : effOffsetY * annotationScale;
-        final textPos = Offset(anchorScreen.dx + scaledOffsetX, anchorScreen.dy + scaledOffsetY);
-
-        // Проверяем основную линию-ножку
-        if (_distanceToSegment(screenPos, anchorScreen, textPos) <= hitTolerance) {
-          return callout.id;
+      if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
+        if (callout.arrowOnNode) {
+          final shelfY = anchorScreen.dy + scaledOffsetY;
+          shelfStart = Offset(anchorScreen.dx, shelfY);
+          final shelfLen = bounds?.width ?? 40.0;
+          shelfEnd = Offset(isRight ? anchorScreen.dx + shelfLen : anchorScreen.dx - shelfLen, shelfY);
+        } else {
+          const flagH = 14.4;
+          final shelfY = textPos.dy - flagH - 4.0;
+          shelfStart = Offset(textPos.dx, shelfY);
+          final shelfLen = bounds?.width ?? 40.0;
+          shelfEnd = Offset(isRight ? textPos.dx + shelfLen : textPos.dx - shelfLen, shelfY);
         }
+      }
 
-        // Проверяем дополнительные ножки вилочной выноски
-        if (callout.additionalTargetIds.isNotEmpty) {
-          for (final addTargetId in callout.additionalTargetIds) {
-            final addAnchor3D = getTarget3DPointForTarget(network, callout.targetType, addTargetId);
-            if (addAnchor3D != null) {
-              final addAnchorScreen = projector.project(addAnchor3D);
-              if (_distanceToSegment(screenPos, addAnchorScreen, textPos) <= hitTolerance) {
-                return callout.id;
-              }
-            }
+      final double distToShelf = _distanceToSegment(screenPos, shelfStart, shelfEnd);
+
+      // Минимальное расстояние до геометрии выноски
+      double minDist = math.min(distToBounds, distToShelf);
+
+      // Линия-ножка и точка привязки
+      if (!callout.arrowOnNode) {
+        final double distToLeader = _distanceToSegment(screenPos, anchorScreen, textPos);
+        final double distToAnchorDot = (screenPos - anchorScreen).distance;
+        minDist = math.min(minDist, math.min(distToLeader, distToAnchorDot));
+      } else {
+        final double distToStem = _distanceToSegment(screenPos, anchorScreen, shelfStart);
+        minDist = math.min(minDist, distToStem);
+      }
+
+      // Дополнительные ножки объединенной вилочной выноски ("Ласточкин хвост" по ГОСТ 2.316)
+      if (callout.additionalTargetIds.isNotEmpty) {
+        for (final addTargetId in callout.additionalTargetIds) {
+          final addAnchor3D = getTarget3DPointForTarget(network, callout.targetType, addTargetId);
+          if (addAnchor3D != null) {
+            final addAnchorScreen = projector.project(addAnchor3D);
+            final double distToForkLeg = _distanceToSegment(screenPos, addAnchorScreen, textPos);
+            final double distToForkDot = (screenPos - addAnchorScreen).distance;
+            minDist = math.min(minDist, math.min(distToForkLeg, distToForkDot));
           }
         }
+      }
 
-        // Проверяем линию горизонтальной полки
-        if (bounds != null) {
-          final shelfY = textPos.dy;
-          final shelfStart = textPos;
-          final isRight = callout.shelfDirection == ShelfDirection.right
-              ? true
-              : (callout.shelfDirection == ShelfDirection.left ? false : scaledOffsetX >= 0);
-          final shelfEnd = Offset(isRight ? bounds.right : bounds.left, shelfY);
-          if (_distanceToSegment(screenPos, shelfStart, shelfEnd) <= hitTolerance) {
-            return callout.id;
-          }
-        }
+      // Прямой клик по тексту или горизонтальной полке (<= 4.5 px от полки)
+      final bool isDirectHit = isInsideText || distToShelf <= 4.5;
+
+      if (isDirectHit || minDist <= hitTolerance) {
+        candidates.add(_CalloutHitCandidate(
+          calloutId: callout.id,
+          isDirectHit: isDirectHit,
+          distance: minDist,
+          distToCenter: distToCenter,
+          isSelected: callout.id == selectedCalloutId,
+        ));
       }
     }
-    return null;
+
+    if (candidates.isEmpty) return null;
+
+    // Сортировка: прямой клик всегда побеждает клик по фоновой линии;
+    // при равном типе попадания выбирается строго ближайший элемент.
+    candidates.sort((a, b) {
+      if (a.isDirectHit && !b.isDirectHit) return -1;
+      if (!a.isDirectHit && b.isDirectHit) return 1;
+
+      if (a.isDirectHit && b.isDirectHit) {
+        if (a.isSelected && !b.isSelected && (a.distToCenter - b.distToCenter).abs() < 12.0) return -1;
+        if (!a.isSelected && b.isSelected && (a.distToCenter - b.distToCenter).abs() < 12.0) return 1;
+        return a.distToCenter.compareTo(b.distToCenter);
+      }
+
+      if (a.isSelected && !b.isSelected && (a.distance - b.distance).abs() < 1.5) return -1;
+      if (!a.isSelected && b.isSelected && (a.distance - b.distance).abs() < 1.5) return 1;
+
+      return a.distance.compareTo(b.distance);
+    });
+
+    return candidates.first.calloutId;
   }
 
   static void _paintSingleCallout(
@@ -948,5 +1030,21 @@ class _CanvasCalloutDrawItem {
     required this.textPos,
     required this.isSelected,
     required this.isRight,
+  });
+}
+
+class _CalloutHitCandidate {
+  final String calloutId;
+  final bool isDirectHit;
+  final double distance;
+  final double distToCenter;
+  final bool isSelected;
+
+  const _CalloutHitCandidate({
+    required this.calloutId,
+    required this.isDirectHit,
+    required this.distance,
+    required this.distToCenter,
+    required this.isSelected,
   });
 }

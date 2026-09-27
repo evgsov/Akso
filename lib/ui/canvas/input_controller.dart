@@ -6009,10 +6009,12 @@ class PipingInputController extends ChangeNotifier {
           vpProjector,
           templates: currentProject.calloutTemplates,
           project: currentProject,
-          hitTolerance: 14.0 * math.max(1.0, sheetZoom),
+          hitTolerance: 12.0,
           annotationScale: sheetZoom,
           isPaperSpace: true,
           activeSheetId: activeSheet!.id,
+          activeSheet: activeSheet,
+          selectedCalloutId: selectedCalloutId,
         );
       }
     }
@@ -6023,9 +6025,10 @@ class PipingInputController extends ChangeNotifier {
       projector,
       templates: currentProject.calloutTemplates,
       project: currentProject,
-      hitTolerance: 12.0 * zoomFactor,
+      hitTolerance: 12.0,
       annotationScale: zoomFactor,
       isPaperSpace: false,
+      selectedCalloutId: selectedCalloutId,
     );
   }
 
