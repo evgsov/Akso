@@ -5221,6 +5221,28 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialog",
+      "label": "CustomPipeDimensionDialog",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "custompipedimensiondialog",
+      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialogstate",
+      "label": "_CustomPipeDimensionDialogState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_custompipedimensiondialogstate",
+      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout",
       "label": "desktop_cad_layout.dart",
       "_origin": "ast",
@@ -5507,6 +5529,160 @@
       "source_location": null
     },
     {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspector",
+      "label": "_DesktopEquipmentInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopequipmentinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspectorstate",
+      "label": "_DesktopEquipmentInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopequipmentinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspector",
+      "label": "_DesktopFittingInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopfittinginspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspectorstate",
+      "label": "_DesktopFittingInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopfittinginspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditor",
+      "label": "_DesktopNodeElevationEditor",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopnodeelevationeditor",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditorstate",
+      "label": "_DesktopNodeElevationEditorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopnodeelevationeditorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspector",
+      "label": "_DesktopSegmentInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopsegmentinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspectorstate",
+      "label": "_DesktopSegmentInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopsegmentinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspector",
+      "label": "_DesktopSpoolInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopspoolinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspectorstate",
+      "label": "_DesktopSpoolInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopspoolinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspector",
+      "label": "_DesktopValveInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopvalveinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspectorstate",
+      "label": "_DesktopValveInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopvalveinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspector",
+      "label": "_DesktopWeldInspector",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopweldinspector",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspectorstate",
+      "label": "_DesktopWeldInspectorState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_desktopweldinspectorstate",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_ui_features_editor_widgets_desktop_cad_layout_didupdatewidget",
       "label": "didUpdateWidget",
       "_origin": "ast",
@@ -5668,6 +5844,28 @@
       "community_name": "desktop_cad_layout.dart",
       "file_type": "code",
       "norm_label": "_materials",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrols",
+      "label": "_MultiSelectPipeControls",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_multiselectpipecontrols",
+      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrolsstate",
+      "label": "_MultiSelectPipeControlsState",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "_multiselectpipecontrolsstate",
       "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
       "source_location": null
     },
@@ -5881,6 +6079,28 @@
       "source_location": null
     },
     {
+      "id": "state",
+      "label": "State",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "state",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "statefulwidget",
+      "label": "StatefulWidget",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "desktop_cad_layout.dart",
+      "file_type": "code",
+      "norm_label": "statefulwidget",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "touch_distance_entry_dialog_dart",
       "label": "touch_distance_entry_dialog.dart",
       "_origin": "ast",
@@ -5922,72 +6142,6 @@
       "file_type": "code",
       "norm_label": "../../../../domain/enums/dxf_callout_options.dart",
       "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options",
-      "label": "dxf_callout_options.dart",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dxf_callout_options.dart",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options_dxfcalloutorientation",
-      "label": "DxfCalloutOrientation",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dxfcalloutorientation",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options_dxfcalloutorientationext",
-      "label": "DxfCalloutOrientationExt",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dxfcalloutorientationext",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options_dxfcallouttype",
-      "label": "DxfCalloutType",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dxfcallouttype",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options_dxfcallouttypeext",
-      "label": "DxfCalloutTypeExt",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "dxfcallouttypeext",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_dxf_callout_options_getextrusionvector",
-      "label": "getExtrusionVector",
-      "_origin": "ast",
-      "community": 123,
-      "community_name": "dxf_export_dialog.dart",
-      "file_type": "code",
-      "norm_label": "getextrusionvector",
-      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
@@ -6064,6 +6218,28 @@
       "community_name": "dxf_export_dialog.dart",
       "file_type": "code",
       "norm_label": "customvalves",
+      "source_file": "lib/ui/features/editor/widgets/dxf_export_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_dxf_export_dialog_dxfexportdialog",
+      "label": "DxfExportDialog",
+      "_origin": "ast",
+      "community": 123,
+      "community_name": "dxf_export_dialog.dart",
+      "file_type": "code",
+      "norm_label": "dxfexportdialog",
+      "source_file": "lib/ui/features/editor/widgets/dxf_export_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_dxf_export_dialog_dxfexportdialogstate",
+      "label": "_DxfExportDialogState",
+      "_origin": "ast",
+      "community": 123,
+      "community_name": "dxf_export_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_dxfexportdialogstate",
       "source_file": "lib/ui/features/editor/widgets/dxf_export_dialog.dart",
       "source_location": null
     },
@@ -8054,6 +8230,17 @@
       "norm_label": "writing content fragments",
       "source_file": ".agents/skills/brainstorming/visual-companion.md",
       "source_location": "L140"
+    },
+    {
+      "id": "domain_models_pipe_dimension_dart",
+      "label": "../../../../domain/models/pipe_dimension.dart",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "pipe_assortment_dialog.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/models/pipe_dimension.dart",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "lib_domain_models_piping_network_pipingnetwork",
@@ -14559,6 +14746,17 @@
       "source_location": null
     },
     {
+      "id": "node_3d_dart",
+      "label": "node_3d.dart",
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "linear_dimension.dart",
+      "file_type": "code",
+      "norm_label": "node_3d.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "data_repositories_project_repository_dart",
       "label": "../../../../data/repositories/project_repository.dart",
       "_origin": "ast",
@@ -14874,6 +15072,28 @@
       "community_name": "quick_bridge_dialog.dart",
       "file_type": "code",
       "norm_label": "_openprojectfile",
+      "source_file": "lib/ui/features/editor/widgets/quick_bridge_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_quick_bridge_dialog_quickbridgedialog",
+      "label": "QuickBridgeDialog",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "quick_bridge_dialog.dart",
+      "file_type": "code",
+      "norm_label": "quickbridgedialog",
+      "source_file": "lib/ui/features/editor/widgets/quick_bridge_dialog.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_quick_bridge_dialog_quickbridgedialogstate",
+      "label": "_QuickBridgeDialogState",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "quick_bridge_dialog.dart",
+      "file_type": "code",
+      "norm_label": "_quickbridgedialogstate",
       "source_file": "lib/ui/features/editor/widgets/quick_bridge_dialog.dart",
       "source_location": null
     },
@@ -16609,7 +16829,7 @@
       "label": "../../../canvas/input_controller.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../canvas/input_controller.dart",
       "source_file": null,
@@ -16620,7 +16840,7 @@
       "label": "ChangeNotifier",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "changenotifier",
       "source_file": null,
@@ -16631,7 +16851,7 @@
       "label": "custom_pipe_dimension_dialog.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "custom_pipe_dimension_dialog.dart",
       "source_file": null,
@@ -16642,9 +16862,20 @@
       "label": "../../../../domain/enums/sheet_format_type.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/enums/sheet_format_type.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "domain_enums_viewport_layout_preset_dart",
+      "label": "../../../../domain/enums/viewport_layout_preset.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/enums/viewport_layout_preset.dart",
       "source_file": null,
       "source_location": null
     },
@@ -16653,7 +16884,7 @@
       "label": "../../../../domain/enums/weld_type.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/enums/weld_type.dart",
       "source_file": null,
@@ -16664,7 +16895,7 @@
       "label": "../../../../domain/models/drawing_sheet.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/models/drawing_sheet.dart",
       "source_file": null,
@@ -16675,10 +16906,54 @@
       "label": "../../../../domain/models/sheet_format.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "../../../../domain/models/sheet_format.dart",
       "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "domain_services_viewport_transform_service_dart",
+      "label": "../../../../domain/services/viewport_transform_service.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "../../../../domain/services/viewport_transform_service.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "drawing_legend_dialog_dart",
+      "label": "drawing_legend_dialog.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "drawing_legend_dialog.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_viewport_layout_preset",
+      "label": "viewport_layout_preset.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "viewport_layout_preset.dart",
+      "source_file": "lib/domain/enums/viewport_layout_preset.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_viewport_layout_preset_viewportlayoutpreset",
+      "label": "ViewportLayoutPreset",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "viewportlayoutpreset",
+      "source_file": "lib/domain/enums/viewport_layout_preset.dart",
       "source_location": null
     },
     {
@@ -16686,7 +16961,7 @@
       "label": "CanvasTool",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "canvastool",
       "source_file": "lib/ui/canvas/input_controller.dart",
@@ -16697,7 +16972,7 @@
       "label": "PipingInputController",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "pipinginputcontroller",
       "source_file": "lib/ui/canvas/input_controller.dart",
@@ -16708,7 +16983,7 @@
       "label": "_ElevationCalloutPreview",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_elevationcalloutpreview",
       "source_file": "lib/ui/features/editor/widgets/callout_manager_panel.dart",
@@ -16719,7 +16994,7 @@
       "label": "DesktopCadLayout",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "desktopcadlayout",
       "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
@@ -16730,7 +17005,7 @@
       "label": "elevation_panel.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "elevation_panel.dart",
       "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
@@ -16741,7 +17016,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
@@ -16752,7 +17027,7 @@
       "label": "controller",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "controller",
       "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
@@ -16763,7 +17038,7 @@
       "label": "ElevationPanel",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "elevationpanel",
       "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
@@ -16774,7 +17049,7 @@
       "label": "_showElevationInputDialog",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_showelevationinputdialog",
       "source_file": "lib/ui/features/editor/widgets/elevation_panel.dart",
@@ -16785,7 +17060,7 @@
       "label": "sheet_tab_bar.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "sheet_tab_bar.dart",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16796,7 +17071,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16807,7 +17082,7 @@
       "label": "_buildAddSheetButton",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_buildaddsheetbutton",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16818,7 +17093,7 @@
       "label": "_buildModelTab",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_buildmodeltab",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16829,7 +17104,7 @@
       "label": "_buildSheetTab",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_buildsheettab",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16840,7 +17115,7 @@
       "label": "controller",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "controller",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16851,7 +17126,7 @@
       "label": "_formatDialogOption",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_formatdialogoption",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16862,7 +17137,7 @@
       "label": "_promptChangeFormat",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_promptchangeformat",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16873,7 +17148,7 @@
       "label": "_promptRenameSheet",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_promptrenamesheet",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16884,7 +17159,7 @@
       "label": "SheetTabBar",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "sheettabbar",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
@@ -16895,10 +17170,65 @@
       "label": "_showSheetContextMenu",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "_showsheetcontextmenu",
       "source_file": "lib/ui/features/editor/widgets/sheet_tab_bar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar",
+      "label": "sheet_toolbar.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "sheet_toolbar.dart",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_controller",
+      "label": "controller",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_onexportdxf",
+      "label": "onExportDxf",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "onexportdxf",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_onexportpdf",
+      "label": "onExportPdf",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "onexportpdf",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
       "source_location": null
     },
     {
@@ -16906,9 +17236,31 @@
       "label": "SheetToolbar",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "sheettoolbar",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_showcalloutfilterdialog",
+      "label": "_showCalloutFilterDialog",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "_showcalloutfilterdialog",
+      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_ui_features_editor_widgets_sheet_toolbar_showsystemfilterdialog",
+      "label": "_showSystemFilterDialog",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "_showsystemfilterdialog",
       "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
       "source_location": null
     },
@@ -16917,7 +17269,7 @@
       "label": "tools_panel.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "tools_panel.dart",
       "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
@@ -16928,7 +17280,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
@@ -16939,7 +17291,7 @@
       "label": "controller",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "controller",
       "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
@@ -16950,7 +17302,7 @@
       "label": "EditorToolsPanel",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "editortoolspanel",
       "source_file": "lib/ui/features/editor/widgets/tools_panel.dart",
@@ -16961,7 +17313,7 @@
       "label": "EditorTopBar",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "editortopbar",
       "source_file": "lib/ui/features/editor/widgets/top_bar.dart",
@@ -16972,7 +17324,7 @@
       "label": "pipe_assortment_dialog.dart",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "pipe_assortment_dialog.dart",
       "source_file": null,
@@ -16983,9 +17335,42 @@
       "label": "StatelessWidget",
       "_origin": "ast",
       "community": 160,
-      "community_name": "PipingInputController",
+      "community_name": "sheet_toolbar.dart",
       "file_type": "code",
       "norm_label": "statelesswidget",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "technical_requirements_dialog_dart",
+      "label": "technical_requirements_dialog.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "technical_requirements_dialog.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "title_block_editor_dialog_dart",
+      "label": "title_block_editor_dialog.dart",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "title_block_editor_dialog.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "voidcallback",
+      "label": "VoidCallback?",
+      "_origin": "ast",
+      "community": 160,
+      "community_name": "sheet_toolbar.dart",
+      "file_type": "code",
+      "norm_label": "voidcallback?",
       "source_file": null,
       "source_location": null
     },
@@ -17566,7 +17951,7 @@
       "label": "EditorScreen",
       "_origin": "ast",
       "community": 163,
-      "community_name": "State",
+      "community_name": "EditorScreen",
       "file_type": "code",
       "norm_label": "editorscreen",
       "source_file": "lib/ui/features/editor/editor_screen.dart",
@@ -17577,252 +17962,10 @@
       "label": "_EditorScreenState",
       "_origin": "ast",
       "community": 163,
-      "community_name": "State",
+      "community_name": "EditorScreen",
       "file_type": "code",
       "norm_label": "_editorscreenstate",
       "source_file": "lib/ui/features/editor/editor_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspector",
-      "label": "_DesktopEquipmentInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopequipmentinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopequipmentinspectorstate",
-      "label": "_DesktopEquipmentInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopequipmentinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspector",
-      "label": "_DesktopFittingInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopfittinginspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopfittinginspectorstate",
-      "label": "_DesktopFittingInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopfittinginspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditor",
-      "label": "_DesktopNodeElevationEditor",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopnodeelevationeditor",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopnodeelevationeditorstate",
-      "label": "_DesktopNodeElevationEditorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopnodeelevationeditorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspector",
-      "label": "_DesktopSegmentInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopsegmentinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopsegmentinspectorstate",
-      "label": "_DesktopSegmentInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopsegmentinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspector",
-      "label": "_DesktopSpoolInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopspoolinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopspoolinspectorstate",
-      "label": "_DesktopSpoolInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopspoolinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspector",
-      "label": "_DesktopValveInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopvalveinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopvalveinspectorstate",
-      "label": "_DesktopValveInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopvalveinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspector",
-      "label": "_DesktopWeldInspector",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopweldinspector",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_desktopweldinspectorstate",
-      "label": "_DesktopWeldInspectorState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_desktopweldinspectorstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrols",
-      "label": "_MultiSelectPipeControls",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_multiselectpipecontrols",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_desktop_cad_layout_multiselectpipecontrolsstate",
-      "label": "_MultiSelectPipeControlsState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_multiselectpipecontrolsstate",
-      "source_file": "lib/ui/features/editor/widgets/desktop_cad_layout.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_dxf_export_dialog_dxfexportdialog",
-      "label": "DxfExportDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "dxfexportdialog",
-      "source_file": "lib/ui/features/editor/widgets/dxf_export_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_dxf_export_dialog_dxfexportdialogstate",
-      "label": "_DxfExportDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_dxfexportdialogstate",
-      "source_file": "lib/ui/features/editor/widgets/dxf_export_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_quick_bridge_dialog_quickbridgedialog",
-      "label": "QuickBridgeDialog",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "quickbridgedialog",
-      "source_file": "lib/ui/features/editor/widgets/quick_bridge_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_quick_bridge_dialog_quickbridgedialogstate",
-      "label": "_QuickBridgeDialogState",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_quickbridgedialogstate",
-      "source_file": "lib/ui/features/editor/widgets/quick_bridge_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "state",
-      "label": "State",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "state",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "statefulwidget",
-      "label": "StatefulWidget",
-      "_origin": "ast",
-      "community": 163,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "statefulwidget",
-      "source_file": null,
       "source_location": null
     },
     {
@@ -18175,6 +18318,28 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/centerline_rendering_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_copy_branch_connection_test",
+      "label": "copy_branch_connection_test.dart",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "copy_branch_connection_test.dart",
+      "source_file": "test/copy_branch_connection_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_copy_branch_connection_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 164,
+      "community_name": "package:akso/domain/enums/valve_type.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/copy_branch_connection_test.dart",
       "source_location": null
     },
     {
@@ -18574,17 +18739,6 @@
       "source_location": null
     },
     {
-      "id": "domain_models_pipe_dimension_dart",
-      "label": "../../../../domain/models/pipe_dimension.dart",
-      "_origin": "ast",
-      "community": 166,
-      "community_name": "custom_pipe_dimension_dialog.dart",
-      "file_type": "code",
-      "norm_label": "../../../../domain/models/pipe_dimension.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "formstate",
       "label": "FormState",
       "_origin": "ast",
@@ -18636,28 +18790,6 @@
       "community_name": "custom_pipe_dimension_dialog.dart",
       "file_type": "code",
       "norm_label": "createstate",
-      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialog",
-      "label": "CustomPipeDimensionDialog",
-      "_origin": "ast",
-      "community": 166,
-      "community_name": "custom_pipe_dimension_dialog.dart",
-      "file_type": "code",
-      "norm_label": "custompipedimensiondialog",
-      "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_custom_pipe_dimension_dialog_custompipedimensiondialogstate",
-      "label": "_CustomPipeDimensionDialogState",
-      "_origin": "ast",
-      "community": 166,
-      "community_name": "custom_pipe_dimension_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_custompipedimensiondialogstate",
       "source_file": "lib/ui/features/editor/widgets/custom_pipe_dimension_dialog.dart",
       "source_location": null
     },
@@ -19110,28 +19242,6 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/callout_layout_integration_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_copy_branch_connection_test",
-      "label": "copy_branch_connection_test.dart",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "copy_branch_connection_test.dart",
-      "source_file": "test/copy_branch_connection_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_copy_branch_connection_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 168,
-      "community_name": "package:akso/domain/models/pipe_segment.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/copy_branch_connection_test.dart",
       "source_location": null
     },
     {
@@ -21627,17 +21737,6 @@
       "source_location": null
     },
     {
-      "id": "node_3d_dart",
-      "label": "node_3d.dart",
-      "_origin": "ast",
-      "community": 178,
-      "community_name": "Offset?",
-      "file_type": "code",
-      "norm_label": "node_3d.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "offset",
       "label": "Offset?",
       "_origin": "ast",
@@ -21767,50 +21866,6 @@
       "norm_label": "task 7: full verification & documentation",
       "source_file": "docs/superpowers/plans/2026-09-18-project-lifecycle-and-wifi-sync.md",
       "source_location": "L229"
-    },
-    {
-      "id": "lib_domain_enums_weld_joint_style",
-      "label": "weld_joint_style.dart",
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "weld_journal_dialog.dart",
-      "file_type": "code",
-      "norm_label": "weld_joint_style.dart",
-      "source_file": "lib/domain/enums/weld_joint_style.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_weld_joint_style_fromstring",
-      "label": "fromString",
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "weld_journal_dialog.dart",
-      "file_type": "code",
-      "norm_label": "fromstring",
-      "source_file": "lib/domain/enums/weld_joint_style.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_weld_joint_style_label",
-      "label": "label",
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "weld_journal_dialog.dart",
-      "file_type": "code",
-      "norm_label": "label",
-      "source_file": "lib/domain/enums/weld_joint_style.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_weld_joint_style_weldjointstyle",
-      "label": "WeldJointStyle",
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "weld_journal_dialog.dart",
-      "file_type": "code",
-      "norm_label": "weldjointstyle",
-      "source_file": "lib/domain/enums/weld_joint_style.dart",
-      "source_location": null
     },
     {
       "id": "lib_ui_features_editor_widgets_weld_journal_dialog",
@@ -26090,28 +26145,6 @@
       "community_name": "drawing_style_dialog.dart",
       "file_type": "code",
       "norm_label": "createstate",
-      "source_file": "lib/ui/features/editor/widgets/drawing_style_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_drawing_style_dialog_drawingstyledialog",
-      "label": "DrawingStyleDialog",
-      "_origin": "ast",
-      "community": 197,
-      "community_name": "drawing_style_dialog.dart",
-      "file_type": "code",
-      "norm_label": "drawingstyledialog",
-      "source_file": "lib/ui/features/editor/widgets/drawing_style_dialog.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_drawing_style_dialog_drawingstyledialogstate",
-      "label": "_DrawingStyleDialogState",
-      "_origin": "ast",
-      "community": 197,
-      "community_name": "drawing_style_dialog.dart",
-      "file_type": "code",
-      "norm_label": "_drawingstyledialogstate",
       "source_file": "lib/ui/features/editor/widgets/drawing_style_dialog.dart",
       "source_location": null
     },
@@ -32695,6 +32728,39 @@
       "source_location": null
     },
     {
+      "id": "lib_data_repositories_project_repository_iprojectrepository",
+      "label": "IProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "iprojectrepository",
+      "source_file": "lib/data/repositories/project_repository.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_data_repositories_project_repository_projectrepository",
+      "label": "ProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projectrepository",
+      "source_file": "lib/data/repositories/project_repository.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_models_project_model_projectmodel",
+      "label": "ProjectModel",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projectmodel",
+      "source_file": "lib/domain/models/project_model.dart",
+      "source_location": null
+    },
+    {
       "id": "package_akso_data_repositories_project_repository_dart",
       "label": "package:akso/data/repositories/project_repository.dart",
       "_origin": "ast",
@@ -32816,6 +32882,105 @@
       "source_location": null
     },
     {
+      "id": "test_project_controller_integration_test_testprojectrepository",
+      "label": "TestProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "testprojectrepository",
+      "source_file": "test/project_controller_integration_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test",
+      "label": "project_identity_test.dart",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "project_identity_test.dart",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_fakeprojectrepository",
+      "label": "FakeProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "fakeprojectrepository",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_lastsavedproject",
+      "label": "lastSavedProject",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "lastsavedproject",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_loadcount",
+      "label": "loadCount",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "loadcount",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_projecttoload",
+      "label": "projectToLoad",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "projecttoload",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_savecount",
+      "label": "saveCount",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "savecount",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_identity_test_saveproject",
+      "label": "saveProject",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "saveproject",
+      "source_file": "test/project_identity_test.dart",
+      "source_location": null
+    },
+    {
       "id": "test_project_repository_test",
       "label": "project_repository_test.dart",
       "_origin": "ast",
@@ -32835,6 +33000,17 @@
       "file_type": "code",
       "norm_label": "main",
       "source_file": "test/project_repository_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_project_serialization_test_mockprojectrepository",
+      "label": "MockProjectRepository",
+      "_origin": "ast",
+      "community": 207,
+      "community_name": "dart:io",
+      "file_type": "code",
+      "norm_label": "mockprojectrepository",
+      "source_file": "test/project_serialization_test.dart",
       "source_location": null
     },
     {
@@ -34837,69 +35013,69 @@
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type",
-      "label": "fitting_type.dart",
+      "id": "lib_domain_enums_dxf_callout_options",
+      "label": "dxf_callout_options.dart",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "fitting_type.dart",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "dxf_callout_options.dart",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type_defaultdeductionmm",
-      "label": "defaultDeductionMm",
+      "id": "lib_domain_enums_dxf_callout_options_dxfcalloutorientation",
+      "label": "DxfCalloutOrientation",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "defaultdeductionmm",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "dxfcalloutorientation",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type_fittingtype",
-      "label": "FittingType",
+      "id": "lib_domain_enums_dxf_callout_options_dxfcalloutorientationext",
+      "label": "DxfCalloutOrientationExt",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "fittingtype",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "dxfcalloutorientationext",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type_fittingtypeext",
-      "label": "FittingTypeExt",
+      "id": "lib_domain_enums_dxf_callout_options_dxfcallouttype",
+      "label": "DxfCalloutType",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "fittingtypeext",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "dxfcallouttype",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type_flangeconnectiontype",
-      "label": "FlangeConnectionType",
+      "id": "lib_domain_enums_dxf_callout_options_dxfcallouttypeext",
+      "label": "DxfCalloutTypeExt",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "flangeconnectiontype",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "dxfcallouttypeext",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_fitting_type_flangeconnectiontypeext",
-      "label": "FlangeConnectionTypeExt",
+      "id": "lib_domain_enums_dxf_callout_options_getextrusionvector",
+      "label": "getExtrusionVector",
       "_origin": "ast",
       "community": 218,
-      "community_name": "FlangeConnectionType",
+      "community_name": "dxf_callout_options.dart",
       "file_type": "code",
-      "norm_label": "flangeconnectiontypeext",
-      "source_file": "lib/domain/enums/fitting_type.dart",
+      "norm_label": "getextrusionvector",
+      "source_file": "lib/domain/enums/dxf_callout_options.dart",
       "source_location": null
     },
     {
@@ -37005,168 +37181,47 @@
       "source_location": null
     },
     {
-      "id": "domain_enums_viewport_layout_preset_dart",
-      "label": "../../../../domain/enums/viewport_layout_preset.dart",
+      "id": "lib_domain_enums_weld_joint_style",
+      "label": "weld_joint_style.dart",
       "_origin": "ast",
       "community": 226,
-      "community_name": "sheet_toolbar.dart",
+      "community_name": "WeldJointStyle",
       "file_type": "code",
-      "norm_label": "../../../../domain/enums/viewport_layout_preset.dart",
-      "source_file": null,
+      "norm_label": "weld_joint_style.dart",
+      "source_file": "lib/domain/enums/weld_joint_style.dart",
       "source_location": null
     },
     {
-      "id": "domain_services_viewport_transform_service_dart",
-      "label": "../../../../domain/services/viewport_transform_service.dart",
+      "id": "lib_domain_enums_weld_joint_style_fromstring",
+      "label": "fromString",
       "_origin": "ast",
       "community": 226,
-      "community_name": "sheet_toolbar.dart",
+      "community_name": "WeldJointStyle",
       "file_type": "code",
-      "norm_label": "../../../../domain/services/viewport_transform_service.dart",
-      "source_file": null,
+      "norm_label": "fromstring",
+      "source_file": "lib/domain/enums/weld_joint_style.dart",
       "source_location": null
     },
     {
-      "id": "drawing_legend_dialog_dart",
-      "label": "drawing_legend_dialog.dart",
+      "id": "lib_domain_enums_weld_joint_style_label",
+      "label": "label",
       "_origin": "ast",
       "community": 226,
-      "community_name": "sheet_toolbar.dart",
+      "community_name": "WeldJointStyle",
       "file_type": "code",
-      "norm_label": "drawing_legend_dialog.dart",
-      "source_file": null,
+      "norm_label": "label",
+      "source_file": "lib/domain/enums/weld_joint_style.dart",
       "source_location": null
     },
     {
-      "id": "lib_domain_enums_viewport_layout_preset",
-      "label": "viewport_layout_preset.dart",
+      "id": "lib_domain_enums_weld_joint_style_weldjointstyle",
+      "label": "WeldJointStyle",
       "_origin": "ast",
       "community": 226,
-      "community_name": "sheet_toolbar.dart",
+      "community_name": "WeldJointStyle",
       "file_type": "code",
-      "norm_label": "viewport_layout_preset.dart",
-      "source_file": "lib/domain/enums/viewport_layout_preset.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_enums_viewport_layout_preset_viewportlayoutpreset",
-      "label": "ViewportLayoutPreset",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "viewportlayoutpreset",
-      "source_file": "lib/domain/enums/viewport_layout_preset.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar",
-      "label": "sheet_toolbar.dart",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "sheet_toolbar.dart",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_controller",
-      "label": "controller",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_onexportdxf",
-      "label": "onExportDxf",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "onexportdxf",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_onexportpdf",
-      "label": "onExportPdf",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "onexportpdf",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_showcalloutfilterdialog",
-      "label": "_showCalloutFilterDialog",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "_showcalloutfilterdialog",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_ui_features_editor_widgets_sheet_toolbar_showsystemfilterdialog",
-      "label": "_showSystemFilterDialog",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "_showsystemfilterdialog",
-      "source_file": "lib/ui/features/editor/widgets/sheet_toolbar.dart",
-      "source_location": null
-    },
-    {
-      "id": "technical_requirements_dialog_dart",
-      "label": "technical_requirements_dialog.dart",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "technical_requirements_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "title_block_editor_dialog_dart",
-      "label": "title_block_editor_dialog.dart",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "title_block_editor_dialog.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "voidcallback",
-      "label": "VoidCallback?",
-      "_origin": "ast",
-      "community": 226,
-      "community_name": "sheet_toolbar.dart",
-      "file_type": "code",
-      "norm_label": "voidcallback?",
-      "source_file": null,
+      "norm_label": "weldjointstyle",
+      "source_file": "lib/domain/enums/weld_joint_style.dart",
       "source_location": null
     },
     {
@@ -38121,146 +38176,25 @@
       "source_location": null
     },
     {
-      "id": "lib_data_repositories_project_repository_iprojectrepository",
-      "label": "IProjectRepository",
+      "id": "lib_ui_features_editor_widgets_drawing_style_dialog_drawingstyledialog",
+      "label": "DrawingStyleDialog",
       "_origin": "ast",
       "community": 233,
-      "community_name": "project_identity_test.dart",
+      "community_name": "DrawingStyleDialog",
       "file_type": "code",
-      "norm_label": "iprojectrepository",
-      "source_file": "lib/data/repositories/project_repository.dart",
+      "norm_label": "drawingstyledialog",
+      "source_file": "lib/ui/features/editor/widgets/drawing_style_dialog.dart",
       "source_location": null
     },
     {
-      "id": "lib_data_repositories_project_repository_projectrepository",
-      "label": "ProjectRepository",
+      "id": "lib_ui_features_editor_widgets_drawing_style_dialog_drawingstyledialogstate",
+      "label": "_DrawingStyleDialogState",
       "_origin": "ast",
       "community": 233,
-      "community_name": "project_identity_test.dart",
+      "community_name": "DrawingStyleDialog",
       "file_type": "code",
-      "norm_label": "projectrepository",
-      "source_file": "lib/data/repositories/project_repository.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_domain_models_project_model_projectmodel",
-      "label": "ProjectModel",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "projectmodel",
-      "source_file": "lib/domain/models/project_model.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_controller_integration_test_testprojectrepository",
-      "label": "TestProjectRepository",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "testprojectrepository",
-      "source_file": "test/project_controller_integration_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test",
-      "label": "project_identity_test.dart",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "project_identity_test.dart",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_fakeprojectrepository",
-      "label": "FakeProjectRepository",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "fakeprojectrepository",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_lastsavedproject",
-      "label": "lastSavedProject",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "lastsavedproject",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_loadcount",
-      "label": "loadCount",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "loadcount",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_projecttoload",
-      "label": "projectToLoad",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "projecttoload",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_savecount",
-      "label": "saveCount",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "savecount",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_identity_test_saveproject",
-      "label": "saveProject",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "saveproject",
-      "source_file": "test/project_identity_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_project_serialization_test_mockprojectrepository",
-      "label": "MockProjectRepository",
-      "_origin": "ast",
-      "community": 233,
-      "community_name": "project_identity_test.dart",
-      "file_type": "code",
-      "norm_label": "mockprojectrepository",
-      "source_file": "test/project_serialization_test.dart",
+      "norm_label": "_drawingstyledialogstate",
+      "source_file": "lib/ui/features/editor/widgets/drawing_style_dialog.dart",
       "source_location": null
     },
     {
@@ -40979,6 +40913,72 @@
       "norm_label": "\u0441\u043f\u0435\u0446\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f: \u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f \u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0432\u044b\u043d\u043e\u0441\u043e\u043a \u043f\u043e \u0432\u0435\u0442\u043a\u0430\u043c \u0442\u0440\u0430\u0441\u0441\u044b (branch-oriented local stacking)",
       "source_file": "docs/superpowers/specs/2026-09-26-branch-oriented-callout-layout-design.md",
       "source_location": "L1"
+    },
+    {
+      "id": "lib_domain_enums_fitting_type",
+      "label": "fitting_type.dart",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "fitting_type.dart",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_fitting_type_defaultdeductionmm",
+      "label": "defaultDeductionMm",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "defaultdeductionmm",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_fitting_type_fittingtype",
+      "label": "FittingType",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "fittingtype",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_fitting_type_fittingtypeext",
+      "label": "FittingTypeExt",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "fittingtypeext",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_fitting_type_flangeconnectiontype",
+      "label": "FlangeConnectionType",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "flangeconnectiontype",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_domain_enums_fitting_type_flangeconnectiontypeext",
+      "label": "FlangeConnectionTypeExt",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "fitting.dart",
+      "file_type": "code",
+      "norm_label": "flangeconnectiontypeext",
+      "source_file": "lib/domain/enums/fitting_type.dart",
+      "source_location": null
     },
     {
       "id": "lib_domain_models_fitting",
@@ -50090,6 +50090,17 @@
       "source_location": null
     },
     {
+      "id": "lib_domain_models_piping_network_getcalloutsystemid",
+      "label": "getCalloutSystemId",
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "piping_network.dart",
+      "file_type": "code",
+      "norm_label": "getcalloutsystemid",
+      "source_file": "lib/domain/models/piping_network.dart",
+      "source_location": null
+    },
+    {
       "id": "lib_domain_models_piping_network_getconnectedsegments",
       "label": "getConnectedSegments",
       "_origin": "ast",
@@ -53073,7 +53084,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0430\u0434\u0430\u043f\u0442\u0438\u0432\u043d\u044b\u0435 \u0434\u0438\u043d\u0430\u043c\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438 (adaptive smart callouts), \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0437\u043c\u0435\u0440\u044b \u0448\u0440\u0438\u0444\u0442\u043e\u0432 \u0432 \u043c\u043c \u0431\u0443\u043c\u0430\u0433\u0438 \u0438 \u0440\u0443\u0447\u043d\u043e\u0435 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0432\u044b\u0441\u043e\u0442\u043e\u0438 \u0442\u0435\u043a\u0441\u0442\u0430 (phase 50)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2969"
+      "source_location": "L2986"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e_\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435_\u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435_\u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f_\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432_\u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430_\u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445_\u043a\u0430\u0442\u0443\u0448\u0435\u043a_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0438_\u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435_\u0432\u044b\u043d\u043e\u0441\u043a\u0438",
@@ -53085,7 +53096,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0431\u0443\u043a\u0432\u0435\u043d\u043d\u043e-\u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435 \u043f\u043e\u0437\u0438\u0446\u0438\u043e\u043d\u043d\u044b\u0435 \u043e\u0431\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432, \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u043a\u0430 \u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0445 \u043a\u0430\u0442\u0443\u0448\u0435\u043a/\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0438 \u0443\u043b\u044c\u0442\u0440\u0430\u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0435 \u0432\u044b\u043d\u043e\u0441\u043a\u0438",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2928"
+      "source_location": "L2945"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f_\u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430_\u0432\u044b\u043d\u043e\u0441\u043e\u043a_\u043f\u043e_\u0432\u0435\u0442\u043a\u0430\u043c_\u0442\u0440\u0430\u0441\u0441\u044b_branch_oriented_local_stacking_layout",
@@ -53097,7 +53108,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043a\u043b\u0430\u0441\u0442\u0435\u0440\u043d\u0430\u044f \u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0432\u044b\u043d\u043e\u0441\u043e\u043a \u043f\u043e \u0432\u0435\u0442\u043a\u0430\u043c \u0442\u0440\u0430\u0441\u0441\u044b (branch-oriented local stacking layout)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3004"
+      "source_location": "L3021"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435_\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0439_\u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b_\u0432_\u0441\u0445\u0435\u043c\u0430\u0445_\u043f\u043e_\u0433\u043e\u0441\u0442_21_205_2d_\u0443\u0433\u043e_\u0432_3d_\u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438",
@@ -53109,7 +53120,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u043e\u0438 \u0430\u0440\u043c\u0430\u0442\u0443\u0440\u044b \u0432 \u0441\u0445\u0435\u043c\u0430\u0445 \u043f\u043e \u0433\u043e\u0441\u0442 21.205 (2d \u0443\u0433\u043e \u0432 3d \u0430\u043a\u0441\u043e\u043d\u043e\u043c\u0435\u0442\u0440\u0438\u0438)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2828"
+      "source_location": "L2845"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u043e\u043b\u043d\u043e\u0435_\u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435_\u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e_pdf_\u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443_\u044d\u043a\u0440\u0430\u043d\u0443_\u0438_\u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435_\u0442\u043e\u043b\u0449\u0438\u043d\u044b_\u043b\u0438\u043d\u0438\u0439_pdf_fidelity_line_weight_styles",
@@ -53121,7 +53132,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u043e\u043b\u043d\u043e\u0435 \u0433\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435 \u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e pdf \u0432\u0438\u0434\u043e\u0432\u043e\u043c\u0443 \u044d\u043a\u0440\u0430\u043d\u0443 \u0438 \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u043c\u044b\u0435 \u0442\u043e\u043b\u0449\u0438\u043d\u044b \u043b\u0438\u043d\u0438\u0438 (pdf fidelity & line weight styles)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2733"
+      "source_location": "L2750"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435_\u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0439_\u043d\u0430\u0434\u043f\u0438\u0441\u0438_\u0448\u0442\u0430\u043c\u043f\u0430_185_55_\u043c\u043c_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_\u043a_\u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443_\u0433\u043e\u0441\u0442_\u0440_21_101_2020_\u0444\u043e\u0440\u043c\u0430_3_\u0441\u043f\u0434\u0441_\u0438_\u043e\u0431\u0440\u0430\u0437\u0446\u0443_\u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0439_\u0441\u0445\u0435\u043c\u044b",
@@ -53133,7 +53144,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u043f\u0440\u0438\u0432\u0435\u0434\u0435\u043d\u0438\u0435 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0438 \u043d\u0430\u0434\u043f\u0438\u0441\u0438 (\u0448\u0442\u0430\u043c\u043f\u0430 185\u00d755 \u043c\u043c) \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 \u043a \u0441\u0442\u0440\u043e\u0433\u043e\u043c\u0443 \u0433\u043e\u0441\u0442 \u0440 21.101-2020 (\u0444\u043e\u0440\u043c\u0430 3 / \u0441\u043f\u0434\u0441) \u0438 \u043e\u0431\u0440\u0430\u0437\u0446\u0443 \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0438 \u0441\u0445\u0435\u043c\u044b",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2699"
+      "source_location": "L2716"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439_cad_\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0439_\u0434\u0432\u0438\u0436\u043e\u043a_\u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e_\u043b\u0438\u0441\u0442\u0430_vectorscene_sheetgeometrybuilder_\u0438_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432_\u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430_pdf",
@@ -53145,7 +53156,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u043d\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0438 cad-\u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0438 \u0434\u0432\u0438\u0436\u043e\u043a \u0447\u0435\u0440\u0442\u0435\u0436\u043d\u043e\u0433\u043e \u043b\u0438\u0441\u0442\u0430 (vectorscene & sheetgeometrybuilder) \u0438 \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u043e\u0432 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430 pdf",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2887"
+      "source_location": "L2904"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_renderflex_overflow_\u0432_\u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445_cad_\u0438_\u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f_\u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f_\u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_\u0438_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432_phase_17",
@@ -53157,7 +53168,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 renderflex overflow \u0432 \u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440\u0430\u0445 cad \u0438 \u043c\u0430\u0441\u0448\u0442\u0430\u0431\u043d\u0430\u044f \u043c\u043e\u0434\u0435\u0440\u043d\u0438\u0437\u0430\u0446\u0438\u044f \u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 \u0438 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0430 \u0441\u0442\u043e\u043b\u0431\u0446\u043e\u0432 (phase 17)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2795"
+      "source_location": "L2812"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f_\u043f\u0440\u0438_\u043a\u043b\u0438\u043a\u0435_\u043d\u0430_\u0441\u0442\u043e\u043b\u0431\u0446\u044b_\u0448\u0430\u0431\u043b\u043e\u043d\u0430_\u0432_\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435_\u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0439_fix_freeze_pointer_deadlock_in_reporttemplatebuilderwidget",
@@ -53169,7 +53180,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0437\u0430\u0432\u0438\u0441\u0430\u043d\u0438\u044f \u043f\u0440\u0438 \u043a\u043b\u0438\u043a\u0435 \u043d\u0430 \"\u0441\u0442\u043e\u043b\u0431\u0446\u044b \u0448\u0430\u0431\u043b\u043e\u043d\u0430\" \u0432 \u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440\u0435 \u0432\u0435\u0434\u043e\u043c\u043e\u0441\u0442\u0435\u0438 (fix freeze & pointer deadlock in reporttemplatebuilderwidget)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2858"
+      "source_location": "L2875"
     },
     {
       "id": "project_memory_\u044d\u0442\u0430\u043f_\u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435_\u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e_\u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e_\u0441\u0442\u044b\u043a\u0430_\u0438_\u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0439_\u043a\u0430\u0442\u0443\u0448\u043a\u0438_\u043f\u0440\u0438_\u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435_\u0432_\u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0439_\u0441\u0442\u043e\u044f\u043a_fix_riser_elbow_stray_weld_protruding_spool",
@@ -53181,7 +53192,7 @@
       "node_kind": "heading",
       "norm_label": "\u044d\u0442\u0430\u043f: \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u043f\u0430\u0440\u0430\u0437\u0438\u0442\u043d\u043e\u0433\u043e \u0441\u0432\u0430\u0440\u043d\u043e\u0433\u043e \u0441\u0442\u044b\u043a\u0430 \u0438 \u0432\u044b\u043b\u0435\u0442\u0430\u044e\u0449\u0435\u0438 \u043a\u0430\u0442\u0443\u0448\u043a\u0438 \u043f\u0440\u0438 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0435 \u0432 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0438 \u0441\u0442\u043e\u044f\u043a (fix riser elbow stray weld & protruding spool)",
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2764"
+      "source_location": "L2781"
     },
     {
       "id": "agents_skills_systematic_debugging_test_pressure_1",
@@ -74054,7 +74065,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2699",
+      "source_location": "L2716",
       "weight": 1.0
     },
     {
@@ -74065,7 +74076,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2733",
+      "source_location": "L2750",
       "weight": 1.0
     },
     {
@@ -74076,7 +74087,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2764",
+      "source_location": "L2781",
       "weight": 1.0
     },
     {
@@ -74087,7 +74098,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2795",
+      "source_location": "L2812",
       "weight": 1.0
     },
     {
@@ -74098,7 +74109,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2828",
+      "source_location": "L2845",
       "weight": 1.0
     },
     {
@@ -74109,7 +74120,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2858",
+      "source_location": "L2875",
       "weight": 1.0
     },
     {
@@ -74120,7 +74131,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2887",
+      "source_location": "L2904",
       "weight": 1.0
     },
     {
@@ -74131,7 +74142,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2928",
+      "source_location": "L2945",
       "weight": 1.0
     },
     {
@@ -74142,7 +74153,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L2969",
+      "source_location": "L2986",
       "weight": 1.0
     },
     {
@@ -74153,7 +74164,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "PROJECT_MEMORY.md",
-      "source_location": "L3004",
+      "source_location": "L3021",
       "weight": 1.0
     },
     {
@@ -82871,6 +82882,17 @@
     {
       "source": "lib_domain_models_piping_network",
       "target": "lib_domain_models_piping_network_getbuttjointtargetlength",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/models/piping_network.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "lib_domain_models_piping_network",
+      "target": "lib_domain_models_piping_network_getcalloutsystemid",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -128006,5 +128028,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8bd20d313102debb1ba1a8a801085d66a1e1d166"
+  "built_at_commit": "db105bcdd5e708c34ff7d9cfcb8344f8dc969424"
 }

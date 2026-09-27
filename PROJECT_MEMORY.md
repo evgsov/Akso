@@ -44,8 +44,25 @@
   - **Опция снятия фиксации со «залипших» выносок (`onlyUnpinned: false`):**
     - Если пользователь ранее вручную перетаскивал выноски, они получали флаг `isPinned = true` и оставались на полях даже при повторном запуске авторасстановки.
     - В `runSheetCalloutAutoLayout` и `calculateSheetLayout` добавлен параметр `onlyUnpinned`. В `SheetToolbar` добавлена опция в меню: *«Все выноски (снять фиксацию)»*, которая сбрасывает `isPinned: false` и заново оптимально пересчитывает координаты абсолютно всех выносок листа.
-  - **Гарантированная предпечатная проверка PDF (Pre-flight PDF Layout):**
-    - В `DesktopCadLayout._exportSheetPdf` перед экспортом проверяется наличие рассчитанных координат `sheetOffsets[sheet.id]`. Если у видимых выносок они отсутствуют, авторасстановка запускается автоматически перед формированием PDF.
+  - **Предпечатная проверка PDF (Pre-flight PDF Layout):**
+    - Автоматическая расстановка выносок перед экспортом PDF **убрана** по запросу пользователя. Пользователь должен явно запустить авторасстановку перед экспортом.
+- **Централизованная фильтрация выносок по видимым системам (System Visibility Filtering for Callouts):**
+  - **Корневая проблема:**
+    - `DrawingSheet.isCalloutVisible` проверял только `enabledCalloutTypes` и `showElevationCallouts`, но **не проверял** `viewport.visibleSystemIds`. Выноски скрытых систем:
+      1. Занимали лучшие позиции в карте размещения, отталкивая видимые выноски далеко от труб.
+      2. Рисовались на холсте листа и попадали в PDF.
+      3. Запускали лишнюю авторасстановку при экспорте PDF.
+  - **Решение — единый централизованный фильтр:**
+    - `PipingNetwork.getCalloutSystemId(type, targetId)`: новый метод, определяющий `systemId` для любого типа выноски (через `getTargetSegmentId` для арматуры/стыков/фитингов/опор/катушек, через `getConnectedSegments` для узлов). Оборудование и штуцеры возвращают `null` (не привязаны к системе — всегда видны).
+    - `DrawingSheet.isCalloutVisible(callout, [network])`: добавлен опциональный параметр `network` для проверки `viewport.visibleSystemIds`. Обратная совместимость: без `network` фильтрация по системам не выполняется.
+  - **Обновлены все 6 точек вызова `isCalloutVisible`:**
+    - `CalloutLayoutEngine.calculateSheetLayout` (2 цикла — предобработка и неназначенные)
+    - `PipelineBranchExtractor.extractBranches` (привязка выносок к веткам)
+    - `SheetGeometryBuilder._buildCallouts` (рендеринг выносок в PDF VectorScene)
+    - `SheetCanvasPainter._getEffectiveNetwork` (фильтрация выносок для холста листа)
+    - `InputController.selectSheet` (проверка нерассчитанных выносок при смене листа)
+  - **Убрана автосортировка при экспорте PDF:** `_exportSheetPdf` больше не вызывает `runSheetCalloutAutoLayout` автоматически.
+  - **Убраны дублирующиеся проверки:** ручная проверка `getTargetSegmentId` + `visibleSys` в `calculateSheetLayout` удалена — вся логика теперь в `isCalloutVisible`.
 - **Кластерная авторасстановка выносок по веткам трассы (Branch-Oriented Local Stacking Layout):**
   - **Архитектурный контекст и эволюция:**
     - Ранее выноски выносились на дальние внешние поля чертежа (`Boundary Column Stacking`), что приводило к паутине перерезающих чертеж линий-выносок и визуальному отрыву аннотаций от физических участков трубопровода.
