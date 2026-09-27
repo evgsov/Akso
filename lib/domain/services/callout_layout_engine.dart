@@ -1529,6 +1529,7 @@ class CalloutLayoutEngine {
 
     // Компактные дистанции поиска (от 10 до 42 мм)
     final radii = <double>[10.0, 14.0, 18.0, 22.0, 28.0, 34.0, 42.0];
+    final placedShelves = <_PlacedGenerativeShelf>[];
 
     for (final cluster in clusters) {
       final anchor = cluster.anchorMm;
@@ -1550,6 +1551,114 @@ class CalloutLayoutEngine {
 
       _GenerativeCandidate? best;
       double lowestCost = double.infinity;
+
+      // 4a. Каскадный поиск (попытка встать в каскад строго "друг над другом" с соседней полкой)
+      for (final placed in placedShelves) {
+        final dAnchor = (placed.anchor - anchor).distance;
+        if (dAnchor > 55.0) continue; // только для элементов в пределах одной строчной зоны
+
+        final cascadeX = placed.shelfStart.dx;
+        final isRight = placed.isRight;
+
+        // Попробуем встать строго сверху или снизу от уже стоящей полки/стопки
+        final testYList = <double>[
+          placed.minY - numItems * (pitch + 1.0), // над полкой
+          placed.maxY + pitch + 1.0,              // под полкой
+        ];
+
+        for (final candStartY in testYList) {
+          final entryShelf = Offset(cascadeX, candStartY + (numItems - 1) * pitch / 2.0);
+          final dist = (entryShelf - anchor).distance;
+          if (dist < 8.0 || dist > 45.0) continue;
+
+          final dx = (entryShelf.dx - anchor.dx).abs();
+          final dy = (entryShelf.dy - anchor.dy).abs();
+          if (dx < 1.0) continue; // исключаем строго вертикальную линию
+          final angleDeg = math.atan2(dy, dx) * 180 / math.pi;
+          if (angleDeg < 15.0 || angleDeg > 80.0) continue; // только красивые наклонные углы
+
+          final rects = <Rect>[];
+          bool outOfBounds = false;
+
+          for (int i = 0; i < numItems; i++) {
+            final y = candStartY + i * pitch;
+            final shelfStartX = cascadeX;
+            final rect = Rect.fromLTWH(
+              isRight ? shelfStartX : shelfStartX - maxW,
+              y - avgTextH - 1.0,
+              maxW,
+              avgTextH + 2.0,
+            );
+            rects.add(rect);
+
+            if (rect.left < frameLeft || rect.right > frameRight ||
+                rect.top < frameTop || rect.bottom > frameBottom ||
+                rect.overlaps(stampRect)) {
+              outOfBounds = true;
+              break;
+            }
+          }
+          if (outOfBounds) continue;
+
+          int collisions = 0;
+          int lineCollisions = 0;
+
+          for (final rect in rects) {
+            for (final obs in obstacleMap.rects) {
+              if (obs.id != null && clusterTargetValveIds.contains(obs.id)) continue;
+              if (rect.overlaps(obs.rect)) collisions++;
+            }
+            if (obstacleMap.testShelfPipeCollision(rect)) collisions++;
+          }
+
+          for (final line in obstacleMap.leaderLines) {
+            if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, line.p1, line.p2)) {
+              lineCollisions++;
+            }
+          }
+
+          for (final pipe in obstacleMap.pipes) {
+            if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
+            if (CalloutObstacleMap.segmentsIntersect(anchor, entryShelf, pipe.p1, pipe.p2, tolerance: 0.05)) {
+              lineCollisions++;
+            }
+          }
+
+          if (numItems > 1) {
+            final stemP1 = Offset(entryShelf.dx, candStartY);
+            final stemP2 = Offset(entryShelf.dx, candStartY + (numItems - 1) * pitch);
+            for (final pipe in obstacleMap.pipes) {
+              if (pipe.id != null && clusterTargetSegIds.contains(pipe.id)) continue;
+              if (CalloutObstacleMap.segmentsIntersect(stemP1, stemP2, pipe.p1, pipe.p2, tolerance: 0.05)) {
+                lineCollisions++;
+              }
+            }
+          }
+
+          // Базовая стоимость каскадного кандидата:
+          // Он НЕ получает штрафа за разрозненность (+45.0), поэтому выигрывает у обычных кандидатов!
+          double cost = dist * 4.0;
+          if (dist > 18.0) {
+            final extra = dist - 18.0;
+            cost += extra * extra * 30.0;
+          }
+
+          cost += collisions * 50000.0;
+          cost += lineCollisions * 100000.0;
+
+          if (cost < lowestCost) {
+            lowestCost = cost;
+            best = _GenerativeCandidate(
+              entryShelf: entryShelf,
+              startY: candStartY,
+              pitch: pitch,
+              isRight: isRight,
+              cost: cost,
+              rects: rects,
+            );
+          }
+        }
+      }
 
       for (final radius in radii) {
         for (final angle in angles) {
@@ -1638,8 +1747,24 @@ class CalloutLayoutEngine {
 
           if (isOrthogonal) cost += 30.0;
           
-          final angleDeg = (angle * 180 / math.pi).abs() % 90;
-          if ((angleDeg - 45).abs() < 5.0) cost -= 5.0;
+          // Проверяем, есть ли рядом размещенная полка
+          bool hasNearbyShelf = false;
+          bool matchesCascade = false;
+          for (final placed in placedShelves) {
+            if ((placed.anchor - anchor).distance <= 50.0) {
+              hasNearbyShelf = true;
+              if ((entryShelf.dx - placed.shelfStart.dx).abs() <= 1.0) {
+                matchesCascade = true;
+                break;
+              }
+            }
+          }
+
+          // Если рядом есть соседи, но кандидат ставит полку на случайном X вразнобой —
+          // накладываем ПЛЮС К ШТРАФУ за разрозненность полок!
+          if (hasNearbyShelf && !matchesCascade) {
+            cost += 45.0; // Штраф за отказ от каскадного выравнивания
+          }
 
           cost += collisions * 50000.0;
           cost += lineCollisions * 100000.0;
@@ -1656,7 +1781,7 @@ class CalloutLayoutEngine {
             );
           }
         }
-        if (best != null && best.cost < 50000.0) break;
+        if (best != null && best.cost < 50000.0 && radius >= 18.0) break;
       }
 
       if (best != null) {
@@ -1681,6 +1806,15 @@ class CalloutLayoutEngine {
             trunkId,
           );
         }
+
+        // Фиксируем размещенную полку в списке для каскадного выравнивания следующих выносок
+        placedShelves.add(_PlacedGenerativeShelf(
+          shelfStart: best.entryShelf,
+          isRight: best.isRight,
+          minY: best.startY,
+          maxY: best.startY + (numItems - 1) * best.pitch,
+          anchor: anchor,
+        ));
       }
     }
   }
@@ -1701,6 +1835,22 @@ class _GenerativeCandidate {
     required this.isRight,
     required this.cost,
     required this.rects,
+  });
+}
+
+class _PlacedGenerativeShelf {
+  final Offset shelfStart;
+  final bool isRight;
+  final double minY;
+  final double maxY;
+  final Offset anchor;
+
+  _PlacedGenerativeShelf({
+    required this.shelfStart,
+    required this.isRight,
+    required this.minY,
+    required this.maxY,
+    required this.anchor,
   });
 }
 
