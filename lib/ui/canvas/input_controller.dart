@@ -21,6 +21,7 @@ import '../../domain/models/pipe_segment.dart';
 import '../../domain/models/pipe_spool.dart';
 import '../../domain/models/pipe_support.dart';
 import '../../domain/models/piping_network.dart';
+import '../../domain/models/property_clipboard.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/custom_valve_definition.dart';
 import '../../domain/models/project_model.dart';
@@ -39,10 +40,12 @@ import '../../domain/enums/sheet_format_type.dart';
 import '../../domain/enums/viewport_layout_preset.dart';
 import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
+import '../../domain/models/detail_node.dart';
 import '../../domain/models/sheet_callout_preset.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
 import '../../domain/models/title_block_data.dart';
+import '../../domain/services/sheet_geometry_builder.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import 'sheet_canvas_painter.dart';
 import '../../data/repositories/project_repository.dart';
@@ -148,6 +151,12 @@ class PipingInputController extends ChangeNotifier {
   SnapResult? currentSnapResult;
   bool isSnapEnabled = true;
   bool showGrid = true;
+
+  /// Отображать ли выноски в 3D-пространстве модели (не влияет на листы чертежей и пресеты)
+  bool showCalloutsInModelSpace = true;
+
+  /// Категории выносок, временно скрытые в 3D-пространстве модели
+  final Set<CalloutTargetType> hiddenCalloutTypes = {};
 
   // Модульные подконтроллеры селекции и трассировки
   final SelectionController selectionController = SelectionController();
@@ -290,6 +299,442 @@ class PipingInputController extends ChangeNotifier {
       selectedSupportId = newId;
       history.recordState(network);
       notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
+  // --- Буфер обмена инженерных свойств (Match / Copy Properties) ---
+  ElementPropertySnapshot? propertyClipboard;
+  PropertyCopyOptions propertyCopyOptions = const PropertyCopyOptions();
+  bool isPropertyBrushActive = false;
+
+  void updatePropertyCopyOptions(PropertyCopyOptions options) {
+    propertyCopyOptions = options;
+    notifyListeners();
+  }
+
+  /// Определяет категорию свойств текущего выделенного элемента
+  PropertySourceKind? get selectedPropertyTargetKind {
+    if (selectedValveId != null && network.valves.containsKey(selectedValveId)) {
+      return PropertySourceKind.valve;
+    }
+    if (selectedNodeId != null && network.fittings.containsKey(selectedNodeId)) {
+      return PropertySourceKind.fitting;
+    }
+    if (selectedSupportId != null && network.supports.containsKey(selectedSupportId)) {
+      return PropertySourceKind.support;
+    }
+    if (selectedWeldId != null && network.weldJoints.containsKey(selectedWeldId)) {
+      return PropertySourceKind.weld;
+    }
+    if (selectedSpoolId != null && network.spools.containsKey(selectedSpoolId)) {
+      final spool = network.spools[selectedSpoolId]!;
+      if (network.segments.containsKey(spool.segmentId)) {
+        return PropertySourceKind.segment;
+      }
+    }
+    if (selectedSegmentId != null && network.segments.containsKey(selectedSegmentId)) {
+      return PropertySourceKind.segment;
+    }
+    if (selectedSegmentIds.isNotEmpty) {
+      return PropertySourceKind.segment;
+    }
+    return null;
+  }
+
+  /// Создает снимок свойств текущего выделенного элемента
+  ElementPropertySnapshot? captureSelectedElementProperties() {
+    if (selectedValveId != null) {
+      final v = network.valves[selectedValveId!];
+      if (v != null) return ElementPropertySnapshot.fromValve(v);
+    }
+    if (selectedNodeId != null) {
+      final f = network.fittings[selectedNodeId!];
+      if (f != null) return ElementPropertySnapshot.fromFitting(f);
+    }
+    if (selectedSupportId != null) {
+      final s = network.supports[selectedSupportId!];
+      if (s != null) return ElementPropertySnapshot.fromSupport(s);
+    }
+    if (selectedWeldId != null) {
+      final w = network.weldJoints[selectedWeldId!];
+      if (w != null) return ElementPropertySnapshot.fromWeld(w);
+    }
+    if (selectedSpoolId != null) {
+      final spool = network.spools[selectedSpoolId!];
+      final seg = spool != null ? network.segments[spool.segmentId] : null;
+      if (seg != null) return ElementPropertySnapshot.fromSegment(seg);
+    }
+    if (selectedSegmentId != null) {
+      final seg = network.segments[selectedSegmentId!];
+      if (seg != null) return ElementPropertySnapshot.fromSegment(seg);
+    }
+    return null;
+  }
+
+  /// Копирует свойства выделенного элемента в `propertyClipboard`
+  bool copySelectedElementProperties() {
+    final snap = captureSelectedElementProperties();
+    if (snap == null) return false;
+    propertyClipboard = snap;
+    notifyListeners();
+    return true;
+  }
+
+  /// Можно ли вставить свойства из `propertyClipboard` в текущий выделенный элемент
+  bool get canPasteProperties {
+    final targetKind = selectedPropertyTargetKind;
+    if (propertyClipboard == null || targetKind == null) return false;
+    return propertyClipboard!.canApplyTo(targetKind);
+  }
+
+  /// Вставляет свойства из `propertyClipboard` в текущий выделенный элемент (или группу сегментов)
+  int pastePropertiesToSelected() {
+    final snap = propertyClipboard;
+    if (snap == null) return 0;
+
+    int updatedCount = 0;
+    bool needsWeldAndSpoolSync = false;
+
+    if (selectedValveId != null && network.valves.containsKey(selectedValveId)) {
+      final target = network.valves[selectedValveId!]!;
+      final updated = snap.applyToValve(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.updateValve(target.id, updated);
+        updatedCount++;
+        needsWeldAndSpoolSync = true;
+      }
+    } else if (selectedNodeId != null && network.fittings.containsKey(selectedNodeId)) {
+      final target = network.fittings[selectedNodeId!]!;
+      final updated = snap.applyToFitting(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.fittings[selectedNodeId!] = updated;
+        updatedCount++;
+        needsWeldAndSpoolSync = true;
+      }
+    } else if (selectedSupportId != null && network.supports.containsKey(selectedSupportId)) {
+      final target = network.supports[selectedSupportId!]!;
+      final updated = snap.applyToSupport(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.updateSupport(target.id, updated);
+        updatedCount++;
+      }
+    } else if (selectedWeldId != null && network.weldJoints.containsKey(selectedWeldId)) {
+      final target = network.weldJoints[selectedWeldId!]!;
+      final updated = snap.applyToWeld(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.weldJoints[target.id] = updated;
+        updatedCount++;
+      }
+    } else {
+      final targetSegIds = <String>{
+        if (selectedSegmentId != null) selectedSegmentId!,
+        ...selectedSegmentIds,
+        if (selectedSpoolId != null && network.spools[selectedSpoolId!] != null)
+          network.spools[selectedSpoolId!]!.segmentId,
+      };
+      final affectedNodes = <String>{};
+      for (final segId in targetSegIds) {
+        final target = network.segments[segId];
+        if (target == null) continue;
+        final updated = snap.applyToSegment(target, options: propertyCopyOptions);
+        if (updated != target) {
+          network.segments[segId] = updated;
+          affectedNodes.add(updated.startNodeId);
+          affectedNodes.add(updated.endNodeId);
+          updatedCount++;
+          needsWeldAndSpoolSync = true;
+        }
+      }
+      for (final nId in affectedNodes) {
+        FittingDetector.autoDetectFittingsForNode(network, nId);
+      }
+    }
+
+    if (updatedCount > 0) {
+      if (needsWeldAndSpoolSync) {
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+      }
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updatedCount;
+  }
+
+  /// Включает или выключает интерактивный режим «Кисть свойств» (Match Properties)
+  void togglePropertyBrush() {
+    if (isPropertyBrushActive) {
+      isPropertyBrushActive = false;
+      notifyListeners();
+      return;
+    }
+    final snap = captureSelectedElementProperties() ?? propertyClipboard;
+    if (snap == null) return;
+    propertyClipboard = snap;
+    isPropertyBrushActive = true;
+    currentTool = CanvasTool.select;
+    notifyListeners();
+  }
+
+  /// Подсчитывает количество однотипных элементов в сети (не считая сам элемент-источник)
+  int countSimilarTargets({required bool sameDnOnly}) {
+    final snap = captureSelectedElementProperties();
+    if (snap == null) return 0;
+
+    switch (snap.kind) {
+      case PropertySourceKind.valve:
+        final src = snap.valve!;
+        return network.valves.values.where((v) {
+          if (v.id == src.id) return false;
+          if (v.valveType != src.valveType) return false;
+          if (sameDnOnly && v.dn != src.dn) return false;
+          return true;
+        }).length;
+
+      case PropertySourceKind.fitting:
+        final src = snap.fitting!;
+        return network.fittings.values.where((f) {
+          if (f.id == src.id && f.nodeId == src.nodeId) return false;
+          if (!ElementPropertySnapshot.isSameFittingFamily(f.fittingType, src.fittingType)) {
+            return false;
+          }
+          if (sameDnOnly && (f.dn != src.dn || f.dnSecondary != src.dnSecondary)) return false;
+          return true;
+        }).length;
+
+      case PropertySourceKind.segment:
+        final src = snap.segment!;
+        return network.segments.values.where((s) {
+          if (s.id == src.id) return false;
+          if (sameDnOnly) return s.dn == src.dn && s.systemId == src.systemId;
+          return s.systemId == src.systemId;
+        }).length;
+
+      case PropertySourceKind.support:
+        final src = snap.support!;
+        final srcDn = network.segments[src.segmentId]?.dn;
+        return network.supports.values.where((sup) {
+          if (sup.id == src.id) return false;
+          if (sup.type != src.type) return false;
+          if (sameDnOnly && srcDn != null && network.segments[sup.segmentId]?.dn != srcDn) {
+            return false;
+          }
+          return true;
+        }).length;
+
+      case PropertySourceKind.weld:
+        final src = snap.weld!;
+        final srcDn = network.segments[src.segmentId]?.dn;
+        return network.weldJoints.values.where((w) {
+          if (w.id == src.id) return false;
+          if (sameDnOnly && srcDn != null && network.segments[w.segmentId]?.dn != srcDn) {
+            return false;
+          }
+          return true;
+        }).length;
+    }
+  }
+
+  /// Пакетно применяет свойства текущего элемента ко всем однотипным элементам сети (за 1 шаг Undo)
+  int applySelectedPropertiesToSimilar({required bool sameDnOnly}) {
+    final snap = captureSelectedElementProperties();
+    if (snap == null) return 0;
+    propertyClipboard = snap;
+
+    int updatedCount = 0;
+    bool needsWeldAndSpoolSync = false;
+
+    switch (snap.kind) {
+      case PropertySourceKind.valve:
+        final src = snap.valve!;
+        for (final entry in network.valves.entries.toList()) {
+          final v = entry.value;
+          if (v.id == src.id) continue;
+          if (v.valveType != src.valveType) continue;
+          if (sameDnOnly && v.dn != src.dn) continue;
+          final updated = snap.applyToValve(v, options: propertyCopyOptions);
+          if (updated != v) {
+            network.updateValve(v.id, updated);
+            updatedCount++;
+            needsWeldAndSpoolSync = true;
+          }
+        }
+        break;
+
+      case PropertySourceKind.fitting:
+        final src = snap.fitting!;
+        for (final entry in network.fittings.entries.toList()) {
+          final f = entry.value;
+          if (f.id == src.id && f.nodeId == src.nodeId) continue;
+          if (!ElementPropertySnapshot.isSameFittingFamily(f.fittingType, src.fittingType)) {
+            continue;
+          }
+          if (sameDnOnly && (f.dn != src.dn || f.dnSecondary != src.dnSecondary)) continue;
+          final updated = snap.applyToFitting(f, options: propertyCopyOptions);
+          if (updated != f) {
+            network.fittings[entry.key] = updated;
+            updatedCount++;
+            needsWeldAndSpoolSync = true;
+          }
+        }
+        break;
+
+      case PropertySourceKind.segment:
+        final src = snap.segment!;
+        final affectedNodes = <String>{};
+        for (final entry in network.segments.entries.toList()) {
+          final s = entry.value;
+          if (s.id == src.id) continue;
+          if (sameDnOnly && (s.dn != src.dn || s.systemId != src.systemId)) continue;
+          if (!sameDnOnly && s.systemId != src.systemId) continue;
+          final updated = snap.applyToSegment(s, options: propertyCopyOptions);
+          if (updated != s) {
+            network.segments[entry.key] = updated;
+            affectedNodes.add(updated.startNodeId);
+            affectedNodes.add(updated.endNodeId);
+            updatedCount++;
+            needsWeldAndSpoolSync = true;
+          }
+        }
+        for (final nId in affectedNodes) {
+          FittingDetector.autoDetectFittingsForNode(network, nId);
+        }
+        break;
+
+      case PropertySourceKind.support:
+        final src = snap.support!;
+        final srcDn = network.segments[src.segmentId]?.dn;
+        for (final entry in network.supports.entries.toList()) {
+          final sup = entry.value;
+          if (sup.id == src.id) continue;
+          if (sup.type != src.type) continue;
+          if (sameDnOnly && srcDn != null && network.segments[sup.segmentId]?.dn != srcDn) {
+            continue;
+          }
+          final updated = snap.applyToSupport(sup, options: propertyCopyOptions);
+          if (updated != sup) {
+            network.updateSupport(sup.id, updated);
+            updatedCount++;
+          }
+        }
+        break;
+
+      case PropertySourceKind.weld:
+        final src = snap.weld!;
+        final srcDn = network.segments[src.segmentId]?.dn;
+        for (final entry in network.weldJoints.entries.toList()) {
+          final w = entry.value;
+          if (w.id == src.id) continue;
+          if (sameDnOnly && srcDn != null && network.segments[w.segmentId]?.dn != srcDn) {
+            continue;
+          }
+          final updated = snap.applyToWeld(w, options: propertyCopyOptions);
+          if (updated != w) {
+            network.weldJoints[entry.key] = updated;
+            updatedCount++;
+          }
+        }
+        break;
+    }
+
+    if (updatedCount > 0) {
+      if (needsWeldAndSpoolSync) {
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+      }
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updatedCount;
+  }
+
+  /// Применяет свойства из активной «Кисти свойств» к элементу под курсором `screenPos`
+  bool applyPropertyBrushAtScreenPos(Offset screenPos) {
+    final snap = propertyClipboard;
+    if (!isPropertyBrushActive || snap == null) return false;
+
+    final hitValveId = _findValveAtScreenPos(screenPos);
+    if (hitValveId != null &&
+        network.valves.containsKey(hitValveId) &&
+        snap.canApplyTo(PropertySourceKind.valve)) {
+      final target = network.valves[hitValveId]!;
+      final updated = snap.applyToValve(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.updateValve(target.id, updated);
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+        history.recordState(network);
+        notifyListeners();
+      }
+      return true;
+    }
+
+    final hitWeldId = _findWeldAtScreenPos(screenPos);
+    if (hitWeldId != null &&
+        network.weldJoints.containsKey(hitWeldId) &&
+        snap.canApplyTo(PropertySourceKind.weld)) {
+      final target = network.weldJoints[hitWeldId]!;
+      final updated = snap.applyToWeld(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.weldJoints[hitWeldId] = updated;
+        history.recordState(network);
+        notifyListeners();
+      }
+      return true;
+    }
+
+    final hitSupportId = _findSupportAtScreenPos(screenPos);
+    if (hitSupportId != null &&
+        network.supports.containsKey(hitSupportId) &&
+        snap.canApplyTo(PropertySourceKind.support)) {
+      final target = network.supports[hitSupportId]!;
+      final updated = snap.applyToSupport(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.updateSupport(target.id, updated);
+        history.recordState(network);
+        notifyListeners();
+      }
+      return true;
+    }
+
+    final hitNodeId = (currentSnapResult?.type == SnapType.node
+            ? currentSnapResult!.snappedNodeId
+            : _findNodeAtScreenPos(screenPos)) ??
+        _findFittingAtScreenPos(screenPos);
+    if (hitNodeId != null &&
+        network.fittings.containsKey(hitNodeId) &&
+        snap.canApplyTo(PropertySourceKind.fitting)) {
+      final target = network.fittings[hitNodeId]!;
+      final updated = snap.applyToFitting(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.fittings[hitNodeId] = updated;
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+        history.recordState(network);
+        notifyListeners();
+      }
+      return true;
+    }
+
+    final hitSpool = !isCenterlineMode ? _findSpoolAtScreenPos(screenPos) : null;
+    final hitSegId = hitSpool?.segmentId ?? _findSegmentAtScreenPos(screenPos);
+    if (hitSegId != null &&
+        network.segments.containsKey(hitSegId) &&
+        snap.canApplyTo(PropertySourceKind.segment)) {
+      final target = network.segments[hitSegId]!;
+      final updated = snap.applyToSegment(target, options: propertyCopyOptions);
+      if (updated != target) {
+        network.segments[hitSegId] = updated;
+        FittingDetector.autoDetectFittingsForNode(network, updated.startNodeId);
+        FittingDetector.autoDetectFittingsForNode(network, updated.endNodeId);
+        network.generateElementWeldJoints();
+        network.recalculateSpools();
+        history.recordState(network);
+        notifyListeners();
+      }
       return true;
     }
 
@@ -539,14 +984,21 @@ class PipingInputController extends ChangeNotifier {
         isDraggingValve ||
         isDraggingSupport ||
         isDraggingWeld ||
+        isPropertyBrushActive ||
         (currentTool != CanvasTool.select && currentTool != CanvasTool.pan);
   }
 
   /// Отмена текущей операции (по клавише Esc, ПКМ или кнопке на экране)
   void cancelCurrentOperation({bool keepTool = false}) {
+    if (isPropertyBrushActive && !keepTool) {
+      isPropertyBrushActive = false;
+      notifyListeners();
+      return;
+    }
     final hadActive = hasActiveSelectionOrOperation;
     _longPressTimer?.cancel();
     _canDragElement = false;
+    isPropertyBrushActive = false;
     clearSelection();
     tracingController.clearAcquiredPoints();
     traceStartNode = null;
@@ -1082,10 +1534,16 @@ class PipingInputController extends ChangeNotifier {
           return;
         }
 
+        // 5.5. Клик по ручкам, полке или контуру выносного узла (DetailNode)
+        if (_handleDetailNodePointerDownOnSheet(screenPos)) {
+          return;
+        }
+
         // 6. Клик по умной выноске на листе
         final hitCalloutId = _findCalloutAtScreenPos(screenPos);
         if (hitCalloutId != null) {
           selectedCalloutId = hitCalloutId;
+          selectedDetailNodeId = null;
           selectedSheetBlock = null;
           isViewportSelected = false;
           activeViewportGrip = null;
@@ -1103,6 +1561,9 @@ class PipingInputController extends ChangeNotifier {
           selectedSheetBlock = 'viewport';
           isViewportSelected = true;
           activeViewportGrip = null;
+          if (activeSheet?.detailNodeId == null) {
+            selectedDetailNodeId = null;
+          }
           notifyListeners();
           return;
         }
@@ -1111,6 +1572,9 @@ class PipingInputController extends ChangeNotifier {
         selectedSheetBlock = null;
         isViewportSelected = false;
         activeViewportGrip = null;
+        if (activeSheet?.detailNodeId == null) {
+          selectedDetailNodeId = null;
+        }
         notifyListeners();
         return;
       } else {
@@ -1118,6 +1582,9 @@ class PipingInputController extends ChangeNotifier {
         if (!hitTestSheetViewport(screenPos)) {
           isViewportFocused = false;
           notifyListeners();
+          return;
+        }
+        if (currentTool == CanvasTool.select && _handleDetailNodePointerDownOnSheet(screenPos)) {
           return;
         }
       }
@@ -1193,6 +1660,11 @@ class PipingInputController extends ChangeNotifier {
       activeElbowAxisId = null;
       isElbowAxisStart = null;
       notifyListeners();
+      return;
+    }
+
+    if (isPropertyBrushActive) {
+      applyPropertyBrushAtScreenPos(screenPos);
       return;
     }
 
@@ -2264,7 +2736,53 @@ class PipingInputController extends ChangeNotifier {
           }
         }
       }
-      if (!isViewportFocused) {
+
+      // Интерактивное перетаскивание полки, вершин многоугольника или отступа DetailNode
+      if (selectedDetailNodeId != null &&
+          (isDraggingDetailNodeShelf ||
+              draggingDetailPolygonVertexIndex != null ||
+              isDraggingDetailNodePadding)) {
+        final dn = network.detailNodes[selectedDetailNodeId!];
+        final sheet = activeSheet!;
+        if (dn != null) {
+          final ptMm = _screenToSheetMm(screenPos);
+          final ptModel2d = ViewportTransformService.sheetMmToModel2d(ptMm, sheet.viewport);
+
+          if (isDraggingDetailNodeShelf && _detailNodeDragStartScreenPos != null && _detailNodeInitialShelfModel2d != null) {
+            final deltaMm = (screenPos - _detailNodeDragStartScreenPos!) / sheetZoom;
+            final safeScale = sheet.viewport.viewScale <= 1e-6 ? 0.02 : sheet.viewport.viewScale;
+            final newShelfModel2d = _detailNodeInitialShelfModel2d! + (deltaMm / safeScale);
+            network.detailNodes[dn.id] = dn.copyWith(shelfPositionModel2d: newShelfModel2d);
+            hasUnsavedChanges = true;
+            notifyListeners();
+            return;
+          }
+
+          if (draggingDetailPolygonVertexIndex != null) {
+            final idx = draggingDetailPolygonVertexIndex!;
+            if (idx >= 0 && idx < dn.polygonVerticesModel2d.length) {
+              final updatedVerts = List<Offset>.from(dn.polygonVerticesModel2d);
+              updatedVerts[idx] = ptModel2d;
+              network.detailNodes[dn.id] = dn.copyWith(polygonVerticesModel2d: updatedVerts);
+              hasUnsavedChanges = true;
+              notifyListeners();
+              return;
+            }
+          }
+
+          if (isDraggingDetailNodePadding && _detailNodeDragStartScreenPos != null) {
+            final deltaPx = screenPos - _detailNodeDragStartScreenPos!;
+            final deltaMm = (deltaPx.dx + deltaPx.dy) * 0.5 / sheetZoom;
+            final newPad = (_detailNodeInitialPaddingMm + deltaMm).clamp(3.0, 60.0);
+            network.detailNodes[dn.id] = dn.copyWith(paddingMm: newPad);
+            hasUnsavedChanges = true;
+            notifyListeners();
+            return;
+          }
+        }
+      }
+
+      if (!isViewportFocused && !isDraggingCallout) {
         return;
       }
     }
@@ -2785,7 +3303,19 @@ class PipingInputController extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      if (!isViewportFocused) {
+      if (isDraggingDetailNodeShelf ||
+          draggingDetailPolygonVertexIndex != null ||
+          isDraggingDetailNodePadding) {
+        isDraggingDetailNodeShelf = false;
+        draggingDetailPolygonVertexIndex = null;
+        isDraggingDetailNodePadding = false;
+        _detailNodeDragStartScreenPos = null;
+        _detailNodeInitialShelfModel2d = null;
+        history.recordState(network);
+        notifyListeners();
+        return;
+      }
+      if (!isViewportFocused && !isDraggingCallout) {
         return;
       }
     }
@@ -5852,9 +6382,178 @@ class PipingInputController extends ChangeNotifier {
   void removeCallout(String id) {
     if (network.callouts.containsKey(id)) {
       network.callouts.remove(id);
+      if (selectedCalloutId == id) {
+        selectedCalloutId = null;
+      }
       history.recordState(network);
       notifyListeners();
     }
+  }
+
+  /// Переключение видимости всех выносок в 3D-пространстве модели
+  /// (не удаляет выноски, их смещения на листах и шаблоны-пресеты)
+  void toggleShowCalloutsInModelSpace() {
+    showCalloutsInModelSpace = !showCalloutsInModelSpace;
+    if (!showCalloutsInModelSpace && isModelSpaceActive && selectedCalloutId != null) {
+      selectedCalloutId = null;
+    }
+    notifyListeners();
+  }
+
+  /// Установка видимости выносок в 3D-пространстве модели
+  void setShowCalloutsInModelSpace(bool value) {
+    if (showCalloutsInModelSpace == value) return;
+    showCalloutsInModelSpace = value;
+    if (!showCalloutsInModelSpace && isModelSpaceActive && selectedCalloutId != null) {
+      selectedCalloutId = null;
+    }
+    notifyListeners();
+  }
+
+  /// Переключение видимости конкретной категории выносок в 3D-пространстве модели
+  void toggleCalloutTypeVisibilityInModelSpace(CalloutTargetType type) {
+    if (hiddenCalloutTypes.contains(type)) {
+      hiddenCalloutTypes.remove(type);
+    } else {
+      hiddenCalloutTypes.add(type);
+      if (isModelSpaceActive && selectedCalloutId != null) {
+        final sel = network.callouts[selectedCalloutId];
+        if (sel != null && sel.targetType == type) {
+          selectedCalloutId = null;
+        }
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Показать все категории выносок в 3D-пространстве модели
+  void showAllCalloutTypesInModelSpace() {
+    showCalloutsInModelSpace = true;
+    hiddenCalloutTypes.clear();
+    notifyListeners();
+  }
+
+  /// Скрыть все категории выносок в 3D-пространстве модели
+  void hideAllCalloutTypesInModelSpace() {
+    hiddenCalloutTypes.addAll(CalloutTargetType.values);
+    if (isModelSpaceActive) {
+      selectedCalloutId = null;
+    }
+    notifyListeners();
+  }
+
+  /// Переключение индивидуального скрытия конкретной выноски (без её удаления)
+  void toggleCalloutHidden(String calloutId) {
+    final callout = network.callouts[calloutId];
+    if (callout == null) return;
+    final nextHidden = !callout.isHidden;
+    network.callouts[calloutId] = callout.copyWith(isHidden: nextHidden);
+    if (nextHidden && selectedCalloutId == calloutId) {
+      selectedCalloutId = null;
+    }
+    history.recordState(network);
+    notifyListeners();
+  }
+
+  /// Групповое скрытие / показ выносок выбранных типов (с сохранением выносок, листов и пресетов)
+  int setCalloutsHiddenByTypes(Set<CalloutTargetType> types, bool hidden) {
+    int updated = 0;
+    for (final entry in network.callouts.entries.toList()) {
+      if (types.contains(entry.value.targetType) && entry.value.isHidden != hidden) {
+        network.callouts[entry.key] = entry.value.copyWith(isHidden: hidden);
+        updated++;
+      }
+    }
+    if (updated > 0) {
+      if (hidden && selectedCalloutId != null) {
+        final sel = network.callouts[selectedCalloutId];
+        if (sel != null && sel.isHidden) {
+          selectedCalloutId = null;
+        }
+      }
+      history.recordState(network);
+      notifyListeners();
+    }
+    return updated;
+  }
+
+  /// Показать все индивидуально скрытые выноски и включить отображение в 3D
+  int unhideAllCallouts() {
+    int updated = 0;
+    for (final entry in network.callouts.entries.toList()) {
+      if (entry.value.isHidden) {
+        network.callouts[entry.key] = entry.value.copyWith(isHidden: false);
+        updated++;
+      }
+    }
+    showCalloutsInModelSpace = true;
+    hiddenCalloutTypes.clear();
+    if (updated > 0) {
+      history.recordState(network);
+    }
+    notifyListeners();
+    return updated;
+  }
+
+  /// Групповое удаление выносок по выбранным категориям [types].
+  /// При [keepPinned] = true закрепленные выноски (📌) сохраняются.
+  /// Шаблоны текста выносок (`calloutTemplates`) и пресеты листов НЕ удаляются.
+  int deleteCalloutsByTypes(
+    Set<CalloutTargetType> types, {
+    bool keepPinned = false,
+    bool onlyElevationMarks = false,
+  }) {
+    if (types.isEmpty && !onlyElevationMarks) return 0;
+    final idsToRemove = <String>[];
+    for (final c in network.callouts.values) {
+      if (keepPinned && (c.isPinned || c.sheetPinned.values.any((v) => v))) {
+        continue;
+      }
+      final isElev = c.targetType == CalloutTargetType.node || c.elevationStyle != null;
+      if (onlyElevationMarks) {
+        if (isElev) idsToRemove.add(c.id);
+        continue;
+      }
+      if (types.contains(c.targetType)) {
+        idsToRemove.add(c.id);
+      }
+    }
+    if (idsToRemove.isEmpty) return 0;
+    for (final id in idsToRemove) {
+      network.callouts.remove(id);
+    }
+    if (selectedCalloutId != null && idsToRemove.contains(selectedCalloutId)) {
+      selectedCalloutId = null;
+    }
+    history.recordState(network);
+    notifyListeners();
+    return idsToRemove.length;
+  }
+
+  /// Удаление произвольного набора выносок по их ID (с записью в историю Undo)
+  int deleteCalloutsByIds(Iterable<String> ids) {
+    int removed = 0;
+    for (final id in ids.toList()) {
+      if (network.callouts.remove(id) != null) {
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      if (selectedCalloutId != null && !network.callouts.containsKey(selectedCalloutId)) {
+        selectedCalloutId = null;
+      }
+      history.recordState(network);
+      notifyListeners();
+    }
+    return removed;
+  }
+
+  /// Удаление всех выносок сети (с опцией сохранения закрепленных 📌 и полным сохранением шаблонов/пресетов)
+  int deleteAllCallouts({bool keepPinned = false}) {
+    return deleteCalloutsByTypes(
+      CalloutTargetType.values.toSet(),
+      keepPinned: keepPinned,
+    );
   }
 
   /// Автоматическая интеллектуальная расстановка выносок для предотвращения
@@ -6122,7 +6821,9 @@ class PipingInputController extends ChangeNotifier {
           selectedCalloutId: selectedCalloutId,
         );
       }
+      return null;
     }
+    if (!showCalloutsInModelSpace) return null;
     final zoomFactor = (projector.scale / 0.2).clamp(0.65, 1.8);
     return CalloutPainter.hitTest(
       screenPos,
@@ -6134,6 +6835,7 @@ class PipingInputController extends ChangeNotifier {
       annotationScale: zoomFactor,
       isPaperSpace: false,
       selectedCalloutId: selectedCalloutId,
+      hiddenTypes: hiddenCalloutTypes,
     );
   }
 
@@ -6979,6 +7681,537 @@ class PipingInputController extends ChangeNotifier {
     return rect.contains(screenPos);
   }
 
+  // Состояние выбора и интерактивного редактирования выносного узла (DetailNode)
+  String? selectedDetailNodeId;
+  bool isDraggingDetailNodeShelf = false;
+  int? draggingDetailPolygonVertexIndex;
+  bool isDraggingDetailNodePadding = false;
+  Offset? _detailNodeDragStartScreenPos;
+  Offset? _detailNodeInitialShelfModel2d;
+  double _detailNodeInitialPaddingMm = 10.0;
+
+  bool get canCreateDetailNode =>
+      selectedSegmentIds.isNotEmpty ||
+      selectedSegmentId != null ||
+      selectedNodeIds.isNotEmpty ||
+      selectedNodeId != null ||
+      selectedSpoolIds.isNotEmpty ||
+      selectedSpoolId != null ||
+      selectedValveId != null ||
+      selectedSupportId != null ||
+      selectedEquipmentIds.isNotEmpty ||
+      selectedEquipmentId != null;
+
+  Set<String> collectSelectedSegmentsForDetailNode() {
+    final segIds = <String>{};
+    segIds.addAll(selectedSegmentIds);
+    if (selectedSegmentId != null) segIds.add(selectedSegmentId!);
+
+    for (final spId in selectedSpoolIds) {
+      final sp = network.spools[spId];
+      if (sp != null) segIds.add(sp.segmentId);
+    }
+    if (selectedSpoolId != null) {
+      final sp = network.spools[selectedSpoolId!];
+      if (sp != null) segIds.add(sp.segmentId);
+    }
+
+    if (selectedValveId != null) {
+      final v = network.valves[selectedValveId!];
+      if (v != null) segIds.add(v.segmentId);
+    }
+    if (selectedSupportId != null) {
+      final sup = network.supports[selectedSupportId!];
+      if (sup != null) segIds.add(sup.segmentId);
+    }
+
+    final nodeSet = <String>{...selectedNodeIds};
+    if (selectedNodeId != null) nodeSet.add(selectedNodeId!);
+
+    if (nodeSet.isNotEmpty) {
+      // Если сегменты еще не выбраны напрямую, или выбраны узлы — собираем сегменты, связанные с выбранными узлами
+      final betweenNodes = <String>{};
+      final touchingNodes = <String>{};
+      for (final seg in network.segments.values) {
+        final sIn = nodeSet.contains(seg.startNodeId);
+        final eIn = nodeSet.contains(seg.endNodeId);
+        if (sIn && eIn) {
+          betweenNodes.add(seg.id);
+        } else if (sIn || eIn) {
+          touchingNodes.add(seg.id);
+        }
+      }
+      if (betweenNodes.isNotEmpty) {
+        segIds.addAll(betweenNodes);
+      } else if (segIds.isEmpty) {
+        segIds.addAll(touchingNodes);
+      }
+    }
+
+    // Если выбрано оборудование без сегментов — добавляем примыкающие к штуцерам сегменты
+    final eqSet = <String>{...selectedEquipmentIds};
+    if (selectedEquipmentId != null) eqSet.add(selectedEquipmentId!);
+    if (eqSet.isNotEmpty && segIds.isEmpty) {
+      for (final n in network.nodes.values) {
+        if (n.equipmentId != null && eqSet.contains(n.equipmentId)) {
+          for (final s in network.getConnectedSegments(n.id)) {
+            segIds.add(s.id);
+          }
+        }
+      }
+    }
+
+    return segIds;
+  }
+
+  /// Создает выносной укрупненный узел (DetailNode) из текущего выделения
+  /// и автоматически формирует отдельный чертежный лист с крупным масштабом.
+  DetailNode? createDetailNodeFromSelection({
+    DetailBoundaryShape boundaryShape = DetailBoundaryShape.roundedRect,
+    bool switchToDetailSheet = false,
+  }) {
+    final segIds = collectSelectedSegmentsForDetailNode();
+    if (segIds.isEmpty) return null;
+
+    final eqIds = <String>{...selectedEquipmentIds};
+    if (selectedEquipmentId != null) eqIds.add(selectedEquipmentId!);
+
+    // Если еще нет ни одного обзорного листа (работа шла в Модели), сначала убеждаемся что Лист 1 есть
+    if (currentProject.sheets.isEmpty) {
+      addSheet(name: 'Лист 1');
+    }
+
+    final mark = network.generateNextDetailNodeMark();
+    final dnId = 'dn_${_uuid.v4()}';
+    final nextSheetNumber = currentProject.sheets.length + 1;
+    final newSheetId = _uuid.v4();
+
+    final dn = DetailNode(
+      id: dnId,
+      mark: mark,
+      title: 'Узел $mark',
+      segmentIds: segIds,
+      equipmentIds: eqIds,
+      targetSheetId: newSheetId,
+      targetSheetNumber: nextSheetNumber,
+      boundaryShape: boundaryShape,
+      paddingMm: 10.0,
+      suppressCalloutsOnOverview: true,
+      showContextStubs: true,
+      contextStubLengthMm: 450.0,
+    );
+
+    network.detailNodes[dnId] = dn;
+    history.recordState(network);
+
+    // Определяем базовый формат из текущего или первого листа
+    final refSheet = activeSheet ?? currentProject.sheets.first;
+    final baseTitle = refSheet.titleBlockData.drawingTitle.isNotEmpty
+        ? refSheet.titleBlockData.drawingTitle
+        : 'Аксонометрическая схема';
+
+    var detailSheet = DrawingSheet.createDefault(
+      id: newSheetId,
+      name: 'Узел $mark (Лист $nextSheetNumber)',
+      sheetNumber: nextSheetNumber,
+      formatType: refSheet.format.type,
+      orientation: refSheet.format.orientation,
+      detailNodeId: dnId,
+    ).copyWith(
+      titleBlockData: refSheet.titleBlockData.copyWith(
+        drawingTitle: '$baseTitle. Узел $mark',
+        sheetNumber: nextSheetNumber,
+        totalSheets: nextSheetNumber,
+      ),
+    );
+
+    // Авто-вписывание (Auto-Fit) видового экрана нового листа строго по сегментам узла и контекстным патрубкам
+    final autoFit = ViewportTransformService.calculateAutoFit(
+      network: network,
+      projectionType: projector.projectionType,
+      viewport: detailSheet.viewport,
+      detailNodeId: dnId,
+    );
+    detailSheet = detailSheet.copyWith(
+      viewport: detailSheet.viewport.copyWith(
+        modelCenterX: autoFit.centerX,
+        modelCenterY: autoFit.centerY,
+        viewScale: autoFit.scale,
+      ),
+    );
+
+    final updatedSheets = currentProject.sheets.map((s) {
+      return s.copyWith(
+        titleBlockData: s.titleBlockData.copyWith(totalSheets: nextSheetNumber),
+      );
+    }).toList();
+    updatedSheets.add(detailSheet);
+
+    // Если пользователь создавал узел из Пространства Модели — переключаем на Обзорный Лист 1,
+    // чтобы он сразу увидел контур "Узел А / Лист N" (либо на сам детальный лист, если запрошено).
+    final overviewSheetId = activeSheetId ?? updatedSheets.first.id;
+    currentProject = currentProject.copyWith(
+      sheets: updatedSheets,
+      activeSheetId: switchToDetailSheet ? newSheetId : overviewSheetId,
+    );
+
+    // Автоматически раскладываем выноски на новом детальном листе
+    if (network.callouts.isNotEmpty) {
+      runSheetCalloutAutoLayout(newSheetId, onlyUnpinned: true);
+    }
+
+    selectedDetailNodeId = dnId;
+    isViewportFocused = false;
+    hasUnsavedChanges = true;
+    notifyListeners();
+    return dn;
+  }
+
+  void updateDetailNode(DetailNode updated, {bool recordHistory = true}) {
+    if (!network.detailNodes.containsKey(updated.id)) return;
+    network.detailNodes[updated.id] = updated;
+
+    // Синхронизируем имя целевого листа, если марка изменилась
+    if (updated.targetSheetId != null) {
+      final idx = currentProject.sheets.indexWhere((s) => s.id == updated.targetSheetId);
+      if (idx != -1) {
+        final s = currentProject.sheets[idx];
+        final newName = '${updated.effectiveTitle} (Лист ${s.sheetNumber})';
+        if (s.name != newName) {
+          final updatedList = List<DrawingSheet>.from(currentProject.sheets);
+          updatedList[idx] = s.copyWith(name: newName);
+          currentProject = currentProject.copyWith(sheets: updatedList);
+        }
+      }
+    }
+
+    if (recordHistory) {
+      history.recordState(network);
+    }
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  void setDetailNodeBoundaryShape(String detailNodeId, DetailBoundaryShape shape) {
+    final dn = network.detailNodes[detailNodeId];
+    if (dn == null) return;
+
+    List<Offset> polyModel2d = dn.polygonVerticesModel2d;
+    if (shape == DetailBoundaryShape.polygon && polyModel2d.isEmpty) {
+      final baseProjector = AxonometryProjector(
+        projectionType: projector.projectionType,
+        orbitAzimuth: projector.orbitAzimuth,
+        orbitElevation: projector.orbitElevation,
+        targetCenter: projector.targetCenter,
+      );
+      final vpScale = activeSheet?.viewport.viewScale ?? 0.02;
+      final safeScale = vpScale <= 1e-6 ? 0.02 : vpScale;
+      polyModel2d = dn.computeDefaultPolygonModel2d(
+        network,
+        baseProjector,
+        marginModelUnits: dn.paddingMm / safeScale,
+      );
+    }
+
+    updateDetailNode(
+      dn.copyWith(
+        boundaryShape: shape,
+        polygonVerticesModel2d: polyModel2d,
+      ),
+    );
+  }
+
+  void resetDetailNodePolygon(String detailNodeId) {
+    final dn = network.detailNodes[detailNodeId];
+    if (dn == null) return;
+    updateDetailNode(
+      dn.copyWith(
+        polygonVerticesModel2d: const [],
+        clearShelfPosition: true,
+      ),
+    );
+  }
+
+  void addSelectedSegmentsToDetailNode(String detailNodeId) {
+    final dn = network.detailNodes[detailNodeId];
+    if (dn == null) return;
+    final extraSegs = collectSelectedSegmentsForDetailNode();
+    if (extraSegs.isEmpty) return;
+
+    final updated = dn.copyWith(
+      segmentIds: {...dn.segmentIds, ...extraSegs},
+      polygonVerticesModel2d: const [],
+    );
+    updateDetailNode(updated);
+
+    // Обновляем Auto-Fit на целевом листе узла
+    if (updated.targetSheetId != null) {
+      final idx = currentProject.sheets.indexWhere((s) => s.id == updated.targetSheetId);
+      if (idx != -1) {
+        final targetSheet = currentProject.sheets[idx];
+        final autoFit = ViewportTransformService.calculateAutoFit(
+          network: network,
+          projectionType: projector.projectionType,
+          viewport: targetSheet.viewport,
+          detailNodeId: detailNodeId,
+        );
+        updateSheet(
+          targetSheet.copyWith(
+            viewport: targetSheet.viewport.copyWith(
+              modelCenterX: autoFit.centerX,
+              modelCenterY: autoFit.centerY,
+              viewScale: autoFit.scale,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void deleteDetailNode(String detailNodeId, {bool deleteTargetSheet = true}) {
+    final dn = network.detailNodes.remove(detailNodeId);
+    if (dn == null) return;
+    if (selectedDetailNodeId == detailNodeId) {
+      selectedDetailNodeId = null;
+    }
+    history.recordState(network);
+
+    if (deleteTargetSheet && dn.targetSheetId != null) {
+      removeSheet(dn.targetSheetId!);
+    } else {
+      hasUnsavedChanges = true;
+      notifyListeners();
+    }
+  }
+
+  void openDetailNodeSheet(String detailNodeId) {
+    final dn = network.detailNodes[detailNodeId];
+    if (dn == null) return;
+    if (dn.targetSheetId != null && currentProject.sheets.any((s) => s.id == dn.targetSheetId)) {
+      selectSheet(dn.targetSheetId!);
+      return;
+    }
+    // Если лист был удален — пересоздаем его для этого узла
+    final nextSheetNumber = currentProject.sheets.length + 1;
+    final newSheetId = _uuid.v4();
+    final refSheet = activeSheet ?? (currentProject.sheets.isNotEmpty ? currentProject.sheets.first : null);
+    var detailSheet = DrawingSheet.createDefault(
+      id: newSheetId,
+      name: '${dn.effectiveTitle} (Лист $nextSheetNumber)',
+      sheetNumber: nextSheetNumber,
+      formatType: refSheet?.format.type ?? SheetFormatType.a3,
+      orientation: refSheet?.format.orientation ?? SheetOrientation.landscape,
+      detailNodeId: dn.id,
+    );
+    final autoFit = ViewportTransformService.calculateAutoFit(
+      network: network,
+      projectionType: projector.projectionType,
+      viewport: detailSheet.viewport,
+      detailNodeId: dn.id,
+    );
+    detailSheet = detailSheet.copyWith(
+      viewport: detailSheet.viewport.copyWith(
+        modelCenterX: autoFit.centerX,
+        modelCenterY: autoFit.centerY,
+        viewScale: autoFit.scale,
+      ),
+    );
+    final updatedSheets = [...currentProject.sheets, detailSheet];
+    network.detailNodes[dn.id] = dn.copyWith(
+      targetSheetId: newSheetId,
+      targetSheetNumber: nextSheetNumber,
+    );
+    currentProject = currentProject.copyWith(
+      sheets: updatedSheets,
+      activeSheetId: newSheetId,
+    );
+    if (network.callouts.isNotEmpty) {
+      runSheetCalloutAutoLayout(newSheetId, onlyUnpinned: true);
+    }
+    hasUnsavedChanges = true;
+    notifyListeners();
+  }
+
+  Offset _screenToSheetMm(Offset screenPos) {
+    return Offset(
+      (screenPos.dx - sheetPan.dx) / sheetZoom,
+      (screenPos.dy - sheetPan.dy) / sheetZoom,
+    );
+  }
+
+  DetailNodeSheetGeometry? _computeDetailNodeGeometryOnActiveSheet(DetailNode dn) {
+    final sheet = activeSheet;
+    if (sheet == null || sheet.detailNodeId != null) return null;
+    final baseProjector = AxonometryProjector(
+      projectionType: projector.projectionType,
+      orbitAzimuth: projector.orbitAzimuth,
+      orbitElevation: projector.orbitElevation,
+      targetCenter: projector.targetCenter,
+    );
+    return SheetGeometryBuilder.computeDetailNodeSheetGeometry(
+      detailNode: dn,
+      network: network,
+      viewport: sheet.viewport,
+      projector: baseProjector,
+    );
+  }
+
+  /// Проверяет попадание клика по ручкам или контуру/полке выносного узла на обзорном листе.
+  /// Возвращает true, если событие перехвачено.
+  bool _handleDetailNodePointerDownOnSheet(Offset screenPos) {
+    final sheet = activeSheet;
+    if (sheet == null || sheet.detailNodeId != null || network.detailNodes.isEmpty) {
+      return false;
+    }
+
+    final ptMm = _screenToSheetMm(screenPos);
+    final hitRadiusMm = 10.0 / sheetZoom;
+
+    // 1. Если уже выбран выносной узел — проверяем его интерактивные ручки (Grips)
+    if (selectedDetailNodeId != null) {
+      final selDn = network.detailNodes[selectedDetailNodeId!];
+      if (selDn != null) {
+        final geom = _computeDetailNodeGeometryOnActiveSheet(selDn);
+        if (geom != null) {
+          // Ручка перетаскивания полки или сама полка
+          if ((ptMm - geom.shelfStartMm).distance <= hitRadiusMm || geom.shelfHitRectMm.contains(ptMm)) {
+            isDraggingDetailNodeShelf = true;
+            _detailNodeDragStartScreenPos = screenPos;
+            _detailNodeInitialShelfModel2d = ViewportTransformService.sheetMmToModel2d(
+              geom.shelfStartMm,
+              sheet.viewport,
+            );
+            notifyListeners();
+            return true;
+          }
+
+          if (selDn.boundaryShape == DetailBoundaryShape.polygon) {
+            final vertsMm = geom.polygonVerticesMm;
+            // Проверяем вершины многоугольника
+            for (int i = 0; i < vertsMm.length; i++) {
+              if ((ptMm - vertsMm[i]).distance <= hitRadiusMm) {
+                // Убеждаемся, что вершины инициализированы в модели
+                final modelVerts = vertsMm
+                    .map((vMm) => ViewportTransformService.sheetMmToModel2d(vMm, sheet.viewport))
+                    .toList();
+                network.detailNodes[selDn.id] = selDn.copyWith(polygonVerticesModel2d: modelVerts);
+                draggingDetailPolygonVertexIndex = i;
+                _detailNodeDragStartScreenPos = screenPos;
+                notifyListeners();
+                return true;
+              }
+            }
+            // Проверяем середины ребер (вставка новой вершины многоугольника!)
+            for (int i = 0; i < vertsMm.length; i++) {
+              final v1 = vertsMm[i];
+              final v2 = vertsMm[(i + 1) % vertsMm.length];
+              final mid = Offset((v1.dx + v2.dx) / 2.0, (v1.dy + v2.dy) / 2.0);
+              if ((ptMm - mid).distance <= hitRadiusMm) {
+                final modelVerts = vertsMm
+                    .map((vMm) => ViewportTransformService.sheetMmToModel2d(vMm, sheet.viewport))
+                    .toList();
+                final newModelPt = ViewportTransformService.sheetMmToModel2d(ptMm, sheet.viewport);
+                modelVerts.insert(i + 1, newModelPt);
+                network.detailNodes[selDn.id] = selDn.copyWith(polygonVerticesModel2d: modelVerts);
+                draggingDetailPolygonVertexIndex = i + 1;
+                _detailNodeDragStartScreenPos = screenPos;
+                notifyListeners();
+                return true;
+              }
+            }
+          } else {
+            // Ручка изменения отступа (paddingMm) на правом нижнем углу контура
+            if ((ptMm - geom.boundsMm.bottomRight).distance <= hitRadiusMm) {
+              isDraggingDetailNodePadding = true;
+              _detailNodeDragStartScreenPos = screenPos;
+              _detailNodeInitialPaddingMm = selDn.paddingMm;
+              notifyListeners();
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Проверяем клик по полке или контуру любого выносного узла на листе
+    for (final dn in network.detailNodes.values) {
+      final geom = _computeDetailNodeGeometryOnActiveSheet(dn);
+      if (geom == null) continue;
+
+      final hitShelf = geom.shelfHitRectMm.inflate(1.5).contains(ptMm);
+      bool hitContour = false;
+
+      if (!hitShelf) {
+        switch (dn.boundaryShape) {
+          case DetailBoundaryShape.circle:
+            final r = math.max(geom.boundsMm.width, geom.boundsMm.height) / 2.0;
+            final dist = (ptMm - geom.centerMm).distance;
+            hitContour = (dist - r).abs() <= hitRadiusMm;
+            break;
+          case DetailBoundaryShape.oval:
+          case DetailBoundaryShape.roundedRect:
+            final outer = geom.boundsMm.inflate(hitRadiusMm);
+            final inner = geom.boundsMm.deflate(hitRadiusMm);
+            hitContour = outer.contains(ptMm) && !inner.contains(ptMm);
+            break;
+          case DetailBoundaryShape.polygon:
+            final verts = geom.polygonVerticesMm;
+            for (int i = 0; i < verts.length; i++) {
+              final a = verts[i];
+              final b = verts[(i + 1) % verts.length];
+              final ab = b - a;
+              final len2 = ab.dx * ab.dx + ab.dy * ab.dy;
+              final t = len2 < 1e-6 ? 0.0 : (((ptMm.dx - a.dx) * ab.dx + (ptMm.dy - a.dy) * ab.dy) / len2).clamp(0.0, 1.0);
+              final proj = a + ab * t;
+              if ((ptMm - proj).distance <= hitRadiusMm) {
+                hitContour = true;
+                break;
+              }
+            }
+            break;
+        }
+      }
+
+      if (hitShelf || hitContour) {
+        selectedDetailNodeId = dn.id;
+        selectedCalloutId = null;
+        selectedSheetBlock = null;
+        isViewportSelected = false;
+        activeViewportGrip = null;
+        if (hitShelf) {
+          isDraggingDetailNodeShelf = true;
+          _detailNodeDragStartScreenPos = screenPos;
+          _detailNodeInitialShelfModel2d = ViewportTransformService.sheetMmToModel2d(
+            geom.shelfStartMm,
+            sheet.viewport,
+          );
+        }
+        notifyListeners();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Обрабатывает двойной клик по полке выносного узла ("Узел А / Лист N") для мгновенного перехода на лист узла
+  bool handleDetailNodeDoubleTap(Offset screenPos) {
+    final sheet = activeSheet;
+    if (sheet == null || sheet.detailNodeId != null || network.detailNodes.isEmpty) {
+      return false;
+    }
+    final ptMm = _screenToSheetMm(screenPos);
+    for (final dn in network.detailNodes.values) {
+      final geom = _computeDetailNodeGeometryOnActiveSheet(dn);
+      if (geom == null) continue;
+      if (geom.shelfHitRectMm.inflate(2.0).contains(ptMm)) {
+        openDetailNodeSheet(dn.id);
+        return true;
+      }
+    }
+    return false;
+  }
+
   void applyViewportPreset(ViewportLayoutPreset preset) {
     final sheet = activeSheet;
     if (sheet == null) return;
@@ -6992,6 +8225,7 @@ class PipingInputController extends ChangeNotifier {
     isViewportSelected = false;
     selectedSheetBlock = null;
     activeViewportGrip = null;
+    selectedDetailNodeId = null;
     hasUnsavedChanges = true;
     notifyListeners();
   }
@@ -7006,8 +8240,10 @@ class PipingInputController extends ChangeNotifier {
     selectedSheetBlock = null;
     activeViewportGrip = null;
 
-    // Автоматическая раскладка выносок листа, если они еще не имеют позиций на этом листе
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    selectedDetailNodeId = sheet?.detailNodeId;
+
+    // Автоматическая раскладка выносок листа, если они еще не имеют позиций на этом листе
     if (sheet != null && network.callouts.isNotEmpty) {
       final hasUnplaced = network.callouts.values.any(
         (c) => sheet.isCalloutVisible(c, network) && !c.hasSheetOffset(sheet.id),
@@ -7077,7 +8313,35 @@ class PipingInputController extends ChangeNotifier {
   }
 
   void removeSheet(String sheetId) {
-    final updatedList = currentProject.sheets.where((s) => s.id != sheetId).toList();
+    final rawList = currentProject.sheets.where((s) => s.id != sheetId).toList();
+    final total = rawList.length;
+    final updatedList = <DrawingSheet>[];
+    for (int i = 0; i < rawList.length; i++) {
+      final s = rawList[i];
+      final num = i + 1;
+      updatedList.add(
+        s.copyWith(
+          sheetNumber: num,
+          titleBlockData: s.titleBlockData.copyWith(
+            sheetNumber: num,
+            totalSheets: total,
+          ),
+        ),
+      );
+    }
+
+    // Синхронизируем номера листов в выносных узлах
+    for (final dn in network.detailNodes.values.toList()) {
+      if (dn.targetSheetId == sheetId) {
+        network.detailNodes[dn.id] = dn.copyWith(clearTargetSheet: true);
+      } else if (dn.targetSheetId != null) {
+        final match = updatedList.where((s) => s.id == dn.targetSheetId).firstOrNull;
+        if (match != null && dn.targetSheetNumber != match.sheetNumber) {
+          network.detailNodes[dn.id] = dn.copyWith(targetSheetNumber: match.sheetNumber);
+        }
+      }
+    }
+
     String? nextActiveId = activeSheetId;
     if (activeSheetId == sheetId) {
       nextActiveId = updatedList.isNotEmpty ? updatedList.first.id : null;
@@ -7111,6 +8375,7 @@ class PipingInputController extends ChangeNotifier {
       projectionType: projector.projectionType,
       viewport: sheet.viewport,
       visibleSystemIds: sheet.viewport.visibleSystemIds,
+      detailNodeId: sheet.detailNodeId,
     );
     final updatedVp = sheet.viewport.copyWith(
       modelCenterX: autoFit.centerX,

@@ -184,11 +184,16 @@ class CalloutCandidateGenerator {
         final v = network.valves[callout.targetId];
         if (v != null) connectedSegIds.add(v.segmentId);
       } else if (callout.targetType == CalloutTargetType.fitting) {
-        final fit = network.fittings[callout.targetId] ??
-            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
-        final nId = fit?.nodeId ?? callout.targetId;
-        for (final s in network.getConnectedSegments(nId)) {
-          connectedSegIds.add(s.id);
+        final cfValve = network.getCounterFlangeValve(callout.targetId);
+        if (cfValve != null) {
+          connectedSegIds.add(cfValve.segmentId);
+        } else {
+          final fit = network.fittings[callout.targetId] ??
+              network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
+          final nId = fit?.nodeId ?? callout.targetId;
+          for (final s in network.getConnectedSegments(nId)) {
+            connectedSegIds.add(s.id);
+          }
         }
       } else if (callout.targetType == CalloutTargetType.node) {
         for (final s in network.getConnectedSegments(callout.targetId)) {

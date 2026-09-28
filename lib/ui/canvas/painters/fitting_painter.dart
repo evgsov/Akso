@@ -381,6 +381,11 @@ class FittingPainter {
       sheetZoom: sheetZoom,
     );
 
+    final pMid = Offset(
+      0.25 * pOut1.dx + 0.5 * ptN.dx + 0.25 * pOut2.dx,
+      0.25 * pOut1.dy + 0.5 * ptN.dy + 0.25 * pOut2.dy,
+    );
+
     if (isVolumeMode) {
       if (showCallouts && !_hasCallout(network, fit)) {
         final tp = TextPainter(
@@ -396,7 +401,7 @@ class FittingPainter {
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        tp.paint(canvas, ptN + const Offset(10, 10));
+        tp.paint(canvas, pMid + const Offset(10, 10));
       }
       return;
     }
@@ -437,7 +442,7 @@ class FittingPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, ptN + const Offset(10, 10));
+      tp.paint(canvas, pMid + const Offset(10, 10));
     }
   }
 

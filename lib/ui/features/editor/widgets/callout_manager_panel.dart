@@ -404,6 +404,370 @@ class CalloutManagerPanel extends StatefulWidget {
     );
   }
 
+  /// Открывает диалог группового скрытия и пакетного удаления выносок по категориям
+  static Future<void> showBatchDeleteDialog(
+    BuildContext context, {
+    required PipingInputController controller,
+  }) {
+    final selectedTypes = <CalloutTargetType>{};
+    bool keepPinned = true;
+
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return ListenableBuilder(
+            listenable: controller,
+            builder: (ctx, _) {
+              final allCallouts = controller.network.callouts.values.toList();
+              final countsByType = <CalloutTargetType, int>{
+                for (final t in CalloutTargetType.values) t: 0,
+              };
+              int pinnedCount = 0;
+              for (final c in allCallouts) {
+                countsByType[c.targetType] = (countsByType[c.targetType] ?? 0) + 1;
+                if (c.isPinned || c.sheetPinned.values.any((v) => v)) {
+                  pinnedCount++;
+                }
+              }
+
+              int matchingDeleteCount = 0;
+              for (final c in allCallouts) {
+                if (!selectedTypes.contains(c.targetType)) continue;
+                if (keepPinned && (c.isPinned || c.sheetPinned.values.any((v) => v))) {
+                  continue;
+                }
+                matchingDeleteCount++;
+              }
+
+              return AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.auto_delete_outlined, color: Colors.indigo.shade700),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Групповое скрытие и удаление выносок',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                content: SizedBox(
+                  width: 540,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Безопасный информационный баннер
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.teal.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.shield_outlined, size: 18, color: Colors.teal.shade800),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Пресеты и листы в безопасности!',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '• Если выноски мешают чертить в 3D — просто скройте их в 3D: на листах чертежей и при экспорте в PDF они останутся на своих местах.\n'
+                                '• При удалении выносок шаблоны текста (пресеты ГОСТ) и настройки листов НЕ удаляются. Любое удаление можно отменить через Ctrl+Z.',
+                                style: TextStyle(fontSize: 12, color: Colors.teal.shade900, height: 1.35),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Быстрый переключатель 3D видимости
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: controller.showCalloutsInModelSpace
+                                ? Colors.indigo.shade50
+                                : Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: controller.showCalloutsInModelSpace
+                                  ? Colors.indigo.shade200
+                                  : Colors.amber.shade300,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                controller.showCalloutsInModelSpace
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: controller.showCalloutsInModelSpace
+                                    ? Colors.indigo.shade700
+                                    : Colors.amber.shade900,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      controller.showCalloutsInModelSpace
+                                          ? 'Выноски показаны в 3D-модели'
+                                          : 'Выноски скрыты в 3D-модели (на листах видны)',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                    const Text(
+                                      'Отключите, чтобы свободно редактировать трубы без помех',
+                                      style: TextStyle(fontSize: 11, color: Colors.black54),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: controller.showCalloutsInModelSpace,
+                                onChanged: (val) {
+                                  controller.setShowCalloutsInModelSpace(val);
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Заголовок выбора категорий
+                        Row(
+                          children: [
+                            const Text(
+                              'Выберите группы выносок:',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            TextButton(
+                              key: const Key('batch_select_all_types_button'),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedTypes.addAll(CalloutTargetType.values);
+                                });
+                              },
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: const Text('Выбрать все', style: TextStyle(fontSize: 12)),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedTypes.clear();
+                                });
+                              },
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: const Text('Сбросить', style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Список чекбоксов по категориям
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: CalloutTargetType.values.map((type) {
+                              final count = countsByType[type] ?? 0;
+                              final isChecked = selectedTypes.contains(type);
+                              final isHiddenIn3D = controller.hiddenCalloutTypes.contains(type);
+                              return CheckboxListTile(
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                                value: isChecked,
+                                onChanged: (val) {
+                                  setDialogState(() {
+                                    if (val == true) {
+                                      selectedTypes.add(type);
+                                    } else {
+                                      selectedTypes.remove(type);
+                                    }
+                                  });
+                                },
+                                secondary: IconButton(
+                                  icon: Icon(
+                                    isHiddenIn3D ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    size: 18,
+                                    color: isHiddenIn3D ? Colors.orange.shade800 : Colors.blueGrey,
+                                  ),
+                                  tooltip: isHiddenIn3D
+                                      ? 'Категория скрыта в 3D (нажмите, чтобы показать в 3D)'
+                                      : 'Скрыть только эту категорию в 3D-модели',
+                                  onPressed: () {
+                                    controller.toggleCalloutTypeVisibilityInModelSpace(type);
+                                    setDialogState(() {});
+                                  },
+                                ),
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        type.displayName,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                    if (isHiddenIn3D)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade50,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: Colors.orange.shade300),
+                                        ),
+                                        child: Text(
+                                          'Скрыто в 3D',
+                                          style: TextStyle(fontSize: 10, color: Colors.orange.shade900),
+                                        ),
+                                      ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: count > 0 ? Colors.indigo.shade50 : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '$count шт.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: count > 0 ? Colors.indigo.shade700 : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Опция сохранения закрепленных
+                        if (pinnedCount > 0)
+                          CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: keepPinned,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                keepPinned = val ?? true;
+                              });
+                            },
+                            title: Text(
+                              'Не удалять закрепленные вручную выноски (📌 $pinnedCount шт.)',
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                actionsAlignment: MainAxisAlignment.spaceBetween,
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Закрыть'),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: selectedTypes.isEmpty
+                            ? null
+                            : () {
+                                for (final t in selectedTypes) {
+                                  if (!controller.hiddenCalloutTypes.contains(t)) {
+                                    controller.toggleCalloutTypeVisibilityInModelSpace(t);
+                                  }
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Категории (${selectedTypes.length}) скрыты в 3D-модели. На листах они сохранены.',
+                                    ),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                                Navigator.of(ctx).pop();
+                              },
+                        icon: const Icon(Icons.visibility_off_outlined, size: 16),
+                        label: const Text('Скрыть выбранные в 3D'),
+                      ),
+                      FilledButton.icon(
+                        key: const Key('confirm_batch_delete_callouts_button'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                        ),
+                        onPressed: matchingDeleteCount == 0
+                            ? null
+                            : () {
+                                final removed = controller.deleteCalloutsByTypes(
+                                  selectedTypes,
+                                  keepPinned: keepPinned,
+                                );
+                                Navigator.of(ctx).pop();
+                                if (removed > 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Удалено выносок: $removed шт. (Шаблоны-пресеты сохранены)',
+                                      ),
+                                      action: SnackBarAction(
+                                        label: 'Отменить (Ctrl+Z)',
+                                        onPressed: () {
+                                          controller.undo();
+                                        },
+                                      ),
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                        label: Text('Удалить выбранные ($matchingDeleteCount шт.)'),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
   @override
   State<CalloutManagerPanel> createState() => _CalloutManagerPanelState();
 }
@@ -576,6 +940,8 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
                         // Вкладка 1: Таблица выносок
                         Column(
                           children: [
+                            _buildVisibilityAndBatchBar(context, allCallouts, filteredCallouts),
+                            const SizedBox(height: 10),
                             _buildToolbar(context),
                             const SizedBox(height: 12),
                             Expanded(
@@ -596,6 +962,172 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildVisibilityAndBatchBar(
+    BuildContext context,
+    List<Callout> allCallouts,
+    List<Callout> filteredCallouts,
+  ) {
+    final controller = widget.controller;
+    final showIn3D = controller.showCalloutsInModelSpace;
+    final hiddenTypes = controller.hiddenCalloutTypes;
+    final individuallyHiddenCount = allCallouts.where((c) => c.isHidden).length;
+    final hasAnyHidden = !showIn3D || hiddenTypes.isNotEmpty || individuallyHiddenCount > 0;
+    final hasActiveFilter = _selectedFilterType != null || _searchQuery.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: showIn3D ? Colors.indigo.shade50.withValues(alpha: 0.55) : Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: showIn3D ? Colors.indigo.shade100 : Colors.amber.shade300,
+        ),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          // 1. Главный переключатель видимости в 3D
+          Tooltip(
+            message:
+                'Скрывает или показывает выноски в 3D-окне, чтобы они не мешали работать с трубами.\nНа листах чертежей и в пресетах все выноски сохраняются!',
+            child: FilledButton.tonalIcon(
+              key: const Key('toggle_3d_callouts_visibility_button'),
+              onPressed: () {
+                controller.toggleShowCalloutsInModelSpace();
+              },
+              icon: Icon(
+                showIn3D ? Icons.visibility : Icons.visibility_off,
+                size: 17,
+                color: showIn3D ? Colors.indigo.shade800 : Colors.amber.shade900,
+              ),
+              label: Text(
+                showIn3D ? 'В 3D-модели: Видны' : 'В 3D-модели: Скрыты (на листах сохранены)',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: showIn3D ? Colors.indigo.shade900 : Colors.amber.shade900,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: showIn3D ? Colors.white : Colors.amber.shade100,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              ),
+            ),
+          ),
+
+          // 2. Быстрые чипы скрытия по категориям в 3D
+          ...CalloutTargetType.values.where((t) => allCallouts.any((c) => c.targetType == t)).map((type) {
+            final isTypeVisible = showIn3D && !hiddenTypes.contains(type);
+            final count = allCallouts.where((c) => c.targetType == type).length;
+            return Tooltip(
+              message: isTypeVisible
+                  ? 'Нажмите, чтобы временно скрыть «${type.displayName}» в 3D-модели (на листах останется)'
+                  : 'Нажмите, чтобы показать «${type.displayName}» в 3D-модели',
+              child: FilterChip(
+                selected: isTypeVisible,
+                showCheckmark: false,
+                avatar: Icon(
+                  isTypeVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  size: 14,
+                  color: isTypeVisible ? _getTypeColor(type) : Colors.grey.shade600,
+                ),
+                label: Text(
+                  '${type.displayName} ($count)',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    decoration: isTypeVisible ? null : TextDecoration.lineThrough,
+                    color: isTypeVisible ? Colors.black87 : Colors.grey.shade600,
+                  ),
+                ),
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) {
+                  if (!controller.showCalloutsInModelSpace) {
+                    controller.setShowCalloutsInModelSpace(true);
+                  }
+                  controller.toggleCalloutTypeVisibilityInModelSpace(type);
+                },
+              ),
+            );
+          }),
+
+          if (hasAnyHidden)
+            TextButton.icon(
+              onPressed: () {
+                controller.unhideAllCallouts();
+              },
+              icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
+              label: Text(
+                individuallyHiddenCount > 0
+                    ? 'Показать все скрытые ($individuallyHiddenCount)'
+                    : 'Показать все в 3D',
+                style: const TextStyle(fontSize: 12),
+              ),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+
+          // 3. Кнопка удаления отфильтрованных (когда выбран фильтр типа или поиск)
+          if (hasActiveFilter && filteredCallouts.isNotEmpty)
+            OutlinedButton.icon(
+              onPressed: () {
+                final ids = filteredCallouts.map((c) => c.id).toList();
+                final removed = controller.deleteCalloutsByIds(ids);
+                if (removed > 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Удалено отфильтрованных выносок: $removed шт. (Шаблоны сохранены)'),
+                      action: SnackBarAction(
+                        label: 'Отменить',
+                        onPressed: () => controller.undo(),
+                      ),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.delete_sweep, size: 16, color: Colors.redAccent),
+              label: Text(
+                'Удалить найденные (${filteredCallouts.length})',
+                style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.redAccent),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+            ),
+
+          // 4. Кнопка открытия диалога группового удаления
+          OutlinedButton.icon(
+            key: const Key('open_batch_delete_callouts_dialog_button'),
+            onPressed: allCallouts.isEmpty
+                ? null
+                : () => CalloutManagerPanel.showBatchDeleteDialog(
+                      context,
+                      controller: controller,
+                    ),
+            icon: const Icon(Icons.auto_delete_outlined, size: 16, color: Colors.red),
+            label: const Text(
+              'Удалить по группам...',
+              style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.red.shade300),
+              backgroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1134,6 +1666,19 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                icon: Icon(
+                  callout.isHidden ? Icons.visibility_off : Icons.visibility_outlined,
+                  size: 20,
+                  color: callout.isHidden ? Colors.orange.shade800 : Colors.blueGrey.shade600,
+                ),
+                tooltip: callout.isHidden
+                    ? 'Выноска скрыта (нажмите, чтобы показать)'
+                    : 'Скрыть выноску (без удаления)',
+                onPressed: () {
+                  widget.controller.toggleCalloutHidden(callout.id);
+                },
+              ),
               IconButton(
                 icon: Icon(
                   callout.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
@@ -2094,8 +2639,7 @@ class _CalloutManagerPanelState extends State<CalloutManagerPanel> {
         }
         return 'Штуцер ${callout.targetId}';
       case CalloutTargetType.fitting:
-        final f = net.fittings[callout.targetId] ??
-            net.fittings.values.where((fit) => fit.id == callout.targetId).firstOrNull;
+        final f = net.resolveFittingById(callout.targetId);
         final markStr = f?.mark != null ? '${f!.mark}: ' : '';
         return f != null ? '$markStr${f.name ?? f.fittingType.displayName}' : callout.targetId;
       case CalloutTargetType.support:

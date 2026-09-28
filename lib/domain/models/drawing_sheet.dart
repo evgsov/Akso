@@ -302,6 +302,10 @@ class DrawingSheet {
   /// Сохраненные именованные пресеты расстановки выносок для этого листа
   final List<SheetCalloutPreset> calloutPresets;
 
+  /// ID выносного узла (DetailNode), если этот лист представляет собой укрупненный узел.
+  /// Если null — это обычный обзорный лист.
+  final String? detailNodeId;
+
   const DrawingSheet({
     required this.id,
     required this.name,
@@ -319,12 +323,16 @@ class DrawingSheet {
     this.mergeIdenticalCallouts = true,
     this.debugShowObstacles = false,
     this.calloutPresets = const [],
+    this.detailNodeId,
   });
 
   /// Проверяет, должна ли отображаться данная выноска на текущем листе.
   /// При передаче [network] дополнительно проверяет фильтр видимых систем
-  /// видового экрана ([viewport.visibleSystemIds]).
+  /// видового экрана ([viewport.visibleSystemIds]) и принадлежность выносным узлам ([detailNodeId]).
   bool isCalloutVisible(Callout callout, [PipingNetwork? network]) {
+    if (callout.isHidden) {
+      return false;
+    }
     if (callout.elevationStyle != null && !showElevationCallouts) {
       return false;
     }
@@ -333,19 +341,28 @@ class DrawingSheet {
     }
     // Прямая врезка (directBranch) не является фасонной деталью/элементом сети
     if (callout.targetType == CalloutTargetType.fitting && network != null) {
-      Fitting? fit = network.fittings[callout.targetId];
-      if (fit == null) {
-        for (final f in network.fittings.values) {
-          if (f.id == callout.targetId || f.nodeId == callout.targetId) {
-            fit = f;
-            break;
-          }
-        }
-      }
+      final fit = network.resolveFittingById(callout.targetId);
       if (fit != null && fit.fittingType == FittingType.directBranch) {
         return false;
       }
     }
+
+    // Фильтрация выносных узлов (DetailNode):
+    // 1. На листе самого узла показываем ТОЛЬКО выноски элементов этого узла.
+    // 2. На общем листе скрываем выноски элементов, которые вынесены в укрупненный узел.
+    if (network != null) {
+      if (detailNodeId != null) {
+        final dn = network.detailNodes[detailNodeId];
+        if (dn != null && !network.isTargetInDetailNode(dn, callout.targetType, callout.targetId)) {
+          return false;
+        }
+      } else {
+        if (network.isCalloutSuppressedOnOverview(callout)) {
+          return false;
+        }
+      }
+    }
+
     // Фильтрация по видимым системам видового экрана
     final visibleSys = viewport.visibleSystemIds;
     if (visibleSys != null && visibleSys.isNotEmpty && network != null) {
@@ -356,6 +373,11 @@ class DrawingSheet {
 
       // Для фитингов: проверяем, видна ли хотя бы одна подключенная труба
       if (callout.targetType == CalloutTargetType.fitting) {
+        final cfValve = network.getCounterFlangeValve(callout.targetId);
+        if (cfValve != null) {
+          final seg = network.segments[cfValve.segmentId];
+          return seg != null && visibleSys.contains(seg.systemId);
+        }
         Fitting? fit = network.fittings[callout.targetId];
         if (fit == null) {
           for (final f in network.fittings.values) {
@@ -391,12 +413,62 @@ class DrawingSheet {
   }
 
   /// Возвращает эффективную сеть для текущего листа с учетом фильтра видимых систем
-  /// видового экрана ([viewport.visibleSystemIds]) и фильтра выносок ([isCalloutVisible]).
+  /// видового экрана ([viewport.visibleSystemIds]), выносного узла ([detailNodeId])
+  /// и фильтра выносок ([isCalloutVisible]).
   PipingNetwork getEffectiveNetwork(PipingNetwork baseNetwork) {
     final visibleSys = viewport.visibleSystemIds;
+    final detailNode = detailNodeId != null ? baseNetwork.detailNodes[detailNodeId] : null;
     var net = baseNetwork;
 
-    if (visibleSys != null && visibleSys.isNotEmpty) {
+    if (detailNode != null) {
+      // Лист укрупненного узла: оставляем строго сегменты и элементы этого узла
+      final visibleSegs = Map<String, PipeSegment>.fromEntries(
+        baseNetwork.segments.entries.where((e) {
+          if (!detailNode.segmentIds.contains(e.key)) return false;
+          if (visibleSys != null && visibleSys.isNotEmpty && !visibleSys.contains(e.value.systemId)) {
+            return false;
+          }
+          return true;
+        }),
+      );
+      final visibleSegIds = visibleSegs.keys.toSet();
+      final detailNodeIds = <String>{};
+      for (final seg in visibleSegs.values) {
+        detailNodeIds.add(seg.startNodeId);
+        detailNodeIds.add(seg.endNodeId);
+      }
+
+      final visibleValves = Map<String, Valve>.fromEntries(
+        baseNetwork.valves.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSupports = Map<String, PipeSupport>.fromEntries(
+        baseNetwork.supports.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleWelds = Map<String, WeldJoint>.fromEntries(
+        baseNetwork.weldJoints.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleSpools = Map<String, PipeSpool>.fromEntries(
+        baseNetwork.spools.entries.where((e) => visibleSegIds.contains(e.value.segmentId)),
+      );
+      final visibleFittings = Map<String, Fitting>.fromEntries(
+        baseNetwork.fittings.entries.where((e) => detailNodeIds.contains(e.value.nodeId)),
+      );
+      final visibleDimensions = Map<String, LinearDimension>.fromEntries(
+        baseNetwork.dimensions.entries.where(
+          (e) => baseNetwork.isDimensionInDetailNode(detailNode, e.value),
+        ),
+      );
+
+      net = baseNetwork.copyWith(
+        segments: visibleSegs,
+        valves: visibleValves,
+        supports: visibleSupports,
+        weldJoints: visibleWelds,
+        spools: visibleSpools,
+        fittings: visibleFittings,
+        dimensions: visibleDimensions,
+      );
+    } else if (visibleSys != null && visibleSys.isNotEmpty) {
       final visibleSegs = Map<String, PipeSegment>.fromEntries(
         baseNetwork.segments.entries.where((e) => visibleSys.contains(e.value.systemId)),
       );
@@ -422,6 +494,12 @@ class DrawingSheet {
       final visibleDimensions = Map<String, LinearDimension>.fromEntries(
         baseNetwork.dimensions.entries.where((e) {
           final dim = e.value;
+          // Скрываем на общем листе размеры, относящиеся к выносным узлам
+          for (final dn in baseNetwork.detailNodes.values) {
+            if (dn.suppressCalloutsOnOverview && baseNetwork.isDimensionInDetailNode(dn, dim)) {
+              return false;
+            }
+          }
           if (dim.startNodeId == null && dim.endNodeId == null) return true;
           final s1 = dim.startNodeId != null ? baseNetwork.getConnectedSegments(dim.startNodeId!) : const <PipeSegment>[];
           final s2 = dim.endNodeId != null ? baseNetwork.getConnectedSegments(dim.endNodeId!) : const <PipeSegment>[];
@@ -440,6 +518,20 @@ class DrawingSheet {
         fittings: visibleFittings,
         dimensions: visibleDimensions,
       );
+    } else if (baseNetwork.detailNodes.isNotEmpty) {
+      // Общий лист без фильтра систем: скрываем внутренние размеры выносных узлов
+      final visibleDimensions = Map<String, LinearDimension>.fromEntries(
+        baseNetwork.dimensions.entries.where((e) {
+          final dim = e.value;
+          for (final dn in baseNetwork.detailNodes.values) {
+            if (dn.suppressCalloutsOnOverview && baseNetwork.isDimensionInDetailNode(dn, dim)) {
+              return false;
+            }
+          }
+          return true;
+        }),
+      );
+      net = baseNetwork.copyWith(dimensions: visibleDimensions);
     }
 
     final visibleCallouts = Map<String, Callout>.fromEntries(
@@ -528,6 +620,7 @@ class DrawingSheet {
     SheetFormatType formatType = SheetFormatType.a3,
     SheetOrientation orientation = SheetOrientation.landscape,
     Set<String>? visibleSystemIds,
+    String? detailNodeId,
   }) {
     final fmt = SheetFormat(type: formatType, orientation: orientation);
 
@@ -539,7 +632,7 @@ class DrawingSheet {
       titleBlockForm: TitleBlockForm.form3,
       titleBlockData: TitleBlockData(
         sheetNumber: sheetNumber,
-        drawingTitle: 'Исполнительная схема трубопроводов $name',
+        drawingTitle: detailNodeId != null ? name : 'Исполнительная схема трубопроводов $name',
       ),
       viewport: calculatePresetViewport(
         fmt,
@@ -552,6 +645,7 @@ class DrawingSheet {
         widthMm: 185.0,
         heightMm: 45.0,
       ),
+      detailNodeId: detailNodeId,
     );
   }
 
@@ -574,6 +668,7 @@ class DrawingSheet {
         'debugShowObstacles': debugShowObstacles,
         if (calloutPresets.isNotEmpty)
           'calloutPresets': calloutPresets.map((p) => p.toJson()).toList(),
+        if (detailNodeId != null) 'detailNodeId': detailNodeId,
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -621,6 +716,7 @@ class DrawingSheet {
                 .map((e) => SheetCalloutPreset.fromJson(e as Map<String, dynamic>))
                 .toList()
             : const [],
+        detailNodeId: json['detailNodeId'] as String?,
       );
 
   DrawingSheet copyWith({
@@ -643,6 +739,8 @@ class DrawingSheet {
     bool? mergeIdenticalCallouts,
     bool? debugShowObstacles,
     List<SheetCalloutPreset>? calloutPresets,
+    String? detailNodeId,
+    bool clearDetailNodeId = false,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -665,6 +763,7 @@ class DrawingSheet {
       mergeIdenticalCallouts: mergeIdenticalCallouts ?? this.mergeIdenticalCallouts,
       debugShowObstacles: debugShowObstacles ?? this.debugShowObstacles,
       calloutPresets: calloutPresets ?? this.calloutPresets,
+      detailNodeId: clearDetailNodeId ? null : (detailNodeId ?? this.detailNodeId),
     );
   }
 }

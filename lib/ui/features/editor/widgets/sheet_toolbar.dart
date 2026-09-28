@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/enums/viewport_layout_preset.dart';
 import '../../../../domain/models/callout.dart';
+import '../../../../domain/models/detail_node.dart';
 import '../../../../domain/models/drawing_legend.dart';
 import '../../../../domain/models/drawing_sheet.dart';
 import '../../../../domain/services/viewport_transform_service.dart';
@@ -199,6 +200,68 @@ class SheetToolbar extends StatelessWidget {
                         ),
                         backgroundColor: const Color(0xFF334155),
                         onPressed: () => _showCalloutFilterDialog(context, sheet),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Выносные укрупненные узлы (ГОСТ 2.305)
+                      if (sheet.detailNodeId != null) ...[
+                        ActionChip(
+                          key: const Key('sheet_back_to_overview_chip'),
+                          avatar: const Icon(Icons.arrow_back, size: 14, color: Colors.amberAccent),
+                          label: const Text(
+                            'К общему листу',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          backgroundColor: const Color(0xFF0F172A),
+                          onPressed: () {
+                            final overview = controller.sheets.where((s) => s.detailNodeId == null).firstOrNull;
+                            if (overview != null) {
+                              controller.selectSheet(overview.id);
+                              controller.selectedDetailNodeId = sheet.detailNodeId;
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      ActionChip(
+                        key: const Key('sheet_detail_nodes_chip'),
+                        avatar: Icon(
+                          Icons.zoom_in_map,
+                          size: 15,
+                          color: controller.canCreateDetailNode ? Colors.amberAccent : Colors.lightBlueAccent,
+                        ),
+                        label: Text(
+                          sheet.detailNodeId != null
+                              ? (controller.network.detailNodes[sheet.detailNodeId]?.effectiveTitle ?? 'Узел')
+                              : (controller.canCreateDetailNode
+                                  ? '+ Вынести в узел'
+                                  : 'Узлы (${controller.network.detailNodes.length})'),
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                        backgroundColor: controller.canCreateDetailNode
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFF334155),
+                        onPressed: () {
+                          if (sheet.detailNodeId == null && controller.canCreateDetailNode) {
+                            final dn = controller.createDetailNodeFromSelection();
+                            if (dn != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Создан ${dn.effectiveTitle} → Лист ${dn.targetSheetNumber}. Выноски внутри узла скрыты на общем плане.',
+                                  ),
+                                  action: SnackBarAction(
+                                    label: 'Открыть Лист ${dn.targetSheetNumber}',
+                                    onPressed: () => controller.openDetailNodeSheet(dn.id),
+                                  ),
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                          } else {
+                            _showDetailNodesDialog(context, sheet);
+                          }
+                        },
                       ),
                       const SizedBox(width: 8),
 
@@ -1143,6 +1206,237 @@ class SheetToolbar extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('Закрыть', style: TextStyle(color: Colors.white60)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDetailNodesDialog(BuildContext context, DrawingSheet sheet) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final nodes = controller.network.detailNodes.values.toList();
+          final canCreate = controller.canCreateDetailNode;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: Row(
+              children: [
+                const Icon(Icons.zoom_in_map, color: Colors.cyanAccent, size: 22),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Выносные укрупненные узлы (ГОСТ 2.305)',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+                if (canCreate)
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.amber.shade700,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Создать из выделения', style: TextStyle(fontSize: 12)),
+                    onPressed: () {
+                      controller.createDetailNodeFromSelection();
+                      setDialogState(() {});
+                    },
+                  ),
+              ],
+            ),
+            content: SizedBox(
+              width: 560,
+              child: nodes.isEmpty
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 12),
+                        const Icon(Icons.layers_clear_outlined, size: 42, color: Colors.white38),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'В проекте еще нет выносных узлов.\n\n'
+                          'Чтобы разгрузить плотный участок чертежа:\n'
+                          '1. Выделите трубы, фитинги или рамкой участок ответвления.\n'
+                          '2. Нажмите «+ Вынести в узел».\n'
+                          '3. На общем листе выноски внутри узла автоматически скроются и появится аккуратная обводка «Узел А / Лист N», а сам узел развернется подробно на новом листе.',
+                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.45),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    )
+                  : ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 460),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: nodes.length,
+                        separatorBuilder: (_, _) => const Divider(color: Color(0xFF334155), height: 18),
+                        itemBuilder: (context, idx) {
+                          final dn = nodes[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: controller.selectedDetailNodeId == dn.id
+                                    ? Colors.cyanAccent
+                                    : const Color(0xFF334155),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0284C7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        dn.effectiveTitle,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      '${dn.shelfBottomText} • Участков: ${dn.segmentIds.length}',
+                                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                    const Spacer(),
+                                    TextButton.icon(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.cyanAccent,
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      icon: const Icon(Icons.open_in_new, size: 15),
+                                      label: Text('Открыть ${dn.shelfBottomText}', style: const TextStyle(fontSize: 12)),
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop();
+                                        controller.openDetailNodeSheet(dn.id);
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                                      tooltip: 'Удалить узел и его лист',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        controller.deleteDetailNode(dn.id);
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Форма обводки на обзорном листе:',
+                                  style: TextStyle(color: Colors.white60, fontSize: 11),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: DetailBoundaryShape.values.map((shape) {
+                                    final isSelected = dn.boundaryShape == shape;
+                                    return ChoiceChip(
+                                      label: Text(shape.shortName, style: const TextStyle(fontSize: 11)),
+                                      selected: isSelected,
+                                      selectedColor: const Color(0xFF0284C7),
+                                      backgroundColor: const Color(0xFF1E293B),
+                                      labelStyle: TextStyle(
+                                        color: isSelected ? Colors.white : Colors.white70,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                      onSelected: (_) {
+                                        controller.setDetailNodeBoundaryShape(dn.id, shape);
+                                        setDialogState(() {});
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                if (dn.boundaryShape == DetailBoundaryShape.polygon) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        child: Text(
+                                          'Совет: выделите контур на листе и тяните квадратные вершины или кружки на гранях.',
+                                          style: TextStyle(color: Colors.amberAccent, fontSize: 11),
+                                        ),
+                                      ),
+                                      TextButton.icon(
+                                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                                        icon: const Icon(Icons.refresh, size: 14, color: Colors.white70),
+                                        label: const Text('Сбросить вершины', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                        onPressed: () {
+                                          controller.resetDetailNodePolygon(dn.id);
+                                          setDialogState(() {});
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CheckboxListTile(
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity: ListTileControlAffinity.leading,
+                                        title: const Text(
+                                          'Скрыть выноски внутри узла на общем плане',
+                                          style: TextStyle(color: Colors.white, fontSize: 11),
+                                        ),
+                                        value: dn.suppressCalloutsOnOverview,
+                                        onChanged: (val) {
+                                          if (val == null) return;
+                                          controller.updateDetailNode(dn.copyWith(suppressCalloutsOnOverview: val));
+                                          setDialogState(() {});
+                                        },
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: CheckboxListTile(
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity: ListTileControlAffinity.leading,
+                                        title: const Text(
+                                          'Пунктирные примыкания магистрали с обрывом',
+                                          style: TextStyle(color: Colors.white, fontSize: 11),
+                                        ),
+                                        value: dn.showContextStubs,
+                                        onChanged: (val) {
+                                          if (val == null) return;
+                                          controller.updateDetailNode(dn.copyWith(showContextStubs: val));
+                                          setDialogState(() {});
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Закрыть', style: TextStyle(color: Colors.white70)),
               ),
             ],
           );

@@ -300,6 +300,32 @@ class VectorScene {
     );
   }
 
+  void addEllipse({
+    required VectorSceneLayer layer,
+    required Offset center,
+    required double radiusXMm,
+    required double radiusYMm,
+    bool isFilled = false,
+    required int strokeColorValue,
+    int? fillColorValue,
+    double strokeWidthMm = 0.25,
+    int zIndex = 0,
+  }) {
+    addItem(
+      layer,
+      VectorEllipse(
+        center: center,
+        radiusXMm: radiusXMm,
+        radiusYMm: radiusYMm,
+        isFilled: isFilled,
+        strokeColorValue: strokeColorValue,
+        fillColorValue: fillColorValue,
+        strokeWidthMm: strokeWidthMm,
+      ),
+      zIndex: zIndex,
+    );
+  }
+
   void addText({
     required VectorSceneLayer layer,
     required String text,

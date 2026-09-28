@@ -14,8 +14,10 @@ import '../../domain/models/piping_system.dart';
 import '../../domain/models/title_block_data.dart';
 import '../../domain/models/valve.dart';
 import '../../domain/models/custom_valve_definition.dart';
+import '../../domain/models/detail_node.dart';
 import '../../domain/models/fitting.dart';
 import '../../domain/services/callout_layout_engine.dart';
+import '../../domain/services/sheet_geometry_builder.dart';
 import '../../domain/services/viewport_transform_service.dart';
 import 'painters/annotation_painter.dart';
 import 'painters/callout_painter.dart';
@@ -62,6 +64,7 @@ class SheetCanvasPainter extends CustomPainter {
   final Set<String>? selectedDimensionIds;
   final LinearDimension? previewDimension;
   final String? selectedCalloutId;
+  final String? selectedDetailNodeId;
   final double orbitAzimuth;
   final double orbitElevation;
   final Node3D targetCenter;
@@ -98,6 +101,7 @@ class SheetCanvasPainter extends CustomPainter {
     this.selectedDimensionIds,
     this.previewDimension,
     this.selectedCalloutId,
+    this.selectedDetailNodeId,
     this.orbitAzimuth = -math.pi / 4,
     this.orbitElevation = math.pi / 6,
     this.targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
@@ -1030,6 +1034,14 @@ class SheetCanvasPainter extends CustomPainter {
       _paintGhostInactiveSystems(canvas, vpSize, vpProjector, vp);
     }
 
+    // 1.5. На листе детального узла — примыкающие отрезки основной магистрали с линией обрыва
+    if (sheet.detailNodeId != null) {
+      final dn = network.detailNodes[sheet.detailNodeId];
+      if (dn != null && dn.showContextStubs) {
+        _paintDetailContextStubs(canvas, vpProjector, dn);
+      }
+    }
+
     // 2. Строительные оси здания
     _drawConstructionAxesInViewport(canvas, vpProjector, effectiveNetwork);
 
@@ -1145,6 +1157,11 @@ class SheetCanvasPainter extends CustomPainter {
       annotationScale: (sheetZoom * 0.85).clamp(0.6, 3.0),
     );
 
+    // 10.5. На обзорных листах — контуры и полки выносных узлов (DetailNode) + CAD-ручки
+    if (sheet.detailNodeId == null && network.detailNodes.isNotEmpty) {
+      _paintDetailNodeBoundaries(canvas, vp);
+    }
+
     // 11. Подсветка группы выбранных элементов в активном видовом экране
     if (isViewportFocused && selectedNodeIds != null && selectedNodeIds!.length > 1) {
       final multiGlow = Paint()
@@ -1160,6 +1177,259 @@ class SheetCanvasPainter extends CustomPainter {
           final pt = vpProjector.project(n);
           canvas.drawCircle(pt, 8.0, multiGlow);
           canvas.drawCircle(pt, 5.0, multiRing);
+        }
+      }
+    }
+  }
+
+  Offset _mmToScreen(Offset ptMm) {
+    return Offset(
+      sheetPan.dx + ptMm.dx * sheetZoom,
+      sheetPan.dy + ptMm.dy * sheetZoom,
+    );
+  }
+
+  Rect _rectMmToScreen(Rect rMm) {
+    return Rect.fromLTRB(
+      sheetPan.dx + rMm.left * sheetZoom,
+      sheetPan.dy + rMm.top * sheetZoom,
+      sheetPan.dx + rMm.right * sheetZoom,
+      sheetPan.dy + rMm.bottom * sheetZoom,
+    );
+  }
+
+  void _paintDetailContextStubs(
+    Canvas canvas,
+    AxonometryProjector vpProjector,
+    DetailNode dn,
+  ) {
+    final stubs = network.getDetailNodeAdjacentStubs(dn);
+    if (stubs.isEmpty) return;
+
+    final stubPaint = Paint()
+      ..color = const Color(0xFF78909C)
+      ..strokeWidth = math.max(1.2, 0.35 * sheetZoom)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final breakPaint = Paint()
+      ..color = const Color(0xFF546E7A)
+      ..strokeWidth = math.max(1.0, 0.25 * sheetZoom)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    for (final stub in stubs) {
+      final p1 = vpProjector.project(stub.boundaryNode);
+      final p2 = vpProjector.project(stub.cutEndPoint);
+      final diff = p2 - p1;
+      final len = diff.distance;
+      if (len < 2.0) continue;
+
+      _drawDashedLine(canvas, p1, p2, stubPaint);
+
+      final dir = diff / len;
+      final perp = Offset(-dir.dy, dir.dx);
+      final halfSpan = 3.2 * sheetZoom;
+      final zigAmp = 1.3 * sheetZoom;
+      final zigStep = 0.85 * sheetZoom;
+
+      final b0 = p2 - perp * halfSpan;
+      final b1 = p2 - perp * zigStep;
+      final b2 = p2 - perp * (zigStep * 0.35) + dir * zigAmp;
+      final b3 = p2 + perp * (zigStep * 0.35) - dir * zigAmp;
+      final b4 = p2 + perp * zigStep;
+      final b5 = p2 + perp * halfSpan;
+
+      final path = Path()
+        ..moveTo(b0.dx, b0.dy)
+        ..lineTo(b1.dx, b1.dy)
+        ..lineTo(b2.dx, b2.dy)
+        ..lineTo(b3.dx, b3.dy)
+        ..lineTo(b4.dx, b4.dy)
+        ..lineTo(b5.dx, b5.dy);
+      canvas.drawPath(path, breakPaint);
+    }
+  }
+
+  void _paintDetailNodeBoundaries(Canvas canvas, SheetViewport vp) {
+    final baseProjector = AxonometryProjector(
+      projectionType: projectionType,
+      orbitAzimuth: orbitAzimuth,
+      orbitElevation: orbitElevation,
+      targetCenter: targetCenter,
+    );
+
+    for (final dn in network.detailNodes.values) {
+      final geom = SheetGeometryBuilder.computeDetailNodeSheetGeometry(
+        detailNode: dn,
+        network: network,
+        viewport: vp,
+        projector: baseProjector,
+      );
+      if (geom == null) continue;
+
+      final isSelected = selectedDetailNodeId == dn.id;
+      final contourColor = isSelected ? const Color(0xFF0288D1) : Colors.black87;
+      final contourStroke = Paint()
+        ..color = contourColor
+        ..strokeWidth = math.max(1.0, (isSelected ? 0.45 : 0.30) * sheetZoom)
+        ..style = PaintingStyle.stroke;
+
+      final screenBounds = _rectMmToScreen(geom.boundsMm);
+
+      if (isSelected) {
+        final fillPaint = Paint()
+          ..color = const Color(0x140288D1)
+          ..style = PaintingStyle.fill;
+        switch (dn.boundaryShape) {
+          case DetailBoundaryShape.circle:
+            final center = _mmToScreen(geom.centerMm);
+            final r = math.max(geom.boundsMm.width, geom.boundsMm.height) / 2.0 * sheetZoom;
+            canvas.drawCircle(center, r, fillPaint);
+            canvas.drawCircle(center, r, contourStroke);
+            break;
+          case DetailBoundaryShape.oval:
+            canvas.drawOval(screenBounds, fillPaint);
+            canvas.drawOval(screenBounds, contourStroke);
+            break;
+          case DetailBoundaryShape.roundedRect:
+            final r = math.min(10.0, math.min(geom.boundsMm.width, geom.boundsMm.height) * 0.22) * sheetZoom;
+            final rrect = RRect.fromRectAndRadius(screenBounds, Radius.circular(r));
+            canvas.drawRRect(rrect, fillPaint);
+            canvas.drawRRect(rrect, contourStroke);
+            break;
+          case DetailBoundaryShape.polygon:
+            final verts = geom.polygonVerticesMm;
+            if (verts.length >= 3) {
+              final path = Path()..moveTo(_mmToScreen(verts.first).dx, _mmToScreen(verts.first).dy);
+              for (int i = 1; i < verts.length; i++) {
+                final pt = _mmToScreen(verts[i]);
+                path.lineTo(pt.dx, pt.dy);
+              }
+              path.close();
+              canvas.drawPath(path, fillPaint);
+              canvas.drawPath(path, contourStroke);
+            }
+            break;
+        }
+      } else {
+        switch (dn.boundaryShape) {
+          case DetailBoundaryShape.circle:
+            final center = _mmToScreen(geom.centerMm);
+            final r = math.max(geom.boundsMm.width, geom.boundsMm.height) / 2.0 * sheetZoom;
+            canvas.drawCircle(center, r, contourStroke);
+            break;
+          case DetailBoundaryShape.oval:
+            canvas.drawOval(screenBounds, contourStroke);
+            break;
+          case DetailBoundaryShape.roundedRect:
+            final r = math.min(10.0, math.min(geom.boundsMm.width, geom.boundsMm.height) * 0.22) * sheetZoom;
+            final rrect = RRect.fromRectAndRadius(screenBounds, Radius.circular(r));
+            canvas.drawRRect(rrect, contourStroke);
+            break;
+          case DetailBoundaryShape.polygon:
+            final verts = geom.polygonVerticesMm;
+            if (verts.length >= 3) {
+              final path = Path()..moveTo(_mmToScreen(verts.first).dx, _mmToScreen(verts.first).dy);
+              for (int i = 1; i < verts.length; i++) {
+                final pt = _mmToScreen(verts[i]);
+                path.lineTo(pt.dx, pt.dy);
+              }
+              path.close();
+              canvas.drawPath(path, contourStroke);
+            }
+            break;
+        }
+      }
+
+      // Линия-выноска и полка "Узел А / Лист N"
+      final attachPx = _mmToScreen(geom.leaderAttachMm);
+      final shelfStartPx = _mmToScreen(geom.shelfStartMm);
+      final shelfEndPx = _mmToScreen(geom.shelfEndMm);
+      final shelfRectPx = _rectMmToScreen(geom.shelfHitRectMm);
+
+      // Белая подложка под полку для читаемости
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(shelfRectPx, const Radius.circular(2)),
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.88)
+          ..style = PaintingStyle.fill,
+      );
+      if (isSelected) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(shelfRectPx, const Radius.circular(2)),
+          Paint()
+            ..color = const Color(0xFF0288D1).withValues(alpha: 0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0,
+        );
+      }
+
+      canvas.drawLine(attachPx, shelfStartPx, contourStroke);
+      canvas.drawLine(shelfStartPx, shelfEndPx, contourStroke);
+
+      final leftX = math.min(shelfStartPx.dx, shelfEndPx.dx) + 1.2 * sheetZoom;
+      final topFontSize = styleConfig.textHeightSmallMm * 1.15 * sheetZoom;
+      final botFontSize = styleConfig.textHeightSmallMm * 0.95 * sheetZoom;
+
+      _drawText(
+        canvas,
+        geom.topText,
+        Offset(leftX, shelfStartPx.dy - topFontSize - 1.0 * sheetZoom),
+        topFontSize,
+        isBold: true,
+        color: isSelected ? const Color(0xFF01579B) : Colors.black,
+      );
+      _drawText(
+        canvas,
+        geom.bottomText,
+        Offset(leftX, shelfStartPx.dy + 0.8 * sheetZoom),
+        botFontSize,
+        color: isSelected ? const Color(0xFF0277BD) : const Color(0xFF263238),
+      );
+
+      // Отрисовка интерактивных ручек (Grips) при выборе узла
+      if (isSelected) {
+        final gripFill = Paint()
+          ..color = const Color(0xFF0288D1)
+          ..style = PaintingStyle.fill;
+        final gripStroke = Paint()
+          ..color = Colors.white
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+        final midGripFill = Paint()
+          ..color = const Color(0xFF00BCD4)
+          ..style = PaintingStyle.fill;
+
+        // 1. Ручка перетаскивания полки
+        final shelfGripRect = Rect.fromCenter(center: shelfStartPx, width: 8.0, height: 8.0);
+        canvas.drawRect(shelfGripRect, gripFill);
+        canvas.drawRect(shelfGripRect, gripStroke);
+
+        // 2. Ручки контура
+        if (dn.boundaryShape == DetailBoundaryShape.polygon) {
+          final verts = geom.polygonVerticesMm;
+          for (int i = 0; i < verts.length; i++) {
+            final vPx = _mmToScreen(verts[i]);
+            final vNextPx = _mmToScreen(verts[(i + 1) % verts.length]);
+            final midPx = Offset((vPx.dx + vNextPx.dx) / 2.0, (vPx.dy + vNextPx.dy) / 2.0);
+
+            // Середина ребра (кружок для добавления новой вершины)
+            canvas.drawCircle(midPx, 3.8, midGripFill);
+            canvas.drawCircle(midPx, 3.8, gripStroke);
+
+            // Вершина многоугольника (квадрат)
+            final vRect = Rect.fromCenter(center: vPx, width: 7.5, height: 7.5);
+            canvas.drawRect(vRect, gripFill);
+            canvas.drawRect(vRect, gripStroke);
+          }
+        } else {
+          // Ручка отступа (padding) на правом нижнем углу контура
+          final padGripPx = screenBounds.bottomRight;
+          final padRect = Rect.fromCenter(center: padGripPx, width: 7.5, height: 7.5);
+          canvas.drawRect(padRect, gripFill);
+          canvas.drawRect(padRect, gripStroke);
         }
       }
     }

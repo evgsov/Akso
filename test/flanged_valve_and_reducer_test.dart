@@ -12,7 +12,9 @@ import 'package:akso/domain/services/segment_positioning_service.dart';
 import 'package:akso/domain/services/spool_calculator.dart';
 import 'package:akso/domain/services/report_engine.dart';
 import 'package:akso/domain/models/report_template.dart';
+import 'package:akso/domain/models/callout.dart';
 import 'package:akso/ui/canvas/input_controller.dart';
+import 'package:akso/ui/canvas/painters/callout_painter.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 
 void main() {
@@ -400,5 +402,76 @@ void main() {
       // Qty should be 2 (pair of counter flanges)
       expect(flangeRow.any((cell) => cell == 2 || cell == '2' || cell == 2.0), isTrue);
     });
+
+    test('8. Counter-flanges of flanged valves generate fitting callouts when includeCounterFlanges is true', () {
+      final network = PipingNetwork();
+      final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      final n2 = Node3D(id: 'n2', x: 1000, y: 0, z: 0);
+      network.nodes[n1.id] = n1;
+      network.nodes[n2.id] = n2;
+
+      final seg = PipeSegment(id: 'seg1', startNodeId: n1.id, endNodeId: n2.id, dn: 80, systemId: 'sys1');
+      network.segments[seg.id] = seg;
+
+      final valve = network.addValve(
+        segmentId: seg.id,
+        ratio: 0.5,
+        valveType: ValveType.gateValve,
+        dn: 80,
+        isFlanged: true,
+        includeCounterFlanges: true,
+        flangePressurePn: 25,
+        counterFlangeType: 'ГОСТ 33259-2015 тип 11',
+        counterFlangeMaterial: '09Г2С',
+      );
+
+      // Сразу при вставке выноски не создаются
+      expect(network.callouts, isEmpty);
+
+      // При генерации выносок элементов создаются выноски на арматуру и 2 ответных фланца
+      final added = network.generateMissingCallouts(
+        targetTypes: const {CalloutTargetType.valve, CalloutTargetType.fitting},
+      );
+      expect(added, equals(3));
+
+      final valveCallouts = network.callouts.values
+          .where((c) => c.targetType == CalloutTargetType.valve)
+          .toList();
+      final cfCallouts = network.callouts.values
+          .where((c) => c.targetType == CalloutTargetType.fitting)
+          .toList();
+
+      expect(valveCallouts.length, equals(1));
+      expect(cfCallouts.length, equals(2));
+      expect(
+        cfCallouts.map((c) => c.targetId).toSet(),
+        equals({'${valve.id}_cf_start', '${valve.id}_cf_end'}),
+      );
+
+      // Проверяем 3D-точки привязки и текст выносок ответных фланцев
+      for (final c in cfCallouts) {
+        final anchor = CalloutPainter.getTarget3DPoint(network, c);
+        expect(anchor, isNotNull);
+        final topText = network.generateCalloutText(c, defaultCalloutTemplates);
+        final bottomText = network.generateCalloutBottomText(c, defaultCalloutTemplates);
+        final compactText = network.generateCalloutText(c, compactCalloutTemplates);
+        expect(topText, contains('Фланец воротниковый (тип 11) Ду80 Ру25'));
+        expect(bottomText, contains('ГОСТ 33259-2015 тип 11'));
+        expect(bottomText, contains('09Г2С'));
+        expect(compactText, equals('Ф-1'));
+      }
+
+      // Если отключить учет ответных фланцев (идут в комплекте с арматурой), выноски фланцев очищаются
+      network.updateValve(valve.id, valve.copyWith(includeCounterFlanges: false));
+      expect(
+        network.callouts.values.where((c) => c.targetType == CalloutTargetType.fitting),
+        isEmpty,
+      );
+      expect(
+        network.callouts.values.where((c) => c.targetType == CalloutTargetType.valve).length,
+        equals(1),
+      );
+    });
   });
 }
+

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:akso/domain/enums/fitting_type.dart';
 import 'package:akso/domain/enums/weld_joint_style.dart';
+import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/models/fitting.dart';
 import 'package:akso/domain/models/node_3d.dart';
@@ -104,5 +105,101 @@ void main() {
         expect(poly.smoothJoin, isTrue);
       }
     });
+
+    test('includes all GOST 21.101-2020 Form 3 title block lines matching SheetCanvasPainter', () {
+      final network = PipingNetwork();
+      final sheet = DrawingSheet.createDefault(id: 'sheet_1', name: 'Лист 1', sheetNumber: 1);
+      final scene = SheetGeometryBuilder.buildScene(sheet: sheet, network: network);
+
+      final polylines = scene.items
+          .where((it) => it.layer == VectorSceneLayer.frameAndStamp && it.primitive is VectorPolyline)
+          .map((it) => it.primitive as VectorPolyline)
+          .toList();
+
+      final stampRight = sheet.format.widthMm - sheet.format.frameRightMm;
+      final stampBottom = sheet.format.heightMm - sheet.format.frameBottomMm;
+      final stampLeft = stampRight - 185.0;
+      final stampTop = stampBottom - 55.0;
+      final xApprovalsEnd = stampLeft + 65.0;
+      final xStageStart = stampLeft + 135.0;
+
+      bool hasSegment(double x1, double y1, double x2, double y2) {
+        return polylines.any((p) =>
+            p.points.length == 2 &&
+            (p.points[0].dx - x1).abs() < 0.01 &&
+            (p.points[0].dy - y1).abs() < 0.01 &&
+            (p.points[1].dx - x2).abs() < 0.01 &&
+            (p.points[1].dy - y2).abs() < 0.01);
+      }
+
+      // 1. Horizontal divider between Graph 4 (documentCode) and Graph 1 (projectName)
+      expect(hasSegment(xApprovalsEnd, stampTop + 10.0, stampRight, stampTop + 10.0), isTrue);
+
+      // 2. Horizontal divider at stampTop + 40.0 spanning from xApprovalsEnd to stampRight (Graph 2 / Graph 3 & Stage/Organization)
+      expect(hasSegment(xApprovalsEnd, stampTop + 40.0, stampRight, stampTop + 40.0), isTrue);
+
+      // 3. Vertical divider at xStageStart from stampTop + 25.0 to stampBottom (Graph 3 / Graph 9)
+      expect(hasSegment(xStageStart, stampTop + 25.0, xStageStart, stampBottom), isTrue);
+
+      // 4. Vertical dividers for Стадия | Лист | Листов starting from stampTop + 25.0 to stampTop + 40.0
+      expect(hasSegment(xStageStart + 15.0, stampTop + 25.0, xStageStart + 15.0, stampTop + 40.0), isTrue);
+      expect(hasSegment(xStageStart + 30.0, stampTop + 25.0, xStageStart + 30.0, stampTop + 40.0), isTrue);
+
+      // 5. Approval role/surname vertical divider at stampLeft + 20.0 (from stampTop + 25.0 to stampBottom)
+      expect(hasSegment(stampLeft + 20.0, stampTop + 25.0, stampLeft + 20.0, stampBottom), isTrue);
+    });
+
+    test('aligns callout text directly on shelf without opaque white mask and respects ShelfDirection', () {
+      final network = PipingNetwork();
+      final n1 = Node3D(id: 'n1', x: 0, y: 0, z: 0);
+      final n2 = Node3D(id: 'n2', x: 2000, y: 0, z: 0);
+      network.nodes[n1.id] = n1;
+      network.nodes[n2.id] = n2;
+      final seg = PipeSegment(id: 'seg_1', startNodeId: 'n1', endNodeId: 'n2', dn: 50, systemId: 'sys_1');
+      network.segments[seg.id] = seg;
+
+      // Callout with positive offsetX but explicit ShelfDirection.left
+      final callout = Callout(
+        id: 'c_left',
+        targetType: CalloutTargetType.segment,
+        targetId: 'seg_1',
+        customText: 'Труба Ду50',
+        screenOffsetX: 30.0,
+        screenOffsetY: -25.0,
+        shelfDirection: ShelfDirection.left,
+      );
+      network.callouts[callout.id] = callout;
+
+      final sheet = DrawingSheet.createDefault(id: 'sheet_1', name: 'Лист 1', sheetNumber: 1);
+      final scene = SheetGeometryBuilder.buildScene(
+        sheet: sheet,
+        network: network,
+        measureTextWidthMm: (text, fontSizeMm, {isBold = false}) => 14.0,
+      );
+
+      final calloutItems = scene.items.where((it) => it.layer == VectorSceneLayer.callouts).toList();
+      final polylines = calloutItems.where((it) => it.primitive is VectorPolyline).map((it) => it.primitive as VectorPolyline).toList();
+      final texts = calloutItems.where((it) => it.primitive is VectorText).map((it) => it.primitive as VectorText).toList();
+
+      expect(polylines, hasLength(2));
+      expect(texts, hasLength(1));
+
+      final shelfPoly = polylines[1];
+      expect(shelfPoly.points.length, equals(2));
+      final leaderEnd = shelfPoly.points[0];
+      final shelfEnd = shelfPoly.points[1];
+
+      // Shelf must go left because shelfDirection == ShelfDirection.left
+      expect(shelfEnd.dx, lessThan(leaderEnd.dx));
+      // Shelf length must equal measured width (14.0) + 2.0mm padding = 16.0mm
+      expect((leaderEnd.dx - shelfEnd.dx), closeTo(16.0, 0.001));
+
+      final vt = texts.first;
+      // Text must NOT have an opaque white mask that erases pipes or the shelf line
+      expect(vt.maskFillColorValue, isNull);
+      // Text must start at shelfEnd.dx + 1.0mm (centered on the 16.0mm shelf)
+      expect(vt.position.dx, closeTo(shelfEnd.dx + 1.0, 0.001));
+    });
   });
 }
+

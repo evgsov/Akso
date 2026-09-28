@@ -6,6 +6,7 @@ import 'package:akso/domain/models/callout.dart';
 import 'package:akso/domain/models/node_3d.dart';
 import 'package:akso/domain/models/drawing_sheet.dart';
 import 'package:akso/domain/services/viewport_transform_service.dart';
+import 'package:akso/domain/services/sheet_geometry_builder.dart';
 import 'package:akso/core/math/axonometry_projector.dart';
 import 'package:akso/domain/models/pipeline_branch.dart';
 import 'package:akso/domain/services/pipeline_branch_extractor.dart';
@@ -138,14 +139,14 @@ class CalloutObstacleMap {
     // 6. Фасонные элементы (отводы, тройники, переходы, фланцы, заглушки)
     for (final fit in network.fittings.values) {
       if (fit.fittingType == FittingType.directBranch) continue;
-      final node = network.nodes[fit.nodeId];
-      if (node == null) continue;
-      final connected = network.getConnectedSegments(node.id);
+      final anchor = network.getFittingAnchorPoint(fit);
+      if (anchor == null) continue;
+      final connected = network.getConnectedSegments(fit.nodeId);
       if (visibleSys != null && visibleSys.isNotEmpty) {
         final anyVisible = connected.any((s) => visibleSys.contains(s.systemId));
         if (!anyVisible && connected.isNotEmpty) continue;
       }
-      final raw = projector.projectRaw(node.x, node.y, node.z);
+      final raw = projector.projectRaw(anchor.x, anchor.y, anchor.z);
       final fMm = ViewportTransformService.model2dToSheetMm(raw, vp);
       final fitRect = Rect.fromCenter(center: fMm, width: 2.5, height: 2.5);
       map.addRect(fitRect, 'fitting_${fit.id}');
@@ -206,6 +207,22 @@ class CalloutObstacleMap {
         final nMm = ViewportTransformService.model2dToSheetMm(raw, vp);
         final nozRect = Rect.fromCenter(center: nMm, width: 2.5, height: 2.5);
         map.addRect(nozRect, 'noz_${noz.id}');
+      }
+    }
+
+    // 10. Контуры и полочки выносных узлов (DetailNode) на обзорных листах
+    if (sheet.detailNodeId == null) {
+      for (final dn in network.detailNodes.values) {
+        final geom = SheetGeometryBuilder.computeDetailNodeSheetGeometry(
+          detailNode: dn,
+          network: network,
+          viewport: vp,
+          projector: projector,
+        );
+        if (geom == null) continue;
+        map.addRect(geom.boundsMm.inflate(1.5), 'detail_node_${dn.id}');
+        map.addRect(geom.shelfHitRectMm.inflate(1.5), 'detail_shelf_${dn.id}');
+        map.addLeaderLine(geom.leaderAttachMm, geom.shelfStartMm, 'detail_leader_${dn.id}');
       }
     }
 
@@ -500,10 +517,7 @@ class CalloutLayoutEngine {
         return null;
 
       case CalloutTargetType.fitting:
-        final fit = network.fittings[callout.targetId] ??
-            network.fittings.values.where((f) => f.id == callout.targetId).firstOrNull;
-        if (fit == null) return null;
-        return network.nodes[fit.nodeId];
+        return network.getFittingAnchorPointById(callout.targetId);
     }
   }
 
@@ -1686,6 +1700,11 @@ class CalloutLayoutEngine {
             if (sId != null) clusterTargetSegIds.add(sId);
             break;
           case CalloutTargetType.fitting:
+            final cfValve = network.getCounterFlangeValve(c.targetId);
+            if (cfValve != null) {
+              clusterTargetSegIds.add(cfValve.segmentId);
+              break;
+            }
             var fit = network.fittings[c.targetId];
             if (fit == null) {
               for (final f in network.fittings.values) {

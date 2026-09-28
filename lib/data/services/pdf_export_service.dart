@@ -9,6 +9,8 @@ import 'package:printing/printing.dart';
 
 import '../../core/math/axonometry_projector.dart';
 import '../../domain/enums/projection_type.dart';
+import '../../domain/models/callout.dart';
+import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/node_3d.dart';
@@ -73,6 +75,11 @@ class PdfExportService {
                     targetCenter: targetCenter,
                     customValves: customValves,
                     calloutTemplates: calloutTemplates,
+                    measureTextWidthMm: (text, fontSizeMm, {isBold = false}) {
+                      if (text.isEmpty) return 0.0;
+                      final font = isBold ? pdfFontBold : pdfFontRegular;
+                      return font.stringMetrics(text).width * fontSizeMm;
+                    },
                   );
 
                   _renderVectorSceneToPdf(
@@ -154,8 +161,11 @@ class PdfExportService {
               if (sheet.legend != null && sheet.legend!.isVisible)
                 _buildDrawingLegend(
                   sheet: sheet,
+                  network: effectiveNetwork,
+                  styleConfig: styleConfig,
                   fontRegular: fontRegular,
                   fontBold: fontBold,
+                  pdfFontRegular: pdfFontRegular,
                   mm: mm,
                 ),
             ],
@@ -545,6 +555,15 @@ class PdfExportService {
       final sinA = math.sin(rad);
 
       for (final noz in eq.nozzles) {
+        final hasNozzleCallout = network.callouts.values.any(
+          (c) =>
+              !c.isHidden &&
+              sheet.isCalloutVisible(c, network) &&
+              c.targetType == CalloutTargetType.nozzle &&
+              (c.targetId == noz.id || c.additionalTargetIds.contains(noz.id)),
+        );
+        if (hasNozzleCallout) continue;
+
         final node = network.nodes[noz.id];
         final double wx, wy, wz;
         if (node != null) {
@@ -573,6 +592,13 @@ class PdfExportService {
           vp,
         );
 
+        if (pFlangeMm.dx < vp.xMm ||
+            pFlangeMm.dx > vp.xMm + vp.widthMm ||
+            pFlangeMm.dy < vp.yMm ||
+            pFlangeMm.dy > vp.yMm + vp.heightMm) {
+          continue;
+        }
+
         // Экранное смещение (8, -12) переводим в миллиметры (примерно 2мм вправо, 3мм вверх)
         final textX = pFlangeMm.dx + 2.0;
         final textY = pFlangeMm.dy - 3.0;
@@ -585,48 +611,47 @@ class PdfExportService {
           pw.Positioned(
             left: textX * mm,
             top: textY * mm,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(
-                horizontal: 1.0,
-                vertical: 0.5,
-              ),
-              color: PdfColors.white,
-              child: pw.Text(
-                labelText,
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 6.5,
-                  color: const PdfColor.fromInt(0xFF006064),
-                ),
+            child: pw.Text(
+              labelText,
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 6.5,
+                color: const PdfColor.fromInt(0xFF006064),
               ),
             ),
           ),
         );
       }
 
-      if (eq.name.isNotEmpty) {
+      final hasEqCallout = network.callouts.values.any(
+        (c) =>
+            !c.isHidden &&
+            sheet.isCalloutVisible(c, network) &&
+            c.targetType == CalloutTargetType.equipment &&
+            (c.targetId == eq.id || c.additionalTargetIds.contains(eq.id)),
+      );
+
+      if (eq.name.isNotEmpty && !hasEqCallout) {
         final topCenterR = projector.projectRaw(eq.x, eq.y, eq.z + eq.height);
         final pTopMm = ViewportTransformService.model2dToSheetMm(
           topCenterR,
           vp,
         );
 
-        // Смещение вверх (около 4 мм на листе)
-        final textY = pTopMm.dy - 4.0;
+        if (pTopMm.dx >= vp.xMm &&
+            pTopMm.dx <= vp.xMm + vp.widthMm &&
+            pTopMm.dy >= vp.yMm &&
+            pTopMm.dy <= vp.yMm + vp.heightMm) {
+          // Смещение вверх (около 4 мм на листе)
+          final textY = pTopMm.dy - 4.0;
 
-        final eqMetrics = pdfFontBold.stringMetrics(eq.name);
-        final eqWidthMm = eqMetrics.width * 8.0 / mm;
+          final eqMetrics = pdfFontBold.stringMetrics(eq.name);
+          final eqWidthMm = eqMetrics.width * 8.0 / mm;
 
-        widgets.add(
-          pw.Positioned(
-            left: (pTopMm.dx - eqWidthMm / 2.0 - 2.0) * mm,
-            top: (textY - 1.0) * mm,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(
-                horizontal: 2.0,
-                vertical: 1.0,
-              ),
-              color: PdfColors.white,
+          widgets.add(
+            pw.Positioned(
+              left: (pTopMm.dx - eqWidthMm / 2.0) * mm,
+              top: (textY - 1.0) * mm,
               child: pw.Text(
                 eq.name,
                 style: pw.TextStyle(
@@ -636,8 +661,8 @@ class PdfExportService {
                 ),
               ),
             ),
-          ),
-        );
+          );
+        }
       }
     }
 
@@ -1212,11 +1237,15 @@ class PdfExportService {
   /// Виджет блока «Условные обозначения» (Легенда)
   static pw.Widget _buildDrawingLegend({
     required DrawingSheet sheet,
+    required PipingNetwork network,
+    required DrawingStyleConfig styleConfig,
     required pw.Font fontRegular,
     required pw.Font fontBold,
+    required PdfFont pdfFontRegular,
     required double mm,
   }) {
     final leg = sheet.legend!;
+    final title = leg.title.isNotEmpty ? leg.title : 'Условные обозначения:';
 
     return pw.Positioned(
       left: leg.xMm * mm,
@@ -1224,10 +1253,13 @@ class PdfExportService {
       child: pw.Container(
         width: leg.widthMm * mm,
         height: leg.heightMm * mm,
-        padding: const pw.EdgeInsets.all(3.0),
+        padding: pw.EdgeInsets.symmetric(horizontal: 4.0 * mm, vertical: 3.0 * mm),
         decoration: leg.hasBorder
             ? pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.black, width: 0.5),
+                border: pw.Border.all(
+                  color: PdfColors.black,
+                  width: styleConfig.thinLineWidthMm * mm,
+                ),
                 color: PdfColors.white,
               )
             : const pw.BoxDecoration(color: PdfColors.white),
@@ -1235,52 +1267,186 @@ class PdfExportService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              leg.title,
-              style: pw.TextStyle(font: fontBold, fontSize: 7.5),
+              title,
+              style: pw.TextStyle(font: fontBold, fontSize: 3.0 * mm),
             ),
             pw.SizedBox(height: 1.5 * mm),
             pw.Expanded(
-              child: pw.ListView.builder(
-                itemCount: leg.items.length,
-                itemBuilder: (ctx, i) {
-                  final item = leg.items[i];
-                  return pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 1.0),
-                    child: pw.Row(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  for (final item in leg.items)
+                    pw.Row(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        pw.Container(
-                          width: 14.0 * mm,
-                          height: 3.5 * mm,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(
-                              color: PdfColors.grey500,
-                              width: 0.5,
-                            ),
-                          ),
-                          alignment: pw.Alignment.center,
-                          child: pw.Text(
-                            item.subLabel ?? item.label,
-                            style: pw.TextStyle(font: fontRegular, fontSize: 5),
+                        pw.SizedBox(
+                          width: 24.0 * mm,
+                          height: 7.0 * mm,
+                          child: pw.CustomPaint(
+                            size: PdfPoint(24.0 * mm, 7.0 * mm),
+                            painter: (canvas, size) {
+                              _drawPdfLegendIcon(
+                                canvas: canvas,
+                                size: size,
+                                item: item,
+                                network: network,
+                                styleConfig: styleConfig,
+                                fontRegular: pdfFontRegular,
+                                mm: mm,
+                              );
+                            },
                           ),
                         ),
-                        pw.SizedBox(width: 2.0 * mm),
+                        pw.SizedBox(width: 4.0 * mm),
                         pw.Expanded(
                           child: pw.Text(
-                            item.label,
-                            style: pw.TextStyle(font: fontRegular, fontSize: 6),
+                            item.subLabel != null && item.subLabel!.isNotEmpty
+                                ? '${item.label}\n${item.subLabel}'
+                                : item.label,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 2.3 * mm),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  static void _drawPdfLegendIcon({
+    required PdfGraphics canvas,
+    required PdfPoint size,
+    required LegendItem item,
+    required PipingNetwork network,
+    required DrawingStyleConfig styleConfig,
+    required PdfFont fontRegular,
+    required double mm,
+  }) {
+    final midY = size.y / 2.0;
+    final thinW = styleConfig.thinLineWidthMm * mm;
+
+    switch (item.type) {
+      case LegendItemType.dimension:
+        final x1 = 2.0 * mm;
+        final x2 = size.x - 2.0 * mm;
+        canvas.setStrokeColor(const PdfColor.fromInt(0xFF37474F));
+        canvas.setLineWidth(thinW);
+        canvas.moveTo(x1, midY);
+        canvas.lineTo(x2, midY);
+        final tickLen = 2.0 * mm;
+        canvas.moveTo(x1 - tickLen, midY - tickLen);
+        canvas.lineTo(x1 + tickLen, midY + tickLen);
+        canvas.moveTo(x2 - tickLen, midY - tickLen);
+        canvas.lineTo(x2 + tickLen, midY + tickLen);
+        canvas.strokePath();
+
+        final fs = 1.8 * mm;
+        final m1 = fontRegular.stringMetrics('1000');
+        final m2 = fontRegular.stringMetrics('1005');
+        canvas.setFillColor(const PdfColor.fromInt(0xFF37474F));
+        canvas.drawString(
+          fontRegular,
+          fs,
+          '1000',
+          (size.x - m1.width * fs) / 2.0,
+          midY + 0.6 * mm,
+        );
+        canvas.drawString(
+          fontRegular,
+          fs,
+          '1005',
+          (size.x - m2.width * fs) / 2.0,
+          midY - 2.2 * mm,
+        );
+        break;
+
+      case LegendItemType.elevation:
+        final flagH = 2.8 * mm;
+        final flagW = 2.0 * mm;
+        final tipX = 4.5 * mm;
+        final tipY = midY - 1.5 * mm;
+        final flagBaseY = tipY + flagH;
+        final shelfY = tipY + 4.2 * mm;
+        canvas.setStrokeColor(const PdfColor.fromInt(0xFF1976D2));
+        canvas.setLineWidth(thinW);
+        canvas.moveTo(tipX, tipY);
+        canvas.lineTo(tipX - flagW, flagBaseY);
+        canvas.lineTo(tipX + flagW, flagBaseY);
+        canvas.closePath();
+        canvas.strokePath();
+        canvas.moveTo(tipX, flagBaseY);
+        canvas.lineTo(tipX, shelfY);
+        canvas.lineTo(size.x - 2.0 * mm, shelfY);
+        canvas.strokePath();
+        canvas.setFillColor(const PdfColor.fromInt(0xFF1976D2));
+        canvas.drawString(
+          fontRegular,
+          1.8 * mm,
+          '+2.450',
+          tipX + 1.2 * mm,
+          shelfY + 0.5 * mm,
+        );
+        break;
+
+      case LegendItemType.pipeSystem:
+        final pSysId = item.systemId ?? item.systemCode;
+        final colorVal = pSysId != null && network.systems.containsKey(pSysId)
+            ? network.systems[pSysId]!.colorValue
+            : 0xFF1976D2;
+        canvas.setStrokeColor(PdfColor.fromInt(colorVal));
+        canvas.setLineWidth(styleConfig.pipeLineWidthMm * mm);
+        canvas.moveTo(2.0 * mm, midY);
+        canvas.lineTo(size.x - 2.0 * mm, midY);
+        canvas.strokePath();
+        break;
+
+      case LegendItemType.weldJoint:
+        canvas.setStrokeColor(const PdfColor.fromInt(0xFF455A64));
+        canvas.setLineWidth(styleConfig.pipeLineWidthMm * 0.7 * mm);
+        canvas.moveTo(2.0 * mm, midY);
+        canvas.lineTo(size.x - 2.0 * mm, midY);
+        canvas.strokePath();
+        canvas.setFillColor(const PdfColor.fromInt(0xFFE53935));
+        canvas.drawEllipse(size.x / 2.0, midY, 1.5 * mm, 1.5 * mm);
+        canvas.fillPath();
+        break;
+
+      case LegendItemType.valve:
+        final cx = size.x / 2.0;
+        canvas.setStrokeColor(const PdfColor.fromInt(0xFF1976D2));
+        canvas.setLineWidth(thinW);
+        canvas.moveTo(cx - 4.5 * mm, midY - 2.2 * mm);
+        canvas.lineTo(cx, midY);
+        canvas.lineTo(cx - 4.5 * mm, midY + 2.2 * mm);
+        canvas.closePath();
+        canvas.moveTo(cx + 4.5 * mm, midY - 2.2 * mm);
+        canvas.lineTo(cx, midY);
+        canvas.lineTo(cx + 4.5 * mm, midY + 2.2 * mm);
+        canvas.closePath();
+        canvas.strokePath();
+        break;
+
+      case LegendItemType.fitting:
+        final cx = size.x / 2.0;
+        canvas.setStrokeColor(const PdfColor.fromInt(0xFF5E35B1));
+        canvas.setLineWidth(styleConfig.pipeLineWidthMm * 0.8 * mm);
+        canvas.moveTo(cx - 4.0 * mm, midY - 2.2 * mm);
+        canvas.lineTo(cx, midY);
+        canvas.lineTo(cx + 4.0 * mm, midY + 2.2 * mm);
+        canvas.strokePath();
+        break;
+
+      case LegendItemType.custom:
+        canvas.setFillColor(PdfColors.black);
+        canvas.drawEllipse(size.x / 2.0, midY, 1.5 * mm, 1.5 * mm);
+        canvas.fillPath();
+        break;
+    }
   }
 
   /// Загрузка TTF шрифта с поддержкой кириллицы (Roboto)

@@ -230,6 +230,9 @@ class Callout {
   /// Отображать ли суффикс количества "(N шт.)" в тексте выноски
   final bool showQuantity;
 
+  /// Скрыта ли данная выноска пользователем (без удаления самой выноски и её настроек)
+  final bool isHidden;
+
   const Callout({
     required this.id,
     required this.targetId,
@@ -249,6 +252,7 @@ class Callout {
     this.sheetPinned = const {},
     this.additionalTargetIds = const [],
     this.showQuantity = true,
+    this.isHidden = false,
   }) : customText = text ?? customText;
 
   /// Алиас для customText
@@ -307,6 +311,7 @@ class Callout {
     Map<String, bool>? sheetPinned,
     List<String>? additionalTargetIds,
     bool? showQuantity,
+    bool? isHidden,
   }) {
     return Callout(
       id: id ?? this.id,
@@ -326,6 +331,7 @@ class Callout {
       sheetPinned: sheetPinned ?? this.sheetPinned,
       additionalTargetIds: additionalTargetIds ?? this.additionalTargetIds,
       showQuantity: showQuantity ?? this.showQuantity,
+      isHidden: isHidden ?? this.isHidden,
     );
   }
 
@@ -348,6 +354,7 @@ class Callout {
         if (sheetPinned.isNotEmpty) 'sheetPinned': sheetPinned,
         if (additionalTargetIds.isNotEmpty) 'additionalTargetIds': additionalTargetIds,
         'showQuantity': showQuantity,
+        if (isHidden) 'isHidden': isHidden,
       };
 
   factory Callout.fromJson(Map<String, dynamic> json) {
@@ -391,6 +398,7 @@ class Callout {
       }
     }
     final parsedShowQuantity = (json['showQuantity'] as bool?) ?? true;
+    final parsedIsHidden = (json['isHidden'] as bool?) ?? false;
 
     final rawSheetOffsets = json['sheetOffsets'];
     final parsedSheetOffsets = <String, Offset>{};
@@ -437,6 +445,7 @@ class Callout {
       sheetPinned: parsedSheetPinned,
       additionalTargetIds: parsedAddTargets,
       showQuantity: parsedShowQuantity,
+      isHidden: parsedIsHidden,
     );
   }
 
@@ -459,6 +468,7 @@ class Callout {
           arrowOnNode == other.arrowOnNode &&
           isPinned == other.isPinned &&
           showQuantity == other.showQuantity &&
+          isHidden == other.isHidden &&
           _listEquals(additionalTargetIds, other.additionalTargetIds) &&
           _mapEquals(sheetPinned, other.sheetPinned);
 
@@ -496,11 +506,12 @@ class Callout {
         arrowOnNode,
         isPinned,
         showQuantity,
+        isHidden,
         Object.hashAll(additionalTargetIds),
         Object.hashAll(sheetPinned.entries.map((e) => Object.hash(e.key, e.value))),
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned, sheetPinned: ${sheetPinned.length}, addTargets: ${additionalTargetIds.length}, showQty: $showQuantity)';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned, sheetPinned: ${sheetPinned.length}, addTargets: ${additionalTargetIds.length}, showQty: $showQuantity, isHidden: $isHidden)';
 }

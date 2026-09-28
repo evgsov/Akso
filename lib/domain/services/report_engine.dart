@@ -424,23 +424,13 @@ class ReportEngine {
     // Добавляем ответные фланцы от фланцевой арматуры в общую спецификацию фланцев
     for (final v in network.valves.values) {
       if (v.effectiveIsFlanged && v.includeCounterFlanges) {
-        final flName = 'Фланец ${v.isFlatCounterFlange ? 'плоский (тип 01)' : 'воротниковый (тип 11)'} Ду${v.dn} Ру${v.flangePressurePn}';
-        final key = '$flName|${v.counterFlangeType}|${v.counterFlangeMaterial}';
-        fittingMap[key] = (fittingMap[key] ?? 0) + 2;
-        fittingData.putIfAbsent(
-          key,
-          () => Fitting(
-            id: 'valve_flange_${v.id}',
-            nodeId: '',
-            fittingType: FittingType.flange,
-            dn: v.dn,
-            radiusMm: 0,
-            material: v.counterFlangeMaterial,
-            standard: v.counterFlangeType,
-            pressurePn: v.flangePressurePn,
-            name: flName,
-          ),
-        );
+        final cfFit = network.buildCounterFlangeFitting(v, customId: 'valve_flange_${v.id}');
+        final cfCount = network.getValveCounterFlangeLocations(v).length;
+        final effectiveCount = cfCount > 0 ? cfCount : 2;
+        final flName = cfFit.name ?? cfFit.displayName;
+        final key = '$flName|${v.counterFlangeType}|${v.effectiveCounterFlangeMaterial}';
+        fittingMap[key] = (fittingMap[key] ?? 0) + effectiveCount;
+        fittingData.putIfAbsent(key, () => cfFit);
       }
     }
     for (final entry in fittingMap.entries) {

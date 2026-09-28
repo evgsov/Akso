@@ -16,6 +16,7 @@ class CalloutPainter {
   final ProjectModel? project;
   final Map<String, String>? templates;
   final String? selectedCalloutId;
+  final Set<CalloutTargetType>? hiddenTypes;
 
   const CalloutPainter({
     required this.network,
@@ -23,6 +24,7 @@ class CalloutPainter {
     this.project,
     this.templates,
     this.selectedCalloutId,
+    this.hiddenTypes,
   });
 
   /// Отрисовка всех выносок через экземпляр класса
@@ -34,6 +36,7 @@ class CalloutPainter {
       project: project,
       templates: templates ?? project?.calloutTemplates,
       selectedCalloutId: selectedCalloutId,
+      hiddenTypes: hiddenTypes,
     );
   }
 
@@ -48,6 +51,7 @@ class CalloutPainter {
     double annotationScale = 1.0,
     bool isPaperSpace = false,
     String? activeSheetId,
+    Set<CalloutTargetType>? hiddenTypes,
   }) {
     if (network.callouts.isEmpty) return;
 
@@ -56,6 +60,9 @@ class CalloutPainter {
     if (!isPaperSpace) {
       // В 3D-пространстве модели отрисовываем выноски независимо
       for (final callout in network.callouts.values) {
+        if (callout.isHidden) continue;
+        if (hiddenTypes != null && hiddenTypes.contains(callout.targetType)) continue;
+
         final anchor3D = getTarget3DPoint(network, callout);
         if (anchor3D == null) continue;
 
@@ -81,6 +88,9 @@ class CalloutPainter {
     // В пространстве чертежного листа: группируем этажерки по ГОСТ 2.316
     final canvasItems = <_CanvasCalloutDrawItem>[];
     for (final callout in network.callouts.values) {
+      if (callout.isHidden) continue;
+      if (hiddenTypes != null && hiddenTypes.contains(callout.targetType)) continue;
+
       final anchor3D = getTarget3DPoint(network, callout);
       if (anchor3D == null) continue;
 
@@ -264,14 +274,7 @@ class CalloutPainter {
         return null;
 
       case CalloutTargetType.fitting:
-        final fit = network.fittings[targetId] ??
-            network.fittings.values.where((f) => f.id == targetId).firstOrNull;
-        if (fit == null) {
-          final node = network.nodes[targetId];
-          if (node != null) return node;
-          return null;
-        }
-        return network.nodes[fit.nodeId];
+        return network.getFittingAnchorPointById(targetId);
     }
   }
 
@@ -340,7 +343,8 @@ class CalloutPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      bottomHeight = bottomTp.height + 4.0;
+      final padY = isPaperSpace ? 0.4 * annotationScale : 2.0 * annotationScale;
+      bottomHeight = bottomTp.height + padY * 2.0;
       maxTextWidth = math.max(maxTextWidth, bottomTp.width);
     }
 
@@ -350,14 +354,17 @@ class CalloutPainter {
             ? false
             : scaledOffsetX >= 0);
 
+    final padX = isPaperSpace ? 1.0 * annotationScale : 4.0 * annotationScale;
+    final padY = isPaperSpace ? 0.4 * annotationScale : 2.0 * annotationScale;
+    final shelfLength = maxTextWidth + padX * 2.0;
+
     if (callout.targetType == CalloutTargetType.node || callout.elevationStyle != null) {
       if (callout.arrowOnNode) {
         final shelfY = anchorScreen.dy + scaledOffsetY;
-        final bgTop = shelfY - topTp.height - 4.0;
-        final totalTextH = topTp.height + 4.0 + bottomHeight;
+        final bgTop = shelfY - topTp.height - padY * 2.0;
+        final totalTextH = topTp.height + padY * 2.0 + bottomHeight;
         final minY = math.min(bgTop, math.min(shelfY, anchorScreen.dy)) - 2.0;
         final maxY = math.max(bgTop + totalTextH, math.max(shelfY, anchorScreen.dy)) + 2.0;
-        final shelfLength = maxTextWidth + 8.0;
         if (isRight) {
           return Rect.fromLTRB(
             anchorScreen.dx - 8.0,
@@ -375,30 +382,32 @@ class CalloutPainter {
         }
       }
 
-      const flagH = 14.4;
-      final shelfY = textPos.dy - flagH;
-      final bgTop = shelfY - topTp.height - 4.0;
-      final totalHeight = (textPos.dy - bgTop) + (bottomHeight > 0 ? bottomHeight : 4.0);
+      final flagSize = isPaperSpace
+          ? (callout.textHeight * 1.5) * annotationScale
+          : 8.0 * annotationScale;
+      final flagH = flagSize * 1.3;
+      final shelfY = textPos.dy - flagH - padY * 2.0;
+      final bgTop = shelfY - topTp.height - padY * 2.0;
+      final totalHeight = (textPos.dy - bgTop) + (bottomHeight > 0 ? bottomHeight : padY * 2.0);
       if (isRight) {
         return Rect.fromLTWH(
           textPos.dx - 8.0,
           bgTop,
-          maxTextWidth + 18.0,
+          shelfLength + 10.0,
           totalHeight,
         );
       } else {
         return Rect.fromLTWH(
-          textPos.dx - maxTextWidth - 10.0,
+          textPos.dx - shelfLength - 2.0,
           bgTop,
-          maxTextWidth + 18.0,
+          shelfLength + 10.0,
           totalHeight,
         );
       }
     }
 
-    final shelfLength = maxTextWidth + (isPaperSpace ? 2.5 * annotationScale : 8.0 * annotationScale);
-    final bgTopPad = isPaperSpace ? 1.5 * annotationScale : 4.0;
-    final totalHeight = topTp.height + bgTopPad + (bottomHeight > 0 ? bottomHeight : (isPaperSpace ? 1.5 * annotationScale : 4.0));
+    final bgTopPad = padY * 2.0;
+    final totalHeight = topTp.height + bgTopPad + (bottomHeight > 0 ? bottomHeight : bgTopPad);
     final bgTop = textPos.dy - topTp.height - bgTopPad;
     if (isRight) {
       return Rect.fromLTWH(
@@ -449,12 +458,15 @@ class CalloutPainter {
     String? activeSheetId,
     DrawingSheet? activeSheet,
     String? selectedCalloutId,
+    Set<CalloutTargetType>? hiddenTypes,
   }) {
     if (network.callouts.isEmpty) return null;
 
     final candidates = <_CalloutHitCandidate>[];
 
     for (final callout in network.callouts.values) {
+      if (callout.isHidden) continue;
+      if (hiddenTypes != null && hiddenTypes.contains(callout.targetType)) continue;
       // 1. Фильтрация по видимости на активном листе чертежа
       if (activeSheet != null && !activeSheet.isCalloutVisible(callout, network)) {
         continue;
@@ -660,8 +672,10 @@ class CalloutPainter {
       )..layout();
     }
 
+    final padX = isPaperSpace ? 1.0 * annotationScale : 4.0 * annotationScale;
+    final padY = isPaperSpace ? 0.4 * annotationScale : 2.0 * annotationScale;
     final maxTextWidth = math.max(topTp.width, bottomTp?.width ?? 0.0);
-    final shelfLength = maxTextWidth + (isPaperSpace ? 2.5 * annotationScale : 8.0 * annotationScale);
+    final shelfLength = maxTextWidth + padX * 2.0;
     final shelfEnd = Offset(
       isRight ? textPos.dx + shelfLength : textPos.dx - shelfLength,
       textPos.dy,
@@ -710,19 +724,20 @@ class CalloutPainter {
             break;
 
           case ElevationMarkStyle.compactFlag:
+            final tick = isPaperSpace ? 1.2 * annotationScale : 3.5 * annotationScale;
             canvas.drawLine(anchorScreen, Offset(anchorScreen.dx, shelfY), linePaint);
             canvas.drawLine(
-              Offset(anchorScreen.dx - 3.5 * annotationScale, anchorScreen.dy + 3.5 * annotationScale),
-              Offset(anchorScreen.dx + 3.5 * annotationScale, anchorScreen.dy - 3.5 * annotationScale),
+              Offset(anchorScreen.dx - tick, anchorScreen.dy + tick),
+              Offset(anchorScreen.dx + tick, anchorScreen.dy - tick),
               linePaint,
             );
             break;
 
           case ElevationMarkStyle.isoCircle:
-            final circleR = 4.5 * annotationScale;
+            final circleR = isPaperSpace ? 1.5 * annotationScale : 4.5 * annotationScale;
             final circlePaint = Paint()
               ..color = primaryColor
-              ..strokeWidth = (isSelected ? 2.0 : 1.2) * annotationScale
+              ..strokeWidth = linePaint.strokeWidth
               ..style = PaintingStyle.stroke;
             canvas.drawCircle(anchorScreen, circleR, circlePaint);
             canvas.drawLine(Offset(anchorScreen.dx - circleR, anchorScreen.dy), Offset(anchorScreen.dx + circleR, anchorScreen.dy), linePaint);
@@ -738,8 +753,8 @@ class CalloutPainter {
           shelfY,
         );
 
-        final bgTop = shelfY - topTp.height - 4.0;
-        final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+        final bgTop = shelfY - topTp.height - padY * 2.0;
+        final totalHeight = topTp.height + padY * 2.0 + (bottomTp != null ? bottomTp.height + padY * 2.0 : 0.0);
         final bgRect = RRect.fromRectAndRadius(
           Rect.fromLTWH(
             isRight ? anchorScreen.dx : anchorScreen.dx - shelfLength,
@@ -750,20 +765,13 @@ class CalloutPainter {
           const Radius.circular(2.0),
         );
 
-        canvas.drawRRect(
-          bgRect,
-          Paint()
-            ..color = Colors.white.withValues(alpha: 0.92)
-            ..style = PaintingStyle.fill,
-        );
-
         canvas.drawLine(shelfStart, shelfEnd, linePaint);
 
-        final textLeft = isRight ? anchorScreen.dx + 4.0 : anchorScreen.dx - shelfLength + 4.0;
-        topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - 2.0));
+        final textLeft = isRight ? anchorScreen.dx + padX : anchorScreen.dx - shelfLength + padX;
+        topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - padY));
 
         if (bottomTp != null) {
-          bottomTp.paint(canvas, Offset(textLeft, shelfY + 2.0));
+          bottomTp.paint(canvas, Offset(textLeft, shelfY + padY));
         }
 
         if (isSelected) {
@@ -786,9 +794,10 @@ class CalloutPainter {
 
       // --- РЕЖИМ 2: Стрелка на выносной ножке (со смещением от узла) ---
       final flagTopY = textPos.dy - flagH;
+      final stemH = isPaperSpace ? 1.4 * annotationScale : 4.0 * annotationScale;
       final shelfY = effectiveStyle == ElevationMarkStyle.compactFlag
-          ? textPos.dy - 12.0
-          : flagTopY - 4.0;
+          ? textPos.dy - (isPaperSpace ? 4.2 * annotationScale : 12.0 * annotationScale)
+          : flagTopY - stemH;
 
       // 1. Выносная ножка от объекта к основанию стрелки отметки
       if ((anchorScreen - textPos).distance > 2.0) {
@@ -822,19 +831,20 @@ class CalloutPainter {
           break;
 
         case ElevationMarkStyle.compactFlag:
+          final tick = isPaperSpace ? 1.2 * annotationScale : 3.5 * annotationScale;
           canvas.drawLine(textPos, Offset(textPos.dx, shelfY), linePaint);
           canvas.drawLine(
-            Offset(textPos.dx - 3.5, textPos.dy + 3.5),
-            Offset(textPos.dx + 3.5, textPos.dy - 3.5),
+            Offset(textPos.dx - tick, textPos.dy + tick),
+            Offset(textPos.dx + tick, textPos.dy - tick),
             linePaint,
           );
           break;
 
         case ElevationMarkStyle.isoCircle:
-          const circleR = 4.5;
+          final circleR = isPaperSpace ? 1.5 * annotationScale : 4.5 * annotationScale;
           final circlePaint = Paint()
             ..color = primaryColor
-            ..strokeWidth = isSelected ? 2.0 : 1.2
+            ..strokeWidth = linePaint.strokeWidth
             ..style = PaintingStyle.stroke;
           canvas.drawCircle(textPos, circleR, circlePaint);
           canvas.drawLine(Offset(textPos.dx - circleR, textPos.dy), Offset(textPos.dx + circleR, textPos.dy), linePaint);
@@ -849,8 +859,8 @@ class CalloutPainter {
         shelfY,
       );
 
-      final bgTop = shelfY - topTp.height - 4.0;
-      final totalHeight = topTp.height + 4.0 + (bottomTp != null ? bottomTp.height + 4.0 : 0.0);
+      final bgTop = shelfY - topTp.height - padY * 2.0;
+      final totalHeight = topTp.height + padY * 2.0 + (bottomTp != null ? bottomTp.height + padY * 2.0 : 0.0);
       final bgRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(
           isRight ? textPos.dx : textPos.dx - shelfLength,
@@ -861,20 +871,13 @@ class CalloutPainter {
         const Radius.circular(2.0),
       );
 
-      canvas.drawRRect(
-        bgRect,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.92)
-          ..style = PaintingStyle.fill,
-      );
-
       canvas.drawLine(Offset(textPos.dx, shelfY), shelfEnd, linePaint);
 
-      final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;
-      topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - 2.0));
+      final textLeft = isRight ? textPos.dx + padX : textPos.dx - shelfLength + padX;
+      topTp.paint(canvas, Offset(textLeft, shelfY - topTp.height - padY));
 
       if (bottomTp != null) {
-        bottomTp.paint(canvas, Offset(textLeft, shelfY + 2.0));
+        bottomTp.paint(canvas, Offset(textLeft, shelfY + padY));
       }
 
       if (isSelected) {
@@ -926,10 +929,10 @@ class CalloutPainter {
       }
     }
 
-    // 3. Фон для текста над и под полочкой (рисуем ДО линии полочки для четкости)
-    final bgTopPad = isPaperSpace ? 1.5 * annotationScale : 4.0;
+    // 3. Область текста над и под полочкой (без непрозрачной белой заливки, чтобы не перекрывать трубы)
+    final bgTopPad = padY * 2.0;
     final bgTop = textPos.dy - topTp.height - bgTopPad;
-    final totalHeight = topTp.height + bgTopPad + (bottomTp != null ? bottomTp.height + (isPaperSpace ? 1.5 * annotationScale : 4.0) : 0.0);
+    final totalHeight = topTp.height + bgTopPad + (bottomTp != null ? bottomTp.height + bgTopPad : 0.0);
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         isRight ? textPos.dx : textPos.dx - shelfLength,
@@ -940,24 +943,17 @@ class CalloutPainter {
       const Radius.circular(2.0),
     );
 
-    canvas.drawRRect(
-      bgRect,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.92)
-        ..style = PaintingStyle.fill,
-    );
-
-    // 4. Горизонтальная полочка выноски (поверх белой плашки по ГОСТ 2.316)
+    // 4. Горизонтальная полочка выноски (по ГОСТ 2.316)
     canvas.drawLine(textPos, shelfEnd, linePaint);
 
     // Отрисовка текста над полочкой
-    final textLeft = isRight ? textPos.dx + 4.0 : textPos.dx - shelfLength + 4.0;
-    final textTop = textPos.dy - topTp.height - 2.0;
+    final textLeft = isRight ? textPos.dx + padX : textPos.dx - shelfLength + padX;
+    final textTop = textPos.dy - topTp.height - padY;
     topTp.paint(canvas, Offset(textLeft, textTop));
 
     // Отрисовка текста под полочкой (если есть)
     if (bottomTp != null) {
-      final bottomTextTop = textPos.dy + 2.0;
+      final bottomTextTop = textPos.dy + padY;
       bottomTp.paint(canvas, Offset(textLeft, bottomTextTop));
     }
 

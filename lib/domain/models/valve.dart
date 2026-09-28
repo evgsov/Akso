@@ -173,6 +173,7 @@ class Valve {
     bool? includeCounterFlanges,
     String? counterFlangeType,
     double? counterFlangeLengthMm,
+    bool clearCounterFlangeLength = false,
     String? counterFlangeMaterial,
     String? serialNumber,
     bool clearSerialNumber = false,
@@ -195,7 +196,8 @@ class Valve {
       flangePressurePn: flangePressurePn ?? this.flangePressurePn,
       includeCounterFlanges: includeCounterFlanges ?? this.includeCounterFlanges,
       counterFlangeType: counterFlangeType ?? this.counterFlangeType,
-      counterFlangeLengthMm: counterFlangeLengthMm ?? this.counterFlangeLengthMm,
+      counterFlangeLengthMm:
+          clearCounterFlangeLength ? null : (counterFlangeLengthMm ?? this.counterFlangeLengthMm),
       counterFlangeMaterial: counterFlangeMaterial ?? this.counterFlangeMaterial,
       serialNumber: clearSerialNumber ? null : (serialNumber ?? this.serialNumber),
       customDefinitionId: clearCustomDefinition ? null : (customDefinitionId ?? this.customDefinitionId),

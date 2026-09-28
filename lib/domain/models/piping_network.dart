@@ -11,6 +11,7 @@ import '../services/spool_calculator.dart';
 import '../services/topology_service.dart';
 import 'callout.dart';
 import 'construction_axis.dart';
+import 'detail_node.dart';
 import 'equipment.dart';
 import 'fitting.dart';
 import 'fitting_catalog.dart';
@@ -40,6 +41,7 @@ class PipingNetwork {
   final Map<String, PipeSupport> supports;
   final Map<String, Callout> callouts;
   final Map<String, LinearDimension> dimensions;
+  final Map<String, DetailNode> detailNodes;
   final FittingCatalog catalog;
   final PipeAssortmentCatalog pipeCatalog;
 
@@ -62,6 +64,7 @@ class PipingNetwork {
     Map<String, PipeSupport>? supports,
     Map<String, Callout>? callouts,
     Map<String, LinearDimension>? dimensions,
+    Map<String, DetailNode>? detailNodes,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
     this.defaultWeldStyle = WeldJointStyle.tick,
@@ -78,6 +81,7 @@ class PipingNetwork {
         supports = supports ?? {},
         callouts = callouts ?? {},
         dimensions = dimensions ?? {},
+        detailNodes = detailNodes ?? {},
         catalog = catalog ?? FittingCatalog(),
         pipeCatalog = pipeCatalog ?? PipeAssortmentCatalog();
 
@@ -103,6 +107,7 @@ class PipingNetwork {
     Map<String, PipeSupport>? supports,
     Map<String, Callout>? callouts,
     Map<String, LinearDimension>? dimensions,
+    Map<String, DetailNode>? detailNodes,
     FittingCatalog? catalog,
     PipeAssortmentCatalog? pipeCatalog,
     WeldJointStyle? defaultWeldStyle,
@@ -122,6 +127,7 @@ class PipingNetwork {
       supports: supports ?? Map.from(this.supports),
       callouts: callouts ?? Map.from(this.callouts),
       dimensions: dimensions ?? Map.from(this.dimensions),
+      detailNodes: detailNodes ?? Map.from(this.detailNodes),
       catalog: catalog ?? this.catalog,
       pipeCatalog: pipeCatalog ?? this.pipeCatalog,
       defaultWeldStyle: defaultWeldStyle ?? this.defaultWeldStyle,
@@ -144,6 +150,7 @@ class PipingNetwork {
       supports: Map.from(supports),
       callouts: Map.from(callouts),
       dimensions: Map.from(dimensions),
+      detailNodes: Map.from(detailNodes),
       catalog: catalog,
       pipeCatalog: pipeCatalog,
       defaultWeldStyle: defaultWeldStyle,
@@ -1033,6 +1040,222 @@ class PipingNetwork {
   bool isElbowNode(String nodeId) {
     final fit = fittings[nodeId];
     return fit != null && (fit.fittingType == FittingType.elbow90 || fit.fittingType == FittingType.elbow45);
+  }
+
+  /// Возвращает 3D-точку привязки (анкер) выноски для фасонного элемента.
+  /// Для отводов (elbow90, elbow45) возвращает середину дуги (кривой Безье B(0.5)),
+  /// для остальных фитингов — координату узла.
+  Node3D? getFittingAnchorPoint(Fitting fit) {
+    final node = nodes[fit.nodeId];
+    if (node == null) return null;
+
+    if (fit.fittingType == FittingType.elbow90 ||
+        fit.fittingType == FittingType.elbow45) {
+      final conn = getConnectedSegments(fit.nodeId);
+      if (conn.length == 2) {
+        final s1 = conn[0];
+        final s2 = conn[1];
+        final other1Id = s1.startNodeId == fit.nodeId ? s1.endNodeId : s1.startNodeId;
+        final other2Id = s2.startNodeId == fit.nodeId ? s2.endNodeId : s2.startNodeId;
+        final other1 = nodes[other1Id];
+        final other2 = nodes[other2Id];
+        if (other1 != null && other2 != null) {
+          final v1x = other1.x - node.x;
+          final v1y = other1.y - node.y;
+          final v1z = other1.z - node.z;
+          final len1 = math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
+
+          final v2x = other2.x - node.x;
+          final v2y = other2.y - node.y;
+          final v2z = other2.z - node.z;
+          final len2 = math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
+
+          if (len1 > 1e-4 && len2 > 1e-4) {
+            final tRaw = getElbowTangentMm(fit.nodeId);
+
+            double t1;
+            if (isButtJoint(s1.id)) {
+              final d1 = getFittingDeduction(fit.nodeId, s1.id);
+              final d2 = getFittingDeduction(other1Id, s1.id);
+              final ratio1 = (d1 + d2) > 0 ? (d1 / (d1 + d2)).clamp(0.0, 1.0) : 0.5;
+              t1 = len1 * ratio1;
+            } else {
+              t1 = tRaw.clamp(0.0, len1 * 0.95);
+            }
+
+            double t2;
+            if (isButtJoint(s2.id)) {
+              final d1 = getFittingDeduction(fit.nodeId, s2.id);
+              final d2 = getFittingDeduction(other2Id, s2.id);
+              final ratio2 = (d1 + d2) > 0 ? (d1 / (d1 + d2)).clamp(0.0, 1.0) : 0.5;
+              t2 = len2 * ratio2;
+            } else {
+              t2 = tRaw.clamp(0.0, len2 * 0.95);
+            }
+
+            final u1x = v1x / len1;
+            final u1y = v1y / len1;
+            final u1z = v1z / len1;
+
+            final u2x = v2x / len2;
+            final u2y = v2y / len2;
+            final u2z = v2z / len2;
+
+            // Середина квадратичной кривой Безье B(0.5) = 0.25*T1 + 0.5*N + 0.25*T2,
+            // где T1 = N + u1*t1, T2 = N + u2*t2 => B(0.5) = N + 0.25*(u1*t1 + u2*t2)
+            return Node3D(
+              id: fit.nodeId,
+              x: node.x + 0.25 * (u1x * t1 + u2x * t2),
+              y: node.y + 0.25 * (u1y * t1 + u2y * t2),
+              z: node.z + 0.25 * (u1z * t1 + u2z * t2),
+            );
+          }
+        }
+      }
+    }
+
+    return node;
+  }
+
+  /// Возвращает список активных ответных фланцев для заданной арматуры [v]
+  /// в виде записей (id, ratio, isStart).
+  /// Если арматура не фланцевая или ответные фланцы отключены, возвращает пустой список.
+  List<({String id, double ratio, bool isStart})> getValveCounterFlangeLocations(Valve v) {
+    if (!v.effectiveIsFlanged || !v.includeCounterFlanges) return const [];
+    final seg = segments[v.segmentId];
+    if (seg == null) return const [];
+    final startNode = nodes[seg.startNodeId];
+    final endNode = nodes[seg.endNodeId];
+    if (startNode == null || endNode == null) return const [];
+    final totalLen = seg.calculateLength(startNode, endNode);
+    if (totalLen <= 0.1) return const [];
+
+    final halfRatio = v.effectiveHalfLengthMm / totalLen;
+    final flLen = v.effectiveCounterFlangeLengthMm > 0 ? v.effectiveCounterFlangeLengthMm : 45.0;
+    final cfOffsetRatio = (v.lengthMm / 2.0 + flLen * 0.5) / totalLen;
+
+    final connStart = getConnectedSegments(seg.startNodeId);
+    final connEnd = getConnectedSegments(seg.endNodeId);
+    final isTerminalAtStart = connStart.length <= 1 && (v.ratio - halfRatio) <= 0.05;
+    final isTerminalAtEnd = connEnd.length <= 1 && (v.ratio + halfRatio) >= 0.95;
+
+    final result = <({String id, double ratio, bool isStart})>[];
+    if (!isTerminalAtStart) {
+      final rStart = (v.ratio - cfOffsetRatio).clamp(0.0, 1.0);
+      result.add((id: '${v.id}_cf_start', ratio: rStart, isStart: true));
+    }
+    if (!isTerminalAtEnd) {
+      final rEnd = (v.ratio + cfOffsetRatio).clamp(0.0, 1.0);
+      result.add((id: '${v.id}_cf_end', ratio: rEnd, isStart: false));
+    }
+    return result;
+  }
+
+  /// Определяет арматуру, которой принадлежит ответный фланец с идентификатором [targetId]
+  Valve? getCounterFlangeValve(String targetId) {
+    String? valveId;
+    if (targetId.endsWith('_cf_start')) {
+      valveId = targetId.substring(0, targetId.length - 9);
+    } else if (targetId.endsWith('_cf_end')) {
+      valveId = targetId.substring(0, targetId.length - 7);
+    } else if (targetId.startsWith('valve_flange_')) {
+      valveId = targetId.substring(13);
+    }
+    if (valveId == null) return null;
+    final v = valves[valveId];
+    if (v == null || !v.effectiveIsFlanged || !v.includeCounterFlanges) return null;
+    return v;
+  }
+
+  /// Вычисляет позиционную марку Ф-N для ответного фланца арматуры [v],
+  /// сквозную с остальными фасонными деталями сети
+  String getCounterFlangeMark(Valve v) {
+    final markCache = <String, String>{};
+    int counter = 1;
+    final sortedEntries = fittings.entries.toList()
+      ..sort((a, b) => a.value.id.compareTo(b.value.id));
+
+    for (final entry in sortedEntries) {
+      final f = entry.value;
+      final key = '${f.fittingType.name}_${f.name ?? ""}_${f.dn}_${f.dnSecondary ?? 0}_${f.material}_${f.standard ?? ""}_${f.isFlangePair}';
+      markCache.putIfAbsent(key, () => 'Ф-${counter++}');
+    }
+
+    final sortedValves = valves.values.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    for (final item in sortedValves) {
+      if (!item.effectiveIsFlanged || !item.includeCounterFlanges) continue;
+      final flName = 'Фланец ${item.isFlatCounterFlange ? 'плоский (тип 01)' : 'воротниковый (тип 11)'} Ду${item.dn} Ру${item.flangePressurePn}';
+      final key = '${FittingType.flange.name}_${flName}_${item.dn}_0_${item.effectiveCounterFlangeMaterial}_${item.counterFlangeType}_false';
+      final mark = markCache.putIfAbsent(key, () => 'Ф-${counter++}');
+      if (item.id == v.id) return mark;
+    }
+
+    return 'Ф-$counter';
+  }
+
+  /// Создает объект Fitting для ответного фланца фланцевой арматуры [v]
+  Fitting buildCounterFlangeFitting(Valve v, {String? customId}) {
+    final flName = 'Фланец ${v.isFlatCounterFlange ? 'плоский (тип 01)' : 'воротниковый (тип 11)'} Ду${v.dn} Ру${v.flangePressurePn}';
+    return Fitting(
+      id: customId ?? '${v.id}_cf_start',
+      nodeId: '',
+      fittingType: FittingType.flange,
+      dn: v.dn,
+      radiusMm: v.effectiveCounterFlangeLengthMm,
+      buildingLengthMm: v.effectiveCounterFlangeLengthMm,
+      material: v.effectiveCounterFlangeMaterial,
+      standard: v.counterFlangeType,
+      pressurePn: v.flangePressurePn,
+      weldType: v.counterFlangeWeldType,
+      name: flName,
+      mark: getCounterFlangeMark(v),
+    );
+  }
+
+  /// Универсальное разрешение фасонной детали по [targetId] (включая ответные фланцы арматуры)
+  Fitting? resolveFittingById(String targetId) {
+    final direct = fittings[targetId] ??
+        fittings.values.where((f) => f.id == targetId || f.nodeId == targetId).firstOrNull;
+    if (direct != null) return direct;
+
+    final v = getCounterFlangeValve(targetId);
+    if (v != null) {
+      if (targetId.endsWith('_cf_start') || targetId.endsWith('_cf_end')) {
+        final locs = getValveCounterFlangeLocations(v);
+        if (!locs.any((loc) => loc.id == targetId)) return null;
+      }
+      return buildCounterFlangeFitting(v, customId: targetId);
+    }
+    return null;
+  }
+
+  /// Универсальное получение 3D-точки привязки фасонной детали по [targetId] (включая ответные фланцы арматуры)
+  Node3D? getFittingAnchorPointById(String targetId) {
+    final v = getCounterFlangeValve(targetId);
+    if (v != null) {
+      final seg = segments[v.segmentId];
+      if (seg == null) return null;
+      final start = nodes[seg.startNodeId];
+      final end = nodes[seg.endNodeId];
+      if (start == null || end == null) return null;
+      final locs = getValveCounterFlangeLocations(v);
+      final match = locs.where((loc) => loc.id == targetId).firstOrNull ?? locs.firstOrNull;
+      final r = match?.ratio ?? v.ratio;
+      return Node3D(
+        id: 'anchor_$targetId',
+        x: start.x + (end.x - start.x) * r,
+        y: start.y + (end.y - start.y) * r,
+        z: start.z + (end.z - start.z) * r,
+      );
+    }
+
+    final fit = fittings[targetId] ??
+        fittings.values.where((f) => f.id == targetId || f.nodeId == targetId).firstOrNull;
+    if (fit != null) {
+      return getFittingAnchorPoint(fit);
+    }
+    return nodes[targetId];
   }
 
   /// Проверяет, установлен ли в данном узле фитинг или подключение к элементу
@@ -2681,6 +2904,8 @@ class PipingNetwork {
         'supports': supports.map((k, v) => MapEntry(k, v.toJson())),
         'callouts': callouts.map((k, v) => MapEntry(k, v.toJson())),
         'dimensions': dimensions.map((k, v) => MapEntry(k, v.toJson())),
+        if (detailNodes.isNotEmpty)
+          'detailNodes': detailNodes.map((k, v) => MapEntry(k, v.toJson())),
         'catalog': catalog.toJson(),
         'pipeCatalog': pipeCatalog.toJson(),
         'defaultWeldStyle': defaultWeldStyle.name,
@@ -2701,6 +2926,7 @@ class PipingNetwork {
     supports.clear();
     callouts.clear();
     dimensions.clear();
+    detailNodes.clear();
 
     if (json.containsKey('nodes')) {
       final m = json['nodes'] as Map<String, dynamic>;
@@ -2749,6 +2975,10 @@ class PipingNetwork {
     if (json.containsKey('dimensions')) {
       final m = json['dimensions'] as Map<String, dynamic>;
       m.forEach((k, v) => dimensions[k] = LinearDimension.fromJson(v as Map<String, dynamic>));
+    }
+    if (json.containsKey('detailNodes')) {
+      final m = json['detailNodes'] as Map<String, dynamic>;
+      m.forEach((k, v) => detailNodes[k] = DetailNode.fromJson(v as Map<String, dynamic>));
     }
     if (json.containsKey('catalog')) {
       catalog.loadFromJson(json['catalog'] as Map<String, dynamic>);
@@ -2826,6 +3056,10 @@ class PipingNetwork {
             (k, v) => MapEntry(k, LinearDimension.fromJson(v as Map<String, dynamic>)),
           ) ??
           {},
+      detailNodes: (json['detailNodes'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, DetailNode.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
       catalog: catalog,
       pipeCatalog: pipeCatalog,
       defaultWeldStyle: json['defaultWeldStyle'] != null
@@ -2834,6 +3068,185 @@ class PipingNetwork {
       defaultWeldTickSizeMm: (json['defaultWeldTickSizeMm'] as num?)?.toDouble(),
     );
     return net;
+  }
+
+  /// Генерация следующей свободной буквы марки выносного узла по ГОСТ 2.316 (А, Б, В, Г...)
+  String generateNextDetailNodeMark() {
+    const gostLetters = [
+      'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'И', 'К', 'Л', 'М',
+      'Н', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Э', 'Ю', 'Я',
+    ];
+    final usedMarks = detailNodes.values.map((d) => d.mark.trim()).toSet();
+    for (final letter in gostLetters) {
+      if (!usedMarks.contains(letter)) {
+        return letter;
+      }
+    }
+    int idx = 1;
+    while (usedMarks.contains('А$idx')) {
+      idx++;
+    }
+    return 'А$idx';
+  }
+
+  /// Проверяет, принадлежит ли целевой объект выноски данному выносному узлу [detailNode]
+  bool isTargetInDetailNode(
+    DetailNode detailNode,
+    CalloutTargetType targetType,
+    String targetId,
+  ) {
+    switch (targetType) {
+      case CalloutTargetType.segment:
+        if (detailNode.segmentIds.contains(targetId)) return true;
+        final spool = spools[targetId];
+        if (spool != null && detailNode.segmentIds.contains(spool.segmentId)) {
+          return true;
+        }
+        return false;
+      case CalloutTargetType.weld:
+        final w = weldJoints[targetId];
+        return w != null && detailNode.segmentIds.contains(w.segmentId);
+      case CalloutTargetType.valve:
+        final v = valves[targetId];
+        return v != null && detailNode.segmentIds.contains(v.segmentId);
+      case CalloutTargetType.support:
+        final sup = supports[targetId];
+        return sup != null && detailNode.segmentIds.contains(sup.segmentId);
+      case CalloutTargetType.fitting:
+        final cfValve = getCounterFlangeValve(targetId);
+        if (cfValve != null) {
+          return detailNode.segmentIds.contains(cfValve.segmentId);
+        }
+        Fitting? fit = fittings[targetId];
+        if (fit == null) {
+          for (final f in fittings.values) {
+            if (f.id == targetId || f.nodeId == targetId) {
+              fit = f;
+              break;
+            }
+          }
+        }
+        final nodeId = fit?.nodeId ?? targetId;
+        for (final sId in detailNode.segmentIds) {
+          final s = segments[sId];
+          if (s != null && (s.startNodeId == nodeId || s.endNodeId == nodeId)) {
+            return true;
+          }
+        }
+        return false;
+      case CalloutTargetType.node:
+        for (final sId in detailNode.segmentIds) {
+          final s = segments[sId];
+          if (s != null && (s.startNodeId == targetId || s.endNodeId == targetId)) {
+            return true;
+          }
+        }
+        return false;
+      case CalloutTargetType.equipment:
+        return detailNode.equipmentIds.contains(targetId);
+      case CalloutTargetType.nozzle:
+        for (final eqId in detailNode.equipmentIds) {
+          final eq = equipments[eqId];
+          if (eq != null && eq.nozzles.any((n) => n.id == targetId)) {
+            return true;
+          }
+        }
+        for (final sId in detailNode.segmentIds) {
+          final s = segments[sId];
+          if (s != null && (s.startNodeId == targetId || s.endNodeId == targetId)) {
+            return true;
+          }
+        }
+        return false;
+    }
+  }
+
+  /// Проверяет, должна ли данная выноска быть скрыта на общем (обзорном) листе
+  /// из-за того, что её элемент входит в состав выносного узла
+  bool isCalloutSuppressedOnOverview(Callout callout) {
+    for (final dn in detailNodes.values) {
+      if (!dn.suppressCalloutsOnOverview) continue;
+      if (isTargetInDetailNode(dn, callout.targetType, callout.targetId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Проверяет, принадлежит ли линейный размер [dim] выносному узлу [detailNode]
+  bool isDimensionInDetailNode(DetailNode detailNode, LinearDimension dim) {
+    final detailNodeIds = <String>{};
+    for (final sId in detailNode.segmentIds) {
+      final s = segments[sId];
+      if (s != null) {
+        detailNodeIds.add(s.startNodeId);
+        detailNodeIds.add(s.endNodeId);
+      }
+    }
+    if (dim.startNodeId != null && dim.endNodeId != null) {
+      return detailNodeIds.contains(dim.startNodeId) &&
+          detailNodeIds.contains(dim.endNodeId);
+    }
+    if (dim.startNodeId != null) {
+      return detailNodeIds.contains(dim.startNodeId);
+    }
+    if (dim.endNodeId != null) {
+      return detailNodeIds.contains(dim.endNodeId);
+    }
+    return false;
+  }
+
+  /// Возвращает список укороченных контекстных отрезков («хвостов») примыкающих труб
+  /// основной трассы, подключенных к граничным узлам [detailNode] (Вариант 1)
+  List<DetailContextStub> getDetailNodeAdjacentStubs(DetailNode detailNode) {
+    if (!detailNode.showContextStubs) return const [];
+
+    final nodeIdsInDetail = <String>{};
+    for (final sId in detailNode.segmentIds) {
+      final s = segments[sId];
+      if (s != null) {
+        nodeIdsInDetail.add(s.startNodeId);
+        nodeIdsInDetail.add(s.endNodeId);
+      }
+    }
+
+    final stubs = <DetailContextStub>[];
+    for (final seg in segments.values) {
+      if (detailNode.segmentIds.contains(seg.id)) continue;
+
+      final startIn = nodeIdsInDetail.contains(seg.startNodeId);
+      final endIn = nodeIdsInDetail.contains(seg.endNodeId);
+      if (!startIn && !endIn) continue;
+
+      final anchorNode = nodes[startIn ? seg.startNodeId : seg.endNodeId];
+      final farNode = nodes[startIn ? seg.endNodeId : seg.startNodeId];
+      if (anchorNode == null || farNode == null) continue;
+
+      final vx = farNode.x - anchorNode.x;
+      final vy = farNode.y - anchorNode.y;
+      final vz = farNode.z - anchorNode.z;
+      final len = math.sqrt(vx * vx + vy * vy + vz * vz);
+      if (len <= 1e-3) continue;
+
+      final stubLen = math.min(len, detailNode.contextStubLengthMm);
+      final ux = vx / len;
+      final uy = vy / len;
+      final uz = vz / len;
+
+      stubs.add(DetailContextStub(
+        segmentId: seg.id,
+        systemId: seg.systemId,
+        dn: seg.dn,
+        startX: anchorNode.x,
+        startY: anchorNode.y,
+        startZ: anchorNode.z,
+        endX: anchorNode.x + ux * stubLen,
+        endY: anchorNode.y + uy * stubLen,
+        endZ: anchorNode.z + uz * stubLen,
+      ));
+    }
+
+    return stubs;
   }
 
   void addDimension(LinearDimension dim) {
@@ -2966,7 +3379,7 @@ class PipingNetwork {
             .replaceAll('{L}', '${v.lengthMm.round()}')
             .replaceAll('{MATERIAL}', material)
             .replaceAll('{SYSTEM}', sysCode)
-            .replaceAll('{PN}', 'Ру16')
+            .replaceAll('{PN}', 'Ру${v.flangePressurePn}')
             .replaceAll('+{Z_M}', zStr)
             .replaceAll('{Z_M}', zStr)
             .replaceAll('+{Z}', zStr)
@@ -2977,12 +3390,14 @@ class PipingNetwork {
         break;
 
       case CalloutTargetType.fitting:
-        final fit = fittings[targetId] ??
-            fittings.values.where((f) => f.id == targetId).firstOrNull;
+        final fit = resolveFittingById(targetId);
         if (fit == null) return 'Деталь (удалена)';
 
-        final conn = getConnectedSegments(fit.nodeId);
-        final firstSeg = conn.isNotEmpty ? conn.first : null;
+        final cfValve = getCounterFlangeValve(targetId);
+        final conn = fit.nodeId.isNotEmpty ? getConnectedSegments(fit.nodeId) : const <PipeSegment>[];
+        final firstSeg = conn.isNotEmpty
+            ? conn.first
+            : (cfValve != null ? segments[cfValve.segmentId] : null);
         final sysCode = (firstSeg != null && systems[firstSeg.systemId] != null) ? systems[firstSeg.systemId]!.code : '';
         final material = fit.material.isNotEmpty ? fit.material : (firstSeg?.material ?? 'Ст20');
         final standard = (fit.standard != null && fit.standard!.isNotEmpty) ? fit.standard! : 'ГОСТ 17375';
@@ -3356,6 +3771,8 @@ class PipingNetwork {
         }
         return null;
       case CalloutTargetType.fitting:
+        final cfValve = getCounterFlangeValve(targetId);
+        if (cfValve != null) return cfValve.segmentId;
         var fit = fittings[targetId];
         if (fit == null) {
           for (final f in fittings.values) {
@@ -3542,6 +3959,26 @@ class PipingNetwork {
           addedCount++;
         }
       }
+      // Ответные фланцы фланцевой арматуры (если они учитываются как отдельные элементы)
+      for (final valve in valves.values) {
+        final cfLocations = getValveCounterFlangeLocations(valve);
+        for (final cf in cfLocations) {
+          if (!existingTargetIds.contains(cf.id)) {
+            final id = 'callout_${_uuid.v4()}';
+            final resolvedY = resolveNonCollidingOffsetY(valve.segmentId, offsetY);
+            callouts[id] = Callout(
+              id: id,
+              targetId: cf.id,
+              targetType: CalloutTargetType.fitting,
+              screenOffsetX: offsetX,
+              screenOffsetY: resolvedY,
+              textHeight: textHeight,
+            );
+            existingTargetIds.add(cf.id);
+            addedCount++;
+          }
+        }
+      }
     }
 
     if (targetTypes == null || targetTypes.contains(CalloutTargetType.equipment)) {
@@ -3661,8 +4098,7 @@ class PipingNetwork {
           exists = weldJoints.containsKey(c.targetId);
           break;
         case CalloutTargetType.fitting:
-          final fit = fittings[c.targetId] ??
-              fittings.values.where((f) => f.id == c.targetId || f.nodeId == c.targetId).firstOrNull;
+          final fit = resolveFittingById(c.targetId);
           exists = fit != null && fit.fittingType != FittingType.directBranch;
           break;
         case CalloutTargetType.equipment:

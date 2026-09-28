@@ -129,8 +129,29 @@ class _EditorScreenState extends State<EditorScreen> {
     _focusNode.requestFocus();
   }
 
+  bool _isTextInputFocused() {
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null || primary == _focusNode || primary == _lengthFocusNode) {
+      return false;
+    }
+    final ctx = primary.context;
+    if (ctx == null) return false;
+    if (ctx.widget is EditableText) return true;
+    return ctx.findAncestorWidgetOfExactType<EditableText>() != null ||
+        ctx.findAncestorStateOfType<EditableTextState>() != null;
+  }
+
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (_isTextInputFocused()) {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        _focusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
 
     final isCtrlOrCmd = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
     final isShift = HardwareKeyboard.instance.isShiftPressed;
@@ -379,6 +400,9 @@ class _EditorScreenState extends State<EditorScreen> {
                         _lengthInputSpawnPos = null;
                       });
                     }
+                    if (_isTextInputFocused()) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    }
                     _focusNode.requestFocus();
                     if (event.buttons & kMiddleMouseButton != 0) {
                       _isMiddleClick = true;
@@ -401,6 +425,11 @@ class _EditorScreenState extends State<EditorScreen> {
                     _lastPrimaryClickPos != null &&
                     (event.localPosition - _lastPrimaryClickPos!).distance < 10.0) {
                   if (!controller.isModelSpaceActive && controller.activeSheet != null) {
+                    if (controller.handleDetailNodeDoubleTap(event.localPosition)) {
+                      _lastPrimaryClickTime = null;
+                      _lastPrimaryClickPos = null;
+                      return;
+                    }
                     final hitVp = controller.hitTestSheetViewport(event.localPosition);
                     if (hitVp) {
                       if (controller.isViewportFocused) {
@@ -552,6 +581,8 @@ class _EditorScreenState extends State<EditorScreen> {
                           snapResult: controller.currentSnapResult,
                           currentElevationZ: controller.currentElevationZ,
                           showGrid: controller.showGrid,
+                          showCallouts: controller.showCalloutsInModelSpace,
+                          hiddenCalloutTypes: controller.hiddenCalloutTypes,
                           acquiredPoints: controller.tracingController.acquiredPoints,
                           isZLocked: controller.draftingSettings.isZLocked,
                           showZPlaneGrid: controller.draftingSettings.showZPlaneGrid,
@@ -589,6 +620,7 @@ class _EditorScreenState extends State<EditorScreen> {
                           selectedDimensionIds: controller.selectedDimensionIds,
                           previewDimension: controller.previewDimension,
                           selectedCalloutId: controller.selectedCalloutId,
+                          selectedDetailNodeId: controller.selectedDetailNodeId,
                           orbitAzimuth: controller.projector.orbitAzimuth,
                           orbitElevation: controller.projector.orbitElevation,
                           targetCenter: controller.projector.targetCenter,

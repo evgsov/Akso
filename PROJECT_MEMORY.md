@@ -34,6 +34,48 @@
 - `PipelineBranch`: топологическая ветка трассы трубопровода (упорядоченная последовательность сегментов `PipeSegment`, привязанные выноски листа, вектор направления `branchVector2D`, габаритный прямоугольник `boundingBoxSheetMm`, единичные нормали `normal1` и `normal2`).
 
 ## 4. Implemented Features & Current Status
+- **Копирование свойств, «Кисть свойств» и пакетное применение к однотипным элементам (Property Clipboard, Format Painter & Batch Property Transfer):**
+  - **Запрос пользователя:** «А мы можем добавить функционал копирования свойств между элементами и арматурой? а то я сейчас понял что у меня есть много таких одинаковых элементов и везде нужно править данные» + «давай добавим уточняющие галочки/чекбоксы или тумблеры».
+  - **Реализованное архитектурное решение:**
+    1. **Доменная модель снимка свойств и фильтров (`PropertyCopyOptions` и `ElementPropertySnapshot` в `lib/domain/models/property_clipboard.dart`):**
+       - Три независимых переключаемых фильтра переноса свойств (`PropertyCopyOptions`):
+         - `copyMaterialAndStandard` (по умолчанию `true`) — **«Сталь / ГОСТ / Ру»**: марка стали (`material`), ГОСТ/ТУ (`gost`), условное давление (`pressurePn`), фланцевое соединение (`isFlanged`, `hasCounterFlanges`, `counterFlangeMaterial`, `counterFlangeGost`), а для сварных стыков — тип шва, метод контроля ВИК/РК/УЗК, клеймо сварщика и присадочный материал.
+         - `copyDimensionsAndType` (по умолчанию `true`) — **«Тип и размеры»**: подтип арматуры/фасонной детали/опоры (`valveType`, `fittingType`, `supportType`), наименование (`name`), кастомное определение каталога (`customCatalogId`), строительная длина (`buildingLengthMm`, `branchLengthMm`, `counterFlangeLengthMm` — переносятся при совпадении Ду), коэффициент радиуса гиба отвода (`1.0 DN` vs `1.5 DN` с автоматическим пропорциональным пересчетом `customRadiusMm` на другой диаметр!), количество швов (`customWeldCount`), угол поворота (`rotationAngle`, `handwheelAngleDeg`), стенка и уклон трубы (`wallThicknessMm`, `slope`, `insulationThicknessMm`).
+         - `copySerialAndMark` (по умолчанию `false`) — **«Зав. № / Марка»**: заводской номер / номер партии/плавки (`serialNumber`), позиционная марка (`mark`). По умолчанию выключен, чтобы не клонировать индивидуальные позиционные марки, но может быть включен пользователем в 1 клик при переносе одной партии/плавки.
+       - **Умное перекрестное копирование между разными классами элементов (`Valve` $\leftrightarrow$ `Fitting` $\leftrightarrow$ `PipeSegment`):**
+         - Копирование с фланцевой арматуры (`Valve`) на приварной фланец (`FittingType.flange`) и обратно автоматически синхронизирует `pressurePn`, марку стали фланца (`material` $\leftrightarrow$ `counterFlangeMaterial`), стандарт исполнения (`ГОСТ 33259-2015 тип 11` / `тип 01`) и длину воротника (`buildingLengthMm` $\leftrightarrow$ `counterFlangeLengthMm`).
+         - Копирование между трубой (`PipeSegment`), отводом/тройником/переходом (`Fitting`) и арматурой (`Valve`) переносит общие атрибуты (`material`, `serialNumber`).
+    2. **Три сценария работы в `PipingInputController` (`lib/ui/canvas/input_controller.dart`) и панели `_PropertyTransferBar` (`lib/ui/features/editor/widgets/desktop_cad_layout.dart`):**
+       - **Копировать / Вставить свойства**: моментальное копирование снимка выбранного элемента (`copySelectedElementProperties`) и вставка в другой выделенный элемент (`pastePropertiesToSelected`).
+       - **Режим «Кисть свойств» (Format Painter)**: кнопка **«Кисть»** (`togglePropertyBrush`) активирует интерактивный режим, в котором каждый клик по арматуре, фитингу, трубе, опоре или стыку на 3D-холсте (или внутри активного ВЭ) сразу применяет скопированные свойства к целевому элементу без сброса кисти (выход по `Esc` или повторному нажатию).
+       - **Пакетное применение «Всем таким же (N)» (`applySelectedPropertiesToSimilar`)**: кнопка со счетчиком подходящих элементов в проекте и выпадающим меню выбора охвата:
+         - *«Только с тем же типом и Ду»* (`sameDnOnly: true`) — обновляет все элементы того же подтипа и номинального диаметра одной транзакцией Undo/Redo;
+         - *«Все элементы этого типа любого Ду»* (`sameDnOnly: false`) — обновляет все элементы того же подтипа по всей сети с сохранением их собственных диаметров и пересчетом зависимых сварных стыков (`generateElementWeldJoints`) и катушек (`recalculateSpools`).
+    3. **Модульные тесты (`test/property_clipboard_test.dart`):**
+       - Полное тестовое покрытие 6 сценариев: копирование между задвижками с фильтрацией чекбоксов, перекрестный перенос `Valve` $\leftrightarrow$ `FittingType.flange`, масштабирование радиуса отвода `1.0 DN` между разными диаметрами, пакетное обновление `applySelectedPropertiesToSimilar` и работа «Кисти свойств».
+- **Полная сетка основной надписи ГОСТ 21.101-2020 (Форма 3) в PDF и выравнивание выносок без непрозрачного белого фона (GOST Title Block Lines & Callout Shelf/Text Alignment in PDF & Canvas):**
+  - **Запрос пользователя:** «Давай перейдем к основной надписи в схеме и в целом выводе в пдф. В основной надписи отсутствуют линии которые есть в нашей программе. И еще в выносках текст идет с задним фоном который закрашивает сзади себя все + текст не на палочке а она словно смещается левее или правее него».
+  - **Выявленные причины:**
+    1. *Отсутствующие линии штампа (Форма 3 по ГОСТ 21.101-2020) в `SheetGeometryBuilder._buildFrameAndStamp`:*
+       - Отсутствовала горизонтальная линия на `stampTopMm + 10.0` от `xApprovalsEnd` (`65.0` мм) до правого края штампа (`185.0` мм), разделяющая Графу 4 (Шифр документа) и Графу 1 (Наименование проекта).
+       - Горизонтальная линия на `stampTopMm + 40.0` начиналась только от `xStageStart` (`135.0` мм) вместо `xApprovalsEnd` (`65.0` мм), из-за чего отсутствовала 70-миллиметровая линия между Графой 2 (Здание/сооружение) и Графой 3 (Наименование чертежа).
+       - Вертикальный разделитель на `xStageStart` (`135.0` мм) шел только от `25.0` до `40.0` мм вместо `55.0` мм (отсутствовала граница между Графой 3 и Графой 9 «Организация»).
+       - Вертикальные разделители граф «Стадия | Лист | Листов» (`xStageStart + 15.0` и `xStageStart + 30.0`) начинались от `30.0` мм вместо `25.0` мм (отсутствовали вертикальные перегородки в строке заголовков).
+       - Первая колонка согласований в левом блоке была на `17.0` мм вместо `20.0` мм (расхождение с `SheetCanvasPainter` и текстовыми координатами `PdfExportService`).
+    2. *Непрозрачный белый фон выносок и смещение полки («палочки») относительно текста:*
+       - В `SheetGeometryBuilder._renderVectorCalloutTexts` (и в `_buildDetailNodeBoundaries`, а также в `CalloutPainter._paintSingleCallout`) под текстом выноски рисовалась белая маска (`maskFillColorValue: 0xFFFFFFFF` / `Colors.white.withValues(alpha: 0.92)`), которая в PDF рисовалась *поверх* труб, фитингов и самой горизонтальной полки выноски, стирая участок полки непосредственно под текстом и оставляя торчащий «хвост» полки слева или справа.
+       - Длина полки в `SheetGeometryBuilder._buildCallouts` вычислялась по грубой формуле `text.length * (textHeight * 0.65) + 3.0` (мин. `8.0` мм), что в 1.5–2 раза шире реальной ширины пропорционального шрифта `Roboto` в PDF, из-за чего полка уезжала далеко за пределы текста, а при направлении влево (`ShelfDirection.left`) текст оказывался прижат к левому краю длинной полки вдали от излома ножки.
+       - В `SheetGeometryBuilder._buildCallouts` игнорировалось свойство `callout.shelfDirection` (`ShelfDirection.left` / `ShelfDirection.right`).
+       - В `CalloutPainter._paintSingleCallout` при `isPaperSpace == true` длина полки использовала `+ 2.5 * annotationScale`, а отступ текста `textLeft` — жесткие `+ 4.0` px без масштабирования `annotationScale`.
+  - **Реализованное решение:**
+    1. **Полное совпадение штампа ГОСТ 21.101-2020 (Форма 3) в `SheetGeometryBuilder._buildFrameAndStamp`:** Добавлены все недостающие горизонтальные и вертикальные линии граф 1, 2, 3, 4, 6–9 и колонок согласований в точном соответствии с `SheetCanvasPainter._drawTitleBlock`.
+    2. **Точный замер ширины текста в PDF и выравнивание полки выноски:**
+       - В `SheetGeometryBuilder.buildScene` добавлен колбэк `measureTextWidthMm`, в который `PdfExportService` передает точные метрики шрифта `pdfFontRegular.stringMetrics(text).width * fontSizeMm`.
+       - Длина полки вычисляется как `maxTextWidthMm + 2.0` мм (по `1.0` мм поля слева и справа от текста), а `textX = math.min(leaderEndMm.dx, shelfEndMm.dx) + 1.0`, благодаря чему текст всегда располагается строго по центру над/под полкой.
+       - Полностью учтено свойство `callout.shelfDirection` (`ShelfDirection.left` / `ShelfDirection.right` / `ShelfDirection.auto`) и все 4 стиля высотных отметок (`ElevationMarkStyle`).
+    3. **Удаление закрашивающего белого фона у выносок и подписей:**
+       - Убрана заливка `maskFillColorValue: 0xFFFFFFFF` у текстов выносок и контуров узлов в `SheetGeometryBuilder`, убрана белая плашка `Colors.white.withValues(alpha: 0.92)` в `CalloutPainter._paintSingleCallout`, а также убраны белые контейнеры `color: PdfColors.white` у подписей штуцеров и оборудования в `PdfExportService._buildViewportAnnotationTexts`.
+       - В `PdfExportService._buildDrawingLegend` реализована полноценная векторная отрисовка значков условных обозначений (`_drawPdfLegendIcon`).
 - **Индивидуальная фиксация выносок на листах и именованные пресеты расстановки (Per-Sheet Callout Pinning & Named Layout Presets):**
   - **Запрос пользователя:** «Мы еще можем починить фиксацию выносок на листе индивидуально и мы можем сделать так, чтобы я расставил все выноски вручную, сделал красиво и как-то их сохранил на всякий случай в виде пресета на данный лист?»
   - **Выявленная проблема в исходной архитектуре:**
@@ -3302,8 +3344,82 @@
   - **Верификация:**
     - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
 
+- **Выносные укрупненные узлы (ГОСТ 2.305-2008 / ГОСТ 21.101-2020 — Detail Node Subsystem):**
+  - **1. Доменная модель (`DetailNode`, `DetailBoundaryShape`, `DetailContextStub`):**
+    - В [detail_node.dart](file:///d:/Git/Akso/lib/domain/models/detail_node.dart) реализована модель `DetailNode`, позволяющая выделить любой плотный участок трубопроводов (ответвление, гребенку, узел арматуры) и развернуть его на отдельном листе в крупном масштабе.
+    - Поддерживаются **4 переключаемые формы контура обводки** (`DetailBoundaryShape`):
+      1. `roundedRect` — Скругленный прямоугольник.
+      2. `oval` — Овал (эллипс).
+      3. `circle` — Круг.
+      4. `polygon` — Свободный многоугольник (автоматическая выпуклая оболочка с отступом + интерактивные ручки вершин и ручки на серединах ребер для добавления новых вершин).
+    - Координаты вершин многоугольника `polygonVerticesModel2d` и полки выноски `shelfPositionModel2d` хранятся в сырых 2D-координатах проекции модели (`rawModel2d`), что гарантирует жесткую синхронную привязку контура к трубам при панорамировании и изменении масштаба видового экрана.
+  - **2. Поведение на обзорных листах (`detailNodeId == null`):**
+    - Автоматическое скрытие (`isCalloutSuppressedOnOverview`, `isDimensionInDetailNode`) всех мелких выносок (катушки, сварные стыки, арматура, фитинги, опоры) и внутренних линейных размеров внутри узла, полностью разгружающее плотный участок общего чертежа.
+    - Отрисовка контура обводки узла и ГОСТ-полки выноски: сверху **«Узел А»**, снизу **«Лист N»**.
+    - Регистрация контура и полки узла в `CalloutObstacleMap.buildSheetMap`, чтобы обычные выноски магистрали автоматически обходили рамку узла.
+  - **3. Поведение на детальном листе узла (`detailNodeId != null`, Вариант 1):**
+    - Автоматическое создание целевого чертежного листа `DrawingSheet` с крупным масштабом (`Auto-Fit` по элементам узла + примыкающим патрубкам) и автоматической раскладкой всех подробных выносок узла.
+    - **Вариант 1 (контекстное примыкание магистрали)**: метод `PipingNetwork.getDetailNodeAdjacentStubs` находит все внешние трубы, подходящие к граничным узлам выносного узла, и строит укороченные контекстные участки (`DetailContextStub`, по умолчанию 450 мм) бледным штриховым пунктиром с ГОСТ-зигзагом линии обрыва на конце.
+  - **4. Интерактивный UI и CAD-манипуляции (`DesktopCadLayout`, `SheetToolbar`, `SheetTabBar`, `SheetCanvasPainter`, `InputController`):**
+    - Создание узла в 1 клик из выделенных труб/узлов через плавающий инспектор свойств («Вынести в укрупненный узел (ГОСТ)») или кнопку `Узлы` на верхней панели листа.
+    - На обзорном листе: выбор контура/полки кликом, перетаскивание полки, изменение отступа рамки, перетаскивание вершин свободного многоугольника и добавление новых вершин перетаскиванием кружков на серединах ребер.
+    - Двойной клик по полке «Узел А / Лист N» мгновенно открывает соответствующий лист узла; на листе узла отображается кнопка «К общему листу».
+    - Полная поддержка векторного экспорта в PDF через `SheetGeometryBuilder`.
+  - **Верификация:**
+    - Набор модульных тестов [test/detail_node_test.dart](file:///d:/Git/Akso/test/detail_node_test.dart) (5 тестов, 100% pass).
+    - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
 
+- **Безопасное скрытие выносок в 3D-модели и пакетное/групповое удаление выносок с защитой пресетов и листов:**
+  - **1. Скрытие выносок в 3D-пространстве модели без влияния на чертежные листы и пресеты (`showCalloutsInModelSpace`, `hiddenCalloutTypes`):**
+    - В [PipingInputController](file:///d:/Git/Akso/lib/ui/canvas/input_controller.dart) добавлены состояние `showCalloutsInModelSpace: bool = true` и множество `hiddenCalloutTypes: Set<CalloutTargetType>`.
+    - При отключении видимости в 3D (или скрытии отдельных категорий в 3D) выноски и встроенные плашки диаметров/уклонов/фитингов перестают отображаться на 3D-холсте [PipingCanvasPainter](file:///d:/Git/Akso/lib/ui/canvas/piping_canvas.dart) и перестают перехватывать клики мыши (`_findCalloutAtScreenPos`, `CalloutPainter.hitTest`), освобождая доступ к трубам и узлам.
+    - При этом сами выноски, их индивидуальные позиции на листах (`sheetOffsets`), закрепления (`isPinned`, `sheetPinned`) и шаблоны текста (`calloutTemplates`) остаются на 100% нетронутыми — на листах чертежей и при экспорте в PDF/DXF все выноски продолжают отображаться.
+  - **2. Индивидуальное скрытие отдельных выносок (`Callout.isHidden`):**
+    - В доменную модель [Callout](file:///d:/Git/Akso/lib/domain/models/callout.dart) добавлено сериализуемое поле `isHidden: bool = false`.
+    - Позволяет временно погасить конкретную мешающую выноску (через иконку «глаз» в таблице [CalloutManagerPanel](file:///d:/Git/Akso/lib/ui/features/editor/widgets/callout_manager_panel.dart) или кнопку «Скрыть эту» в инспекторе свойств выноски [DesktopCadLayout](file:///d:/Git/Akso/lib/ui/features/editor/widgets/desktop_cad_layout.dart)) без ее удаления и вернуть одним нажатием «Показать все скрытые».
+  - **3. Пакетное и групповое удаление выносок по категориям (`deleteCalloutsByTypes`, `deleteCalloutsByIds`, `deleteAllCallouts`):**
+    - Реализован диалог `CalloutManagerPanel.showBatchDeleteDialog` («Групповое скрытие и удаление выносок»), позволяющий:
+      - Выбрать любые категории объектов (`Труба`, `Сварной стык`, `Арматура`, `Фасонный элемент`, `Опора / подвеска`, `Узел`, `Оборудование`, `Штуцер`) с отображением точного количества выносок в каждой группе.
+      - Скрыть выбранные группы только в 3D или удалить их с защитой закрепленных вручную выносок (`Не удалять закрепленные вручную выноски 📌`).
+      - В таблице менеджера выносок добавлена кнопка «Удалить найденные (N)» для мгновенного удаления отфильтрованной выборки.
+    - Все операции удаления сохраняют шаблоны ГОСТ (`calloutTemplates`) и записываются в историю `Undo (Ctrl+Z)`.
+  - **4. Привязка начала выноски отводов к центру дуги (`PipingNetwork.getFittingAnchorPoint`):**
+    - Для отводов (`FittingType.elbow90`, `FittingType.elbow45`) точка начала выноски перенесена с вершины угла (`Node3D`) точно в геометрический центр дуги отвода — середину квадратичной кривой Безье $B(0.5) = V_{\text{node}} + 0.25(\vec{u}_1 t_1 + \vec{u}_2 t_2)$.
+    - Обновлены `CalloutPainter.getTarget3DPointForTarget`, `CalloutLayoutEngine.computeAnchorNode`, `CalloutObstacleMap.buildSheetMap` и `FittingPainter._drawElbowSymbol`, благодаря чему выноски отводов в 3D-модели, на чертежных листах и при экспорте в PDF/DXF всегда указывают на реальную дугу отвода.
+  - **Верификация:**
+    - Набор модульных и виджет-тестов [test/callout_visibility_and_group_delete_test.dart](file:///d:/Git/Akso/test/callout_visibility_and_group_delete_test.dart) (7 тестов, 100% pass).
+    - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
 
+- **Изоляция клавиатурного ввода при редактировании свойств и защита плавающего инспектора свойств (особенно арматуры) от выхода за верхние панели:**
+  - **1. Изоляция глобальных CAD-горячих клавиш при фокусе в текстовом поле (`_isTextInputFocused` в `EditorScreen`):**
+    - В [editor_screen.dart](file:///d:/Git/Akso/lib/ui/features/editor/editor_screen.dart) добавлена проверка `_isTextInputFocused()`, определяющая, находится ли текущий фокус (`FocusManager.instance.primaryFocus`) внутри виджета `EditableText` / `EditableTextState` (исключая корневой `_focusNode` холста и оверлей быстрого ввода длины `_lengthFocusNode`).
+    - В обработчике `_handleKeyEvent` при активном текстовом поле все нажатия (`Delete`, `Backspace`, `R`/`К`, `D`/`В`, `Home`, `Ctrl+C`, `Ctrl+V`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+D`, цифры `0–9`, `.`, `-`) возвращают `KeyEventResult.ignored`, передавая управление стандартному редактированию и выделению текста без запуска глобальных команд CAD (удаления объекта, поворота, смены инструмента, вызова оверлея длины трассы).
+    - Нажатие `Escape` внутри текстового поля снимает фокус только с самого поля и возвращает фокус на холст (`_focusNode.requestFocus()`), сохраняя выделение текущего элемента в модели.
+    - Клик по холсту (`Listener.onPointerDown`) автоматически снимает фокус с активного текстового поля инспектора перед переводом фокуса на холст.
+  - **2. Устойчивое выделение текста и синхронизация полей инспектора через `FocusNode` (`DesktopCadLayout`):**
+    - Все инспекторы элементов в [desktop_cad_layout.dart](file:///d:/Git/Akso/lib/ui/features/editor/widgets/desktop_cad_layout.dart) (`_DesktopValveInspectorState`, `_DesktopSegmentInspectorState`, `_DesktopFittingInspectorState`, `_DesktopWeldInspectorState`, `_DesktopSpoolInspectorState`, `_DesktopNodeElevationEditorState`, `_DesktopEquipmentInspectorState`) оснащены индивидуальными `FocusNode` для каждого `TextField`.
+    - В `didUpdateWidget` и `_syncPositionControllers` перезапись текста контроллера блокируется для поля, находящегося в фокусе (`!_...Focus.hasFocus`), если `id` выбранного элемента не изменился. Это исключает сброс выделения текста (`Ctrl+A`, выделение мышью) и курсора при движении мыши над холстом или перерисовке `AnimatedBuilder`.
+    - При потере фокуса (`!focusNode.hasFocus`), нажатии `Enter` (`onSubmitted`) или клике вне поля (`onTapOutside`) введенное значение автоматически фиксируется и применяется к модели (`_apply...()`).
+    - Устранены инлайн-контроллеры `TextEditingController` внутри `build` в `_buildOptionsBar` (поля марки оси и клейма сварщика переведены на `TextFormField` с `ValueKey`).
+  - **3. Ограничение высоты и внутренняя прокрутка плавающего инспектора свойств (`_buildPropertyInspector`):**
+    - В `DesktopCadLayout` карточка `_buildPropertyInspector` размещена внутри `Positioned(top: hasTopBanner ? 64 : 16, right: 16, bottom: 16, child: Align(alignment: Alignment.bottomRight, ...))`, благодаря чему даже самая высокая панель свойств (фланцевая арматура с ответными фланцами, сталью, Ру, воротником и позиционированием $Z / L_1 / L_2$) никогда не поднимается выше рабочей области и не перекрывается верхней панелью опций / баннером подсказки выделения.
+    - Заголовок инспектора (иконка, название и кнопка закрытия `×`) зафиксирован сверху карточки, а содержимое обернуто в `Flexible(child: SingleChildScrollView(...))`.
+    - Панель отметок `ElevationPanel` динамически сдвигается влево (`right: hasInspector ? 342 : 16`), когда открыт инспектор любого элемента (включая катушки `selectedSpoolId`), исключая визуальное наложение панелей.
+  - **Верификация:**
+    - Набор виджет-тестов [test/inspector_editing_and_layout_test.dart](file:///d:/Git/Akso/test/inspector_editing_and_layout_test.dart) (3 теста, 100% pass).
+    - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
 
-
-
+- **Учет ответных фланцев фланцевой арматуры в системе выносок и позиционной маркировки (`CalloutTargetType.fitting`):**
+  - **Запрос пользователя:** При включенной опции «Ответные фланцы» (`includeCounterFlanges: true`) ответные приварные фланцы (воротниковые ГОСТ 33259-2015 тип 11 и плоские тип 01) не идут в комплекте с арматурой и должны учитываться как самостоятельные фасонные элементы трубопровода при генерации выносок (без принудительного создания выносок в сам момент клика вставки).
+  - **Реализованное решение:**
+    1. **Геометрическое и топологическое разрешение ответных фланцев (`PipingNetwork`):**
+       - В [piping_network.dart](file:///d:/Git/Akso/lib/domain/models/piping_network.dart) добавлены методы `getValveCounterFlangeLocations`, `getCounterFlangeValve`, `getCounterFlangeMark`, `buildCounterFlangeFitting`, `resolveFittingById` и `getFittingAnchorPointById`.
+       - Для каждой фланцевой арматуры с `includeCounterFlanges: true` определяются активные ответные фланцы (`${valve.id}_cf_start` и `${valve.id}_cf_end`, либо 1 ответный фланец со стороны трубы при концевом монтаже на открытом торце) с точными 3D-координатами привязки по центрам воротников/колец ответных фланцев.
+       - Каждому типоразмеру ответного фланца присваивается сквозная позиционная марка `Ф-N` (`getCounterFlangeMark`), единая для выносок на схеме и таблицы спецификации МТО в [report_engine.dart](file:///d:/Git/Akso/lib/domain/services/report_engine.dart).
+    2. **Генерация, отображение и автоочистка выносок ответных фланцев:**
+       - В `PipingNetwork.generateMissingCallouts` (вызывается по кнопкам «Сгенерировать недостающие» и «Элементы» в [callout_manager_panel.dart](file:///d:/Git/Akso/lib/ui/features/editor/widgets/callout_manager_panel.dart)) добавлено создание выносок `CalloutTargetType.fitting` для ответных фланцев арматуры при `includeCounterFlanges: true`.
+       - Обновлены `CalloutPainter.getTarget3DPointForTarget`, `CalloutLayoutEngine`, `CalloutCandidateGenerator`, `DrawingSheet.isCalloutVisible` и `CalloutManagerPanel` для полной поддержки выносок ответных фланцев (включая авто-расстановку, фильтрацию по системам и выносным узлам, а также объединение в вилочную выноску «Ласточкин хвост (2 шт.)»).
+       - При отключении переключателя «Ответные фланцы» (`includeCounterFlanges: false`) или удалении арматуры метод `cleanOrphanedCallouts()` автоматически удаляет выноски ответных фланцев.
+  - **Верификация:**
+    - Модульные тесты в [test/flanged_valve_and_reducer_test.dart](file:///d:/Git/Akso/test/flanged_valve_and_reducer_test.dart) (8 тестов, 100% pass).
+    - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.

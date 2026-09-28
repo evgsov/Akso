@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/math/axonometry_projector.dart';
 import '../../core/math/snap_engine.dart';
 import '../../domain/models/acquired_tracking_point.dart';
+import '../../domain/models/callout.dart';
 import '../../domain/models/node_3d.dart';
 
 import '../../domain/models/linear_dimension.dart';
@@ -55,6 +56,7 @@ class PipingCanvasPainter extends CustomPainter {
   final SnapResult? snapResult;
   final bool showWelds;
   final bool showCallouts;
+  final Set<CalloutTargetType>? hiddenCalloutTypes;
   final bool showGrid;
   final bool isVolumeMode;
   final bool isCenterlineMode;
@@ -111,6 +113,7 @@ class PipingCanvasPainter extends CustomPainter {
     this.snapResult,
     this.showWelds = true,
     this.showCallouts = true,
+    this.hiddenCalloutTypes,
     this.showGrid = true,
     this.isVolumeMode = false,
     this.isCenterlineMode = false,
@@ -158,6 +161,13 @@ class PipingCanvasPainter extends CustomPainter {
       screenPoints[node.id] = projector.project(node);
     }
 
+    final showSegmentCallouts =
+        showCallouts && !(hiddenCalloutTypes?.contains(CalloutTargetType.segment) ?? false);
+    final showFittingCallouts =
+        showCallouts && !(hiddenCalloutTypes?.contains(CalloutTargetType.fitting) ?? false);
+    final showNodeCallouts =
+        showCallouts && !(hiddenCalloutTypes?.contains(CalloutTargetType.node) ?? false);
+
     PipePainter.paint(
       canvas,
       size,
@@ -166,7 +176,7 @@ class PipingCanvasPainter extends CustomPainter {
       selectedSegmentId,
       null,
       screenPoints,
-      showCallouts,
+      showSegmentCallouts,
       isVolumeMode,
       selectedSegmentIds,
       isCenterlineMode,
@@ -204,7 +214,7 @@ class PipingCanvasPainter extends CustomPainter {
       projector,
       network,
       selectedNodeId,
-      showCallouts,
+      showFittingCallouts,
       isVolumeMode: isVolumeMode,
       styleConfig: styleConfig,
     );
@@ -216,7 +226,7 @@ class PipingCanvasPainter extends CustomPainter {
       network,
       selectedNodeId,
       showWelds && (styleConfig?.showWeldJoints ?? true),
-      showCallouts,
+      showNodeCallouts,
       selectedWeldId: selectedWeldId,
       styleConfig: styleConfig,
     );
@@ -232,6 +242,7 @@ class PipingCanvasPainter extends CustomPainter {
         selectedCalloutId: selectedCalloutId,
         annotationScale: zoomFactor,
         isPaperSpace: false,
+        hiddenTypes: hiddenCalloutTypes,
       );
     }
 

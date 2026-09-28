@@ -121,6 +121,8 @@ class ViewportTransformService {
     PipingNetwork network,
     ProjectionType projectionType, {
     Set<String>? visibleSystemIds,
+    Set<String>? filterSegmentIds,
+    String? detailNodeId,
   }) {
     final projector = AxonometryProjector(projectionType: projectionType);
     double minX = double.infinity;
@@ -137,9 +139,14 @@ class ViewportTransformService {
     }
 
     bool hasPoints = false;
+    final detailNode = detailNodeId != null ? network.detailNodes[detailNodeId] : null;
+    final effectiveFilterSegs = filterSegmentIds ?? detailNode?.segmentIds;
 
     // Сканируем сегменты труб
     for (final seg in network.segments.values) {
+      if (effectiveFilterSegs != null && !effectiveFilterSegs.contains(seg.id)) {
+        continue;
+      }
       if (visibleSystemIds != null && !visibleSystemIds.contains(seg.systemId)) {
         continue;
       }
@@ -155,8 +162,18 @@ class ViewportTransformService {
       }
     }
 
+    // Если это выносной узел с включенными примыкающими «хвостами» магистрали, учитываем их габариты
+    if (detailNode != null && detailNode.showContextStubs) {
+      final stubs = network.getDetailNodeAdjacentStubs(detailNode);
+      for (final stub in stubs) {
+        includePoint(stub.startX, stub.startY, stub.startZ);
+        includePoint(stub.endX, stub.endY, stub.endZ);
+        hasPoints = true;
+      }
+    }
+
     // Если нет видимых сегментов, проверяем все узлы
-    if (!hasPoints) {
+    if (!hasPoints && effectiveFilterSegs == null) {
       for (final n in network.nodes.values) {
         includePoint(n.x, n.y, n.z);
         hasPoints = true;
@@ -187,6 +204,8 @@ class ViewportTransformService {
     required SheetViewport viewport,
     double marginMm = 15.0,
     Set<String>? visibleSystemIds,
+    Set<String>? filterSegmentIds,
+    String? detailNodeId,
     bool snapToStandardScale = false,
   }) {
     final effectiveSystems = visibleSystemIds ?? viewport.visibleSystemIds;
@@ -194,6 +213,8 @@ class ViewportTransformService {
       network,
       projectionType,
       visibleSystemIds: effectiveSystems,
+      filterSegmentIds: filterSegmentIds,
+      detailNodeId: detailNodeId,
     );
 
     final availW = math.max(10.0, viewport.widthMm - (marginMm * 2.0));

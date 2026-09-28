@@ -8,8 +8,10 @@ import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/fitting.dart';
 import '../../../../domain/models/pipe_support.dart';
+import '../../../../domain/models/property_clipboard.dart';
 import '../../../../core/math/snap_engine.dart';
 import '../../../../domain/models/callout.dart';
+import '../../../../domain/models/detail_node.dart';
 import '../../../canvas/input_controller.dart';
 import '../../../../domain/services/segment_positioning_service.dart';
 import 'callout_manager_panel.dart';
@@ -71,68 +73,11 @@ class DesktopCadLayout extends StatelessWidget {
 
               // Холст и плавающие панели
               Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Container(
-                        color: const Color(0xFFF8F9FA),
-                        child: canvasWidget,
-                      ),
-                    ),
-
-                    // Навигационный блок зума и ориентации (слева вверху холста)
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: _buildViewportControls(context),
-                    ),
-
-                    // Панель отметок (справа вверху)
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: ElevationPanel(controller: controller),
-                    ),
-
-                    // Плавающий баннер активного фокуса видового экрана (режим модели на листе)
-                    if (!controller.isModelSpaceActive && controller.isViewportFocused)
-                      Positioned(
-                        top: 14,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: _buildViewportFocusBanner(context),
-                        ),
-                      ),
-
-                    // Кнопка точного ввода длины (для тач-устройств), появляется при черчении
-                    if (controller.traceStartNode != null || controller.axisStartNode != null)
-                      Positioned(
-                        bottom: 24,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: FilledButton.icon(
-                            key: const Key('tablet_exact_length_button'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.amber.shade700,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                            ),
-                            icon: const Icon(Icons.straighten, size: 20),
-                            label: const Text(
-                              '📐 Точная длина',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            onPressed: () => _showTouchDistanceEntryDialog(context),
-                          ),
-                        ),
-                      ),
-
-                    // Плавающий инспектор свойств выбранного элемента
-                    if (controller.selectedNodeId != null ||
+                child: Builder(
+                  builder: (context) {
+                    final hasInspector = controller.selectedNodeId != null ||
                         controller.selectedSegmentId != null ||
+                        controller.selectedSpoolId != null ||
                         controller.selectedEquipmentId != null ||
                         controller.selectedDimensionId != null ||
                         controller.selectedAxisId != null ||
@@ -140,14 +85,84 @@ class DesktopCadLayout extends StatelessWidget {
                         controller.selectedSupportId != null ||
                         controller.selectedWeldId != null ||
                         controller.selectedCalloutId != null ||
+                        controller.selectedDetailNodeId != null ||
                         controller.selectedNodeIds.length > 1 ||
-                        controller.selectedSegmentIds.length > 1)
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: _buildPropertyInspector(context),
-                      ),
-                  ],
+                        controller.selectedSegmentIds.length > 1;
+                    final hasTopBanner = !controller.isModelSpaceActive && controller.isViewportFocused;
+
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Container(
+                            color: const Color(0xFFF8F9FA),
+                            child: canvasWidget,
+                          ),
+                        ),
+
+                        // Навигационный блок зума и ориентации (слева вверху холста)
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: _buildViewportControls(context),
+                        ),
+
+                        // Панель отметок (справа вверху; сдвигается влево при открытом инспекторе свойств)
+                        Positioned(
+                          top: 16,
+                          right: hasInspector ? 342 : 16,
+                          child: ElevationPanel(controller: controller),
+                        ),
+
+                        // Плавающий баннер активного фокуса видового экрана (режим модели на листе)
+                        if (hasTopBanner)
+                          Positioned(
+                            top: 14,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: _buildViewportFocusBanner(context),
+                            ),
+                          ),
+
+                        // Кнопка точного ввода длины (для тач-устройств), появляется при черчении
+                        if (controller.traceStartNode != null || controller.axisStartNode != null)
+                          Positioned(
+                            bottom: 24,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: FilledButton.icon(
+                                key: const Key('tablet_exact_length_button'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.amber.shade700,
+                                  foregroundColor: Colors.white,
+                                  elevation: 4,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                ),
+                                icon: const Icon(Icons.straighten, size: 20),
+                                label: const Text(
+                                  '📐 Точная длина',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                onPressed: () => _showTouchDistanceEntryDialog(context),
+                              ),
+                            ),
+                          ),
+
+                        // Плавающий инспектор свойств выбранного элемента
+                        if (hasInspector)
+                          Positioned(
+                            top: hasTopBanner ? 64 : 16,
+                            right: 16,
+                            bottom: 16,
+                            child: Align(
+                              alignment: Alignment.bottomRight,
+                              child: _buildPropertyInspector(context),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -785,7 +800,36 @@ class DesktopCadLayout extends StatelessWidget {
             ),
           ),
 
-          // Авто-расстановка выносок
+          // Быстрое скрытие/показ выносок в 3D-модели (без удаления с листов и пресетов)
+          Tooltip(
+            message: controller.showCalloutsInModelSpace
+                ? 'Скрыть выноски в 3D-модели (на листах чертежей и в пресетах сохраняются!)'
+                : 'Показать выноски в 3D-модели (сейчас скрыты в 3D)',
+            child: IconButton(
+              key: const Key('cad_toggle_3d_callouts_button'),
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                controller.showCalloutsInModelSpace ? Icons.visibility : Icons.visibility_off,
+                size: 18,
+                color: controller.showCalloutsInModelSpace ? Colors.amberAccent : Colors.orangeAccent,
+              ),
+              onPressed: () {
+                controller.toggleShowCalloutsInModelSpace();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      controller.showCalloutsInModelSpace
+                          ? 'Выноски показаны в 3D-модели'
+                          : 'Выноски скрыты в 3D-модели (на листах чертежей и в пресетах сохранены)',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Авто-расстановка и групповое управление выносками
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -812,12 +856,34 @@ class DesktopCadLayout extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 key: const Key('cad_auto_layout_callouts_options_button'),
-                tooltip: 'Опции авторасстановки',
+                tooltip: 'Опции выносок: скрытие, объединение, удаление по группам',
                 padding: EdgeInsets.zero,
                 icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.tealAccent),
                 color: const Color(0xFF1E293B),
                 onSelected: (val) {
-                  if (val == 'unpin_and_layout') {
+                  if (val == 'toggle_3d_visibility') {
+                    controller.toggleShowCalloutsInModelSpace();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          controller.showCalloutsInModelSpace
+                              ? 'Выноски показаны в 3D-модели'
+                              : 'Выноски скрыты в 3D-модели (на листах и в пресетах сохранены)',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (val == 'unhide_all') {
+                    controller.unhideAllCallouts();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Все скрытые выноски и категории снова отображаются'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (val == 'batch_delete_dialog') {
+                    CalloutManagerPanel.showBatchDeleteDialog(context, controller: controller);
+                  } else if (val == 'unpin_and_layout') {
                     final updated = controller.autoLayoutCallouts(onlyUnpinned: false);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -877,6 +943,38 @@ class DesktopCadLayout extends StatelessWidget {
                   }
                 },
                 itemBuilder: (ctx) => [
+                  CheckedPopupMenuItem(
+                    value: 'toggle_3d_visibility',
+                    checked: controller.showCalloutsInModelSpace,
+                    child: const Text(
+                      'Показывать выноски в 3D-модели (на листах сохраняются)',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                  if (!controller.showCalloutsInModelSpace ||
+                      controller.hiddenCalloutTypes.isNotEmpty ||
+                      controller.network.callouts.values.any((c) => c.isHidden))
+                    const PopupMenuItem(
+                      value: 'unhide_all',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility, size: 16, color: Colors.amberAccent),
+                          SizedBox(width: 8),
+                          Text('Показать все скрытые выноски', style: TextStyle(color: Colors.amberAccent, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'batch_delete_dialog',
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_delete_outlined, size: 16, color: Colors.redAccent),
+                        SizedBox(width: 8),
+                        Text('Скрыть / Удалить выноски по группам...', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
                     value: 'unpin_and_layout',
                     child: Text('Перераспределить все (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 13)),
@@ -893,7 +991,7 @@ class DesktopCadLayout extends StatelessWidget {
                     ),
                     const PopupMenuItem(
                       value: 'unmerge_all',
-                      child: Text('Разъединить все вилочные выноски', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      child: Text('Разъединить все вилочных выноски', style: TextStyle(color: Colors.white, fontSize: 13)),
                     ),
                     const PopupMenuItem(
                       value: 'reset',
@@ -1315,10 +1413,12 @@ class DesktopCadLayout extends StatelessWidget {
                 const SizedBox(width: 6),
                 SizedBox(
                   width: 60,
-                  child: TextField(
-                    controller: TextEditingController(text: controller.currentAxisLabel),
+                  child: TextFormField(
+                    key: ValueKey('opt_axis_label_${controller.network.axes.length}'),
+                    initialValue: controller.currentAxisLabel,
                     decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6), border: OutlineInputBorder()),
-                    onSubmitted: (val) => controller.setCurrentAxisLabel(val.trim()),
+                    onChanged: (val) => controller.setCurrentAxisLabel(val.trim()),
+                    onFieldSubmitted: (val) => controller.setCurrentAxisLabel(val.trim()),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1461,10 +1561,12 @@ class DesktopCadLayout extends StatelessWidget {
               const SizedBox(width: 6),
               SizedBox(
                 width: 70,
-                child: TextField(
-                  controller: TextEditingController(text: controller.currentWelderStamp),
+                child: TextFormField(
+                  key: const ValueKey('opt_welder_stamp'),
+                  initialValue: controller.currentWelderStamp,
                   decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6), border: OutlineInputBorder()),
-                  onSubmitted: (val) => controller.setCurrentWelderStamp(val.trim()),
+                  onChanged: (val) => controller.setCurrentWelderStamp(val.trim()),
+                  onFieldSubmitted: (val) => controller.setCurrentWelderStamp(val.trim()),
                 ),
               ),
             ] else if (controller.currentTool == CanvasTool.insertReducer) ...[
@@ -1760,13 +1862,29 @@ class DesktopCadLayout extends StatelessWidget {
     final isSpool = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isCallout && controller.selectedSpoolId != null;
     final isSegment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isCallout && controller.selectedSegmentId != null;
     final isEquipment = !isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isCallout && controller.selectedEquipmentId != null;
-    final selectedFit = (!isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isSegment && !isEquipment && !isCallout && controller.selectedNodeId != null)
+    final isDetailNode = !isDimension &&
+        !isAxis &&
+        !isMultiSelect &&
+        !isValve &&
+        !isSupport &&
+        !isWeld &&
+        !isSpool &&
+        !isSegment &&
+        !isEquipment &&
+        !isCallout &&
+        controller.selectedNodeId == null &&
+        controller.selectedDetailNodeId != null;
+    final selectedFit = (!isDimension && !isAxis && !isMultiSelect && !isValve && !isSupport && !isWeld && !isSpool && !isSegment && !isEquipment && !isCallout && !isDetailNode && controller.selectedNodeId != null)
         ? controller.network.fittings[controller.selectedNodeId]
         : null;
 
     String title = 'Свойства узла';
     IconData icon = Icons.grain;
-    if (isCallout) {
+    if (isDetailNode) {
+      final dn = controller.network.detailNodes[controller.selectedDetailNodeId!];
+      title = dn?.effectiveTitle ?? 'Выносной узел';
+      icon = Icons.zoom_in_map;
+    } else if (isCallout) {
       final callout = controller.network.callouts[controller.selectedCalloutId!];
       title = 'Выноска: ${callout?.targetType.displayName ?? ""}';
       icon = Icons.label_important_outline;
@@ -1834,51 +1952,65 @@ class DesktopCadLayout extends StatelessWidget {
       shadowColor: Colors.black26,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        width: 310,
+        width: 314,
         padding: const EdgeInsets.all(14),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: Colors.indigo),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: isDetailNode ? Colors.teal.shade700 : Colors.indigo),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: 'Снять выделение',
-                  onPressed: () {
-                    controller.selectedNodeId = null;
-                    controller.selectedSegmentId = null;
-                    controller.selectedSpoolId = null;
-                    controller.selectedEquipmentId = null;
-                    controller.selectedDimensionId = null;
-                    controller.selectedAxisId = null;
-                    controller.selectedValveId = null;
-                    controller.selectedSupportId = null;
-                    controller.selectedWeldId = null;
-                    controller.selectedCalloutId = null;
-                    controller.selectedNodeIds.clear();
-                    controller.selectedSegmentIds.clear();
-                    controller.selectedSpoolIds.clear();
-                    controller.refresh();
-                  },
-                ),
-              ],
-            ),
-            const Divider(height: 14),
-            if (isCallout) ...[
-              _buildCalloutInspector(context),
-            ] else if (isDimension) ...[
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Снять выделение',
+                    onPressed: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      controller.selectedNodeId = null;
+                      controller.selectedSegmentId = null;
+                      controller.selectedSpoolId = null;
+                      controller.selectedEquipmentId = null;
+                      controller.selectedDimensionId = null;
+                      controller.selectedAxisId = null;
+                      controller.selectedValveId = null;
+                      controller.selectedSupportId = null;
+                      controller.selectedWeldId = null;
+                      controller.selectedCalloutId = null;
+                      controller.selectedDetailNodeId = null;
+                      controller.selectedNodeIds.clear();
+                      controller.selectedSegmentIds.clear();
+                      controller.selectedSpoolIds.clear();
+                      controller.refresh();
+                    },
+                  ),
+                ],
+              ),
+              const Divider(height: 14),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (controller.selectedPropertyTargetKind != null) ...[
+                        _PropertyTransferBar(controller: controller),
+                        const SizedBox(height: 10),
+                      ],
+                      if (isDetailNode) ...[
+                        _buildDetailNodeInspector(context),
+                      ] else if (isCallout) ...[
+                        _buildCalloutInspector(context),
+                      ] else if (isDimension) ...[
               () {
                 final dim = controller.network.dimensions[controller.selectedDimensionId!];
                 if (dim == null) return const Text('Размер не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
@@ -2114,6 +2246,33 @@ class DesktopCadLayout extends StatelessWidget {
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.zoom_in_map, size: 15),
+                  label: const Text('Вынести в укрупненный узел (ГОСТ)', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    final dn = controller.createDetailNodeFromSelection();
+                    if (dn != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Создан ${dn.effectiveTitle} → Лист ${dn.targetSheetNumber}'),
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Открыть лист',
+                            onPressed: () => controller.openDetailNodeSheet(dn.id),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
                 child: FilledButton.tonalIcon(
                   style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
                   icon: const Icon(Icons.copy, size: 15),
@@ -2275,12 +2434,40 @@ class DesktopCadLayout extends StatelessWidget {
                 controller: controller,
                 spoolId: controller.selectedSpoolId!,
               )
-            else if (isSegment)
+            else if (isSegment) ...[
               _DesktopSegmentInspector(
                 controller: controller,
                 segmentId: controller.selectedSegmentId!,
-              )
-            else if (isEquipment)
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.teal.shade700,
+                    side: BorderSide(color: Colors.teal.shade300),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.zoom_in_map, size: 15),
+                  label: const Text('Вынести в укрупненный узел', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    final dn = controller.createDetailNodeFromSelection();
+                    if (dn != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Создан ${dn.effectiveTitle} → Лист ${dn.targetSheetNumber}'),
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Открыть лист',
+                            onPressed: () => controller.openDetailNodeSheet(dn.id),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ] else if (isEquipment)
               _DesktopEquipmentInspector(
                 controller: controller,
                 equipmentId: controller.selectedEquipmentId!,
@@ -2294,10 +2481,43 @@ class DesktopCadLayout extends StatelessWidget {
                 final isEndNode = connected.length == 1 && node?.equipmentId == null;
 
                 if (fit != null) {
-                  return _DesktopFittingInspector(
-                    controller: controller,
-                    nodeId: nodeId,
-                    fitting: fit,
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _DesktopFittingInspector(
+                        controller: controller,
+                        nodeId: nodeId,
+                        fitting: fit,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.teal.shade700,
+                            side: BorderSide(color: Colors.teal.shade300),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.zoom_in_map, size: 15),
+                          label: const Text('Вынести узел с трубами на лист', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            final dn = controller.createDetailNodeFromSelection();
+                            if (dn != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Создан ${dn.effectiveTitle} → Лист ${dn.targetSheetNumber}'),
+                                  duration: const Duration(seconds: 3),
+                                  action: SnackBarAction(
+                                    label: 'Открыть лист',
+                                    onPressed: () => controller.openDetailNodeSheet(dn.id),
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 }
 
@@ -2583,6 +2803,34 @@ class DesktopCadLayout extends StatelessWidget {
                         },
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.teal.shade700,
+                          side: BorderSide(color: Colors.teal.shade300),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.zoom_in_map, size: 15),
+                        label: const Text('Вынести узел с трубами на лист', style: TextStyle(fontSize: 11)),
+                        onPressed: () {
+                          final dn = controller.createDetailNodeFromSelection();
+                          if (dn != null && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Создан ${dn.effectiveTitle} → Лист ${dn.targetSheetNumber}'),
+                                duration: const Duration(seconds: 3),
+                                action: SnackBarAction(
+                                  label: 'Открыть лист',
+                                  onPressed: () => controller.openDetailNodeSheet(dn.id),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
@@ -2601,9 +2849,238 @@ class DesktopCadLayout extends StatelessWidget {
                 );
               }(),
             ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+
+  Widget _buildDetailNodeInspector(BuildContext context) {
+    final dnId = controller.selectedDetailNodeId;
+    final dn = dnId != null ? controller.network.detailNodes[dnId] : null;
+    if (dn == null) {
+      return const Text('Выносной узел не найден', style: TextStyle(fontSize: 11, color: Colors.grey));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Предпросмотр ГОСТ-полки
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.teal.shade50,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.teal.shade200),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      dn.effectiveTitle,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.teal.shade900,
+                      ),
+                    ),
+                    Divider(height: 6, thickness: 1, color: Colors.teal.shade300),
+                    Text(
+                      dn.effectiveSheetReference,
+                      style: TextStyle(fontSize: 11, color: Colors.teal.shade800),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.teal.shade700,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+                icon: const Icon(Icons.open_in_new, size: 14),
+                label: Text('Лист ${dn.targetSheetNumber}', style: const TextStyle(fontSize: 11)),
+                onPressed: () => controller.openDetailNodeSheet(dn.id),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // 2. Марка узла (А, Б, В...)
+        Row(
+          children: [
+            const Text('Марка узла:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 70,
+              height: 28,
+              child: TextFormField(
+                key: ValueKey('dn_mark_${dn.id}_${dn.mark}'),
+                initialValue: dn.mark,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  border: OutlineInputBorder(),
+                ),
+                onFieldSubmitted: (val) {
+                  final trimmed = val.trim();
+                  if (trimmed.isNotEmpty) {
+                    controller.updateDetailNode(
+                      dn.copyWith(mark: trimmed, title: 'Узел $trimmed'),
+                    );
+                  }
+                },
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'Труб: ${dn.segmentIds.length}',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87),
+            ),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+
+        // 3. Форма контура обводки (4 варианта)
+        const Text('Форма контура обводки:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: DetailBoundaryShape.values.map((shape) {
+            final isSelected = dn.boundaryShape == shape;
+            IconData shapeIcon;
+            switch (shape) {
+              case DetailBoundaryShape.roundedRect:
+                shapeIcon = Icons.crop_16_9;
+                break;
+              case DetailBoundaryShape.oval:
+                shapeIcon = Icons.panorama_fish_eye;
+                break;
+              case DetailBoundaryShape.circle:
+                shapeIcon = Icons.circle_outlined;
+                break;
+              case DetailBoundaryShape.polygon:
+                shapeIcon = Icons.pentagon_outlined;
+                break;
+            }
+            return ChoiceChip(
+              avatar: Icon(
+                shapeIcon,
+                size: 14,
+                color: isSelected ? Colors.teal.shade900 : Colors.grey.shade700,
+              ),
+              label: Text(shape.shortName, style: const TextStyle(fontSize: 11)),
+              selected: isSelected,
+              selectedColor: Colors.teal.shade100,
+              visualDensity: VisualDensity.compact,
+              onSelected: (_) {
+                controller.setDetailNodeBoundaryShape(dn.id, shape);
+              },
+            );
+          }).toList(),
+        ),
+        if (dn.boundaryShape == DetailBoundaryShape.polygon) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.amber.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Подсказка: тяните квадратные ручки на листе для смещения углов или кружки на ребрах для добавления новых вершин.',
+                  style: TextStyle(fontSize: 10, color: Colors.black87),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.auto_fix_high, size: 14),
+                    label: const Text('Сбросить многоугольник по трубам', style: TextStyle(fontSize: 10)),
+                    onPressed: () => controller.resetDetailNodePolygon(dn.id),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Отступ рамки:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              Expanded(
+                child: Slider(
+                  value: dn.paddingMm.clamp(2.0, 40.0),
+                  min: 2.0,
+                  max: 40.0,
+                  divisions: 38,
+                  label: '${dn.paddingMm.round()} мм',
+                  onChanged: (val) {
+                    controller.updateDetailNode(dn.copyWith(paddingMm: val));
+                  },
+                ),
+              ),
+              Text('${dn.paddingMm.round()} мм', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+        const SizedBox(height: 6),
+
+        // 4. Настройки отображения на обзорном и детальном листах
+        SwitchListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          title: const Text('Скрыть выноски на общем листе', style: TextStyle(fontSize: 11)),
+          subtitle: const Text('Прячет катушки, стыки, арматуру и размеры внутри узла', style: TextStyle(fontSize: 9, color: Colors.grey)),
+          value: dn.suppressCalloutsOnOverview,
+          onChanged: (val) {
+            controller.updateDetailNode(dn.copyWith(suppressCalloutsOnOverview: val));
+          },
+        ),
+        SwitchListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          title: const Text('Показывать примыкание магистрали', style: TextStyle(fontSize: 11)),
+          subtitle: const Text('Пунктирные подводящие трубы с линией обрыва на листе узла', style: TextStyle(fontSize: 9, color: Colors.grey)),
+          value: dn.showContextStubs,
+          onChanged: (val) {
+            controller.updateDetailNode(dn.copyWith(showContextStubs: val));
+          },
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: BorderSide(color: Colors.red.shade300),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Удалить выносной узел', style: TextStyle(fontSize: 11)),
+            onPressed: () => controller.deleteDetailNode(dn.id, deleteTargetSheet: true),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3039,21 +3516,92 @@ class DesktopCadLayout extends StatelessWidget {
         ),
         const SizedBox(height: 6),
 
-        // 7. Кнопка открытия менеджера
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
+        // 7. Быстрое скрытие (без удаления)
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
+                icon: const Icon(Icons.visibility_off_outlined, size: 14),
+                label: const Text('Скрыть эту', style: TextStyle(fontSize: 10.5)),
+                onPressed: () {
+                  controller.toggleCalloutHidden(callout.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Выноска скрыта (не удалена). Восстановить можно в Менеджере выносок.'),
+                      action: SnackBarAction(
+                        label: 'Отменить',
+                        onPressed: () => controller.undo(),
+                      ),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
             ),
-            icon: const Icon(Icons.table_chart_outlined, size: 15),
-            label: const Text('Таблица всех выносок', style: TextStyle(fontSize: 11)),
-            onPressed: () => CalloutManagerPanel.show(context, controller: controller),
-          ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
+                icon: const Icon(Icons.layers_clear_outlined, size: 14),
+                label: const Text('Скрыть в 3D все', style: TextStyle(fontSize: 10.5)),
+                onPressed: () {
+                  controller.setShowCalloutsInModelSpace(false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Выноски скрыты в 3D-модели (на листах и в пресетах сохранены)'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
 
-        // 8. Кнопка удаления
+        // 8. Кнопка открытия менеджера и группового удаления
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
+                icon: const Icon(Icons.table_chart_outlined, size: 14),
+                label: const Text('Все выноски', style: TextStyle(fontSize: 10.5)),
+                onPressed: () => CalloutManagerPanel.show(context, controller: controller),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  side: BorderSide(color: Colors.red.shade200),
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
+                icon: const Icon(Icons.auto_delete_outlined, size: 14),
+                label: const Text('По группам...', style: TextStyle(fontSize: 10.5)),
+                onPressed: () => CalloutManagerPanel.showBatchDeleteDialog(
+                  context,
+                  controller: controller,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        // 9. Кнопка удаления
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -3490,6 +4038,10 @@ class DesktopCadLayout extends StatelessWidget {
   }
 
   String _getHintText(CanvasTool tool, bool isTracing) {
+    if (controller.isPropertyBrushActive) {
+      final srcLabel = controller.propertyClipboard?.summaryLabel ?? 'Элемент';
+      return '🖌 КИСТЬ СВОЙСТВ ($srcLabel): кликайте по элементам на схеме для переноса свойств • Esc: завершить';
+    }
     if (!controller.isModelSpaceActive && controller.activeSheet != null) {
       if (controller.isViewportFocused) {
         return 'Фокус видового экрана (Модель) • Двойной клик или Esc: выход в пространство листа • Home: вписать лист';
@@ -3567,6 +4119,8 @@ class _DesktopFittingInspector extends StatefulWidget {
 class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
   late TextEditingController _lengthController;
   late TextEditingController _branchHController;
+  late FocusNode _lengthFocus;
+  late FocusNode _branchHFocus;
 
   @override
   void initState() {
@@ -3577,26 +4131,59 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
     _branchHController = TextEditingController(
       text: widget.fitting.effectiveBranchLengthMm.round().toString(),
     );
+    _lengthFocus = FocusNode()
+      ..addListener(() {
+        if (!_lengthFocus.hasFocus) _applyLength();
+      });
+    _branchHFocus = FocusNode()
+      ..addListener(() {
+        if (!_branchHFocus.hasFocus) _applyBranchH();
+      });
   }
 
   @override
   void didUpdateWidget(covariant _DesktopFittingInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fitting.id != widget.fitting.id ||
-        oldWidget.fitting.effectiveBuildingLengthMm != widget.fitting.effectiveBuildingLengthMm) {
-      _lengthController.text = widget.fitting.effectiveBuildingLengthMm.round().toString();
+    final isNew = oldWidget.fitting.id != widget.fitting.id;
+    if (isNew || !_lengthFocus.hasFocus) {
+      final newLen = widget.fitting.effectiveBuildingLengthMm.round().toString();
+      if (_lengthController.text != newLen) {
+        _lengthController.text = newLen;
+      }
     }
-    if (oldWidget.fitting.id != widget.fitting.id ||
-        oldWidget.fitting.effectiveBranchLengthMm != widget.fitting.effectiveBranchLengthMm) {
-      _branchHController.text = widget.fitting.effectiveBranchLengthMm.round().toString();
+    if (isNew || !_branchHFocus.hasFocus) {
+      final newH = widget.fitting.effectiveBranchLengthMm.round().toString();
+      if (_branchHController.text != newH) {
+        _branchHController.text = newH;
+      }
     }
   }
 
   @override
   void dispose() {
+    _lengthFocus.dispose();
+    _branchHFocus.dispose();
     _lengthController.dispose();
     _branchHController.dispose();
     super.dispose();
+  }
+
+  void _applyLength() {
+    final l = double.tryParse(_lengthController.text.trim().replaceAll(',', '.').replaceAll(' ', ''));
+    if (l != null && l > 0 && (l - widget.fitting.effectiveBuildingLengthMm).abs() > 0.5) {
+      widget.controller.network.updateFittingLength(widget.nodeId, l);
+      widget.controller.history.recordState(widget.controller.network);
+      widget.controller.refresh();
+    }
+  }
+
+  void _applyBranchH() {
+    final h = double.tryParse(_branchHController.text.trim().replaceAll(',', '.').replaceAll(' ', ''));
+    if (h != null && h > 0 && (h - widget.fitting.effectiveBranchLengthMm).abs() > 0.5) {
+      widget.controller.network.updateFitting(widget.nodeId, widget.fitting.copyWith(branchLengthMm: h));
+      widget.controller.history.recordState(widget.controller.network);
+      widget.controller.refresh();
+    }
   }
 
   @override
@@ -3774,6 +4361,10 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                   height: 26,
                   child: TextField(
                     controller: _lengthController,
+                    focusNode: _lengthFocus,
+                    onTapOutside: (_) {
+                      if (_lengthFocus.hasFocus) _lengthFocus.unfocus();
+                    },
                     keyboardType: TextInputType.number,
                     style: const TextStyle(fontSize: 11),
                     decoration: const InputDecoration(
@@ -3783,14 +4374,7 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                    onSubmitted: (v) {
-                      final l = double.tryParse(v);
-                      if (l != null && l > 0) {
-                        controller.network.updateFittingLength(nodeId, l);
-                        controller.history.recordState(controller.network);
-                        controller.refresh();
-                      }
-                    },
+                    onSubmitted: (_) => _applyLength(),
                   ),
                 ),
               ),
@@ -4001,6 +4585,10 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                         height: 26,
                         child: TextField(
                           controller: _branchHController,
+                          focusNode: _branchHFocus,
+                          onTapOutside: (_) {
+                            if (_branchHFocus.hasFocus) _branchHFocus.unfocus();
+                          },
                           keyboardType: TextInputType.number,
                           style: const TextStyle(fontSize: 11),
                           decoration: const InputDecoration(
@@ -4010,14 +4598,7 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
-                          onSubmitted: (v) {
-                            final h = double.tryParse(v);
-                            if (h != null && h > 0) {
-                              controller.network.updateFitting(nodeId, fitting.copyWith(branchLengthMm: h));
-                              controller.history.recordState(controller.network);
-                              controller.refresh();
-                            }
-                          },
+                          onSubmitted: (_) => _applyBranchH(),
                         ),
                       ),
                     ),
@@ -4035,6 +4616,10 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                         height: 26,
                         child: TextField(
                           controller: _lengthController,
+                          focusNode: _lengthFocus,
+                          onTapOutside: (_) {
+                            if (_lengthFocus.hasFocus) _lengthFocus.unfocus();
+                          },
                           keyboardType: TextInputType.number,
                           style: const TextStyle(fontSize: 11),
                           decoration: const InputDecoration(
@@ -4044,14 +4629,7 @@ class _DesktopFittingInspectorState extends State<_DesktopFittingInspector> {
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
-                          onSubmitted: (v) {
-                            final l = double.tryParse(v);
-                            if (l != null && l > 0) {
-                              controller.network.updateFittingLength(nodeId, l);
-                              controller.history.recordState(controller.network);
-                              controller.refresh();
-                            }
-                          },
+                          onSubmitted: (_) => _applyLength(),
                         ),
                       ),
                     ),
@@ -4160,6 +4738,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
   late TextEditingController _elevationController;
   late TextEditingController _nameController;
   late TextEditingController _serialController;
+  late FocusNode _lengthFocus;
+  late FocusNode _elevationFocus;
+  late FocusNode _nameFocus;
+  late FocusNode _serialFocus;
   final _materials = const ['Сталь 20', '09Г2С', '12Х18Н10Т', '10ХСНД', '15Х5М', '12Х1МФ'];
 
   @override
@@ -4173,25 +4755,52 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
     _elevationController = TextEditingController(text: elevM.toStringAsFixed(3));
     _nameController = TextEditingController(text: seg?.name ?? '');
     _serialController = TextEditingController(text: seg?.serialNumber ?? '');
+    _lengthFocus = FocusNode()..addListener(() {
+      if (!_lengthFocus.hasFocus) _applyLength();
+    });
+    _elevationFocus = FocusNode()..addListener(() {
+      if (!_elevationFocus.hasFocus) _applyElevation();
+    });
+    _nameFocus = FocusNode()..addListener(() {
+      if (!_nameFocus.hasFocus) _applyName();
+    });
+    _serialFocus = FocusNode()..addListener(() {
+      if (!_serialFocus.hasFocus) _applySerialNumber();
+    });
   }
 
   @override
   void didUpdateWidget(covariant _DesktopSegmentInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.segmentId != widget.segmentId) {
-      final seg = widget.controller.network.segments[widget.segmentId];
-      final len = widget.controller.selectedSegmentLength ?? 1000.0;
-      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
-      final elevM = (startNode?.z ?? 0.0) / 1000.0;
-      _lengthController.text = '${len.round()}';
-      _elevationController.text = elevM.toStringAsFixed(3);
-      _nameController.text = seg?.name ?? '';
-      _serialController.text = seg?.serialNumber ?? '';
+    final seg = widget.controller.network.segments[widget.segmentId];
+    final len = widget.controller.selectedSegmentLength ?? 1000.0;
+    final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+    final elevM = (startNode?.z ?? 0.0) / 1000.0;
+    final force = oldWidget.segmentId != widget.segmentId;
+    final newLenText = '${len.round()}';
+    if ((force || !_lengthFocus.hasFocus) && _lengthController.text != newLenText) {
+      _lengthController.text = newLenText;
+    }
+    final newElevText = elevM.toStringAsFixed(3);
+    if ((force || !_elevationFocus.hasFocus) && _elevationController.text != newElevText) {
+      _elevationController.text = newElevText;
+    }
+    final newNameText = seg?.name ?? '';
+    if ((force || !_nameFocus.hasFocus) && _nameController.text != newNameText) {
+      _nameController.text = newNameText;
+    }
+    final newSerialText = seg?.serialNumber ?? '';
+    if ((force || !_serialFocus.hasFocus) && _serialController.text != newSerialText) {
+      _serialController.text = newSerialText;
     }
   }
 
   @override
   void dispose() {
+    _lengthFocus.dispose();
+    _elevationFocus.dispose();
+    _nameFocus.dispose();
+    _serialFocus.dispose();
     _lengthController.dispose();
     _elevationController.dispose();
     _nameController.dispose();
@@ -4203,26 +4812,47 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
     final text = _elevationController.text.trim().replaceAll('+', '').replaceAll(',', '.');
     final val = double.tryParse(text);
     if (val != null) {
-      widget.controller.changeSelectedSegmentElevation(val);
-      _elevationController.text = val.toStringAsFixed(3);
+      final seg = widget.controller.network.segments[widget.segmentId];
+      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+      final curElevM = (startNode?.z ?? 0.0) / 1000.0;
+      if ((val - curElevM).abs() > 0.0005) {
+        widget.controller.changeSelectedSegmentElevation(val);
+      }
+      final formatted = val.toStringAsFixed(3);
+      if (!_elevationFocus.hasFocus && _elevationController.text != formatted) {
+        _elevationController.text = formatted;
+      }
     }
   }
 
   void _applyLength() {
     final val = double.tryParse(_lengthController.text.replaceAll(' ', ''));
     if (val != null && val > 0) {
-      widget.controller.changeSelectedSegmentLength(val);
+      final curLen = widget.controller.selectedSegmentLength ?? 0.0;
+      if ((val - curLen).abs() > 0.5) {
+        widget.controller.changeSelectedSegmentLength(val);
+      }
     }
   }
 
   void _applyName() {
+    final seg = widget.controller.network.segments[widget.segmentId];
+    if (seg == null) return;
     final text = _nameController.text.trim();
-    widget.controller.changeSelectedSegmentName(text.isEmpty ? null : text);
+    final newName = text.isEmpty ? null : text;
+    if (newName != seg.name) {
+      widget.controller.changeSelectedSegmentName(newName);
+    }
   }
 
   void _applySerialNumber() {
+    final seg = widget.controller.network.segments[widget.segmentId];
+    if (seg == null) return;
     final text = _serialController.text.trim();
-    widget.controller.changeSelectedSegmentSerialNumber(text.isEmpty ? null : text);
+    final newSerial = text.isEmpty ? null : text;
+    if (newSerial != seg.serialNumber) {
+      widget.controller.changeSelectedSegmentSerialNumber(newSerial);
+    }
   }
 
   Future<void> _showAddWallThicknessDialog(BuildContext context, int dn) async {
@@ -4359,6 +4989,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
           height: 32,
           child: TextField(
             controller: _nameController,
+            focusNode: _nameFocus,
+            onTapOutside: (_) {
+              if (_nameFocus.hasFocus) _nameFocus.unfocus();
+            },
             style: const TextStyle(fontSize: 12),
             decoration: const InputDecoration(
               hintText: 'напр. Т1-1, Линия 1...',
@@ -4367,7 +5001,6 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
               border: OutlineInputBorder(),
             ),
             onSubmitted: (_) => _applyName(),
-            onTapOutside: (_) => _applyName(),
           ),
         ),
         const SizedBox(height: 8),
@@ -4394,6 +5027,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
           height: 32,
           child: TextField(
             controller: _serialController,
+            focusNode: _serialFocus,
+            onTapOutside: (_) {
+              if (_serialFocus.hasFocus) _serialFocus.unfocus();
+            },
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: seg.dn >= 500 ? 'Зав. № трубы или № плавки' : 'Номер партии / плавки...',
@@ -4402,7 +5039,6 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
               border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _applySerialNumber(),
-            onTapOutside: (_) => _applySerialNumber(),
           ),
         ),
         const SizedBox(height: 10),
@@ -4550,6 +5186,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
                         height: 36,
                         child: TextField(
                           controller: _elevationController,
+                          focusNode: _elevationFocus,
+                          onTapOutside: (_) {
+                            if (_elevationFocus.hasFocus) _elevationFocus.unfocus();
+                          },
                           keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                           style: const TextStyle(fontSize: 12),
                           decoration: const InputDecoration(
@@ -4600,6 +5240,10 @@ class _DesktopSegmentInspectorState extends State<_DesktopSegmentInspector> {
                 height: 36,
                 child: TextField(
                   controller: _lengthController,
+                  focusNode: _lengthFocus,
+                  onTapOutside: (_) {
+                    if (_lengthFocus.hasFocus) _lengthFocus.unfocus();
+                  },
                   keyboardType: TextInputType.number,
                   style: const TextStyle(fontSize: 12),
                   decoration: const InputDecoration(
@@ -4772,6 +5416,13 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
   late TextEditingController _elevationController;
   late TextEditingController _l1Controller;
   late TextEditingController _l2Controller;
+  late FocusNode _nameFocus;
+  late FocusNode _serialFocus;
+  late FocusNode _lengthFocus;
+  late FocusNode _flangeLengthFocus;
+  late FocusNode _elevationFocus;
+  late FocusNode _l1Focus;
+  late FocusNode _l2Focus;
 
   @override
   void initState() {
@@ -4786,24 +5437,63 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     _elevationController = TextEditingController();
     _l1Controller = TextEditingController();
     _l2Controller = TextEditingController();
-    _syncPositionControllers();
+    _nameFocus = FocusNode()..addListener(() {
+      if (!_nameFocus.hasFocus) _applyName();
+    });
+    _serialFocus = FocusNode()..addListener(() {
+      if (!_serialFocus.hasFocus) _applySerialNumber();
+    });
+    _lengthFocus = FocusNode()..addListener(() {
+      if (!_lengthFocus.hasFocus) _applyLength();
+    });
+    _flangeLengthFocus = FocusNode()..addListener(() {
+      if (!_flangeLengthFocus.hasFocus) _applyFlangeLength();
+    });
+    _elevationFocus = FocusNode()..addListener(() {
+      if (!_elevationFocus.hasFocus) _applyElevation();
+    });
+    _l1Focus = FocusNode()..addListener(() {
+      if (!_l1Focus.hasFocus) _applyL1();
+    });
+    _l2Focus = FocusNode()..addListener(() {
+      if (!_l2Focus.hasFocus) _applyL2();
+    });
+    _syncPositionControllers(force: true);
   }
 
   @override
   void didUpdateWidget(covariant _DesktopValveInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
     final valve = widget.controller.network.valves[widget.valveId];
-    if (oldWidget.valveId != widget.valveId) {
-      _nameController.text = valve?.name ?? '';
-      _serialController.text = valve?.serialNumber ?? '';
-      _lengthController.text = valve != null ? valve.lengthMm.round().toString() : '140';
-      _flangeLengthController.text = valve != null ? valve.effectiveCounterFlangeLengthMm.round().toString() : '45';
+    final force = oldWidget.valveId != widget.valveId;
+    final newName = valve?.name ?? '';
+    if ((force || !_nameFocus.hasFocus) && _nameController.text != newName) {
+      _nameController.text = newName;
     }
-    _syncPositionControllers();
+    final newSerial = valve?.serialNumber ?? '';
+    if ((force || !_serialFocus.hasFocus) && _serialController.text != newSerial) {
+      _serialController.text = newSerial;
+    }
+    final newLen = valve != null ? valve.lengthMm.round().toString() : '140';
+    if ((force || !_lengthFocus.hasFocus) && _lengthController.text != newLen) {
+      _lengthController.text = newLen;
+    }
+    final newFlangeLen = valve != null ? valve.effectiveCounterFlangeLengthMm.round().toString() : '45';
+    if ((force || !_flangeLengthFocus.hasFocus) && _flangeLengthController.text != newFlangeLen) {
+      _flangeLengthController.text = newFlangeLen;
+    }
+    _syncPositionControllers(force: force);
   }
 
   @override
   void dispose() {
+    _nameFocus.dispose();
+    _serialFocus.dispose();
+    _lengthFocus.dispose();
+    _flangeLengthFocus.dispose();
+    _elevationFocus.dispose();
+    _l1Focus.dispose();
+    _l2Focus.dispose();
     _nameController.dispose();
     _serialController.dispose();
     _lengthController.dispose();
@@ -4814,7 +5504,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     super.dispose();
   }
 
-  void _syncPositionControllers() {
+  void _syncPositionControllers({bool force = false}) {
     final valve = widget.controller.network.valves[widget.valveId];
     if (valve == null) return;
     final posInfo = SegmentPositioningService.getPositionInfo(
@@ -4824,9 +5514,18 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
       elementLengthMm: valve.effectiveTotalLengthMm,
       currentElementId: valve.id,
     );
-    _elevationController.text = posInfo.elevationM.toStringAsFixed(3);
-    _l1Controller.text = posInfo.lengthToPrevMm.toStringAsFixed(0);
-    _l2Controller.text = posInfo.lengthToNextMm.toStringAsFixed(0);
+    final newElev = posInfo.elevationM.toStringAsFixed(3);
+    if ((force || !_elevationFocus.hasFocus) && _elevationController.text != newElev) {
+      _elevationController.text = newElev;
+    }
+    final newL1 = posInfo.lengthToPrevMm.toStringAsFixed(0);
+    if ((force || !_l1Focus.hasFocus) && _l1Controller.text != newL1) {
+      _l1Controller.text = newL1;
+    }
+    final newL2 = posInfo.lengthToNextMm.toStringAsFixed(0);
+    if ((force || !_l2Focus.hasFocus) && _l2Controller.text != newL2) {
+      _l2Controller.text = newL2;
+    }
   }
 
   void _applyName() {
@@ -4862,11 +5561,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     final valve = widget.controller.network.valves[widget.valveId];
     if (valve == null) return;
     final l = double.tryParse(_lengthController.text.replaceAll(' ', ''));
-    if (l != null && l > 0 && l != valve.lengthMm) {
+    if (l != null && l > 0 && (l - valve.lengthMm).abs() > 0.5) {
       widget.controller.network.updateValveLength(valve.id, l);
       widget.controller.history.recordState(widget.controller.network);
       widget.controller.refresh();
-      _syncPositionControllers();
+      _syncPositionControllers(force: true);
     }
   }
 
@@ -4874,7 +5573,8 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
     final valve = widget.controller.network.valves[widget.valveId];
     if (valve == null) return;
     final fl = double.tryParse(_flangeLengthController.text.replaceAll(' ', ''));
-    if (fl != null && fl >= 0 && fl != (valve.counterFlangeLengthMm ?? valve.effectiveCounterFlangeLengthMm)) {
+    final curFl = valve.counterFlangeLengthMm ?? valve.effectiveCounterFlangeLengthMm;
+    if (fl != null && fl >= 0 && (fl - curFl).abs() > 0.5) {
       widget.controller.network.updateValve(
         valve.id,
         valve.copyWith(counterFlangeLengthMm: fl),
@@ -4883,31 +5583,64 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
       widget.controller.network.recalculateSpools();
       widget.controller.history.recordState(widget.controller.network);
       widget.controller.refresh();
-      _syncPositionControllers();
+      _syncPositionControllers(force: true);
     }
   }
 
   void _applyElevation() {
+    final valve = widget.controller.network.valves[widget.valveId];
+    if (valve == null) return;
     final val = double.tryParse(_elevationController.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateValvePositionByElevation(widget.valveId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        valve.segmentId,
+        valve.ratio,
+        elementLengthMm: valve.effectiveTotalLengthMm,
+        currentElementId: valve.id,
+      );
+      if ((val - posInfo.elevationM).abs() > 0.0005) {
+        widget.controller.updateValvePositionByElevation(widget.valveId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
-  void _applyL1() {
+  void _applyL1({bool forceApply = false}) {
+    final valve = widget.controller.network.valves[widget.valveId];
+    if (valve == null) return;
     final val = double.tryParse(_l1Controller.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateValvePositionByPrevSection(widget.valveId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        valve.segmentId,
+        valve.ratio,
+        elementLengthMm: valve.effectiveTotalLengthMm,
+        currentElementId: valve.id,
+      );
+      if (forceApply || (val - posInfo.lengthToPrevMm).abs() > 0.5) {
+        widget.controller.updateValvePositionByPrevSection(widget.valveId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
-  void _applyL2() {
+  void _applyL2({bool forceApply = false}) {
+    final valve = widget.controller.network.valves[widget.valveId];
+    if (valve == null) return;
     final val = double.tryParse(_l2Controller.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateValvePositionByNextSection(widget.valveId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        valve.segmentId,
+        valve.ratio,
+        elementLengthMm: valve.effectiveTotalLengthMm,
+        currentElementId: valve.id,
+      );
+      if (forceApply || (val - posInfo.lengthToNextMm).abs() > 0.5) {
+        widget.controller.updateValvePositionByNextSection(widget.valveId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
@@ -4930,6 +5663,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
           height: 30,
           child: TextField(
             controller: _nameController,
+            focusNode: _nameFocus,
+            onTapOutside: (_) {
+              if (_nameFocus.hasFocus) _nameFocus.unfocus();
+            },
             style: const TextStyle(fontSize: 11),
             decoration: const InputDecoration(
               hintText: 'напр. Задвижка 10с9бк, КОП-1',
@@ -4938,7 +5675,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               isDense: true,
             ),
             onSubmitted: (_) => _applyName(),
-            onTapOutside: (_) => _applyName(),
           ),
         ),
         const SizedBox(height: 6),
@@ -4950,6 +5686,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
           height: 30,
           child: TextField(
             controller: _serialController,
+            focusNode: _serialFocus,
+            onTapOutside: (_) {
+              if (_serialFocus.hasFocus) _serialFocus.unfocus();
+            },
             style: const TextStyle(fontSize: 11),
             decoration: const InputDecoration(
               hintText: 'напр. № 48219',
@@ -4958,7 +5698,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
               isDense: true,
             ),
             onSubmitted: (_) => _applySerialNumber(),
-            onTapOutside: (_) => _applySerialNumber(),
           ),
         ),
         const SizedBox(height: 6),
@@ -5148,8 +5887,11 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                   isDense: true,
                 ),
                 controller: _lengthController,
+                focusNode: _lengthFocus,
+                onTapOutside: (_) {
+                  if (_lengthFocus.hasFocus) _lengthFocus.unfocus();
+                },
                 onSubmitted: (_) => _applyLength(),
-                onTapOutside: (_) => _applyLength(),
               ),
             ),
           ],
@@ -5213,6 +5955,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                             height: 26,
                             child: TextField(
                               controller: _elevationController,
+                              focusNode: _elevationFocus,
+                              onTapOutside: (_) {
+                                if (_elevationFocus.hasFocus) _elevationFocus.unfocus();
+                              },
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                               textAlign: TextAlign.right,
@@ -5224,7 +5970,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                                 isDense: true,
                               ),
                               onSubmitted: (_) => _applyElevation(),
-                              onTapOutside: (_) => _applyElevation(),
                             ),
                           ),
                         ),
@@ -5248,7 +5993,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                             InkWell(
                               onTap: () {
                                 _l1Controller.text = '0';
-                                _applyL1();
+                                _applyL1(forceApply: true);
                               },
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 2),
@@ -5272,6 +6017,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                           height: 26,
                           child: TextField(
                             controller: _l1Controller,
+                            focusNode: _l1Focus,
+                            onTapOutside: (_) {
+                              if (_l1Focus.hasFocus) _l1Focus.unfocus();
+                            },
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             textAlign: TextAlign.right,
@@ -5283,7 +6032,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                               isDense: true,
                             ),
                             onSubmitted: (_) => _applyL1(),
-                            onTapOutside: (_) => _applyL1(),
                           ),
                         ),
                       ),
@@ -5307,7 +6055,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                             InkWell(
                               onTap: () {
                                 _l2Controller.text = '0';
-                                _applyL2();
+                                _applyL2(forceApply: true);
                               },
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 2),
@@ -5331,6 +6079,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                           height: 26,
                           child: TextField(
                             controller: _l2Controller,
+                            focusNode: _l2Focus,
+                            onTapOutside: (_) {
+                              if (_l2Focus.hasFocus) _l2Focus.unfocus();
+                            },
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             textAlign: TextAlign.right,
@@ -5342,7 +6094,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                               isDense: true,
                             ),
                             onSubmitted: (_) => _applyL2(),
-                            onTapOutside: (_) => _applyL2(),
                           ),
                         ),
                       ),
@@ -5521,7 +6272,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                         widget.controller.network.recalculateSpools();
                         widget.controller.history.recordState(widget.controller.network);
                         widget.controller.refresh();
-                        _syncPositionControllers();
+                        _syncPositionControllers(force: true);
                       },
                     ),
                   ],
@@ -5559,7 +6310,7 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                       widget.controller.network.recalculateSpools();
                       widget.controller.history.recordState(widget.controller.network);
                       widget.controller.refresh();
-                      _syncPositionControllers();
+                      _syncPositionControllers(force: true);
                     },
                   ),
                   const SizedBox(height: 6),
@@ -5607,6 +6358,10 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                         height: 26,
                         child: TextField(
                           controller: _flangeLengthController,
+                          focusNode: _flangeLengthFocus,
+                          onTapOutside: (_) {
+                            if (_flangeLengthFocus.hasFocus) _flangeLengthFocus.unfocus();
+                          },
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.right,
@@ -5618,7 +6373,6 @@ class _DesktopValveInspectorState extends State<_DesktopValveInspector> {
                             isDense: true,
                           ),
                           onSubmitted: (_) => _applyFlangeLength(),
-                          onTapOutside: (_) => _applyFlangeLength(),
                         ),
                       ),
                     ],
@@ -5784,6 +6538,9 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
   late TextEditingController _elevationController;
   late TextEditingController _l1Controller;
   late TextEditingController _l2Controller;
+  late FocusNode _elevationFocus;
+  late FocusNode _l1Focus;
+  late FocusNode _l2Focus;
 
   @override
   void initState() {
@@ -5791,24 +6548,36 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
     _elevationController = TextEditingController();
     _l1Controller = TextEditingController();
     _l2Controller = TextEditingController();
-    _syncPositionControllers();
+    _elevationFocus = FocusNode()..addListener(() {
+      if (!_elevationFocus.hasFocus) _applyElevation();
+    });
+    _l1Focus = FocusNode()..addListener(() {
+      if (!_l1Focus.hasFocus) _applyL1();
+    });
+    _l2Focus = FocusNode()..addListener(() {
+      if (!_l2Focus.hasFocus) _applyL2();
+    });
+    _syncPositionControllers(force: true);
   }
 
   @override
   void didUpdateWidget(covariant _DesktopWeldInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncPositionControllers();
+    _syncPositionControllers(force: oldWidget.weldId != widget.weldId);
   }
 
   @override
   void dispose() {
+    _elevationFocus.dispose();
+    _l1Focus.dispose();
+    _l2Focus.dispose();
     _elevationController.dispose();
     _l1Controller.dispose();
     _l2Controller.dispose();
     super.dispose();
   }
 
-  void _syncPositionControllers() {
+  void _syncPositionControllers({bool force = false}) {
     final weld = widget.controller.network.weldJoints[widget.weldId];
     if (weld == null) return;
     final posInfo = SegmentPositioningService.getPositionInfo(
@@ -5818,32 +6587,74 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
       elementLengthMm: 0.0,
       currentElementId: weld.id,
     );
-    _elevationController.text = posInfo.elevationM.toStringAsFixed(3);
-    _l1Controller.text = posInfo.lengthToPrevMm.toStringAsFixed(0);
-    _l2Controller.text = posInfo.lengthToNextMm.toStringAsFixed(0);
+    final newElev = posInfo.elevationM.toStringAsFixed(3);
+    if ((force || !_elevationFocus.hasFocus) && _elevationController.text != newElev) {
+      _elevationController.text = newElev;
+    }
+    final newL1 = posInfo.lengthToPrevMm.toStringAsFixed(0);
+    if ((force || !_l1Focus.hasFocus) && _l1Controller.text != newL1) {
+      _l1Controller.text = newL1;
+    }
+    final newL2 = posInfo.lengthToNextMm.toStringAsFixed(0);
+    if ((force || !_l2Focus.hasFocus) && _l2Controller.text != newL2) {
+      _l2Controller.text = newL2;
+    }
   }
 
   void _applyElevation() {
+    final weld = widget.controller.network.weldJoints[widget.weldId];
+    if (weld == null) return;
     final val = double.tryParse(_elevationController.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateWeldPositionByElevation(widget.weldId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        weld.segmentId,
+        weld.ratio,
+        elementLengthMm: 0.0,
+        currentElementId: weld.id,
+      );
+      if ((val - posInfo.elevationM).abs() > 0.0005) {
+        widget.controller.updateWeldPositionByElevation(widget.weldId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
   void _applyL1() {
+    final weld = widget.controller.network.weldJoints[widget.weldId];
+    if (weld == null) return;
     final val = double.tryParse(_l1Controller.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateWeldPositionByPrevSection(widget.weldId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        weld.segmentId,
+        weld.ratio,
+        elementLengthMm: 0.0,
+        currentElementId: weld.id,
+      );
+      if ((val - posInfo.lengthToPrevMm).abs() > 0.5) {
+        widget.controller.updateWeldPositionByPrevSection(widget.weldId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
   void _applyL2() {
+    final weld = widget.controller.network.weldJoints[widget.weldId];
+    if (weld == null) return;
     final val = double.tryParse(_l2Controller.text.replaceAll(',', '.').replaceAll(' ', ''));
     if (val != null) {
-      widget.controller.updateWeldPositionByNextSection(widget.weldId, val);
-      _syncPositionControllers();
+      final posInfo = SegmentPositioningService.getPositionInfo(
+        widget.controller.network,
+        weld.segmentId,
+        weld.ratio,
+        elementLengthMm: 0.0,
+        currentElementId: weld.id,
+      );
+      if ((val - posInfo.lengthToNextMm).abs() > 0.5) {
+        widget.controller.updateWeldPositionByNextSection(widget.weldId, val);
+        _syncPositionControllers(force: true);
+      }
     }
   }
 
@@ -6170,6 +6981,10 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                         height: 26,
                         child: TextField(
                           controller: _elevationController,
+                          focusNode: _elevationFocus,
+                          onTapOutside: (_) {
+                            if (_elevationFocus.hasFocus) _elevationFocus.unfocus();
+                          },
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.right,
@@ -6181,7 +6996,6 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                             isDense: true,
                           ),
                           onSubmitted: (_) => _applyElevation(),
-                          onTapOutside: (_) => _applyElevation(),
                         ),
                       ),
                     ),
@@ -6206,6 +7020,10 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                       height: 26,
                       child: TextField(
                         controller: _l1Controller,
+                        focusNode: _l1Focus,
+                        onTapOutside: (_) {
+                          if (_l1Focus.hasFocus) _l1Focus.unfocus();
+                        },
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.right,
@@ -6217,7 +7035,6 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                           isDense: true,
                         ),
                         onSubmitted: (_) => _applyL1(),
-                        onTapOutside: (_) => _applyL1(),
                       ),
                     ),
                   ),
@@ -6242,6 +7059,10 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                       height: 26,
                       child: TextField(
                         controller: _l2Controller,
+                        focusNode: _l2Focus,
+                        onTapOutside: (_) {
+                          if (_l2Focus.hasFocus) _l2Focus.unfocus();
+                        },
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.right,
@@ -6253,7 +7074,6 @@ class _DesktopWeldInspectorState extends State<_DesktopWeldInspector> {
                           isDense: true,
                         ),
                         onSubmitted: (_) => _applyL2(),
-                        onTapOutside: (_) => _applyL2(),
                       ),
                     ),
                   ),
@@ -6356,6 +7176,10 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
   late TextEditingController _serialController;
   late TextEditingController _lengthController;
   late TextEditingController _elevationController;
+  late FocusNode _nameFocus;
+  late FocusNode _serialFocus;
+  late FocusNode _lengthFocus;
+  late FocusNode _elevationFocus;
 
   @override
   void initState() {
@@ -6370,25 +7194,52 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
       text: spool != null ? spool.cutLengthMm.round().toString() : '',
     );
     _elevationController = TextEditingController(text: elevM.toStringAsFixed(3));
+    _nameFocus = FocusNode()..addListener(() {
+      if (!_nameFocus.hasFocus) _applyName();
+    });
+    _serialFocus = FocusNode()..addListener(() {
+      if (!_serialFocus.hasFocus) _applySerialNumber();
+    });
+    _lengthFocus = FocusNode()..addListener(() {
+      if (!_lengthFocus.hasFocus) _applyLength();
+    });
+    _elevationFocus = FocusNode()..addListener(() {
+      if (!_elevationFocus.hasFocus) _applyElevation();
+    });
   }
 
   @override
   void didUpdateWidget(covariant _DesktopSpoolInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.spoolId != widget.spoolId) {
-      final spool = widget.controller.network.spools[widget.spoolId];
-      final seg = spool != null ? widget.controller.network.segments[spool.segmentId] : null;
-      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
-      final elevM = (startNode?.z ?? 0.0) / 1000.0;
-      _nameController.text = spool?.name ?? '';
-      _serialController.text = spool?.serialNumber ?? '';
-      _lengthController.text = spool != null ? spool.cutLengthMm.round().toString() : '';
-      _elevationController.text = elevM.toStringAsFixed(3);
+    final spool = widget.controller.network.spools[widget.spoolId];
+    final seg = spool != null ? widget.controller.network.segments[spool.segmentId] : null;
+    final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+    final elevM = (startNode?.z ?? 0.0) / 1000.0;
+    final force = oldWidget.spoolId != widget.spoolId;
+    final newName = spool?.name ?? '';
+    if ((force || !_nameFocus.hasFocus) && _nameController.text != newName) {
+      _nameController.text = newName;
+    }
+    final newSerial = spool?.serialNumber ?? '';
+    if ((force || !_serialFocus.hasFocus) && _serialController.text != newSerial) {
+      _serialController.text = newSerial;
+    }
+    final newLen = spool != null ? spool.cutLengthMm.round().toString() : '';
+    if ((force || !_lengthFocus.hasFocus) && _lengthController.text != newLen) {
+      _lengthController.text = newLen;
+    }
+    final newElev = elevM.toStringAsFixed(3);
+    if ((force || !_elevationFocus.hasFocus) && _elevationController.text != newElev) {
+      _elevationController.text = newElev;
     }
   }
 
   @override
   void dispose() {
+    _nameFocus.dispose();
+    _serialFocus.dispose();
+    _lengthFocus.dispose();
+    _elevationFocus.dispose();
     _nameController.dispose();
     _serialController.dispose();
     _lengthController.dispose();
@@ -6400,8 +7251,17 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
     final text = _elevationController.text.trim().replaceAll('+', '').replaceAll(',', '.');
     final val = double.tryParse(text);
     if (val != null) {
-      widget.controller.changeSelectedSpoolElevation(val);
-      _elevationController.text = val.toStringAsFixed(3);
+      final spool = widget.controller.network.spools[widget.spoolId];
+      final seg = spool != null ? widget.controller.network.segments[spool.segmentId] : null;
+      final startNode = seg != null ? widget.controller.network.nodes[seg.startNodeId] : null;
+      final curElevM = (startNode?.z ?? 0.0) / 1000.0;
+      if ((val - curElevM).abs() > 0.0005) {
+        widget.controller.changeSelectedSpoolElevation(val);
+      }
+      final formatted = val.toStringAsFixed(3);
+      if (!_elevationFocus.hasFocus && _elevationController.text != formatted) {
+        _elevationController.text = formatted;
+      }
     }
   }
 
@@ -6536,6 +7396,10 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
                         height: 34,
                         child: TextField(
                           controller: _elevationController,
+                          focusNode: _elevationFocus,
+                          onTapOutside: (_) {
+                            if (_elevationFocus.hasFocus) _elevationFocus.unfocus();
+                          },
                           keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                           style: const TextStyle(fontSize: 12),
                           decoration: const InputDecoration(
@@ -6577,6 +7441,10 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
             Expanded(
               child: TextField(
                 controller: _lengthController,
+                focusNode: _lengthFocus,
+                onTapOutside: (_) {
+                  if (_lengthFocus.hasFocus) _lengthFocus.unfocus();
+                },
                 keyboardType: TextInputType.number,
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 decoration: const InputDecoration(
@@ -6661,38 +7529,40 @@ class _DesktopSpoolInspectorState extends State<_DesktopSpoolInspector> {
         // Наименование / Маркировка
         const Text('Наименование / Позиция:', style: TextStyle(fontSize: 11, color: Colors.grey)),
         const SizedBox(height: 4),
-        Focus(
-          onFocusChange: (has) { if (!has) _applyName(); },
-          child: TextField(
-            controller: _nameController,
-            style: const TextStyle(fontSize: 12),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(),
-              hintText: 'например: Участок В1-1',
-            ),
-            onSubmitted: (_) => _applyName(),
+        TextField(
+          controller: _nameController,
+          focusNode: _nameFocus,
+          onTapOutside: (_) {
+            if (_nameFocus.hasFocus) _nameFocus.unfocus();
+          },
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            border: OutlineInputBorder(),
+            hintText: 'например: Участок В1-1',
           ),
+          onSubmitted: (_) => _applyName(),
         ),
         const SizedBox(height: 8),
 
         // Заводской номер / Партия
         const Text('Заводской номер / Номер плавки:', style: TextStyle(fontSize: 11, color: Colors.grey)),
         const SizedBox(height: 4),
-        Focus(
-          onFocusChange: (has) { if (!has) _applySerialNumber(); },
-          child: TextField(
-            controller: _serialController,
-            style: const TextStyle(fontSize: 12),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(),
-              hintText: 'например: ПЛ-4509 / Зав. 12',
-            ),
-            onSubmitted: (_) => _applySerialNumber(),
+        TextField(
+          controller: _serialController,
+          focusNode: _serialFocus,
+          onTapOutside: (_) {
+            if (_serialFocus.hasFocus) _serialFocus.unfocus();
+          },
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            border: OutlineInputBorder(),
+            hintText: 'например: ПЛ-4509 / Зав. 12',
           ),
+          onSubmitted: (_) => _applySerialNumber(),
         ),
         const SizedBox(height: 8),
 
@@ -6748,6 +7618,7 @@ class _DesktopNodeElevationEditor extends StatefulWidget {
 
 class _DesktopNodeElevationEditorState extends State<_DesktopNodeElevationEditor> {
   late TextEditingController _ctrl;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
@@ -6755,20 +7626,26 @@ class _DesktopNodeElevationEditorState extends State<_DesktopNodeElevationEditor
     final node = widget.controller.network.nodes[widget.nodeId];
     final elevM = (node?.z ?? 0.0) / 1000.0;
     _ctrl = TextEditingController(text: elevM.toStringAsFixed(3));
+    _focusNode = FocusNode()..addListener(() {
+      if (!_focusNode.hasFocus) _apply();
+    });
   }
 
   @override
   void didUpdateWidget(covariant _DesktopNodeElevationEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.nodeId != widget.nodeId) {
-      final node = widget.controller.network.nodes[widget.nodeId];
-      final elevM = (node?.z ?? 0.0) / 1000.0;
-      _ctrl.text = elevM.toStringAsFixed(3);
+    final node = widget.controller.network.nodes[widget.nodeId];
+    final elevM = (node?.z ?? 0.0) / 1000.0;
+    final newText = elevM.toStringAsFixed(3);
+    final force = oldWidget.nodeId != widget.nodeId;
+    if ((force || !_focusNode.hasFocus) && _ctrl.text != newText) {
+      _ctrl.text = newText;
     }
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -6777,8 +7654,15 @@ class _DesktopNodeElevationEditorState extends State<_DesktopNodeElevationEditor
     final text = _ctrl.text.trim().replaceAll('+', '').replaceAll(',', '.');
     final val = double.tryParse(text);
     if (val != null) {
-      widget.controller.changeSelectedNodeElevation(val);
-      _ctrl.text = val.toStringAsFixed(3);
+      final node = widget.controller.network.nodes[widget.nodeId];
+      final curElevM = (node?.z ?? 0.0) / 1000.0;
+      if ((val - curElevM).abs() > 0.0005) {
+        widget.controller.changeSelectedNodeElevation(val);
+      }
+      final formatted = val.toStringAsFixed(3);
+      if (!_focusNode.hasFocus && _ctrl.text != formatted) {
+        _ctrl.text = formatted;
+      }
     }
   }
 
@@ -6806,6 +7690,10 @@ class _DesktopNodeElevationEditorState extends State<_DesktopNodeElevationEditor
                 height: 32,
                 child: TextField(
                   controller: _ctrl,
+                  focusNode: _focusNode,
+                  onTapOutside: (_) {
+                    if (_focusNode.hasFocus) _focusNode.unfocus();
+                  },
                   keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                   style: const TextStyle(fontSize: 12),
                   decoration: const InputDecoration(
@@ -6853,6 +7741,7 @@ class _DesktopEquipmentInspector extends StatefulWidget {
 
 class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> {
   late TextEditingController _elevationCtrl;
+  late FocusNode _elevationFocus;
 
   @override
   void initState() {
@@ -6860,20 +7749,26 @@ class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> 
     final eq = widget.controller.network.equipments[widget.equipmentId];
     final elevM = (eq?.z ?? 0.0) / 1000.0;
     _elevationCtrl = TextEditingController(text: elevM.toStringAsFixed(3));
+    _elevationFocus = FocusNode()..addListener(() {
+      if (!_elevationFocus.hasFocus) _applyElevation();
+    });
   }
 
   @override
   void didUpdateWidget(covariant _DesktopEquipmentInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.equipmentId != widget.equipmentId) {
-      final eq = widget.controller.network.equipments[widget.equipmentId];
-      final elevM = (eq?.z ?? 0.0) / 1000.0;
-      _elevationCtrl.text = elevM.toStringAsFixed(3);
+    final eq = widget.controller.network.equipments[widget.equipmentId];
+    final elevM = (eq?.z ?? 0.0) / 1000.0;
+    final newText = elevM.toStringAsFixed(3);
+    final force = oldWidget.equipmentId != widget.equipmentId;
+    if ((force || !_elevationFocus.hasFocus) && _elevationCtrl.text != newText) {
+      _elevationCtrl.text = newText;
     }
   }
 
   @override
   void dispose() {
+    _elevationFocus.dispose();
     _elevationCtrl.dispose();
     super.dispose();
   }
@@ -6882,8 +7777,15 @@ class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> 
     final text = _elevationCtrl.text.trim().replaceAll('+', '').replaceAll(',', '.');
     final val = double.tryParse(text);
     if (val != null) {
-      widget.controller.changeSelectedEquipmentElevation(val);
-      _elevationCtrl.text = val.toStringAsFixed(3);
+      final eq = widget.controller.network.equipments[widget.equipmentId];
+      final curElevM = (eq?.z ?? 0.0) / 1000.0;
+      if ((val - curElevM).abs() > 0.0005) {
+        widget.controller.changeSelectedEquipmentElevation(val);
+      }
+      final formatted = val.toStringAsFixed(3);
+      if (!_elevationFocus.hasFocus && _elevationCtrl.text != formatted) {
+        _elevationCtrl.text = formatted;
+      }
     }
   }
 
@@ -6926,6 +7828,10 @@ class _DesktopEquipmentInspectorState extends State<_DesktopEquipmentInspector> 
                 height: 34,
                 child: TextField(
                   controller: _elevationCtrl,
+                  focusNode: _elevationFocus,
+                  onTapOutside: (_) {
+                    if (_elevationFocus.hasFocus) _elevationFocus.unfocus();
+                  },
                   keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                   style: const TextStyle(fontSize: 12),
                   decoration: const InputDecoration(
@@ -7378,5 +8284,343 @@ class _MultiSelectPipeControlsState extends State<_MultiSelectPipeControls> {
     );
   }
 }
+
+/// Универсальная панель копирования, вставки, «Кисти свойств» и пакетного применения к однотипным элементам
+class _PropertyTransferBar extends StatelessWidget {
+  final PipingInputController controller;
+
+  const _PropertyTransferBar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final opts = controller.propertyCopyOptions;
+    final canPaste = controller.canPasteProperties;
+    final isBrush = controller.isPropertyBrushActive;
+    final clip = controller.propertyClipboard;
+    final sameDnCount = controller.countSimilarTargets(sameDnOnly: true);
+    final anyDnCount = controller.countSimilarTargets(sameDnOnly: false);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isBrush ? Colors.amber.shade50 : Colors.blueGrey.shade50.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isBrush ? Colors.amber.shade600 : Colors.blueGrey.shade200,
+          width: isBrush ? 1.5 : 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.tune,
+                size: 13,
+                color: isBrush ? Colors.amber.shade900 : Colors.indigo.shade700,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  clip != null
+                      ? 'Буфер св-в: ${clip.summaryLabel}'
+                      : 'Перенос свойств элемента',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isBrush ? Colors.amber.shade900 : Colors.indigo.shade900,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Кнопки: Копировать св-ва | Вставить | Кисть | К однотипным
+          Row(
+            children: [
+              Expanded(
+                child: Tooltip(
+                  message: 'Скопировать свойства выбранного элемента в буфер свойств',
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      backgroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.copy_all, size: 13),
+                    label: const Text('Копир.', style: TextStyle(fontSize: 10)),
+                    onPressed: () {
+                      if (controller.copySelectedElementProperties()) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Свойства скопированы: ${controller.propertyClipboard?.summaryLabel ?? ""}',
+                            ),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Tooltip(
+                  message: canPaste
+                      ? 'Вставить свойства из буфера (${clip?.summaryLabel ?? ""})'
+                      : 'В буфере нет совместимых свойств для вставки',
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      backgroundColor: canPaste ? Colors.indigo.shade50 : Colors.white,
+                      foregroundColor: canPaste ? Colors.indigo.shade800 : null,
+                    ),
+                    icon: const Icon(Icons.content_paste_go, size: 13),
+                    label: const Text('Встав.', style: TextStyle(fontSize: 10)),
+                    onPressed: canPaste
+                        ? () {
+                            final count = controller.pastePropertiesToSelected();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  count > 0
+                                      ? 'Свойства применены (${clip?.summaryLabel ?? ""})'
+                                      : 'Свойства уже совпадают',
+                                ),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: isBrush
+                    ? 'Выключить Кисть свойств (Esc)'
+                    : 'Кисть свойств (Match Properties): кликайте по элементам на схеме для переноса свойств',
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    backgroundColor: isBrush ? Colors.amber.shade600 : Colors.white,
+                    foregroundColor: isBrush ? Colors.white : Colors.indigo.shade800,
+                    side: BorderSide(
+                      color: isBrush ? Colors.amber.shade800 : Colors.indigo.shade200,
+                    ),
+                  ),
+                  icon: const Icon(Icons.format_paint, size: 13),
+                  label: Text(
+                    isBrush ? 'Кисть ВКЛ' : 'Кисть',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: controller.togglePropertyBrush,
+                ),
+              ),
+              const SizedBox(width: 4),
+              PopupMenuButton<bool>(
+                tooltip: 'Применить свойства сразу ко всем однотипным элементам на схеме',
+                enabled: anyDnCount > 0,
+                onSelected: (sameDnOnly) {
+                  final updated = controller.applySelectedPropertiesToSimilar(
+                    sameDnOnly: sameDnOnly,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        updated > 0
+                            ? 'Обновлено однотипных элементов: $updated шт.'
+                            : 'Все однотипные элементы уже имеют такие свойства',
+                      ),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem<bool>(
+                    value: true,
+                    enabled: sameDnCount > 0,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.filter_1, size: 16, color: Colors.indigo),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Только с тем же типом и Ду ($sameDnCount шт.)',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<bool>(
+                    value: false,
+                    enabled: anyDnCount > 0,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.done_all, size: 16, color: Colors.teal),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Все элементы этого типа любого Ду ($anyDnCount шт.)',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: anyDnCount > 0 ? Colors.teal.shade50 : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: anyDnCount > 0 ? Colors.teal.shade300 : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.done_all,
+                        size: 13,
+                        color: anyDnCount > 0 ? Colors.teal.shade800 : Colors.grey,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Всем ($anyDnCount)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: anyDnCount > 0 ? Colors.teal.shade900 : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (isBrush) ...[
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.touch_app, size: 13, color: Colors.amber.shade900),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Кликайте по элементам на схеме • Esc — выход',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          // Уточняющие чекбоксы (тумблеры фильтрации свойств)
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              _buildOptionToggle(
+                label: 'Сталь / ГОСТ / Ру',
+                tooltip: 'Переносить марку стали, ГОСТ, давление Ру, исполнение фланцев и тип сварки',
+                value: opts.copyMaterialAndStandard,
+                onChanged: (v) => controller.updatePropertyCopyOptions(
+                  opts.copyWith(copyMaterialAndStandard: v),
+                ),
+              ),
+              _buildOptionToggle(
+                label: 'Тип и размеры',
+                tooltip: 'Переносить наименование, тип элемента и строительные размеры (с учетом Ду)',
+                value: opts.copyDimensionsAndType,
+                onChanged: (v) => controller.updatePropertyCopyOptions(
+                  opts.copyWith(copyDimensionsAndType: v),
+                ),
+              ),
+              _buildOptionToggle(
+                label: 'Зав. № / Марка',
+                tooltip: 'Переносить заводской номер (партию/плавку) и индивидуальную марку позиции',
+                value: opts.copySerialAndMark,
+                onChanged: (v) => controller.updatePropertyCopyOptions(
+                  opts.copyWith(copySerialAndMark: v),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionToggle({
+    required String label,
+    required String tooltip,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(4),
+        onTap: () => onChanged(!value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(
+            color: value ? Colors.indigo.shade50 : Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: value ? Colors.indigo.shade300 : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                value ? Icons.check_box : Icons.check_box_outline_blank,
+                size: 12,
+                color: value ? Colors.indigo.shade700 : Colors.grey.shade500,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: value ? FontWeight.w600 : FontWeight.normal,
+                  color: value ? Colors.indigo.shade900 : Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 

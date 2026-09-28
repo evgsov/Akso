@@ -123,9 +123,11 @@ class SheetTabBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.description_outlined,
+              sheet.detailNodeId != null ? Icons.zoom_in_map : Icons.description_outlined,
               size: 14,
-              color: isActive ? Colors.amberAccent : Colors.white60,
+              color: isActive
+                  ? Colors.amberAccent
+                  : (sheet.detailNodeId != null ? Colors.cyanAccent : Colors.white60),
             ),
             const SizedBox(width: 6),
             Text(
