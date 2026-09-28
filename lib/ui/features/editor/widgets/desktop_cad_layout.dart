@@ -3021,10 +3021,21 @@ class DesktopCadLayout extends StatelessWidget {
           dense: true,
           contentPadding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
-          title: const Text('Закрепить (Pin)', style: TextStyle(fontSize: 11)),
-          subtitle: const Text('Защитить от авто-расстановки', style: TextStyle(fontSize: 9, color: Colors.grey)),
-          value: callout.isPinned,
-          onChanged: (_) => controller.toggleCalloutPinning(callout.id),
+          title: Text(
+            controller.activeSheet != null ? 'Закрепить на листе (Pin)' : 'Закрепить (Pin)',
+            style: const TextStyle(fontSize: 11),
+          ),
+          subtitle: Text(
+            controller.activeSheet != null
+                ? 'Защитить от авто-расстановки на текущем листе'
+                : 'Защитить от авто-расстановки',
+            style: const TextStyle(fontSize: 9, color: Colors.grey),
+          ),
+          value: callout.isPinnedOnSheet(controller.activeSheet?.id),
+          onChanged: (_) => controller.toggleCalloutPinning(
+            callout.id,
+            sheetId: controller.activeSheet?.id,
+          ),
         ),
         const SizedBox(height: 6),
 

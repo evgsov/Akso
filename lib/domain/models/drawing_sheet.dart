@@ -9,6 +9,7 @@ import 'pipe_segment.dart';
 import 'pipe_spool.dart';
 import 'pipe_support.dart';
 import 'piping_network.dart';
+import 'sheet_callout_preset.dart';
 import 'sheet_format.dart';
 import 'title_block_data.dart';
 import 'valve.dart';
@@ -298,6 +299,9 @@ class DrawingSheet {
   /// Показывать ли визуальный отладочный слой препятствий (коридоры труб, боксы деталей)
   final bool debugShowObstacles;
 
+  /// Сохраненные именованные пресеты расстановки выносок для этого листа
+  final List<SheetCalloutPreset> calloutPresets;
+
   const DrawingSheet({
     required this.id,
     required this.name,
@@ -314,6 +318,7 @@ class DrawingSheet {
     this.groupMultiLevelCallouts = true,
     this.mergeIdenticalCallouts = true,
     this.debugShowObstacles = false,
+    this.calloutPresets = const [],
   });
 
   /// Проверяет, должна ли отображаться данная выноска на текущем листе.
@@ -567,6 +572,8 @@ class DrawingSheet {
         'groupMultiLevelCallouts': groupMultiLevelCallouts,
         'mergeIdenticalCallouts': mergeIdenticalCallouts,
         'debugShowObstacles': debugShowObstacles,
+        if (calloutPresets.isNotEmpty)
+          'calloutPresets': calloutPresets.map((p) => p.toJson()).toList(),
       };
 
   factory DrawingSheet.fromJson(Map<String, dynamic> json) => DrawingSheet(
@@ -609,6 +616,11 @@ class DrawingSheet {
         groupMultiLevelCallouts: json['groupMultiLevelCallouts'] as bool? ?? true,
         mergeIdenticalCallouts: json['mergeIdenticalCallouts'] as bool? ?? true,
         debugShowObstacles: json['debugShowObstacles'] as bool? ?? false,
+        calloutPresets: json['calloutPresets'] is List
+            ? (json['calloutPresets'] as List)
+                .map((e) => SheetCalloutPreset.fromJson(e as Map<String, dynamic>))
+                .toList()
+            : const [],
       );
 
   DrawingSheet copyWith({
@@ -630,6 +642,7 @@ class DrawingSheet {
     bool? groupMultiLevelCallouts,
     bool? mergeIdenticalCallouts,
     bool? debugShowObstacles,
+    List<SheetCalloutPreset>? calloutPresets,
   }) {
     return DrawingSheet(
       id: id ?? this.id,
@@ -651,6 +664,7 @@ class DrawingSheet {
       groupMultiLevelCallouts: groupMultiLevelCallouts ?? this.groupMultiLevelCallouts,
       mergeIdenticalCallouts: mergeIdenticalCallouts ?? this.mergeIdenticalCallouts,
       debugShowObstacles: debugShowObstacles ?? this.debugShowObstacles,
+      calloutPresets: calloutPresets ?? this.calloutPresets,
     );
   }
 }

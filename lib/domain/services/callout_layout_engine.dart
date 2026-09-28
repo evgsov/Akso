@@ -852,7 +852,7 @@ class CalloutLayoutEngine {
       if (!sheet.isCalloutVisible(callout, network)) continue;
 
       // Закрепленные выноски (isPinned)
-      if (onlyUnpinned && callout.isPinned) {
+      if (onlyUnpinned && callout.isPinnedOnSheet(sheet.id)) {
         final effOffset = callout.getEffectiveOffset(sheet.id);
         result[callout.id] = effOffset;
         handledCalloutIds.add(callout.id);
@@ -989,7 +989,7 @@ class CalloutLayoutEngine {
     for (final branch in branches) {
       final branchCallouts = branch.callouts.where((c) {
         if (handledCalloutIds.contains(c.id)) return false;
-        if (onlyUnpinned && c.isPinned) return false;
+        if (onlyUnpinned && c.isPinnedOnSheet(sheet.id)) return false;
         return true;
       }).toList();
 
@@ -1603,7 +1603,7 @@ class CalloutLayoutEngine {
     final allItems = <_SheetCalloutItem>[];
     for (final callout in network.callouts.values) {
       if (handledCalloutIds.contains(callout.id)) continue;
-      if (onlyUnpinned && callout.isPinned) continue;
+      if (onlyUnpinned && callout.isPinnedOnSheet(sheet.id)) continue;
       if (!sheet.isCalloutVisible(callout, network)) continue;
 
       final anchor3D = computeAnchorNode(callout, network);

@@ -219,6 +219,10 @@ class Callout {
   /// Индивидуальные смещения выноски для конкретных листов чертежа (sheetId -> Offset(dx, dy))
   final Map<String, Offset> sheetOffsets;
 
+  /// Индивидуальная фиксация выноски для конкретных листов чертежа (sheetId -> bool).
+  /// Защищает выноску от авто-расстановки на данном листе, не блокируя другие листы.
+  final Map<String, bool> sheetPinned;
+
   /// Дополнительные ID объектов сети, на которые ссылается данная выноска
   /// (для объединенных вилочных выносок типа "Ласточкин хвост / Звезда" по ГОСТ 2.316 п. 4.4)
   final List<String> additionalTargetIds;
@@ -242,6 +246,7 @@ class Callout {
     this.arrowOnNode = true,
     this.isPinned = false,
     this.sheetOffsets = const {},
+    this.sheetPinned = const {},
     this.additionalTargetIds = const [],
     this.showQuantity = true,
   }) : customText = text ?? customText;
@@ -256,6 +261,16 @@ class Callout {
 
   /// Проверяет, задано ли индивидуальное смещение для конкретного листа
   bool hasSheetOffset(String sheetId) => sheetOffsets.containsKey(sheetId);
+
+  /// Проверяет, зафиксирована ли выноска от перемещения алгоритмами авторасстановки.
+  /// Если передан [sheetId], проверяет индивидуальную фиксацию листа [sheetPinned],
+  /// откатываясь к глобальной [isPinned], если лист не настроен индивидуально.
+  bool isPinnedOnSheet(String? sheetId) {
+    if (sheetId != null && sheetPinned.containsKey(sheetId)) {
+      return sheetPinned[sheetId]!;
+    }
+    return isPinned;
+  }
 
   /// Возвращает эффективное смещение выноски с учетом указанного листа чертежа
   Offset getEffectiveOffset(String? sheetId) {
@@ -289,6 +304,7 @@ class Callout {
     bool? arrowOnNode,
     bool? isPinned,
     Map<String, Offset>? sheetOffsets,
+    Map<String, bool>? sheetPinned,
     List<String>? additionalTargetIds,
     bool? showQuantity,
   }) {
@@ -307,6 +323,7 @@ class Callout {
       arrowOnNode: arrowOnNode ?? this.arrowOnNode,
       isPinned: isPinned ?? this.isPinned,
       sheetOffsets: sheetOffsets ?? this.sheetOffsets,
+      sheetPinned: sheetPinned ?? this.sheetPinned,
       additionalTargetIds: additionalTargetIds ?? this.additionalTargetIds,
       showQuantity: showQuantity ?? this.showQuantity,
     );
@@ -328,6 +345,7 @@ class Callout {
         'isPinned': isPinned,
         if (sheetOffsets.isNotEmpty)
           'sheetOffsets': sheetOffsets.map((k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy})),
+        if (sheetPinned.isNotEmpty) 'sheetPinned': sheetPinned,
         if (additionalTargetIds.isNotEmpty) 'additionalTargetIds': additionalTargetIds,
         'showQuantity': showQuantity,
       };
@@ -387,6 +405,16 @@ class Callout {
       }
     }
 
+    final rawSheetPinned = json['sheetPinned'];
+    final parsedSheetPinned = <String, bool>{};
+    if (rawSheetPinned is Map) {
+      for (final entry in rawSheetPinned.entries) {
+        if (entry.value is bool) {
+          parsedSheetPinned[entry.key.toString()] = entry.value as bool;
+        }
+      }
+    }
+
     return Callout(
       id: json['id'] as String,
       targetId: json['targetId'] as String,
@@ -406,6 +434,7 @@ class Callout {
       arrowOnNode: parsedArrowOnNode,
       isPinned: parsedIsPinned,
       sheetOffsets: parsedSheetOffsets,
+      sheetPinned: parsedSheetPinned,
       additionalTargetIds: parsedAddTargets,
       showQuantity: parsedShowQuantity,
     );
@@ -430,7 +459,17 @@ class Callout {
           arrowOnNode == other.arrowOnNode &&
           isPinned == other.isPinned &&
           showQuantity == other.showQuantity &&
-          _listEquals(additionalTargetIds, other.additionalTargetIds);
+          _listEquals(additionalTargetIds, other.additionalTargetIds) &&
+          _mapEquals(sheetPinned, other.sheetPinned);
+
+  static bool _mapEquals<K, V>(Map<K, V> a, Map<K, V> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key) || b[key] != a[key]) return false;
+    }
+    return true;
+  }
 
   static bool _listEquals(List<String> a, List<String> b) {
     if (identical(a, b)) return true;
@@ -458,9 +497,10 @@ class Callout {
         isPinned,
         showQuantity,
         Object.hashAll(additionalTargetIds),
+        Object.hashAll(sheetPinned.entries.map((e) => Object.hash(e.key, e.value))),
       );
 
   @override
   String toString() =>
-      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned, addTargets: ${additionalTargetIds.length}, showQty: $showQuantity)';
+      'Callout(id: $id, targetId: $targetId, type: ${targetType.name}, text: ${customText ?? "template"}, bottom: ${customBottomText ?? "-"}, offset: ($screenOffsetX, $screenOffsetY), elevStyle: ${elevationStyle?.name}, shelfDir: ${shelfDirection.name}, arrowOnNode: $arrowOnNode, isPinned: $isPinned, sheetPinned: ${sheetPinned.length}, addTargets: ${additionalTargetIds.length}, showQty: $showQuantity)';
 }

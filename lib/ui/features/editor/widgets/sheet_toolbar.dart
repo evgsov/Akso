@@ -415,10 +415,11 @@ class SheetToolbar extends StatelessWidget {
                               ),
                             );
                           } else if (action == 'auto_unpin_all') {
+                            controller.unpinAllCallouts(sheetId: sheet.id);
                             final updated = controller.runSheetCalloutAutoLayout(sheet.id, groupMultiLevel: true, onlyUnpinned: false);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Снята фиксация и перераспределено: $updated выносок'),
+                                content: Text('Снята фиксация листа и перераспределено: $updated выносок'),
                                 duration: const Duration(seconds: 2),
                               ),
                             );
@@ -467,6 +468,19 @@ class SheetToolbar extends StatelessWidget {
                                 duration: Duration(seconds: 2),
                               ),
                             );
+                          } else if (action == 'save_preset') {
+                            _showSavePresetDialog(context, sheet);
+                          } else if (action.startsWith('apply_preset_')) {
+                            final presetId = action.substring('apply_preset_'.length);
+                            controller.applySheetCalloutPreset(sheet.id, presetId);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Пресет расстановки выносок применен'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (action == 'manage_presets') {
+                            _showManagePresetsDialog(context, sheet);
                           }
                         },
                         itemBuilder: (ctx) => [
@@ -513,11 +527,55 @@ class SheetToolbar extends StatelessWidget {
                                 Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
                                 SizedBox(width: 8),
                                 Expanded(
-                                  child: Text('Все выноски (снять фиксацию)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                  child: Text('Все выноски (снять фиксацию на листе)', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
                                 ),
                               ],
                             ),
                           ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
+                            value: 'save_preset',
+                            child: Row(
+                              children: [
+                                Icon(Icons.bookmark_add_outlined, size: 16, color: Colors.lightGreenAccent),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('Сохранить как пресет листа...', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (sheet.calloutPresets.isNotEmpty) ...[
+                            for (final preset in sheet.calloutPresets)
+                              PopupMenuItem(
+                                value: 'apply_preset_${preset.id}',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.bookmark, size: 16, color: Colors.lightGreenAccent),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Пресет: ${preset.name}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const PopupMenuItem(
+                              value: 'manage_presets',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.bookmarks_outlined, size: 16, color: Colors.lightBlueAccent),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text('Управление пресетами листа...', style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const PopupMenuDivider(),
                           CheckedPopupMenuItem(
                             value: 'toggle_merge_identical',
@@ -919,6 +977,176 @@ class SheetToolbar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSavePresetDialog(BuildContext context, DrawingSheet sheet) {
+    final defaultName = 'Пресет ${sheet.calloutPresets.length + 1}';
+    final nameController = TextEditingController(text: defaultName);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Row(
+          children: [
+            Icon(Icons.bookmark_add, color: Colors.lightGreenAccent, size: 20),
+            SizedBox(width: 8),
+            Text('Сохранить пресет расстановки', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Сохраняет текущие точные позиции и фиксацию всех выносок для данного листа. '
+                'В любой момент вы сможете вернуться к этой расстановке.',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'Название пресета',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  hintText: 'например: Финальный вид (сдача)',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Colors.tealAccent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Сохранить'),
+            onPressed: () {
+              final name = nameController.text.trim();
+              controller.saveCurrentSheetCalloutPreset(sheet.id, name);
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Пресет "${name.isEmpty ? defaultName : name}" сохранен'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showManagePresetsDialog(BuildContext context, DrawingSheet sheet) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final currentSheet = controller.currentProject.sheets.where((s) => s.id == sheet.id).firstOrNull ?? sheet;
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: const Row(
+              children: [
+                Icon(Icons.bookmarks, color: Colors.lightBlueAccent, size: 20),
+                SizedBox(width: 8),
+                Text('Пресеты расстановки листа', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ],
+            ),
+            content: SizedBox(
+              width: 440,
+              child: currentSheet.calloutPresets.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24.0),
+                      child: Text(
+                        'Нет сохраненных пресетов для этого листа',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: currentSheet.calloutPresets.length,
+                      separatorBuilder: (_, index) => const Divider(color: Color(0xFF334155), height: 1),
+                      itemBuilder: (ctx, index) {
+                        final preset = currentSheet.calloutPresets[index];
+                        final dateStr = '${preset.createdAt.day.toString().padLeft(2, '0')}.'
+                            '${preset.createdAt.month.toString().padLeft(2, '0')} '
+                            '${preset.createdAt.hour.toString().padLeft(2, '0')}:'
+                            '${preset.createdAt.minute.toString().padLeft(2, '0')}';
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          leading: const Icon(Icons.bookmark, color: Colors.lightGreenAccent, size: 20),
+                          title: Text(
+                            preset.name,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            '$dateStr • Выносок: ${preset.offsets.length} (закреплено: ${preset.pinnedCalloutIds.length})',
+                            style: const TextStyle(color: Colors.white54, fontSize: 10),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.play_arrow, color: Colors.tealAccent, size: 20),
+                                tooltip: 'Применить пресет',
+                                onPressed: () {
+                                  controller.applySheetCalloutPreset(sheet.id, preset.id);
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Пресет "${preset.name}" применен'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                tooltip: 'Удалить пресет',
+                                onPressed: () {
+                                  controller.deleteSheetCalloutPreset(sheet.id, preset.id);
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Закрыть', style: TextStyle(color: Colors.white60)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

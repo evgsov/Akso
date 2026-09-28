@@ -39,6 +39,7 @@ import '../../domain/enums/sheet_format_type.dart';
 import '../../domain/enums/viewport_layout_preset.dart';
 import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
+import '../../domain/models/sheet_callout_preset.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
 import '../../domain/models/title_block_data.dart';
@@ -3025,7 +3026,13 @@ class PipingInputController extends ChangeNotifier {
     if (isDraggingCallout) {
       if (selectedCalloutId != null && network.callouts.containsKey(selectedCalloutId)) {
         final c = network.callouts[selectedCalloutId]!;
-        network.callouts[selectedCalloutId!] = c.copyWith(isPinned: true);
+        if (activeSheet != null) {
+          final newSheetPinned = Map<String, bool>.from(c.sheetPinned);
+          newSheetPinned[activeSheet!.id] = true;
+          network.callouts[selectedCalloutId!] = c.copyWith(sheetPinned: newSheetPinned);
+        } else {
+          network.callouts[selectedCalloutId!] = c.copyWith(isPinned: true);
+        }
       }
       history.recordState(network);
       isDraggingCallout = false;
@@ -5906,28 +5913,126 @@ class PipingInputController extends ChangeNotifier {
     return updatedCount;
   }
 
-  /// Переключение состояния фиксации (isPinned) выноски
-  void toggleCalloutPinning(String calloutId) {
+  /// Переключение состояния фиксации выноски.
+  /// Если указан [sheetId], переключает индивидуальную фиксацию на листе [sheetPinned].
+  /// Если [sheetId] не указан, переключает глобальное свойство [isPinned].
+  void toggleCalloutPinning(String calloutId, {String? sheetId}) {
     final callout = network.callouts[calloutId];
     if (callout == null) return;
-    network.callouts[calloutId] = callout.copyWith(isPinned: !callout.isPinned);
+    if (sheetId != null) {
+      final current = callout.isPinnedOnSheet(sheetId);
+      final newSheetPinned = Map<String, bool>.from(callout.sheetPinned);
+      newSheetPinned[sheetId] = !current;
+      network.callouts[calloutId] = callout.copyWith(sheetPinned: newSheetPinned);
+    } else {
+      network.callouts[calloutId] = callout.copyWith(isPinned: !callout.isPinned);
+    }
     history.recordState(network);
     notifyListeners();
   }
 
-  /// Снятие фиксации со всех выносок чертежа
-  void unpinAllCallouts() {
+  /// Снятие фиксации со всех выносок чертежа.
+  /// Если указан [sheetId], снимает фиксацию только для указанного листа.
+  void unpinAllCallouts({String? sheetId}) {
     bool changed = false;
     for (final entry in network.callouts.entries.toList()) {
-      if (entry.value.isPinned) {
-        network.callouts[entry.key] = entry.value.copyWith(isPinned: false);
-        changed = true;
+      if (sheetId != null) {
+        if (entry.value.sheetPinned.containsKey(sheetId) && entry.value.sheetPinned[sheetId] == true) {
+          final newSheetPinned = Map<String, bool>.from(entry.value.sheetPinned);
+          newSheetPinned.remove(sheetId);
+          network.callouts[entry.key] = entry.value.copyWith(sheetPinned: newSheetPinned);
+          changed = true;
+        } else if (entry.value.isPinned) {
+          final newSheetPinned = Map<String, bool>.from(entry.value.sheetPinned);
+          newSheetPinned[sheetId] = false;
+          network.callouts[entry.key] = entry.value.copyWith(sheetPinned: newSheetPinned);
+          changed = true;
+        }
+      } else {
+        if (entry.value.isPinned || entry.value.sheetPinned.isNotEmpty) {
+          network.callouts[entry.key] = entry.value.copyWith(isPinned: false, sheetPinned: const {});
+          changed = true;
+        }
       }
     }
     if (changed) {
       history.recordState(network);
       notifyListeners();
     }
+  }
+
+  /// Сохраняет текущую расстановку выносок активного листа как именованный пресет
+  void saveCurrentSheetCalloutPreset(String sheetId, String presetName) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final offsets = <String, Offset>{};
+    final pinnedIds = <String>{};
+
+    for (final callout in network.callouts.values) {
+      if (!sheet.isCalloutVisible(callout, network)) continue;
+      offsets[callout.id] = callout.getEffectiveOffset(sheetId);
+      if (callout.isPinnedOnSheet(sheetId)) {
+        pinnedIds.add(callout.id);
+      }
+    }
+
+    final newPreset = SheetCalloutPreset(
+      id: 'preset_${DateTime.now().millisecondsSinceEpoch}',
+      name: presetName.trim().isEmpty ? 'Пресет ${sheet.calloutPresets.length + 1}' : presetName.trim(),
+      createdAt: DateTime.now(),
+      offsets: offsets,
+      pinnedCalloutIds: pinnedIds,
+    );
+
+    final updatedPresets = List<SheetCalloutPreset>.from(sheet.calloutPresets)..add(newPreset);
+    updateSheet(sheet.copyWith(calloutPresets: updatedPresets));
+    history.recordState(network);
+  }
+
+  /// Применяет выбранный пресет расстановки выносок к листу
+  void applySheetCalloutPreset(String sheetId, String presetId) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final preset = sheet.calloutPresets.where((p) => p.id == presetId).firstOrNull;
+    if (preset == null) return;
+
+    bool changed = false;
+    for (final entry in preset.offsets.entries) {
+      final calloutId = entry.key;
+      final offset = entry.value;
+      final callout = network.callouts[calloutId];
+      if (callout != null) {
+        final newSheetOffsets = Map<String, Offset>.from(callout.sheetOffsets);
+        newSheetOffsets[sheetId] = offset;
+
+        final newSheetPinned = Map<String, bool>.from(callout.sheetPinned);
+        newSheetPinned[sheetId] = preset.pinnedCalloutIds.contains(calloutId);
+
+        network.callouts[calloutId] = callout.copyWith(
+          sheetOffsets: newSheetOffsets,
+          sheetPinned: newSheetPinned,
+        );
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      history.recordState(network);
+      hasUnsavedChanges = true;
+      notifyListeners();
+    }
+  }
+
+  /// Удаляет пресет расстановки выносок с листа
+  void deleteSheetCalloutPreset(String sheetId, String presetId) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final updatedPresets = sheet.calloutPresets.where((p) => p.id != presetId).toList();
+    updateSheet(sheet.copyWith(calloutPresets: updatedPresets));
+    history.recordState(network);
   }
 
   /// Переключение выноски между режимом "по шаблону" и "свой текст"

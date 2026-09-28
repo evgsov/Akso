@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790562535.3309786,
-    "seen": 1790562800.0406647,
-    "ast_hash": "36e3f003827c2c0dbf201380169a8d21",
+    "mtime": 1790533294.476162,
+    "seen": 1790533471.86729,
+    "ast_hash": "a83b18de10a8a6dbb81b0147b9fe6305",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790562780.984257,
-    "seen": 1790562800.0409548,
-    "ast_hash": "905b4b023767909e90f1e8a218688312",
+    "mtime": 1790533455.0556426,
+    "seen": 1790533471.8676643,
+    "ast_hash": "8ac362de74f7ae896e30647aae7212db",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1790562546.726294,
-    "seen": 1790562800.040686,
-    "ast_hash": "99b421e06b21f2e959a1dd29d7282915",
+    "mtime": 1790532388.4124851,
+    "seen": 1790532574.135196,
+    "ast_hash": "2db4aac68bc7a10873974568801f2adb",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -1404,9 +1404,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/callout.dart": {
-    "mtime": 1790562233.131886,
-    "seen": 1790562800.0406072,
-    "ast_hash": "7c3022914cd4d7a5fc7ddd0b0a9a0f0b",
+    "mtime": 1790525056.1273596,
+    "seen": 1790525659.176348,
+    "ast_hash": "347d2a2f34180272db3dc18502b14c48",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/callout_manager_panel.dart": {
@@ -2070,9 +2070,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_sheet.dart": {
-    "mtime": 1790562457.0803597,
-    "seen": 1790562800.040614,
-    "ast_hash": "0edee9c49e54def5753e9e3840a2f858",
+    "mtime": 1790529147.1892521,
+    "seen": 1790530271.0457492,
+    "ast_hash": "1a19fb1cbc7f54eebf43b9205d269e5c",
     "semantic_hash": ""
   },
   "lib/domain/models/drawing_style_config.dart": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/sheet_toolbar.dart": {
-    "mtime": 1790562723.8764403,
-    "seen": 1790562800.0407028,
-    "ast_hash": "f4af9c09e378d5bf7c9e7227709c9660",
+    "mtime": 1790532408.867146,
+    "seen": 1790532574.1352148,
+    "ast_hash": "f57ca6e9cb9fe8ec6844e39c05b70453",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/technical_requirements_dialog.dart": {
@@ -2214,9 +2214,9 @@
     "semantic_hash": ""
   },
   "lib/domain/services/callout_layout_engine.dart": {
-    "mtime": 1790562494.573608,
-    "seen": 1790562800.0406446,
-    "ast_hash": "ae4890668c6269719927ad2685450b84",
+    "mtime": 1790529190.477252,
+    "seen": 1790530271.0457926,
+    "ast_hash": "d9fd7cd45405802fa52089ef53da4951",
     "semantic_hash": ""
   },
   "test/callout_layout_engine_test.dart": {
@@ -2661,18 +2661,6 @@
     "mtime": 1790533408.3158014,
     "seen": 1790533471.8673997,
     "ast_hash": "6b5e579ff2afc3a58a1bd637c74cbe93",
-    "semantic_hash": ""
-  },
-  "lib/domain/models/sheet_callout_preset.dart": {
-    "mtime": 1790562136.1983247,
-    "seen": 1790562800.0406373,
-    "ast_hash": "d6c081907a8566f14adca0c35f5c11e1",
-    "semantic_hash": ""
-  },
-  "test/sheet_callout_preset_and_pinning_test.dart": {
-    "mtime": 1790562738.2385924,
-    "seen": 1790562800.0408354,
-    "ast_hash": "2e9fe3e240b5b5646cff9c4b409458e0",
     "semantic_hash": ""
   }
 }
