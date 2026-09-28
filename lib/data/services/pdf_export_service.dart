@@ -30,13 +30,17 @@ class PdfExportService {
     required DrawingSheet sheet,
     required PipingNetwork network,
     DrawingStyleConfig styleConfig = const DrawingStyleConfig(),
-    ProjectionType projectionType = ProjectionType.gostFrontal45,
-    double orbitAzimuth = -math.pi / 4,
-    double orbitElevation = math.pi / 6,
+    ProjectionType? projectionType,
+    double? orbitAzimuth,
+    double? orbitElevation,
     Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
     Map<String, CustomValveDefinition>? customValves,
     Map<String, String>? calloutTemplates,
   }) async {
+    final effectiveProjection = projectionType ?? sheet.viewport.projectionType;
+    final effectiveAzimuth = orbitAzimuth ?? sheet.viewport.orbitAzimuth;
+    final effectiveElevation = orbitElevation ?? sheet.viewport.orbitElevation;
+
     final pdf = pw.Document(
       title: sheet.name,
       author: sheet.titleBlockData.organization,
@@ -68,10 +72,10 @@ class PdfExportService {
                   final scene = SheetGeometryBuilder.buildScene(
                     sheet: sheet,
                     network: network,
-                    projectionType: projectionType,
+                    projectionType: effectiveProjection,
                     styleConfig: styleConfig,
-                    orbitAzimuth: orbitAzimuth,
-                    orbitElevation: orbitElevation,
+                    orbitAzimuth: effectiveAzimuth,
+                    orbitElevation: effectiveElevation,
                     targetCenter: targetCenter,
                     customValves: customValves,
                     calloutTemplates: calloutTemplates,
@@ -98,9 +102,9 @@ class PdfExportService {
               ..._buildViewportAnnotationTexts(
                 sheet: sheet,
                 network: effectiveNetwork,
-                projectionType: projectionType,
-                orbitAzimuth: orbitAzimuth,
-                orbitElevation: orbitElevation,
+                projectionType: effectiveProjection,
+                orbitAzimuth: effectiveAzimuth,
+                orbitElevation: effectiveElevation,
                 targetCenter: targetCenter,
                 fontRegular: fontRegular,
                 fontBold: fontBold,

@@ -162,9 +162,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/fitting.dart": {
-    "mtime": 1790335498.9315438,
-    "seen": 1790576426.7623599,
-    "ast_hash": "a4b873ba92e25d531e511734cb5a1d22",
+    "mtime": 1790593750.8591661,
+    "seen": 1790594242.6915781,
+    "ast_hash": "0eadd720fea254e9674c1d909ebb2d12",
     "semantic_hash": ""
   },
   "lib/domain/models/fitting_catalog.dart": {
@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "lib/domain/models/valve.dart": {
-    "mtime": 1790335406.9419918,
-    "seen": 1790576426.7623858,
-    "ast_hash": "418985661d5dccef9afdf2eb65ab051a",
+    "mtime": 1790593747.3883767,
+    "seen": 1790594242.6916323,
+    "ast_hash": "616fa576e65257411ea409ed47d7268a",
     "semantic_hash": ""
   },
   "lib/domain/models/weld_joint.dart": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "lib/ui/canvas/input_controller.dart": {
-    "mtime": 1790578010.006321,
-    "seen": 1790579878.857805,
-    "ast_hash": "0b1ff6a407c70eaf8a8bf389374afdf6",
+    "mtime": 1790593889.871657,
+    "seen": 1790594242.6916833,
+    "ast_hash": "6dcc3a6c8b3cb697e2dc49f87051451e",
     "semantic_hash": ""
   },
   "lib/ui/canvas/piping_canvas.dart": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1790592437.148966,
-    "seen": 1790592484.1141837,
-    "ast_hash": "0e02b117bce41fc9f30ca9beaeb69649",
+    "mtime": 1790594221.9685104,
+    "seen": 1790594242.6922367,
+    "ast_hash": "ff1fea878c38529222e55bbe39fda24c",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/desktop_cad_layout.dart": {
-    "mtime": 1790586206.0767798,
-    "seen": 1790586550.9091327,
-    "ast_hash": "a5b4013c1400d67e6a03959b12c31428",
+    "mtime": 1790594082.6162753,
+    "seen": 1790594242.6917315,
+    "ast_hash": "a8c371943e397dccceec690230bc1519",
     "semantic_hash": ""
   },
   "lib/ui/features/editor/widgets/piping_systems_dialog.dart": {
@@ -2697,6 +2697,18 @@
     "mtime": 1790586384.3320723,
     "seen": 1790586550.909328,
     "ast_hash": "bde543cf31f575a5f808d9d3eccbdf91",
+    "semantic_hash": ""
+  },
+  "lib/domain/models/property_clipboard.dart": {
+    "mtime": 1790593885.269311,
+    "seen": 1790594242.6916153,
+    "ast_hash": "07a4f5fe89beccc6adbe66f57913eb1e",
+    "semantic_hash": ""
+  },
+  "test/property_clipboard_test.dart": {
+    "mtime": 1790593893.432991,
+    "seen": 1790594242.6920443,
+    "ast_hash": "93391e56a75fce3fcff9907e9f060ce7",
     "semantic_hash": ""
   }
 }

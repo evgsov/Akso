@@ -1,11 +1,11 @@
 # Graph Report - Akso  (2026-09-28)
 
 ## Corpus Check
-- 398 files · ~651,462 words
+- 400 files · ~656,881 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5100 nodes · 7051 edges · 254 communities (232 shown, 22 thin omitted)
+- 5144 nodes · 7124 edges · 252 communities (231 shown, 21 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
@@ -42,7 +42,7 @@
 - Root Cause Tracing
 - Systematic Debugging
 - Persuasion Principles for Skill Design
-- package:akso/data/dxf/dxf_writer.dart
+- package:akso/domain/models/piping_network.dart
 - Finishing a Development Branch
 - Спецификация: Кластерная расстановка выносок по веткам трассы (Branch-Oriented Local Stacking)
 - Firestore Indexes Reference
@@ -140,7 +140,7 @@
 - Global Constraints
 - callout.dart
 - report_template.dart
-- sheet_toolbar.dart
+- solid_3d_engine.dart
 - equipment_properties_sheet.dart
 - construction_axis.dart
 - selection_controller.dart
@@ -154,7 +154,7 @@
 - title_block_data.dart
 - equipment.dart
 - materials_specification_dialog.dart
-- dart:math
+- ../../../../domain/models/piping_network.dart
 - Архитектурная спецификация: Двухуровневая модель САПР (Осевая трасса и физические компоненты)
 - pipe_painter.dart
 - drawing_sheet.dart
@@ -170,7 +170,7 @@
 - topology_service.dart
 - pipe_dimension.dart
 - Gemini CLI Tool Mapping
-- PipingInputController
+- sheet_toolbar.dart
 - report_engine.dart
 - pipeline_branch.dart
 - excel_export_service_test.dart
@@ -178,10 +178,10 @@
 - Rect?
 - custom_pipe_dimension_dialog.dart
 - recent_projects_manager.dart
-- package:akso/domain/enums/valve_type.dart
+- package:akso/domain/enums/projection_type.dart
 - 3. Component Details and Algorithms
 - Дизайн-спецификация: Управление проектами и локальный Wi-Fi мост обмена (ПК ↔ Планшет)
-- smart_callout.dart
+- dart:math
 - Win32Window
 - win32_window.cpp
 - 2026-09-18-callout-template-builder-improvements.md
@@ -191,7 +191,7 @@
 - Node3D
 - Global Constraints
 - VERIFY GREEN: Pressure Testing
-- project_serialization_test.dart
+- dart:ui
 - MessageHandler
 - Example: TDD Skill Bulletproofing
 - title_block_editor_dialog.dart
@@ -227,13 +227,15 @@
 - detail_node.dart
 - package:flutter/material.dart
 - vector_scene.dart
-- package:akso/domain/models/callout.dart
+- package:akso/domain/models/pipe_segment.dart
 - sheet_geometry_builder.dart
+- main.dart
 - custom_valve_catalog_dialog.dart
 - custom_valve_catalog.dart
 - custom_valve_editor_dialog_test.dart
 - Дизайн-спецификация: Конструктор и каталог пользовательской арматуры (Custom Valve Families & Parametric Editor)
 - Offset?
+- sheet_geometry_builder_test.dart
 - План выполнения: Конструктор и каталог пользовательской арматуры (Custom Valve Families)
 - VectorPrimitive
 - Дизайн-спецификация: Интеллектуальная авторасстановка выносок без пересечений (Boundary Column Callout Layout & Multi-Tier Stacking)
@@ -245,36 +247,32 @@
 - cascade_spring_aligner_test.dart
 - Адаптивные листовые выноски, динамический фильтр категорий и листовая авторасстановка — План реализации
 - ../../../../domain/models/node_3d.dart
-- package:akso/domain/models/pipe_segment.dart
+- package:akso/domain/enums/fitting_type.dart
 - ../../../../core/math/axonometry_projector.dart
-- top_bar.dart
 - report_token_definition.dart
 - inspector_editing_and_layout_test.dart
 - List
 - Global Constraints
 - DrawingStyleDialog
 - FlangeConnectionType
-- package:akso/domain/models/piping_network.dart
 - ValveType
 - State
-- callout_candidate_generator.dart
 - report_type.dart
-- segment_3d.dart
-- WeldJointStyle
+- _
 - dart:convert
 - CalloutManagerPanel
 
 ## God Nodes (most connected - your core abstractions)
-1. `Win32Window` - 24 edges
-2. `Writing Skills` - 22 edges
-3. `PipingInputController` - 20 edges
-4. `Testing Skills With Subagents` - 16 edges
-5. `PipingNetwork` - 15 edges
-6. `Prompt Templates Reference` - 15 edges
-7. `handleRequest()` - 14 edges
-8. `Code Review Reception` - 14 edges
-9. `Node3D` - 13 edges
-10. `Test-Driven Development (TDD)` - 13 edges
+1. `_` - 40 edges
+2. `Win32Window` - 24 edges
+3. `Writing Skills` - 22 edges
+4. `PipingInputController` - 20 edges
+5. `Testing Skills With Subagents` - 16 edges
+6. `PipingNetwork` - 15 edges
+7. `Prompt Templates Reference` - 15 edges
+8. `handleRequest()` - 14 edges
+9. `Code Review Reception` - 14 edges
+10. `Node3D` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `TestProjectRepository` --implements--> `IProjectRepository`  [EXTRACTED]
@@ -283,15 +281,15 @@
   test/project_serialization_test.dart → lib/data/repositories/project_repository.dart
 - `FakeProjectRepository` --inherits--> `ProjectRepository`  [EXTRACTED]
   test/project_identity_test.dart → lib/data/repositories/project_repository.dart
+- `_` --references--> `WeldJoint`  [EXTRACTED]
+  lib/domain/models/property_clipboard.dart → lib/domain/models/weld_joint.dart
 - `OnCreate` --calls--> `RegisterPlugins()`  [INFERRED]
   windows/runner/flutter_window.h → windows/flutter/generated_plugin_registrant.cc
-- `wWinMain()` --calls--> `CreateAndAttachConsole()`  [INFERRED]
-  windows/runner/main.cpp → windows/runner/utils.cpp
 
 ## Import Cycles
 - None detected.
 
-## Communities (254 total, 22 thin omitted)
+## Communities (252 total, 21 thin omitted)
 
 ### Community 0 - "FlutterWindow"
 Cohesion: 0.12
@@ -303,7 +301,7 @@ Nodes (57): bootstrapPage(), brandMarkup(), broadcast(), browserLauncherForPlatf
 
 ### Community 2 - "input_controller.dart"
 Cohesion: 0.00
-Nodes (421): AngleSnapMode get, controllers/selection_controller.dart, controllers/tracing_controller.dart, ../../data/repositories/recent_projects_manager.dart, ../../data/repositories/recovery_repository.dart, ../../domain/models/callout_candidate_slot.dart, ../../domain/models/network_history_manager.dart, ../../domain/models/sheet_callout_preset.dart (+413 more)
+Nodes (432): AngleSnapMode get, controllers/selection_controller.dart, controllers/tracing_controller.dart, ../../data/repositories/recent_projects_manager.dart, ../../data/repositories/recovery_repository.dart, ../../domain/models/callout_candidate_slot.dart, ../../domain/models/network_history_manager.dart, ../../domain/models/sheet_callout_preset.dart (+424 more)
 
 ### Community 3 - "fitting.dart"
 Cohesion: 0.07
@@ -343,7 +341,7 @@ Nodes (22): FlPluginRegistry, FlView, GApplication, gboolean, gchar, GObject, Gt
 
 ### Community 12 - "piping_canvas.dart"
 Cohesion: 0.03
-Nodes (77): ../../../../domain/services/grid_system_engine.dart, input_controller.dart, acquiredPoints, activeAxisStart, activeSystemId, activeTraceEnd, activeTraceStart, angleDegrees (+69 more)
+Nodes (76): ../../../../domain/services/grid_system_engine.dart, input_controller.dart, acquiredPoints, activeAxisStart, activeSystemId, activeTraceEnd, activeTraceStart, angleDegrees (+68 more)
 
 ### Community 13 - "Visual Companion Guide"
 Cohesion: 0.10
@@ -401,9 +399,9 @@ Nodes (15): Common Rationalizations, Overview, Phase 1: Root Cause Investigation
 Cohesion: 0.12
 Nodes (15): 1. Authority, 2. Commitment, 3. Scarcity, 4. Social Proof, 5. Unity, 6. Reciprocity, 7. Liking, Ethical Use (+7 more)
 
-### Community 27 - "package:akso/data/dxf/dxf_writer.dart"
-Cohesion: 0.13
-Nodes (10): package:akso/data/dxf/dxf_writer.dart, package:akso/domain/enums/dxf_callout_options.dart, package:akso/domain/models/pipe_dimension.dart, package:akso/ui/features/editor/widgets/dxf_export_dialog.dart, package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart, main, main, main (+2 more)
+### Community 27 - "package:akso/domain/models/piping_network.dart"
+Cohesion: 0.07
+Nodes (18): package:akso/domain/enums/dxf_callout_options.dart, package:akso/domain/models/network_history_manager.dart, package:akso/domain/models/piping_network.dart, package:akso/main.dart, package:akso/ui/features/editor/widgets/dxf_export_dialog.dart, package:akso/ui/features/editor/widgets/top_bar.dart, main, main (+10 more)
 
 ### Community 28 - "Finishing a Development Branch"
 Cohesion: 0.13
@@ -418,8 +416,8 @@ Cohesion: 0.13
 Nodes (15): 1. High Write Rates (Sequential Values), 2. Large String/Map/Array Fields, 3. TTL Fields, Automatic vs. Manual Management, Best Practices & Exemptions, CLI Commands, Composite Indexes, Config files (+7 more)
 
 ### Community 31 - "fitting_properties_sheet.dart"
-Cohesion: 0.11
-Nodes (18): ../../../../domain/models/fitting_definition.dart, WeldType, WeldTypeExt, build, _buildBadge, _buildRadiusChip, createState, FittingPropertiesSheet (+10 more)
+Cohesion: 0.08
+Nodes (24): custom_pipe_dimension_dialog.dart, ../../../../domain/enums/weld_type.dart, ../../../../domain/models/fitting_definition.dart, WeldType, WeldTypeExt, CanvasTool, build, _buildBadge (+16 more)
 
 ### Community 32 - "Using Git Worktrees"
 Cohesion: 0.13
@@ -431,7 +429,7 @@ Nodes (15): Code Examples, Common Rationalizations for Skipping Testing, Directo
 
 ### Community 34 - "fitting_catalog_dialog.dart"
 Cohesion: 0.08
-Nodes (25): _applyDefinitionToSelectedNode, build, _buildCollectionTab, _buildRoutingRulesTab, _buildSectionHeader, createState, dispose, FittingCatalogDialog (+17 more)
+Nodes (26): _applyDefinitionToSelectedNode, build, _buildCollectionTab, _buildRoutingRulesTab, _buildSectionHeader, createState, dispose, FittingCatalogDialog (+18 more)
 
 ### Community 35 - "piping_systems_dialog.dart"
 Cohesion: 0.07
@@ -466,8 +464,8 @@ Cohesion: 0.05
 Nodes (35): Agentic Patterns, Context Patterns, Credit-Killing Patterns Reference, Format Patterns, Reasoning Patterns, Scope Patterns, Task Patterns, Prompt Templates Reference (+27 more)
 
 ### Community 43 - "pipe_segment.dart"
-Cohesion: 0.10
-Nodes (19): calculateActualSlope, calculateLength, copyWith, dn, endNodeId, fromJson, id, isVertical (+11 more)
+Cohesion: 0.11
+Nodes (17): calculateActualSlope, calculateLength, copyWith, dn, endNodeId, fromJson, id, isVertical (+9 more)
 
 ### Community 44 - "Defense-in-Depth Validation"
 Cohesion: 0.17
@@ -582,8 +580,8 @@ Cohesion: 0.29
 Nodes (6): 1. Setup, 2. Best Practices: Type-Safe Models, 3. The Service Layer, 4. Listening to Streams in the UI (`StreamBuilder`), Cloud Firestore in Flutter, Initialization & References
 
 ### Community 72 - "weld_joint.dart"
-Cohesion: 0.08
-Nodes (24): ../enums/weld_joint_style.dart, calculatePosition, copyWith, date, electrodeGrade, fromJson, getEffectiveStyle, getEffectiveTickSize (+16 more)
+Cohesion: 0.07
+Nodes (27): ../enums/weld_joint_style.dart, fromString, label, WeldJointStyle, calculatePosition, copyWith, date, electrodeGrade (+19 more)
 
 ### Community 73 - "1. Instance Selection and Edition Detection"
 Cohesion: 0.29
@@ -691,7 +689,7 @@ Nodes (32): axonometry_projector.dart, drafting_settings.dart, angleSnapToleranc
 
 ### Community 120 - "editor_screen.dart"
 Cohesion: 0.05
-Nodes (38): ../../canvas/piping_canvas.dart, ../../canvas/sheet_canvas_painter.dart, EditableText, EditableTextState, _baseScale, build, _buildCanvas, _buildLengthInputOverlay (+30 more)
+Nodes (40): ../../canvas/piping_canvas.dart, ../../canvas/sheet_canvas_painter.dart, EditableText, EditableTextState, _baseScale, build, _buildCanvas, _buildLengthInputOverlay (+32 more)
 
 ### Community 121 - "report_template_repository.dart"
 Cohesion: 0.08
@@ -699,7 +697,7 @@ Nodes (27): ../../../../domain/enums/report_type.dart, ../../../../domain/models
 
 ### Community 122 - "desktop_cad_layout.dart"
 Cohesion: 0.02
-Nodes (81): callout_manager_panel.dart, custom_valve_catalog_dialog.dart, ../../../../data/services/pdf_export_service.dart, ../../../../domain/models/construction_axis.dart, elevation_panel.dart, equipment_properties_sheet.dart, fitting_properties_sheet.dart, _apply (+73 more)
+Nodes (83): callout_manager_panel.dart, custom_valve_catalog_dialog.dart, ../../../../data/services/pdf_export_service.dart, ../../../../domain/models/construction_axis.dart, ../../../../domain/models/property_clipboard.dart, elevation_panel.dart, equipment_properties_sheet.dart, fitting_properties_sheet.dart (+75 more)
 
 ### Community 123 - "dxf_export_dialog.dart"
 Cohesion: 0.09
@@ -753,9 +751,9 @@ Nodes (41): additionalTargetIds, arrowOnNode, CalloutTargetType, CalloutTargetTy
 Cohesion: 0.08
 Nodes (25): alignment, columns, copyWith, defaultMtoGostTemplate, defaultSpoolsCutListTemplate, defaultTemplates, defaultWeldJournalGostTemplate, defaultWeldJournalTransneftTemplate (+17 more)
 
-### Community 130 - "sheet_toolbar.dart"
-Cohesion: 0.11
-Nodes (16): ../../../../domain/enums/viewport_layout_preset.dart, ../../../../domain/models/detail_node.dart, ../../../../domain/services/viewport_transform_service.dart, drawing_legend_dialog.dart, ViewportLayoutPreset, build, controller, onExportDxf (+8 more)
+### Community 130 - "solid_3d_engine.dart"
+Cohesion: 0.08
+Nodes (25): Color, ../../../../domain/models/valve.dart, ../../../domain/models/weld_joint.dart, baseColor, _buildBoxMesh, _buildCapDomeMesh, _buildConeMesh, _buildCylinderMesh (+17 more)
 
 ### Community 131 - "equipment_properties_sheet.dart"
 Cohesion: 0.11
@@ -771,7 +769,7 @@ Nodes (30): boxSelectIsCtrl, boxSelectIsShift, boxSelectStart, cancelBoxSelectio
 
 ### Community 134 - "sheet_canvas_painter.dart"
 Cohesion: 0.03
-Nodes (74): ../../domain/services/callout_layout_engine.dart, activeGrip, calloutTemplates, customValves, _drawActiveElementGrips, _drawArchiveField, _drawBadge, _drawCenteredText (+66 more)
+Nodes (75): ../../domain/services/callout_layout_engine.dart, activeGrip, calloutTemplates, customValves, _drawActiveElementGrips, _drawArchiveField, _drawBadge, _drawCenteredText (+67 more)
 
 ### Community 135 - "codex-tools.md"
 Cohesion: 0.22
@@ -809,9 +807,9 @@ Nodes (33): copyWith, diameter, dirX, dirY, dirZ, dn, Equipment, EquipmentFace (
 Cohesion: 0.08
 Nodes (24): ../../../../data/repositories/report_template_repository.dart, ../../../../data/services/excel_export_service.dart, _activeTemplate, _availableTemplates, build, _categories, controller, createState (+16 more)
 
-### Community 144 - "dart:math"
-Cohesion: 0.04
-Nodes (58): Color, ../../../core/math/vector_3d.dart, dart:math, ../../../../domain/enums/fitting_type.dart, ../../../../domain/enums/weld_joint_style.dart, ../../../../domain/models/callout.dart, ../../../../domain/models/custom_valve_definition.dart, ../../../../domain/models/drawing_style_config.dart (+50 more)
+### Community 144 - "../../../../domain/models/piping_network.dart"
+Cohesion: 0.07
+Nodes (29): ../../../core/math/vector_3d.dart, ../../../../domain/enums/fitting_type.dart, ../../../../domain/enums/weld_joint_style.dart, ../../../../domain/models/callout.dart, ../../../../domain/models/drawing_style_config.dart, ../../../../domain/models/fitting.dart, ../../domain/models/linear_dimension.dart, ../../../../domain/models/pipe_support.dart (+21 more)
 
 ### Community 145 - "Архитектурная спецификация: Двухуровневая модель САПР (Осевая трасса и физические компоненты)"
 Cohesion: 0.11
@@ -819,11 +817,11 @@ Nodes (17): 1.1. Проблема текущей реализации, 1.2. Це
 
 ### Community 146 - "pipe_painter.dart"
 Cohesion: 0.10
-Nodes (19): ../../../../domain/enums/valve_type.dart, ../../../../domain/models/pipe_segment.dart, ../../../domain/models/pipe_spool.dart, calcElbowTangentLength, calcPipeTrimmedPoint, calcStrokeWidth, _drawCenterlineLayer, drawDashDotLine (+11 more)
+Nodes (20): ../../../../domain/enums/valve_type.dart, ../../../../domain/models/custom_valve_definition.dart, ../../../../domain/models/pipe_segment.dart, ../../../domain/models/pipe_spool.dart, calcElbowTangentLength, calcPipeTrimmedPoint, calcStrokeWidth, _drawCenterlineLayer (+12 more)
 
 ### Community 147 - "drawing_sheet.dart"
 Cohesion: 0.03
-Nodes (62): drawing_legend.dart, ../enums/viewport_layout_preset.dart, fitting.dart, applyViewportPreset, autoFit, calculatePresetViewport, calloutPresets, centerX (+54 more)
+Nodes (58): drawing_legend.dart, ../enums/viewport_layout_preset.dart, applyViewportPreset, autoFit, calculatePresetViewport, calloutPresets, centerX, centerY (+50 more)
 
 ### Community 148 - "Global Constraints"
 Cohesion: 0.22
@@ -869,9 +867,9 @@ Nodes (19): addCustomDimension, addWallThickness, copyWith, defaultWallThickness
 Cohesion: 0.29
 Nodes (7): Additional Gemini CLI tools, Gemini CLI Tool Mapping, Instructions file, Parallel dispatch, Personal skills directory, Prompt filling, Subagent support
 
-### Community 160 - "PipingInputController"
-Cohesion: 0.06
-Nodes (32): ../../../canvas/input_controller.dart, ChangeNotifier, custom_pipe_dimension_dialog.dart, ../../../../domain/enums/sheet_format_type.dart, ../../../../domain/enums/weld_type.dart, ../../../../domain/models/drawing_sheet.dart, ../../../../domain/models/sheet_format.dart, CanvasTool (+24 more)
+### Community 160 - "sheet_toolbar.dart"
+Cohesion: 0.04
+Nodes (54): ../../../canvas/input_controller.dart, ChangeNotifier, ../../../../domain/enums/sheet_format_type.dart, ../../../../domain/enums/viewport_layout_preset.dart, ../../../../domain/models/detail_node.dart, ../../../../domain/models/drawing_sheet.dart, ../../../../domain/models/sheet_format.dart, ../../../../domain/services/viewport_transform_service.dart (+46 more)
 
 ### Community 161 - "report_engine.dart"
 Cohesion: 0.07
@@ -886,8 +884,8 @@ Cohesion: 0.15
 Nodes (11): package:akso/data/repositories/report_template_repository.dart, package:akso/data/services/excel_export_service.dart, package:akso/domain/enums/report_type.dart, package:akso/domain/models/report_template.dart, package:akso/domain/models/report_token_definition.dart, package:akso/ui/features/editor/widgets/report_template_builder_widget.dart, package:excel/excel.dart, main (+3 more)
 
 ### Community 164 - "sheet_callout_preset.dart"
-Cohesion: 0.14
-Nodes (13): int get, copyWith, createdAt, fromJson, hashCode, id, name, offsets (+5 more)
+Cohesion: 0.15
+Nodes (12): copyWith, createdAt, fromJson, hashCode, id, name, offsets, operator (+4 more)
 
 ### Community 166 - "custom_pipe_dimension_dialog.dart"
 Cohesion: 0.10
@@ -897,9 +895,9 @@ Nodes (20): ../../../../domain/models/pipe_dimension.dart, FormState, int?, buil
 Cohesion: 0.12
 Nodes (16): addRecentProject, clearRecentProjects, _fileName, filePath, fromJson, _getConfigFile, getRecentProjects, lastOpened (+8 more)
 
-### Community 168 - "package:akso/domain/enums/valve_type.dart"
-Cohesion: 0.06
-Nodes (35): Valve, package:akso/domain/enums/projection_type.dart, package:akso/domain/enums/valve_type.dart, package:akso/domain/models/custom_valve_definition.dart, package:akso/domain/models/pipe_spool.dart, package:akso/domain/models/piping_system.dart, package:akso/domain/models/valve.dart, package:akso/domain/services/element_3d_geometry.dart (+27 more)
+### Community 168 - "package:akso/domain/enums/projection_type.dart"
+Cohesion: 0.07
+Nodes (21): package:akso/domain/enums/projection_type.dart, package:akso/domain/models/piping_system.dart, package:akso/domain/services/segment_positioning_service.dart, package:akso/ui/canvas/controllers/selection_controller.dart, package:akso/ui/canvas/controllers/tracing_controller.dart, package:akso/ui/canvas/painters/callout_painter.dart, package:akso/ui/features/editor/widgets/piping_systems_dialog.dart, return (+13 more)
 
 ### Community 169 - "3. Component Details and Algorithms"
 Cohesion: 0.15
@@ -909,9 +907,9 @@ Nodes (12): 1. Overview and Problem Statement, 2.1 `DraftingSettings` Model, 2.2
 Cohesion: 0.12
 Nodes (15): 1. Обзор и цели (Overview & Goals), 2.1. Расширение метаданных проекта (`ProjectModel`), 2.2. Запоминание недавних проектов (`RecentProjectsManager`), 2. Архитектура и Модель данных (Architecture & Data Model), 3. Файловый репозиторий проектов (`ProjectRepository`), 4.1. Принцип работы (P2P без внешнего интернета), 4.2. Безопасность и надежность:, 4. Локальный Wi-Fi мост обмена (Akso QuickBridge) (+7 more)
 
-### Community 171 - "smart_callout.dart"
-Cohesion: 0.29
-Nodes (6): drawDiameterCallout, drawElementCallout, drawElevationCallout, drawSlopeCallout, drawWeldCallout, SmartCallout
+### Community 171 - "dart:math"
+Cohesion: 0.12
+Nodes (15): callout_layout_engine.dart, dart:math, align, CascadeSpringAligner, computePairwiseConflict, SimulatedAnnealingCalloutSolver, solve, solveAsync (+7 more)
 
 ### Community 172 - "Win32Window"
 Cohesion: 0.16
@@ -926,8 +924,8 @@ Cohesion: 0.29
 Nodes (6): Task 1: Р¤РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ РґР°С‚С‹ РІ РґРѕРјРµРЅРЅРѕР№ РјРѕРґРµР»Рё `PipingNetwork`, Task 2: РўРѕРєРµРЅРёР·Р°С†РёСЏ С€Р°Р±Р»РѕРЅР° РЅР° Р±Р»РѕРєРё-РєРёСЂРїРёС‡РёРєРё (`TemplateBrick`), Task 3: РСЃРїСЂР°РІР»РµРЅРёРµ С‚Р°СЂРіРµС‚РёРЅРіР° Р°РєС‚РёРІРЅРѕР№ РїРѕР»РєРё (РќР°Рґ vs РџРѕРґ РїРѕР»РєРѕР№), Task 4: РРЅС‚РµСЂР°РєС‚РёРІРЅС‹Р№ Р±Р»РѕС‡РЅС‹Р№ РІРёРґР¶РµС‚ (Р»РµРЅС‚Р° РєРёСЂРїРёС‡РёРєРѕРІ СЃ Drag-and-Drop), Task 5: РЎРµР»РµРєС‚РѕСЂ С„РѕСЂРјР°С‚Р° РґР°С‚С‹ С€РІРѕРІ РІ UI РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР°, Task 6: Р РµРіСЂРµСЃСЃРёРѕРЅРЅРѕРµ С‚РµСЃС‚РёСЂРѕРІР°РЅРёРµ, РІРµСЂРёС„РёРєР°С†РёСЏ Рё РѕР±РЅРѕРІР»РµРЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°С†РёРё
 
 ### Community 175 - "node_3d.dart"
-Cohesion: 0.14
-Nodes (13): copyWith, customElevation, distanceTo, equipmentId, fromJson, hashCode, id, nozzleId (+5 more)
+Cohesion: 0.13
+Nodes (14): int get, copyWith, customElevation, distanceTo, equipmentId, fromJson, hashCode, id (+6 more)
 
 ### Community 176 - "project_properties_dialog.dart"
 Cohesion: 0.13
@@ -949,9 +947,9 @@ Nodes (9): Global Constraints, Project Lifecycle & Wi-Fi Sync Implementation Pla
 Cohesion: 0.40
 Nodes (5): Key Elements of Good Scenarios, Pressure Types, Testing Setup, VERIFY GREEN: Pressure Testing, Writing Pressure Scenarios
 
-### Community 181 - "project_serialization_test.dart"
-Cohesion: 0.25
-Nodes (7): loadCount, main, projectToReturn, saveCount, savedProject, saveProject, shareProjectFile
+### Community 181 - "dart:ui"
+Cohesion: 0.12
+Nodes (14): dart:ui, Valve, package:akso/domain/models/custom_valve_definition.dart, package:akso/ui/canvas/painters/solid_3d_engine.dart, package:akso/ui/canvas/painters/valve_painter.dart, package:akso/ui/canvas/valve_symbol_painter.dart, endNode, main (+6 more)
 
 ### Community 182 - "MessageHandler"
 Cohesion: 0.36
@@ -963,7 +961,7 @@ Nodes (4): Example: TDD Skill Bulletproofing, Initial Test (Failed), Iteration 1
 
 ### Community 184 - "title_block_editor_dialog.dart"
 Cohesion: 0.05
-Nodes (41): TopRightCornerMode, _approvalDates, _approvalNames, build, _buildApprovalsTab, _buildArchiveTab, _buildGeneralTab, _buildingNameController (+33 more)
+Nodes (40): TopRightCornerMode, _approvalDates, _approvalNames, build, _buildApprovalsTab, _buildArchiveTab, _buildGeneralTab, _buildingNameController (+32 more)
 
 ### Community 185 - "piping_system.dart"
 Cohesion: 0.11
@@ -987,15 +985,15 @@ Nodes (9): Global Constraints, Task 1: Зависимости и базовая 
 
 ### Community 190 - "package:flutter_test/flutter_test.dart"
 Cohesion: 0.07
-Nodes (39): dart:ui, package:akso/data/services/pdf_export_service.dart, package:akso/domain/enums/sheet_format_type.dart, package:akso/domain/enums/viewport_layout_preset.dart, package:akso/domain/models/drawing_legend.dart, package:akso/domain/models/drawing_sheet.dart, package:akso/domain/models/drawing_style_config.dart, package:akso/domain/models/sheet_callout_preset.dart (+31 more)
+Nodes (41): package:akso/data/services/pdf_export_service.dart, package:akso/domain/enums/sheet_format_type.dart, package:akso/domain/enums/viewport_layout_preset.dart, package:akso/domain/models/callout.dart, package:akso/domain/models/drawing_legend.dart, package:akso/domain/models/drawing_sheet.dart, package:akso/domain/models/drawing_style_config.dart, package:akso/domain/models/segment_3d.dart (+33 more)
 
 ### Community 192 - "riser_sectioning_dialog.dart"
 Cohesion: 0.09
 Nodes (23): ../../../../domain/enums/inspection_method.dart, ../../../../domain/services/segment_positioning_service.dart, _applySectioning, build, _calculateRatios, controller, createState, dispose (+15 more)
 
 ### Community 193 - "viewport_transform_service.dart"
-Cohesion: 0.12
-Nodes (16): ../enums/projection_type.dart, AutoFitResult, calculateAnnotationScale, calculateAutoFit, calculateModel2dBounds, centerX, centerY, createViewportProjector (+8 more)
+Cohesion: 0.07
+Nodes (26): ../enums/projection_type.dart, CalloutCandidateGenerator, columnClearances, columnVerticalShifts, defaultRadii, generateCandidateAngles, generateCandidatePools, AutoFitResult (+18 more)
 
 ### Community 195 - "pdf_export_service.dart"
 Cohesion: 0.08
@@ -1050,8 +1048,8 @@ Cohesion: 0.07
 Nodes (27): dart:io, FileSystemException, FormatException, IProjectRepository, ProjectRepository, ProjectModel, package:akso/data/repositories/project_repository.dart, package:akso/data/repositories/recent_projects_manager.dart (+19 more)
 
 ### Community 208 - "package:akso/domain/models/node_3d.dart"
-Cohesion: 0.06
-Nodes (34): package:akso/core/math/axonometry_projector.dart, package:akso/core/math/drafting_settings.dart, package:akso/core/math/snap_engine.dart, package:akso/domain/models/acquired_tracking_point.dart, package:akso/domain/models/construction_axis.dart, package:akso/domain/models/detail_node.dart, package:akso/domain/models/linear_dimension.dart, package:akso/domain/models/node_3d.dart (+26 more)
+Cohesion: 0.07
+Nodes (28): package:akso/core/math/axonometry_projector.dart, package:akso/core/math/drafting_settings.dart, package:akso/core/math/snap_engine.dart, package:akso/domain/models/acquired_tracking_point.dart, package:akso/domain/models/construction_axis.dart, package:akso/domain/models/linear_dimension.dart, package:akso/domain/models/node_3d.dart, package:akso/domain/services/grid_system_engine.dart (+20 more)
 
 ### Community 209 - "VectorPathCommand"
 Cohesion: 0.40
@@ -1082,20 +1080,24 @@ Cohesion: 0.04
 Nodes (44): boundaryNode, boundaryShape, calculateModel2dBounds, computeDefaultPolygonModel2d, contextStubLengthMm, _convexHull, copyWith, cutEndPoint (+36 more)
 
 ### Community 216 - "package:flutter/material.dart"
-Cohesion: 0.06
-Nodes (33): package:akso/data/services/quick_bridge_service.dart, package:akso/domain/models/project_model.dart, package:akso/main.dart, package:akso/ui/canvas/input_controller.dart, package:akso/ui/canvas/painters/support_painter.dart, package:akso/ui/features/editor/widgets/desktop_cad_layout.dart, package:akso/ui/features/editor/widgets/project_properties_dialog.dart, package:akso/ui/features/editor/widgets/quick_bridge_dialog.dart (+25 more)
+Cohesion: 0.05
+Nodes (39): package:akso/data/services/quick_bridge_service.dart, package:akso/domain/models/pipe_dimension.dart, package:akso/ui/canvas/input_controller.dart, package:akso/ui/canvas/painters/support_painter.dart, package:akso/ui/features/editor/widgets/callout_manager_panel.dart, package:akso/ui/features/editor/widgets/desktop_cad_layout.dart, package:akso/ui/features/editor/widgets/materials_specification_dialog.dart, package:akso/ui/features/editor/widgets/pipe_assortment_dialog.dart (+31 more)
 
 ### Community 217 - "vector_scene.dart"
 Cohesion: 0.04
 Nodes (45): addCircle, addEllipse, addItem, addLine, addPolyline, addRect, addText, center (+37 more)
 
-### Community 218 - "package:akso/domain/models/callout.dart"
+### Community 218 - "package:akso/domain/models/pipe_segment.dart"
 Cohesion: 0.07
-Nodes (25): package:akso/domain/models/callout.dart, package:akso/domain/models/pipe_support.dart, package:akso/domain/models/weld_joint.dart, package:akso/domain/services/topology_service.dart, package:akso/ui/canvas/painters/callout_painter.dart, package:akso/ui/features/editor/widgets/callout_manager_panel.dart, return, main (+17 more)
+Nodes (38): package:akso/domain/enums/inspection_method.dart, package:akso/domain/enums/valve_type.dart, package:akso/domain/models/equipment.dart, package:akso/domain/models/pipe_segment.dart, package:akso/domain/models/pipe_spool.dart, package:akso/domain/models/pipe_support.dart, package:akso/domain/models/project_model.dart, package:akso/domain/models/property_clipboard.dart (+30 more)
 
 ### Community 219 - "sheet_geometry_builder.dart"
 Cohesion: 0.04
 Nodes (44): custom_valve_catalog.dart, element_3d_geometry.dart, _addElevationMarkSymbol, anchorMm, bottomText, boundsMm, _buildAxes, _buildCallouts (+36 more)
+
+### Community 220 - "main.dart"
+Cohesion: 0.14
+Nodes (12): ../../../../domain/enums/projection_type.dart, AksoApp, build, controller, main, network, projector, _drawScaleBar (+4 more)
 
 ### Community 221 - "custom_valve_catalog_dialog.dart"
 Cohesion: 0.13
@@ -1116,6 +1118,10 @@ Nodes (12): 1. Введение и цели, 2.1 Перечисления сти
 ### Community 225 - "Offset?"
 Cohesion: 0.17
 Nodes (11): anchor, angleRad, boundingBox, CalloutCandidateSlot, entryShelf, isRight, localStaticCost, radius (+3 more)
+
+### Community 226 - "sheet_geometry_builder_test.dart"
+Cohesion: 0.29
+Nodes (6): package:akso/domain/enums/weld_joint_style.dart, package:akso/domain/models/detail_node.dart, package:akso/domain/models/vector_scene.dart, package:akso/domain/services/sheet_geometry_builder.dart, main, main
 
 ### Community 227 - "План выполнения: Конструктор и каталог пользовательской арматуры (Custom Valve Families)"
 Cohesion: 0.25
@@ -1161,21 +1167,17 @@ Nodes (7): Task 1: Модель данных `Callout.sheetOffsets`, `DrawingShe
 Cohesion: 0.17
 Nodes (11): ../../../../domain/models/node_3d.dart, cross, dot, fromNode, length, normalized, toNode, Vector3D (+3 more)
 
-### Community 239 - "package:akso/domain/models/pipe_segment.dart"
-Cohesion: 0.06
-Nodes (34): package:akso/domain/enums/fitting_type.dart, package:akso/domain/enums/inspection_method.dart, package:akso/domain/enums/weld_joint_style.dart, package:akso/domain/enums/weld_type.dart, package:akso/domain/models/fitting_catalog.dart, package:akso/domain/models/fitting.dart, package:akso/domain/models/network_history_manager.dart, package:akso/domain/models/pipe_segment.dart (+26 more)
+### Community 239 - "package:akso/domain/enums/fitting_type.dart"
+Cohesion: 0.08
+Nodes (30): package:akso/data/dxf/dxf_writer.dart, package:akso/domain/enums/fitting_type.dart, package:akso/domain/enums/weld_type.dart, package:akso/domain/models/fitting_catalog.dart, package:akso/domain/models/fitting.dart, package:akso/domain/services/element_3d_geometry.dart, package:akso/domain/services/fitting_detector.dart, package:akso/domain/services/spool_calculator.dart (+22 more)
 
 ### Community 240 - "../../../../core/math/axonometry_projector.dart"
-Cohesion: 0.07
-Nodes (27): ../../../../core/math/axonometry_projector.dart, ../../../../domain/enums/projection_type.dart, ../../../../../domain/models/equipment.dart, DxfCalloutOrientation, DxfCalloutOrientationExt, DxfCalloutType, DxfCalloutTypeExt, getExtrusionVector (+19 more)
-
-### Community 241 - "top_bar.dart"
-Cohesion: 0.15
-Nodes (11): drawing_style_dialog.dart, dxf_export_dialog.dart, fitting_catalog_dialog.dart, ProjectionType, build, controller, _loadDemoNetwork, materials_specification_dialog.dart (+3 more)
+Cohesion: 0.13
+Nodes (15): ../../../../core/math/axonometry_projector.dart, ../../../../../domain/models/equipment.dart, DxfCalloutOrientation, DxfCalloutOrientationExt, DxfCalloutType, DxfCalloutTypeExt, getExtrusionVector, EquipmentPainter (+7 more)
 
 ### Community 242 - "report_token_definition.dart"
-Cohesion: 0.15
-Nodes (12): ../enums/report_type.dart, allTokens, appliesTo, category, code, getGroupedTokensForType, getTokensForType, label (+4 more)
+Cohesion: 0.17
+Nodes (11): ../enums/report_type.dart, allTokens, appliesTo, category, code, getGroupedTokensForType, getTokensForType, label (+3 more)
 
 ### Community 243 - "inspector_editing_and_layout_test.dart"
 Cohesion: 0.15
@@ -1193,53 +1195,45 @@ Nodes (7): Branch-Oriented Callout Layout Implementation Plan, Global Constraint
 Cohesion: 0.47
 Nodes (5): defaultDeductionMm, FittingType, FittingTypeExt, FlangeConnectionType, FlangeConnectionTypeExt
 
-### Community 249 - "package:akso/domain/models/piping_network.dart"
-Cohesion: 0.10
-Nodes (16): package:akso/domain/models/equipment.dart, package:akso/domain/models/piping_network.dart, package:akso/domain/models/segment_3d.dart, package:akso/domain/services/pipeline_branch_extractor.dart, package:akso/ui/features/editor/widgets/materials_specification_dialog.dart, package:akso/ui/features/editor/widgets/piping_systems_dialog.dart, package:akso/ui/features/editor/widgets/weld_journal_dialog.dart, main (+8 more)
-
 ### Community 250 - "ValveType"
 Cohesion: 0.67
 Nodes (3): defaultLengthMm, ValveType, ValveTypeExt
 
 ### Community 251 - "State"
-Cohesion: 0.14
-Nodes (20): EditorScreen, _EditorScreenState, _DesktopEquipmentInspector, _DesktopEquipmentInspectorState, _DesktopFittingInspector, _DesktopFittingInspectorState, _DesktopNodeElevationEditor, _DesktopNodeElevationEditorState (+12 more)
-
-### Community 252 - "callout_candidate_generator.dart"
-Cohesion: 0.12
-Nodes (15): callout_layout_engine.dart, CalloutCandidateGenerator, columnClearances, columnVerticalShifts, defaultRadii, generateCandidateAngles, generateCandidatePools, computePairwiseConflict (+7 more)
+Cohesion: 0.16
+Nodes (18): _DesktopEquipmentInspector, _DesktopEquipmentInspectorState, _DesktopFittingInspector, _DesktopFittingInspectorState, _DesktopNodeElevationEditor, _DesktopNodeElevationEditorState, _DesktopSegmentInspector, _DesktopSegmentInspectorState (+10 more)
 
 ### Community 253 - "report_type.dart"
 Cohesion: 0.33
 Nodes (5): IconData, defaultFileName, displayName, icon, ReportType
 
-### Community 255 - "WeldJointStyle"
-Cohesion: 0.50
-Nodes (3): fromString, label, WeldJointStyle
+### Community 254 - "_"
+Cohesion: 0.06
+Nodes (35): fitting.dart, PipeSegment, _, applyToFitting, applyToSegment, applyToSupport, applyToValve, applyToWeld (+27 more)
 
 ### Community 257 - "dart:convert"
 Cohesion: 0.33
 Nodes (6): dart:async, dart:convert, Exception, QuickBridgeAuthException, QuickBridgeConnectionException, main
 
 ## Knowledge Gaps
-- **3729 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+3724 more)
+- **3765 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+3760 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **22 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PipingInputController` connect `PipingInputController` to `riser_sectioning_dialog.dart`, `input_controller.dart`, `piping_systems_dialog.dart`, `sheet_toolbar.dart`, `technical_requirements_dialog.dart`, `materials_specification_dialog.dart`, `../../../../core/math/axonometry_projector.dart`, `project_properties_dialog.dart`, `quick_bridge_dialog.dart`, `report_template_builder_widget.dart`, `top_bar.dart`, `weld_journal_dialog.dart`, `editor_screen.dart`, `desktop_cad_layout.dart`, `callout_manager_panel.dart`, `title_block_editor_dialog.dart`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `Node3D` connect `Node3D` to `input_controller.dart`, `construction_axis.dart`, `sheet_canvas_painter.dart`, `pipe_spool.dart`, `grid_system_engine.dart`, `package:akso/domain/enums/valve_type.dart`, `piping_canvas.dart`, `node_3d.dart`, `snap_engine.dart`, `linear_dimension.dart`, `axonometry_projector.dart`, `tracing_controller.dart`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `PipingNetwork` connect `piping_systems_dialog.dart` to `input_controller.dart`, `equipment_properties_sheet.dart`, `fitting_catalog_dialog.dart`, `sheet_canvas_painter.dart`, `piping_network.dart`, `callout_painter.dart`, `piping_canvas.dart`, `materials_specification_dialog.dart`, `weld_journal_dialog.dart`, `report_template_builder_widget.dart`, `dxf_export_dialog.dart`, `project_model.dart`, `fitting_properties_sheet.dart`?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `Node3D` connect `Node3D` to `input_controller.dart`, `construction_axis.dart`, `sheet_canvas_painter.dart`, `pipe_spool.dart`, `grid_system_engine.dart`, `piping_canvas.dart`, `node_3d.dart`, `snap_engine.dart`, `dart:ui`, `linear_dimension.dart`, `axonometry_projector.dart`, `tracing_controller.dart`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `PipingInputController` connect `sheet_toolbar.dart` to `riser_sectioning_dialog.dart`, `input_controller.dart`, `piping_systems_dialog.dart`, `technical_requirements_dialog.dart`, `materials_specification_dialog.dart`, `project_properties_dialog.dart`, `quick_bridge_dialog.dart`, `report_template_builder_widget.dart`, `weld_journal_dialog.dart`, `editor_screen.dart`, `desktop_cad_layout.dart`, `main.dart`, `callout_manager_panel.dart`, `title_block_editor_dialog.dart`, `fitting_properties_sheet.dart`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `crypto`, `http`, `fs` to the rest of the system?**
-  _3729 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3765 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `FlutterWindow` be split into smaller, more focused modules?**
   _Cohesion score 0.12418300653594772 - nodes in this community are weakly interconnected._
 - **Should `server.cjs` be split into smaller, more focused modules?**
   _Cohesion score 0.05628415300546448 - nodes in this community are weakly interconnected._
 - **Should `input_controller.dart` be split into smaller, more focused modules?**
-  _Cohesion score 0.004739336492890996 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.004618937644341801 - nodes in this community are weakly interconnected._

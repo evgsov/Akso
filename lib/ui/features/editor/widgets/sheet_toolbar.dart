@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../domain/enums/projection_type.dart';
 import '../../../../domain/enums/viewport_layout_preset.dart';
 import '../../../../domain/models/callout.dart';
 import '../../../../domain/models/detail_node.dart';
 import '../../../../domain/models/drawing_legend.dart';
 import '../../../../domain/models/drawing_sheet.dart';
+import '../../../../domain/models/sheet_view_preset.dart';
 import '../../../../domain/services/viewport_transform_service.dart';
 import '../../../canvas/input_controller.dart';
 import 'drawing_legend_dialog.dart';
@@ -117,12 +119,132 @@ class SheetToolbar extends StatelessWidget {
                           ],
                           onChanged: (newScale) {
                             if (newScale != null) {
-                              controller.updateSheet(sheet.copyWith(
-                                viewport: vp.copyWith(viewScale: newScale),
-                              ));
+                              controller.setSheetViewScale(sheet.id, newScale);
                             }
                           },
                         ),
+                      ),
+                      const SizedBox(width: 6),
+
+                      // Выбор проекции / ракурса видового экрана
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF334155),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: DropdownButton<ProjectionType>(
+                          key: const Key('viewport_projection_dropdown'),
+                          isDense: true,
+                          value: vp.projectionType,
+                          dropdownColor: const Color(0xFF1E293B),
+                          underline: const SizedBox.shrink(),
+                          items: const [
+                            DropdownMenuItem(value: ProjectionType.gostFrontal45, child: Text('ГОСТ 45°', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: ProjectionType.gostMirrored45, child: Text('Зеркало 45°', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: ProjectionType.iso30, child: Text('ISO 30°', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: ProjectionType.orbit3d, child: Text('3D Орбита', style: TextStyle(color: Colors.amberAccent, fontSize: 12))),
+                            DropdownMenuItem(value: ProjectionType.topPlan2d, child: Text('План 2D', style: TextStyle(color: Colors.white, fontSize: 12))),
+                          ],
+                          onChanged: (type) {
+                            if (type != null) {
+                              controller.setSheetProjectionType(sheet.id, type);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+
+                      // Пресеты вида видового экрана (ракурс + масштаб)
+                      PopupMenuButton<String>(
+                        key: const Key('sheet_view_preset_menu'),
+                        tooltip: 'Пресеты ракурса и масштаба листа',
+                        color: const Color(0xFF1E293B),
+                        icon: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.camera_alt_outlined, size: 16, color: Colors.cyanAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              'Ракурс',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        onSelected: (action) {
+                          if (action == 'save_view_preset') {
+                            _showSaveViewPresetDialog(context, sheet);
+                          } else if (action == 'manage_view_presets') {
+                            _showManageViewPresetsDialog(context, sheet);
+                          } else if (action.startsWith('apply_view_preset_')) {
+                            final presetId = action.substring('apply_view_preset_'.length);
+                            controller.applySheetViewPreset(sheet.id, presetId);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Пресет ракурса и масштаба применен'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'save_view_preset',
+                            child: Row(
+                              children: [
+                                Icon(Icons.bookmark_add_outlined, size: 16, color: Colors.cyanAccent),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('Сохранить текущий вид как пресет...', style: TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (sheet.viewPresets.isNotEmpty) ...[
+                            const PopupMenuDivider(),
+                            for (final preset in sheet.viewPresets)
+                              PopupMenuItem(
+                                value: 'apply_view_preset_${preset.id}',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.camera_alt, size: 16, color: Colors.cyanAccent),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            preset.name,
+                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            '${preset.scaleText} • ${preset.projectionTitle}',
+                                            style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                              value: 'manage_view_presets',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.settings_outlined, size: 16, color: Colors.lightBlueAccent),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text('Управление пресетами вида...', style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(width: 6),
 
@@ -1193,6 +1315,186 @@ class SheetToolbar extends StatelessWidget {
                                 tooltip: 'Удалить пресет',
                                 onPressed: () {
                                   controller.deleteSheetCalloutPreset(sheet.id, preset.id);
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Закрыть', style: TextStyle(color: Colors.white60)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showSaveViewPresetDialog(BuildContext context, DrawingSheet sheet) {
+    final defaultName = 'Вид ${sheet.viewPresets.length + 1}';
+    final nameController = TextEditingController(text: defaultName);
+    final vp = sheet.viewport;
+    final scaleText = ViewportTransformService.formatScaleText(vp.viewScale);
+    final projTitle = SheetViewPreset(
+      id: '',
+      name: '',
+      createdAt: DateTime.now(),
+      viewScale: vp.viewScale,
+      modelCenterX: vp.modelCenterX,
+      modelCenterY: vp.modelCenterY,
+      projectionType: vp.projectionType,
+    ).projectionTitle;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Row(
+          children: [
+            Icon(Icons.camera_alt_outlined, color: Colors.cyanAccent, size: 20),
+            SizedBox(width: 8),
+            Text('Сохранить пресет вида', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Сохраняет текущий масштаб ($scaleText), ракурс ($projTitle) и центр модели для данного листа.',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'Название пресета',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  hintText: 'например: Общий план 1:50 или Узел 1:10',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Colors.cyanAccent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Сохранить'),
+            onPressed: () {
+              final name = nameController.text.trim();
+              controller.saveCurrentSheetViewPreset(sheet.id, name);
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Пресет вида "${name.isEmpty ? defaultName : name}" сохранен'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showManageViewPresetsDialog(BuildContext context, DrawingSheet sheet) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final currentSheet = controller.currentProject.sheets.where((s) => s.id == sheet.id).firstOrNull ?? sheet;
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: const Row(
+              children: [
+                Icon(Icons.camera_alt, color: Colors.cyanAccent, size: 20),
+                SizedBox(width: 8),
+                Text('Пресеты вида и масштаба листа', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ],
+            ),
+            content: SizedBox(
+              width: 440,
+              child: currentSheet.viewPresets.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24.0),
+                      child: Text(
+                        'Нет сохраненных пресетов вида для этого листа',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: currentSheet.viewPresets.length,
+                      separatorBuilder: (_, index) => const Divider(color: Color(0xFF334155), height: 1),
+                      itemBuilder: (ctx, index) {
+                        final preset = currentSheet.viewPresets[index];
+                        final dateStr = '${preset.createdAt.day.toString().padLeft(2, '0')}.'
+                            '${preset.createdAt.month.toString().padLeft(2, '0')} '
+                            '${preset.createdAt.hour.toString().padLeft(2, '0')}:'
+                            '${preset.createdAt.minute.toString().padLeft(2, '0')}';
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          leading: const Icon(Icons.camera_alt, color: Colors.cyanAccent, size: 20),
+                          title: Text(
+                            preset.name,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            '${preset.scaleText} • ${preset.projectionTitle} • $dateStr',
+                            style: const TextStyle(color: Colors.white54, fontSize: 10),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.play_arrow, color: Colors.tealAccent, size: 20),
+                                tooltip: 'Применить пресет',
+                                onPressed: () {
+                                  controller.applySheetViewPreset(sheet.id, preset.id);
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Пресет "${preset.name}" применен к листу'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                tooltip: 'Удалить пресет',
+                                onPressed: () {
+                                  controller.deleteSheetViewPreset(sheet.id, preset.id);
                                   setDialogState(() {});
                                 },
                               ),

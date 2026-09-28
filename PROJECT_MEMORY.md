@@ -3423,3 +3423,31 @@
   - **Верификация:**
     - Модульные тесты в [test/flanged_valve_and_reducer_test.dart](file:///d:/Git/Akso/test/flanged_valve_and_reducer_test.dart) (8 тестов, 100% pass).
     - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
+
+- **Сохранение масштаба, ракурса (проекции и углов 3D-орбиты) и именованные пресеты вида для каждого листа (`SheetViewPreset`):**
+  - **Запрос пользователя:** Сохранение масштаба и ракурса (аксонометрической проекции / 3D-орбиты) индивидуально для каждого чертежного листа, а также создание механизма именованных пресетов ракурса и масштаба для каждого листа (аналогично пресетам выносок), чтобы можно было настроить красивый вид листа, сохранить его и применять в 1 клик.
+  - **Архитектурное решение и изоляция:**
+    1. **Изоляция ракурса в модели видового экрана (`SheetViewport`):**
+       - Добавлены поля `projectionType` (по умолчанию `ProjectionType.gostFrontal45`), `orbitAzimuth` (-pi/4) и `orbitElevation` (pi/6).
+       - Полная поддержка сериализации в JSON (`toJson`, `fromJson`) и копирования `copyWith`.
+       - Это полностью устранило проблему "утечки" ракурса и масштаба между листами проекта: теперь каждый лист хранит свой собственный ракурс и масштаб независимо от глобального проектора.
+    2. **Доменная модель пресетов вида (`SheetViewPreset`):**
+       - Создан класс `SheetViewPreset` (`lib/domain/models/sheet_view_preset.dart`), сохраняющий `viewScale`, `modelCenterX/Y/Z`, `projectionType`, `orbitAzimuth`, `orbitElevation` с датой создания, именем, форматированием `scaleText` и `projectionTitle`.
+       - В `DrawingSheet` добавлен список `viewPresets`, сериализуемый в JSON проекта.
+    3. **Контроллер ввода и синхронизация (`PipingInputController`):**
+       - В `getActiveSheetViewportProjector()` проектор создается на основе `sheet.viewport.projectionType`, `orbitAzimuth`, `orbitElevation`.
+       - При переключении листов (`selectSheet`) интерактивный проектор контроллера автоматически синхронизируется с сохраненным ракурсом листа.
+       - При 3D-вращении (`orbit`) в режиме сфокусированного ВЭ обновляются углы `orbitAzimuth` и `orbitElevation` активного листа.
+       - При выборе проекции (`setProjectionType`) обновляется `viewport.projectionType` активного листа.
+       - Добавлены методы: `saveCurrentSheetViewPreset(sheetId, presetName)`, `applySheetViewPreset(sheetId, presetId)`, `deleteSheetViewPreset(sheetId, presetId)`, `setSheetViewScale(sheetId, newScale)`, `setSheetProjectionType(sheetId, type)`.
+    4. **Сквозная точность отрисовки и экспорта в PDF:**
+       - В `editor_screen.dart` в `SheetCanvasPainter` передаются ракурс и углы орбиты активного листа (`controller.activeSheet!.viewport.*`).
+       - В `pdf_export_service.dart` метод `generateSheetPdf` теперь гарантированно использует проекцию и углы орбиты листа (`sheet.viewport.projectionType`, `orbitAzimuth`, `orbitElevation`).
+    5. **Интерфейс управления в `SheetToolbar`:**
+       - Выпадающий список стандартных масштабов по ГОСТ (1:10, 1:20, 1:25, 1:50, 1:100, 1:200...).
+       - Выпадающий список проекций видового экрана (ГОСТ 45°, Зеркальная 45°, ISO 30°, 3D Орбита, План 2D).
+       - Меню пресетов ракурса с пунктами «Сохранить текущий вид как пресет...», списком сохраненных пресетов для мгновенного переключения и диалогом «Управление пресетами вида...» с возможностью применения и удаления.
+  - **Верификация:**
+    - Модульные тесты в `test/sheet_view_preset_test.dart` (7 тестов: сериализация пресетов, сериализация ВЭ, изоляция масштаба и проекций между листами, сохранение/применение/удаление пресетов, синхронизация проектора).
+    - Статический анализ `flutter analyze`: **0 ошибок, 0 предупреждений**.
+

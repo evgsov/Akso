@@ -1,8 +1,11 @@
+import 'dart:math' as math;
 import '../enums/fitting_type.dart';
+import '../enums/projection_type.dart';
 import '../enums/sheet_format_type.dart';
 import '../enums/viewport_layout_preset.dart';
 import 'callout.dart';
 import 'drawing_legend.dart';
+import 'sheet_view_preset.dart';
 import 'fitting.dart';
 import 'linear_dimension.dart';
 import 'pipe_segment.dart';
@@ -46,6 +49,13 @@ class SheetViewport {
   /// Приглушенный полупрозрачный показ неактивных систем (для контекста привязки)
   final bool ghostInactiveSystems;
 
+  /// Тип аксонометрической проекции / ракурс видового экрана
+  final ProjectionType projectionType;
+
+  /// Углы вращения для 3D-орбиты (в радианах)
+  final double orbitAzimuth;
+  final double orbitElevation;
+
   const SheetViewport({
     this.xMm = 25.0,
     this.yMm = 10.0,
@@ -58,6 +68,9 @@ class SheetViewport {
     this.autoFit = true,
     this.visibleSystemIds,
     this.ghostInactiveSystems = false,
+    this.projectionType = ProjectionType.gostFrontal45,
+    this.orbitAzimuth = -math.pi / 4,
+    this.orbitElevation = math.pi / 6,
   });
 
   Map<String, dynamic> toJson() => {
@@ -72,6 +85,9 @@ class SheetViewport {
         'autoFit': autoFit,
         if (visibleSystemIds != null) 'visibleSystemIds': visibleSystemIds!.toList(),
         'ghostInactiveSystems': ghostInactiveSystems,
+        'projectionType': projectionType.name,
+        'orbitAzimuth': orbitAzimuth,
+        'orbitElevation': orbitElevation,
       };
 
   factory SheetViewport.fromJson(Map<String, dynamic> json) => SheetViewport(
@@ -88,6 +104,12 @@ class SheetViewport {
             ? (json['visibleSystemIds'] as List).map((e) => e.toString()).toSet()
             : null,
         ghostInactiveSystems: json['ghostInactiveSystems'] as bool? ?? false,
+        projectionType: ProjectionType.values.firstWhere(
+          (e) => e.name == json['projectionType'],
+          orElse: () => ProjectionType.gostFrontal45,
+        ),
+        orbitAzimuth: (json['orbitAzimuth'] as num?)?.toDouble() ?? (-math.pi / 4),
+        orbitElevation: (json['orbitElevation'] as num?)?.toDouble() ?? (math.pi / 6),
       );
 
   SheetViewport copyWith({
@@ -102,6 +124,9 @@ class SheetViewport {
     bool? autoFit,
     Set<String>? visibleSystemIds,
     bool? ghostInactiveSystems,
+    ProjectionType? projectionType,
+    double? orbitAzimuth,
+    double? orbitElevation,
   }) {
     return SheetViewport(
       xMm: xMm ?? this.xMm,
@@ -115,6 +140,9 @@ class SheetViewport {
       autoFit: autoFit ?? this.autoFit,
       visibleSystemIds: visibleSystemIds ?? this.visibleSystemIds,
       ghostInactiveSystems: ghostInactiveSystems ?? this.ghostInactiveSystems,
+      projectionType: projectionType ?? this.projectionType,
+      orbitAzimuth: orbitAzimuth ?? this.orbitAzimuth,
+      orbitElevation: orbitElevation ?? this.orbitElevation,
     );
   }
 
@@ -145,6 +173,9 @@ class ViewportSettings extends SheetViewport {
     super.autoFit,
     super.visibleSystemIds,
     super.ghostInactiveSystems,
+    super.projectionType,
+    super.orbitAzimuth,
+    super.orbitElevation,
   }) : super(
           viewScale: scale,
           modelCenterX: centerX,
@@ -302,6 +333,9 @@ class DrawingSheet {
   /// Сохраненные именованные пресеты расстановки выносок для этого листа
   final List<SheetCalloutPreset> calloutPresets;
 
+  /// Сохраненные именованные пресеты ракурса и масштаба для этого листа
+  final List<SheetViewPreset> viewPresets;
+
   /// ID выносного узла (DetailNode), если этот лист представляет собой укрупненный узел.
   /// Если null — это обычный обзорный лист.
   final String? detailNodeId;
@@ -323,6 +357,7 @@ class DrawingSheet {
     this.mergeIdenticalCallouts = true,
     this.debugShowObstacles = false,
     this.calloutPresets = const [],
+    this.viewPresets = const [],
     this.detailNodeId,
   });
 
@@ -668,6 +703,8 @@ class DrawingSheet {
         'debugShowObstacles': debugShowObstacles,
         if (calloutPresets.isNotEmpty)
           'calloutPresets': calloutPresets.map((p) => p.toJson()).toList(),
+        if (viewPresets.isNotEmpty)
+          'viewPresets': viewPresets.map((p) => p.toJson()).toList(),
         if (detailNodeId != null) 'detailNodeId': detailNodeId,
       };
 
@@ -716,6 +753,11 @@ class DrawingSheet {
                 .map((e) => SheetCalloutPreset.fromJson(e as Map<String, dynamic>))
                 .toList()
             : const [],
+        viewPresets: json['viewPresets'] is List
+            ? (json['viewPresets'] as List)
+                .map((e) => SheetViewPreset.fromJson(e as Map<String, dynamic>))
+                .toList()
+            : const [],
         detailNodeId: json['detailNodeId'] as String?,
       );
 
@@ -739,6 +781,7 @@ class DrawingSheet {
     bool? mergeIdenticalCallouts,
     bool? debugShowObstacles,
     List<SheetCalloutPreset>? calloutPresets,
+    List<SheetViewPreset>? viewPresets,
     String? detailNodeId,
     bool clearDetailNodeId = false,
   }) {
@@ -763,6 +806,7 @@ class DrawingSheet {
       mergeIdenticalCallouts: mergeIdenticalCallouts ?? this.mergeIdenticalCallouts,
       debugShowObstacles: debugShowObstacles ?? this.debugShowObstacles,
       calloutPresets: calloutPresets ?? this.calloutPresets,
+      viewPresets: viewPresets ?? this.viewPresets,
       detailNodeId: clearDetailNodeId ? null : (detailNodeId ?? this.detailNodeId),
     );
   }

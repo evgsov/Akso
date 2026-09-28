@@ -42,6 +42,7 @@ import '../../domain/models/drawing_legend.dart';
 import '../../domain/models/drawing_sheet.dart';
 import '../../domain/models/detail_node.dart';
 import '../../domain/models/sheet_callout_preset.dart';
+import '../../domain/models/sheet_view_preset.dart';
 import '../../domain/models/drawing_style_config.dart';
 import '../../domain/models/report_template.dart';
 import '../../domain/models/title_block_data.dart';
@@ -430,7 +431,7 @@ class PipingInputController extends ChangeNotifier {
       }
     } else {
       final targetSegIds = <String>{
-        if (selectedSegmentId != null) selectedSegmentId!,
+        ?selectedSegmentId,
         ...selectedSegmentIds,
         if (selectedSpoolId != null && network.spools[selectedSpoolId!] != null)
           network.spools[selectedSpoolId!]!.segmentId,
@@ -1337,6 +1338,13 @@ class PipingInputController extends ChangeNotifier {
     } else if (currentTool == CanvasTool.orbit) {
       currentTool = CanvasTool.trace;
     }
+
+    if (!isModelSpaceActive && activeSheet != null) {
+      final sheet = activeSheet!;
+      final updatedVp = sheet.viewport.copyWith(projectionType: type);
+      updateSheet(sheet.copyWith(viewport: updatedVp));
+    }
+
     notifyListeners();
   }
 
@@ -4658,13 +4666,31 @@ class PipingInputController extends ChangeNotifier {
 
   /// Свободное 3D-вращение сцены (Орбита)
   void orbit(Offset delta) {
-    final newAzimuth = projector.orbitAzimuth + delta.dx * 0.01;
-    final newElevation = (projector.orbitElevation + delta.dy * 0.01).clamp(0.05, math.pi / 2 - 0.05);
+    final currentAzimuth = (!isModelSpaceActive && isViewportFocused && activeSheet != null)
+        ? activeSheet!.viewport.orbitAzimuth
+        : projector.orbitAzimuth;
+    final currentElevation = (!isModelSpaceActive && isViewportFocused && activeSheet != null)
+        ? activeSheet!.viewport.orbitElevation
+        : projector.orbitElevation;
+
+    final newAzimuth = currentAzimuth + delta.dx * 0.01;
+    final newElevation = (currentElevation + delta.dy * 0.01).clamp(0.05, math.pi / 2 - 0.05);
     projector = projector.copyWith(
       projectionType: ProjectionType.orbit3d,
       orbitAzimuth: newAzimuth,
       orbitElevation: newElevation,
     );
+
+    if (!isModelSpaceActive && isViewportFocused && activeSheet != null) {
+      final sheet = activeSheet!;
+      final updatedVp = sheet.viewport.copyWith(
+        projectionType: ProjectionType.orbit3d,
+        orbitAzimuth: newAzimuth,
+        orbitElevation: newElevation,
+      );
+      updateSheet(sheet.copyWith(viewport: updatedVp));
+    }
+
     notifyListeners();
   }
 
@@ -6734,6 +6760,90 @@ class PipingInputController extends ChangeNotifier {
     history.recordState(network);
   }
 
+  /// Сохраняет текущий ракурс, масштаб и центр видового экрана листа как именованный пресет
+  void saveCurrentSheetViewPreset(String sheetId, String presetName) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final vp = sheet.viewport;
+    final newPreset = SheetViewPreset(
+      id: 'view_preset_${DateTime.now().millisecondsSinceEpoch}',
+      name: presetName.trim().isEmpty ? 'Вид ${sheet.viewPresets.length + 1}' : presetName.trim(),
+      createdAt: DateTime.now(),
+      viewScale: vp.viewScale,
+      modelCenterX: vp.modelCenterX,
+      modelCenterY: vp.modelCenterY,
+      modelCenterZ: vp.modelCenterZ,
+      projectionType: vp.projectionType,
+      orbitAzimuth: vp.orbitAzimuth,
+      orbitElevation: vp.orbitElevation,
+    );
+
+    final updatedPresets = List<SheetViewPreset>.from(sheet.viewPresets)..add(newPreset);
+    updateSheet(sheet.copyWith(viewPresets: updatedPresets));
+  }
+
+  /// Применяет выбранный пресет ракурса и масштаба к листу
+  void applySheetViewPreset(String sheetId, String presetId) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final preset = sheet.viewPresets.where((p) => p.id == presetId).firstOrNull;
+    if (preset == null) return;
+
+    final updatedVp = sheet.viewport.copyWith(
+      viewScale: preset.viewScale,
+      modelCenterX: preset.modelCenterX,
+      modelCenterY: preset.modelCenterY,
+      modelCenterZ: preset.modelCenterZ,
+      projectionType: preset.projectionType,
+      orbitAzimuth: preset.orbitAzimuth,
+      orbitElevation: preset.orbitElevation,
+    );
+
+    updateSheet(sheet.copyWith(viewport: updatedVp));
+
+    // Синхронизируем интерактивный проектор контроллера, если активен этот лист
+    if (sheet.id == activeSheetId) {
+      projector = projector.copyWith(
+        projectionType: preset.projectionType,
+        orbitAzimuth: preset.orbitAzimuth,
+        orbitElevation: preset.orbitElevation,
+      );
+    }
+  }
+
+  /// Удаляет пресет ракурса с листа
+  void deleteSheetViewPreset(String sheetId, String presetId) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final updatedPresets = sheet.viewPresets.where((p) => p.id != presetId).toList();
+    updateSheet(sheet.copyWith(viewPresets: updatedPresets));
+  }
+
+  /// Устанавливает масштаб видового экрана для указанного листа
+  void setSheetViewScale(String sheetId, double newScale) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final updatedVp = sheet.viewport.copyWith(viewScale: newScale.clamp(0.0005, 1.0));
+    updateSheet(sheet.copyWith(viewport: updatedVp));
+  }
+
+  /// Устанавливает тип проекции видового экрана для указанного листа
+  void setSheetProjectionType(String sheetId, ProjectionType type) {
+    final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
+    if (sheet == null) return;
+
+    final updatedVp = sheet.viewport.copyWith(projectionType: type);
+    updateSheet(sheet.copyWith(viewport: updatedVp));
+
+    if (sheet.id == activeSheetId) {
+      projector = projector.copyWith(projectionType: type);
+    }
+  }
+
   /// Переключение выноски между режимом "по шаблону" и "свой текст"
   void toggleCalloutMode(String id, bool isCustom) {
     final callout = network.callouts[id];
@@ -7534,9 +7644,9 @@ class PipingInputController extends ChangeNotifier {
       viewport: sheet.viewport,
       sheetPanPx: sheetPan,
       sheetZoom: sheetZoom,
-      projectionType: projector.projectionType,
-      orbitAzimuth: projector.orbitAzimuth,
-      orbitElevation: projector.orbitElevation,
+      projectionType: sheet.viewport.projectionType,
+      orbitAzimuth: sheet.viewport.orbitAzimuth,
+      orbitElevation: sheet.viewport.orbitElevation,
       targetCenter: projector.targetCenter,
     );
   }
@@ -8242,6 +8352,13 @@ class PipingInputController extends ChangeNotifier {
 
     final sheet = currentProject.sheets.where((s) => s.id == sheetId).firstOrNull;
     selectedDetailNodeId = sheet?.detailNodeId;
+    if (sheet != null) {
+      projector = projector.copyWith(
+        projectionType: sheet.viewport.projectionType,
+        orbitAzimuth: sheet.viewport.orbitAzimuth,
+        orbitElevation: sheet.viewport.orbitElevation,
+      );
+    }
 
     // Автоматическая раскладка выносок листа, если они еще не имеют позиций на этом листе
     if (sheet != null && network.callouts.isNotEmpty) {

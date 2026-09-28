@@ -71,9 +71,9 @@ class ViewportTransformService {
     required SheetViewport viewport,
     required Offset sheetPanPx,
     required double sheetZoom,
-    required ProjectionType projectionType,
-    double orbitAzimuth = -math.pi / 4,
-    double orbitElevation = math.pi / 6,
+    ProjectionType? projectionType,
+    double? orbitAzimuth,
+    double? orbitElevation,
     Node3D targetCenter = const Node3D(id: 'center', x: 0, y: 0, z: 0),
   }) {
     final vpCenterX = viewport.xMm + (viewport.widthMm / 2.0);
@@ -84,9 +84,9 @@ class ViewportTransformService {
     final panY = sheetPanPx.dy + (vpCenterY + (viewport.modelCenterY * viewport.viewScale)) * sheetZoom;
 
     return AxonometryProjector(
-      projectionType: projectionType,
-      orbitAzimuth: orbitAzimuth,
-      orbitElevation: orbitElevation,
+      projectionType: projectionType ?? viewport.projectionType,
+      orbitAzimuth: orbitAzimuth ?? viewport.orbitAzimuth,
+      orbitElevation: orbitElevation ?? viewport.orbitElevation,
       targetCenter: targetCenter,
       scale: totalScale,
       panOffset: Offset(panX, panY),

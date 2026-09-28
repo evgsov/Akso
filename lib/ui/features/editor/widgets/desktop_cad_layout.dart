@@ -8,7 +8,6 @@ import '../../../../domain/enums/weld_joint_style.dart';
 import '../../../../domain/enums/weld_type.dart';
 import '../../../../domain/models/fitting.dart';
 import '../../../../domain/models/pipe_support.dart';
-import '../../../../domain/models/property_clipboard.dart';
 import '../../../../core/math/snap_engine.dart';
 import '../../../../domain/models/callout.dart';
 import '../../../../domain/models/detail_node.dart';
@@ -187,9 +186,9 @@ class DesktopCadLayout extends StatelessWidget {
         sheet: sheet,
         network: controller.network,
         styleConfig: controller.styleConfig,
-        projectionType: controller.projector.projectionType,
-        orbitAzimuth: controller.projector.orbitAzimuth,
-        orbitElevation: controller.projector.orbitElevation,
+        projectionType: sheet.viewport.projectionType,
+        orbitAzimuth: sheet.viewport.orbitAzimuth,
+        orbitElevation: sheet.viewport.orbitElevation,
         targetCenter: controller.projector.targetCenter,
         customValves: controller.customValves,
         calloutTemplates: controller.currentProject.calloutTemplates,
